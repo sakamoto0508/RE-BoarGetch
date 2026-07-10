@@ -37,7 +37,14 @@ public class REBoarGetch : ModuleRules
 			"REBoarGetch/Variant_SideScrolling/AI",
 			"REBoarGetch/Variant_SideScrolling/Gameplay",
 			"REBoarGetch/Variant_SideScrolling/Interfaces",
-			"REBoarGetch/Variant_SideScrolling/UI"
+			"REBoarGetch/Variant_SideScrolling/UI",
+			"REBoarGetch/Private/Core",
+			"REBoarGetch/Private/Player",
+			"REBoarGetch/Private/Boar",
+			"REBoarGetch/Private/Gadget",
+			"REBoarGetch/Private/Cage",
+			"REBoarGetch/Private/Mission",
+			"REBoarGetch/Private/Save"
 		});
 
 		// Uncomment if you are using Slate UI
