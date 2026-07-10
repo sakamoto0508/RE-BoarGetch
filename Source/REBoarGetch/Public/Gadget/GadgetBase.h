@@ -6,6 +6,10 @@
 #include "GameFramework/Actor.h"
 #include "GadgetBase.generated.h"
 
+/// <summary>
+/// ガチャメカの基底クラスです。
+/// Net / Radar / Jet などはここから派生します。
+/// </summary>
 UCLASS()
 class AGadgetBase : public AActor
 {
