@@ -8,6 +8,8 @@ class UHealthComponent;
 class UGadgetComponent;
 class UCaptureComponent;
 class UCameraComponent;
+class USpringArmComponent;
+class UCameraComponent;
 
 UCLASS()
 class REBOARGETCH_API ABoarPlayerCharacter : public ACharacter
@@ -64,11 +66,11 @@ public:
 		return CaptureComponent;
 	}
 
-	UFUNCTION(BlueprintPure, Category = "Player")
-	UCameraComponent* GetCameraComponentEx() const
-	{
-		return CameraComponentEx;
-	}
+	// UFUNCTION(BlueprintPure, Category = "Player")
+	// UCameraComponent* GetCameraComponentEx() const
+	// {
+	// 	return CameraComponentEx;
+	// }
 
 private:
 
@@ -86,8 +88,8 @@ private:
 	TObjectPtr<UCaptureComponent> CaptureComponent;
 
 	///<summary> 独自のカメラ制御用Component。（Aim・LockOnなどを担当）///</summary>
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCameraComponent> CameraComponentEx;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
+	//TObjectPtr<UCameraComponent> CameraComponentEx;
 
 	//-------------------------------------------------
 	// Movement Settings
@@ -105,4 +107,16 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement"
 		,meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
 	float AirControl = 0.35f;
+	
+	///<summary> TPS用のカメラブームです。 </summary>
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<USpringArmComponent> CameraBoom;
+
+	///<summary> TPS用の追従カメラです。 </summary>
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UCameraComponent> FollowCamera;
+
+	///<summary> BPで調整しやすいカメラ距離です。 </summary>
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
+	float CameraArmLength = 350.0f;
 };

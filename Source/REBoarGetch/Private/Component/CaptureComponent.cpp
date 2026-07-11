@@ -11,7 +11,13 @@ UCaptureComponent::UCaptureComponent()
 /// <summary>捕獲を実行します。</summary>
 bool UCaptureComponent::Capture(AActor* Capturer)
 {
-	if (bIsCaptured || GetOwner() == nullptr) return false;
+	if (bIsCaptured || GetOwner() == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Capture] Capture failed. Owner=%s IsCaptured=%s"),
+			*GetNameSafe(GetOwner()),
+			bIsCaptured ? TEXT("true") : TEXT("false"));
+		return false;
+	}
 
 	bIsCaptured = true;
 
@@ -30,13 +36,21 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 	}
 
 	OnCaptured.Broadcast(Capturer);
+	UE_LOG(LogTemp, Log, TEXT("[Capture] Captured Owner=%s Capturer=%s"),
+		*GetNameSafe(GetOwner()), *GetNameSafe(Capturer));
 	return true;
 }
 
 /// <summary>捕獲解除を実行します。</summary>
 bool UCaptureComponent::Release()
 {
-	if (!bIsCaptured || GetOwner() == nullptr)return false;
+	if (!bIsCaptured || GetOwner() == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Capture] Release failed. Owner=%s IsCaptured=%s"),
+			*GetNameSafe(GetOwner()),
+			bIsCaptured ? TEXT("true") : TEXT("false"));
+		return false;
+	}
 	
 	bIsCaptured = false;
 
@@ -49,5 +63,6 @@ bool UCaptureComponent::Release()
 	}
 
 	OnReleased.Broadcast();
+	UE_LOG(LogTemp, Log, TEXT("[Capture] Released Owner=%s"), *GetNameSafe(GetOwner()));
 	return true;
 }

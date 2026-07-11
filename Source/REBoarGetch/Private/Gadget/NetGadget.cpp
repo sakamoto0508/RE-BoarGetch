@@ -15,7 +15,11 @@ ANetGadget::ANetGadget()
 
 void ANetGadget::Use_Implementation(AActor* TargetActor)
 {
-	if (!CanUse()) return;
+	if (!CanUse())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Net] Use blocked by cooldown"));
+		return;
+	}
 
 	//ネットの位置から範囲内のイノシシを探す。
 	FVector NetLocation = GetActorLocation();
@@ -45,12 +49,17 @@ void ANetGadget::CaptureBoarInRange(const FVector& CenterLocation)
     // 見つかった結果は OverlapResults に格納される
 	World->OverlapMultiByChannel(OverlapResults,CenterLocation,
 		FQuat::Identity,ECC_Pawn,sphere,QueryParams);
-	
+
+	int32 CapturedCount = 0;
 	for (const FOverlapResult& Result:OverlapResults)
 	{
 		if (ABoarBase* Boar=Cast<ABoarBase>(Result.GetActor()))
 		{
 			Boar->Capture();
+			++CapturedCount;
 		}
 	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Net] Overlap=%d Captured=%d Radius=%.1f"),
+		OverlapResults.Num(), CapturedCount, CaptureRadius);
 }

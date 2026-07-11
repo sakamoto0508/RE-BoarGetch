@@ -4,7 +4,9 @@
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputMappingContext.h"
 #include "Player/BoarPlayerCharacter.h"
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Constructor
@@ -33,6 +35,11 @@ void ABoarPlayerController::BeginPlay()
 		 * Priority数字が大きいほど優先順位が高くなる。
 		 */
 		InputSubsystem->AddMappingContext(DefaultMappingContext, 0);
+		UE_LOG(LogTemp, Log, TEXT("[Input] MappingContext added: %s"), *GetNameSafe(DefaultMappingContext));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Input] EnhancedInputLocalPlayerSubsystem is null"));
 	}
 }
 
@@ -138,6 +145,7 @@ void ABoarPlayerController::UseGadget()
 {
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
+		UE_LOG(LogTemp, Log, TEXT("[Input] UseGadget pressed"));
 		PlayerCharacter->UseGadget();
 	}
 }

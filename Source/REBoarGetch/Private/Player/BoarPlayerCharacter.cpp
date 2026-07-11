@@ -6,6 +6,8 @@
 #include "Component/GadgetComponent.h"
 #include "Component/CaptureComponent.h"
 
+#include "Engine/Engine.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -20,17 +22,27 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 	GadgetComponent = CreateDefaultSubobject<UGadgetComponent>(TEXT("GadgetComponent"));
 	CaptureComponent = CreateDefaultSubobject<UCaptureComponent>(TEXT("CaptureComponent"));
-	CameraComponentEx = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponentEx"));
-	CameraComponentEx->SetupAttachment(GetRootComponent());
+	//CameraComponentEx = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponentEx"));
+	//CameraComponentEx->SetupAttachment(GetRootComponent());
 
-	//-------------------------------------------------
-	// Character Movement
-	//-------------------------------------------------
-
-	bUseControllerRotationYaw = false;
-	GetCharacterMovement()->bOrientRotationToMovement = true;
+	/// TPS移動の基本設定
 	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	// SpringArm
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(GetRootComponent());
+	CameraBoom->TargetArmLength = CameraArmLength;
+	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->bEnableCameraLag = true;
+	CameraBoom->CameraLagSpeed = 10.0f;
+
+	// Camera
+	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	FollowCamera->bUsePawnControlRotation = false;
 	
 	GetCharacterMovement()->RotationRate = FRotator(0.f, RotationRate, 0.f);
 
@@ -45,23 +57,40 @@ void ABoarPlayerCharacter::BeginPlay()
 
 void ABoarPlayerCharacter::Move(const FVector2D& Input)
 {
-	if (Controller == nullptr)	return;
-	
-	//Y入力が0に近い場合は無視。
+	if (Controller == nullptr) return;
+
+	const FRotator ControlRot = Controller->GetControlRotation();
+	const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
+
+	const FVector Forward = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
+	const FVector Right   = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
+
 	if (!FMath::IsNearlyZero(Input.Y))
 	{
-		AddMovementInput(GetActorForwardVector(), Input.Y);
+		AddMovementInput(Forward, Input.Y);
 	}
-	
-	//X入力が0に近い場合は無視。
 	if (!FMath::IsNearlyZero(Input.X))
 	{
-		AddMovementInput(GetActorRightVector(), Input.X);
+		AddMovementInput(Right, Input.X);
 	}
 }
 
 void ABoarPlayerCharacter::Look(const FVector2D& Input)
 {
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			2.f,
+			FColor::Green,
+			FString::Printf(TEXT("Look X: %.2f  Y: %.2f"), Input.X, Input.Y)
+		);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Look X is false"));
+	}
+	
 	if (Controller == nullptr) return;
 	
 	if (!FMath::IsNearlyZero(Input.X))

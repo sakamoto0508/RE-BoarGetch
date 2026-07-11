@@ -16,5 +16,6 @@ void ACage::CollectBoar(ABoarBase* Boar)
 	
 	CapturedBoars.Add(Boar);
 	Boar->SetActorLocation(GetActorLocation());
+	UE_LOG(LogTemp, Log, TEXT("[Cage] Collected %s Total=%d"),
+		*GetNameSafe(Boar), CapturedBoars.Num());
 }
-

@@ -18,9 +18,18 @@ void UGadgetComponent::BeginPlay()
 	Super::BeginPlay();
 
 	OwningPawn = Cast<APawn>(GetOwner());
+	UE_LOG(LogTemp, Log, TEXT("[Gadget] Owner pawn: %s"), *GetNameSafe(OwningPawn.Get()));
+
 	if (DefaultGadgetClass)
 	{
-		EquipGadget(DefaultGadgetClass);
+		const bool bEquipped = EquipGadget(DefaultGadgetClass);
+		UE_LOG(LogTemp, Log, TEXT("[Gadget] Default equip %s: %s"),
+			bEquipped ? TEXT("success") : TEXT("failed"),
+			*GetNameSafe(DefaultGadgetClass.Get()));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] DefaultGadgetClass is not set"));
 	}
 }
 
@@ -67,8 +76,13 @@ void UGadgetComponent::UnequipGadget()
 /// </summary>
 bool UGadgetComponent::UseCurrentGadget()
 {
-	if (CurrentGadget == nullptr) return false;
+	if (CurrentGadget == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Use failed: CurrentGadget is null"));
+		return false;
+	}
 
+	UE_LOG(LogTemp, Log, TEXT("[Gadget] Use: %s"), *GetNameSafe(CurrentGadget.Get()));
 	CurrentGadget->Use(OwningPawn.Get());
 	return true;
 }
