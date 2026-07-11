@@ -1,36 +1,53 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Component/CaptureComponent.h"
+#include "AIController.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
-
-// Sets default values for this component's properties
 UCaptureComponent::UCaptureComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
+	PrimaryComponentTick.bCanEverTick = false;
 }
 
-
-// Called when the game starts
-void UCaptureComponent::BeginPlay()
+/// <summary>捕獲を実行します。</summary>
+bool UCaptureComponent::Capture(AActor* Capturer)
 {
-	Super::BeginPlay();
+	if (bIsCaptured || GetOwner() == nullptr) return false;
 
-	// ...
+	bIsCaptured = true;
+
+	if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+	{
+		if (UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement())
+		{
+			Move->StopMovementImmediately();
+			Move->DisableMovement();
+		}
+	}
+
+	if (AAIController* AI = Cast<AAIController>(Cast<APawn>(GetOwner()) ? Cast<APawn>(GetOwner())->GetController() : nullptr))
+	{
+		AI->StopMovement();
+	}
+
+	OnCaptured.Broadcast(Capturer);
+	return true;
+}
+
+/// <summary>捕獲解除を実行します。</summary>
+bool UCaptureComponent::Release()
+{
+	if (!bIsCaptured || GetOwner() == nullptr)return false;
 	
+	bIsCaptured = false;
+
+	if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+	{
+		if (UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement())
+		{
+			Move->SetMovementMode(MOVE_Walking);
+		}
+	}
+
+	OnReleased.Broadcast();
+	return true;
 }
-
-
-// Called every frame
-void UCaptureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-                                      FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
-}
-

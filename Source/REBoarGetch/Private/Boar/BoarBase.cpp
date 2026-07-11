@@ -2,11 +2,12 @@
 
 
 #include "Boar/BoarBase.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "Component/CaptureComponent.h"
 
 ABoarBase::ABoarBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	CaptureComponent = CreateDefaultSubobject<UCaptureComponent>(TEXT("CaptureComponent"));
 }
 
 void ABoarBase::BeginPlay()
@@ -16,11 +17,11 @@ void ABoarBase::BeginPlay()
 
 void ABoarBase::Capture()
 {
-	if (bIsCaptured)	return;
-	
-	// 捕獲状態にして、物理を止めます。
-	bIsCaptured = true;
-	GetCharacterMovement()->DisableMovement();
-	GetCharacterMovement()->StopMovementImmediately();
+	if (CaptureComponent == nullptr) return;
+	CaptureComponent->Capture(nullptr);
 }
 
+bool ABoarBase::IsCaptured() const
+{
+	return CaptureComponent != nullptr && CaptureComponent->IsCaptured();
+}

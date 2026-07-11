@@ -11,7 +11,7 @@
 /// Net / Radar / Jet などはここから派生します。
 /// </summary>
 UCLASS()
-class AGadgetBase : public AActor
+class REBOARGETCH_API AGadgetBase : public AActor
 {
 	GENERATED_BODY()
 

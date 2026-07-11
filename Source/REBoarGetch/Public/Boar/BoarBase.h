@@ -21,19 +21,25 @@ public:
 	/// <summary>
 	/// イノシシを捕まえます。
 	/// </summary>
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Boar")
+	UFUNCTION(BlueprintCallable, Category = "Boar")
 	void Capture();
 
 	/// <summary>
 	/// 捕まっているかどうかを返します。
 	/// </summary>
-	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Boar")
-	bool IsCaptured() const { return bIsCaptured; }
+	UFUNCTION(BlueprintPure, Category = "Boar")
+	bool IsCaptured() const;
 
 private:
 	/// <summary>
-	/// 捕獲状態です。
+	/// 捕獲状態を管理するコンポーネントです。
 	/// </summary>
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "REBoarGetch|Boar", meta = (AllowPrivateAccess = "true"))
-	bool bIsCaptured = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boar|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCaptureComponent> CaptureComponent;
+
+	/// <summary>
+	/// イノシシのステータスを管理するコンポーネントです。
+	/// </summary>
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boar|Components", meta = (AllowPrivateAccess = "true"))
+	//TObjectPtr<UBoarStatusComponent> StatusComponent;
 };

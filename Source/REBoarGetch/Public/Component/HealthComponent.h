@@ -26,48 +26,34 @@ public:
 	void TakeDamage(float DamageAmount);
 	
 	///<summary> HPを回復します	///</sumarry>
-	UFUNCTION(Blueprintable, Category="Health")
+	UFUNCTION(BlueprintCallable, Category="Health")
 	void Heal(float HealAmount);
 	
 	///<summary> HPReset	///</summary>
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void ResetHealth();
 	
-	/// <summary>
-	/// 死亡状態かどうかを返します。
-	/// </summary>
-	UFUNCTION(BlueprintPure, Category = "Boar|Health")
+	/// <summary> 死亡状態かどうかを返します。</summary>
+	UFUNCTION(BlueprintPure, Category = "Health")
 	bool IsDead() const;
 
-	/// <summary>
-	/// 現在 HP を返します。
-	/// </summary>
-	UFUNCTION(BlueprintPure, Category = "Boar|Health")
+	/// <summary> 現在 HP を返します。</summary>
+	UFUNCTION(BlueprintPure, Category = "Health")
 	float GetCurrentHealth() const { return CurrentHealth; }
 
-	/// <summary>
-	/// 最大 HP を返します。
-	/// </summary>
-	UFUNCTION(BlueprintPure, Category = "Boar|Health")
+	/// <summary> 最大 HP を返します。</summary>
+	UFUNCTION(BlueprintPure, Category = "Health")
 	float GetMaxHealth() const { return MaxHealth; }
 
-	/// <summary>
-	/// HP 変化通知イベントです。
-	/// UI 更新に使いやすくしてあります。
-	/// </summary>
-	UPROPERTY(BlueprintAssignable, Category = "Boar|Health")
+	/// <summary> HP変化通知イベントです。 UI 更新に使いやすくしてあります。</summary>
+	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnHealthChangedSignature OnHealthChanged;
 
-	/// <summary>
-	/// 死亡通知イベントです。
-	/// </summary>
-	UPROPERTY(BlueprintAssignable, Category = "Boar|Health")
+	/// <summary> 死亡通知イベントです。</summary>
+	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnDeathSignature OnDeath;
 
 protected:
-	/// <summary>
-	/// 初期化処理です。
-	/// </summary>
 	virtual void BeginPlay() override;
 
 private:
@@ -75,17 +61,13 @@ private:
 	/// 最大 HP です。
 	/// BP で調整できるようにしています。
 	/// </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|Health", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
 	float MaxHealth = 100.0f;
 
-	/// <summary>
-	/// 現在 HP です。
-	/// </summary>
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Health", meta = (AllowPrivateAccess = "true"))
+	/// <summary>現在 HP です。</summary>
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
 	float CurrentHealth = 100.0f;
 
-	/// <summary>
-	/// HP を範囲内に収めて通知します。
-	/// </summary>
+	/// <summary>HP を範囲内に収めて通知します。</summary>
 	void ClampAndBroadcastHealth();
 };
