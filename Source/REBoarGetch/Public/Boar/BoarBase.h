@@ -6,11 +6,11 @@
 #include "GameFramework/Character.h"
 #include "BoarBase.generated.h"
 
-class UBoarStatusComponent;
+//class UBoarStatusComponent;
 class UCaptureComponent;
 
 UCLASS()
-class ABoarBase : public ACharacter
+class REBOARGETCH_API ABoarBase : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -21,25 +21,19 @@ public:
 	/// <summary>
 	/// イノシシを捕まえます。
 	/// </summary>
-	UFUNCTION(BlueprintCallable, Category = "Boar")
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Boar")
 	void Capture();
 
 	/// <summary>
 	/// 捕まっているかどうかを返します。
 	/// </summary>
-	UFUNCTION(BlueprintPure, Category = "Boar")
+	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Boar")
 	bool IsCaptured() const { return bIsCaptured; }
 
 private:
 	/// <summary>
 	/// 捕獲状態です。
 	/// </summary>
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "REBoarGetch|Boar", meta = (AllowPrivateAccess = "true"))
 	bool bIsCaptured = false;
-
-	/// <summary>
-	/// イノシシのステータスを管理するコンポーネントです。
-	/// </summary>
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boar|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UBoarStatusComponent> StatusComponent;
 };

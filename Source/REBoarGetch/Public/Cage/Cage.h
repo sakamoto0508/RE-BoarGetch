@@ -6,8 +6,10 @@
 #include "GameFramework/Actor.h"
 #include "Cage.generated.h"
 
+class ABoarBase;
+
 UCLASS()
-class ACage : public AActor
+class REBOARGETCH_API ACage : public AActor
 {
 	GENERATED_BODY()
 	

@@ -6,7 +6,7 @@
 
 ABoarBase::ABoarBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 }
 
 void ABoarBase::BeginPlay()
@@ -18,9 +18,7 @@ void ABoarBase::Capture()
 {
 	if (bIsCaptured)	return;
 	
-	/// <summary>
-	/// 捕獲状態にして、物理を止めます。
-	/// </summary>
+	// 捕獲状態にして、物理を止めます。
 	bIsCaptured = true;
 	GetCharacterMovement()->DisableMovement();
 	GetCharacterMovement()->StopMovementImmediately();
