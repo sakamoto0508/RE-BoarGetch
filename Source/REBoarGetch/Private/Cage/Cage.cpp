@@ -1,27 +1,20 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Cage.h"
+#include "Cage/Cage.h"
+#include "Boar/BoarBase.h"
 
 // Sets default values
 ACage::ACage()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
+	PrimaryActorTick.bCanEverTick = false;
 }
 
-// Called when the game starts or when spawned
-void ACage::BeginPlay()
+void ACage::CollectBoar(ABoarBase* Boar)
 {
-	Super::BeginPlay();
+	if (Boar == nullptr)	return;
 	
-}
-
-// Called every frame
-void ACage::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
+	CapturedBoars.Add(Boar);
+	Boar->SetActorLocation(GetActorLocation());
 }
 
