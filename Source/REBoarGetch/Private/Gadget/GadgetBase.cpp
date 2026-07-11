@@ -1,20 +1,58 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Gadget/GadgetBase.h"
+#include "TimerManager.h"
+#include "Engine/World.h"
 
 // Sets default values
 AGadgetBase::AGadgetBase()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
-
 }
 
 // Called when the game starts or when spawned
 void AGadgetBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
+/// <summary>
+/// ガチャメカを使用します。
+/// 派生クラスで個別の効果を追加するための入口です。
+/// </summary>
+void AGadgetBase::Use_Implementation(AActor* TargetActor)
+{
+	if (!CanUse()) return;
+	
+	(void) TargetActor;
+	StartCooldown();
+}
+
+/// <summary>
+/// クールタイムを開始します。
+/// </summary>
+void AGadgetBase::StartCooldown()
+{
+	if (CooldownSeconds <= 0.0f) return;
+	
+	UWorld* World = GetWorld();
+	if (World == nullptr) return;
+	
+	bIsOnCooldown = true;
+	
+	World->GetTimerManager().ClearTimer(CooldownTimerHandle);
+	World->GetTimerManager().SetTimer(
+		CooldownTimerHandle,
+		this,
+		&AGadgetBase::FinishCooldown,
+		CooldownSeconds,
+		false
+	);
+}
+
+/// <summary>
+/// クールタイム終了処理です。
+/// </summary>
+void AGadgetBase::FinishCooldown()
+{
+	bIsOnCooldown = false;
+}

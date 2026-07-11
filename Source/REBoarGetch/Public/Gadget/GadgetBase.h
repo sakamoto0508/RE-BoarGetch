@@ -22,12 +22,14 @@ public:
 	/// <summary>
 	/// ガチャメカを使用します。
 	/// 派生クラスで実際の効果を実装します。
+	/// 一時的な参照なのでポインタ。
 	/// </summary>
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Boar|Gadget")
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Gadget")
 	void Use(AActor* TargetActor);
 
 	/// <summary>
 	/// C++ 側のデフォルト挙動です。
+	/// 一時的な参照なのでポインタ。
 	/// </summary>
 	virtual void Use_Implementation(AActor* TargetActor);
 
@@ -36,15 +38,16 @@ public:
 	/// </summary>
 	UFUNCTION(BlueprintPure, Category="Gadget")
 	bool CanUse() const { return !bIsOnCooldown; }
-	
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
+
 	/// <summary>
 	/// クールタイムです。
 	/// </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float CooldownSeconds = 1.0f;
 
 	/// <summary>
@@ -56,7 +59,7 @@ protected:
 	/// <summary>
 	/// クールタイム解除用のタイマーです。
 	/// </summary>
-	FTimerHandle CooldownTimerHandle;
+	FTimerHandle CooldownTimerHandle = FTimerHandle();	//明示的初期化。
 
 	/// <summary>
 	/// クールタイムを開始します。
