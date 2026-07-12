@@ -79,12 +79,6 @@ private:
 	TObjectPtr<UInputAction> GadgetAction;
 
 	///<summary>
-	///	インタラクト入力（Digital）
-	///</summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UInputAction> InteractAction;
-
-	///<summary>
 	///	ダッシュ入力（Digital/Hold）
 	///</summary>
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
@@ -145,14 +139,14 @@ private:
 	void JumpCompleted();
 
 	///<summary>
-	///	ガジェット使用入力を受け取る。
+	///	ガジェット使用開始入力を受け取る。
 	///</summary>
-	void UseGadget();
+	void GadgetStarted();
 
 	///<summary>
-	///	インタラクト入力を受け取る。
+	///	ガジェット使用終了入力を受け取る。
 	///</summary>
-	void Interact();
+	void GadgetCompleted();
 
 	///<summary>
 	///	ダッシュ開始入力を受け取る。

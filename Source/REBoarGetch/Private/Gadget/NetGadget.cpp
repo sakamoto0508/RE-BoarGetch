@@ -9,6 +9,8 @@
 ANetGadget::ANetGadget()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	// ネットは単発ガジェットとして扱う。
+	UseStyle = EGadgetUseStyle::OneShot;
 
 	CaptureCollision = CreateDefaultSubobject<USphereComponent>(TEXT("CaptureCollision"));
 	SetRootComponent(CaptureCollision);

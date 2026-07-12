@@ -12,10 +12,9 @@ ACage::ACage()
 
 void ACage::CollectBoar(ABoarBase* Boar)
 {
-	if (Boar == nullptr)	return;
-	
+	if (Boar == nullptr) return;
+
 	CapturedBoars.Add(Boar);
 	Boar->SetActorLocation(GetActorLocation());
-	UE_LOG(LogTemp, Log, TEXT("[Cage] Collected %s Total=%d"),
-		*GetNameSafe(Boar), CapturedBoars.Num());
+	UE_LOG(LogTemp, Log, TEXT("[Cage] Collected %s Total=%d"), *GetNameSafe(Boar), CapturedBoars.Num());
 }

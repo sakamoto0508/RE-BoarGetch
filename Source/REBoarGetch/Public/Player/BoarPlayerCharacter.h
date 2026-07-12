@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Gadget/GadgetBase.h"
 #include "GameFramework/Character.h"
 #include "BoarPlayerCharacter.generated.h"
 
@@ -25,7 +26,6 @@ enum class EPlayerActionState : uint8
 	Fall,
 	Stun,
 	UseGadget,
-	Interact,
 	Capture
 };
 
@@ -42,6 +42,14 @@ protected:
 
 	virtual void BeginPlay() override;
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
+
+	/// <summary>ガジェット使用開始時のアニメ通知入口です（AnimBP側で実装）。</summary>
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Gadget")
+	void OnGadgetUseStarted(EGadgetUseStyle UseStyle, AGadgetBase* Gadget);
+
+	/// <summary>ガジェット使用終了時のアニメ通知入口です（AnimBP側で実装）。</summary>
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Gadget")
+	void OnGadgetUseStopped(EGadgetUseStyle UseStyle, AGadgetBase* Gadget);
 
 public:
 
@@ -66,11 +74,14 @@ public:
 	///<summary> ガジェットを使用。///</summary>
 	void UseGadget();
 
+	///<summary> ガジェット使用開始。///</summary>
+	void StartGadgetUse();
+
+	///<summary> ガジェット使用終了。///</summary>
+	void StopGadgetUse();
+
 	///<summary> 指定スロットのガジェットへ切替。///</summary>
 	void SwitchGadgetSlot(int32 SlotIndex);
-
-	///<summary> 前方のオブジェクトとインタラクトします。///</summary>
-	void Interact();
 
 	///<summary> 捕獲開始。///</summary>
 	void Capture();
@@ -101,6 +112,20 @@ public:
 	EPlayerActionState GetPlayerActionState() const
 	{
 		return CurrentActionState;
+	}
+
+	/// <summary> ガジェット使用中かを返します。 </summary>
+	UFUNCTION(BlueprintPure, Category = "Player|Gadget")
+	bool IsGadgetInUse() const
+	{
+		return bIsGadgetInUse;
+	}
+
+	/// <summary> 現在ガジェットの使用タイプを返します。 </summary>
+	UFUNCTION(BlueprintPure, Category = "Player|Gadget")
+	EGadgetUseStyle GetCurrentGadgetUseStyle() const
+	{
+		return CurrentGadgetUseStyle;
 	}
 
 	// UFUNCTION(BlueprintPure, Category = "Player")
@@ -187,14 +212,6 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float ContactDamage = 1.0f;
 
-	///<summary> インタラクト判定距離です。///</summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float InteractDistance = 250.0f;
-
-	///<summary> インタラクト判定半径です。///</summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float InteractRadius = 40.0f;
-	
 	///<summary> TPS用のカメラブームです。 </summary>
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -211,7 +228,9 @@ private:
 	bool bIsDashing = false;
 	bool bIsStunned = false;
 	bool bIsInvincible = false;
+	bool bIsGadgetInUse = false;
 	bool bHadMoveInput = false;
+	EGadgetUseStyle CurrentGadgetUseStyle = EGadgetUseStyle::OneShot;
 	EPlayerActionState CurrentActionState = EPlayerActionState::Idle;
 	FTimerHandle StunTimerHandle;
 	FTimerHandle InvincibleTimerHandle;

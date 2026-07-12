@@ -1,4 +1,5 @@
 #include "Gadget/GadgetBase.h"
+#include "Interaction/AttackActivatable.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
 
@@ -22,6 +23,46 @@ void AGadgetBase::Use_Implementation(AActor* TargetActor)
 	
 	(void) TargetActor;
 	StartCooldown();
+}
+
+/// <summary>
+/// 使用開始時の共通処理です。
+/// 既存ガジェット互換のため、内部でUse()を呼び出して効果処理を実行します。
+/// </summary>
+void AGadgetBase::BeginUse_Implementation(AActor* TargetActor)
+{
+	if (!CanUse() || bIsUsing)
+	{
+		return;
+	}
+
+	bIsUsing = true;
+	Use(TargetActor);
+
+	// OneShotは開始と同時に使用完了扱いにする。
+	if (UseStyle == EGadgetUseStyle::OneShot)
+	{
+		bIsUsing = false;
+	}
+}
+
+/// <summary>
+/// 使用終了時の共通処理です。
+/// Hold系は終了時点でクールタイムを開始します。
+/// </summary>
+void AGadgetBase::EndUse_Implementation(AActor* TargetActor)
+{
+	(void)TargetActor;
+	if (!bIsUsing)
+	{
+		return;
+	}
+
+	bIsUsing = false;
+	if (UseStyle == EGadgetUseStyle::Hold && !bIsOnCooldown)
+	{
+		StartCooldown();
+	}
 }
 
 /// <summary>
@@ -52,4 +93,17 @@ void AGadgetBase::StartCooldown()
 void AGadgetBase::FinishCooldown()
 {
 	bIsOnCooldown = false;
+}
+
+/// <summary>
+/// 攻撃ヒットしたActorが攻撃起動I/Fを実装していれば通知を送ります。
+/// </summary>
+void AGadgetBase::TryActivateByAttack(AActor* HitActor, AActor* AttackInstigator)
+{
+	if (HitActor == nullptr || !HitActor->GetClass()->ImplementsInterface(UAttackActivatable::StaticClass()))
+	{
+		return;
+	}
+
+	IAttackActivatable::Execute_ActivateByAttack(HitActor, AttackInstigator, this);
 }

@@ -78,14 +78,39 @@ void UGadgetComponent::UnequipGadget()
 /// </summary>
 bool UGadgetComponent::UseCurrentGadget()
 {
+	// 旧APIは互換維持のため開始APIへ委譲する。
+	return BeginUseCurrentGadget();
+}
+
+/// <summary>
+/// 現在装備中のガジェット使用を開始します。
+/// </summary>
+bool UGadgetComponent::BeginUseCurrentGadget()
+{
 	if (CurrentGadget == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Use failed: CurrentGadget is null"));
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] BeginUse failed: CurrentGadget is null"));
 		return false;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[Gadget] Use: %s"), *GetNameSafe(CurrentGadget.Get()));
-	CurrentGadget->Use(OwningPawn.Get());
+	UE_LOG(LogTemp, Log, TEXT("[Gadget] BeginUse: %s"), *GetNameSafe(CurrentGadget.Get()));
+	CurrentGadget->BeginUse(OwningPawn.Get());
+	return true;
+}
+
+/// <summary>
+/// 現在装備中のガジェット使用を終了します。
+/// </summary>
+bool UGadgetComponent::EndUseCurrentGadget()
+{
+	if (CurrentGadget == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] EndUse failed: CurrentGadget is null"));
+		return false;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Gadget] EndUse: %s"), *GetNameSafe(CurrentGadget.Get()));
+	CurrentGadget->EndUse(OwningPawn.Get());
 	return true;
 }
 
@@ -172,4 +197,9 @@ void UGadgetComponent::InitializeDefaultSlots()
 	{
 		EquippedGadgetSlots[0] = DefaultGadgetClass;
 	}
+}
+
+EGadgetUseStyle UGadgetComponent::GetCurrentGadgetUseStyle() const
+{
+	return CurrentGadget ? CurrentGadget->GetUseStyle() : EGadgetUseStyle::OneShot;
 }

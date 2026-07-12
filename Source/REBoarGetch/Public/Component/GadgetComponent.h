@@ -8,6 +8,7 @@
 
 class AGadgetBase;
 class APawn;
+enum class EGadgetUseStyle : uint8;
 
 /// <summary>
 /// ガチャメカの装備・切り替え・使用をまとめるコンポーネントです。
@@ -41,6 +42,20 @@ public:
 	/// </summary>
 	UFUNCTION(BlueprintCallable, Category = "Gadget")
 	bool UseCurrentGadget();
+
+	/// <summary>
+	/// 現在装備中のガジェット使用を開始します。
+	/// Hold系はこの開始状態を維持します。
+	/// </summary>
+	UFUNCTION(BlueprintCallable, Category = "Gadget")
+	bool BeginUseCurrentGadget();
+
+	/// <summary>
+	/// 現在装備中のガジェット使用を終了します。
+	/// OneShotは通常ほぼ何もしません。
+	/// </summary>
+	UFUNCTION(BlueprintCallable, Category = "Gadget")
+	bool EndUseCurrentGadget();
 	
 	/// <summary>
 	/// ガチャメカを切り替えます。
@@ -70,6 +85,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	int32 GetCurrentGadgetSlotIndex() const { return CurrentGadgetSlotIndex; }
+
+	/// <summary>
+	/// 現在ガジェットの使用タイプを返します。
+	/// 未装備時は OneShot 扱いを返します。
+	/// </summary>
+	UFUNCTION(BlueprintPure, Category = "Gadget")
+	EGadgetUseStyle GetCurrentGadgetUseStyle() const;
 	
 protected:
 	// Called when the game starts

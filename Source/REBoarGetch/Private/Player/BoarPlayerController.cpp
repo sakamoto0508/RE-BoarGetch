@@ -96,17 +96,10 @@ void ABoarPlayerController::SetupInputComponent()
 
 	if (GadgetAction)
 	{
-		//Startedボタンを押した瞬間
-		EnhancedInput->BindAction(GadgetAction,ETriggerEvent::Started,this,&ABoarPlayerController::UseGadget);
-	}
-
-	////////////////////////////////////////////////////////////
-	// Interact
-	////////////////////////////////////////////////////////////
-
-	if (InteractAction)
-	{
-		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &ABoarPlayerController::Interact);
+		// Started/Completed/Canceled を分けて、ガジェット使用ライフサイクルを管理する。
+		EnhancedInput->BindAction(GadgetAction, ETriggerEvent::Started, this, &ABoarPlayerController::GadgetStarted);
+		EnhancedInput->BindAction(GadgetAction, ETriggerEvent::Completed, this, &ABoarPlayerController::GadgetCompleted);
+		EnhancedInput->BindAction(GadgetAction, ETriggerEvent::Canceled, this, &ABoarPlayerController::GadgetCompleted);
 	}
 
 	////////////////////////////////////////////////////////////
@@ -190,20 +183,21 @@ void ABoarPlayerController::JumpCompleted()
 	}
 }
 
-void ABoarPlayerController::UseGadget()
+void ABoarPlayerController::GadgetStarted()
 {
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
-		UE_LOG(LogTemp, Log, TEXT("[Input] UseGadget pressed"));
-		PlayerCharacter->UseGadget();
+		UE_LOG(LogTemp, Log, TEXT("[Input] Gadget started"));
+		PlayerCharacter->StartGadgetUse();
 	}
 }
 
-void ABoarPlayerController::Interact()
+void ABoarPlayerController::GadgetCompleted()
 {
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
-		PlayerCharacter->Interact();
+		UE_LOG(LogTemp, Log, TEXT("[Input] Gadget completed"));
+		PlayerCharacter->StopGadgetUse();
 	}
 }
 

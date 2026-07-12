@@ -7,7 +7,6 @@
 #include "Component/HealthComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Component/CaptureComponent.h"
-#include "Interaction/Interactable.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -150,12 +149,59 @@ void ABoarPlayerCharacter::StopJump()
 // 現在選択中のガジェットを使用する
 void ABoarPlayerCharacter::UseGadget()
 {
+	// 旧API互換のため、使用開始へ委譲する。
+	StartGadgetUse();
+}
+
+// ガジェット使用を開始する
+void ABoarPlayerCharacter::StartGadgetUse()
+{
 	if (GadgetComponent && !IsActionLocked())
 	{
+		if (bIsGadgetInUse)
+		{
+			return;
+		}
+
+		AGadgetBase* CurrentGadget = GadgetComponent->GetCurrentGadget();
+		if (CurrentGadget == nullptr)
+		{
+			return;
+		}
+
+		CurrentGadgetUseStyle = CurrentGadget->GetUseStyle();
+		if (!GadgetComponent->BeginUseCurrentGadget())
+		{
+			return;
+		}
+
+		bIsGadgetInUse = true;
 		SetPlayerActionState(EPlayerActionState::UseGadget);
-		GadgetComponent->UseCurrentGadget();
+		OnGadgetUseStarted(CurrentGadgetUseStyle, CurrentGadget);
+
+		// OneShotは押下時に完結するため、使用中フラグを即時解除する。
+		if (CurrentGadgetUseStyle == EGadgetUseStyle::OneShot)
+		{
+			bIsGadgetInUse = false;
+		}
+
 		UpdateGroundActionState(bHadMoveInput);
 	}
+}
+
+// ガジェット使用を終了する
+void ABoarPlayerCharacter::StopGadgetUse()
+{
+	if (GadgetComponent == nullptr || !bIsGadgetInUse)
+	{
+		return;
+	}
+
+	AGadgetBase* CurrentGadget = GadgetComponent->GetCurrentGadget();
+	GadgetComponent->EndUseCurrentGadget();
+	OnGadgetUseStopped(CurrentGadgetUseStyle, CurrentGadget);
+	bIsGadgetInUse = false;
+	UpdateGroundActionState(bHadMoveInput);
 }
 
 // ガジェットスロットを切り替える
@@ -163,55 +209,14 @@ void ABoarPlayerCharacter::SwitchGadgetSlot(int32 SlotIndex)
 {
 	if (GadgetComponent && !IsActionLocked())
 	{
+		// 継続使用中に装備を切り替える際は先に停止する。
+		if (bIsGadgetInUse)
+		{
+			StopGadgetUse();
+		}
+
 		GadgetComponent->SwitchGadgetBySlot(SlotIndex);
 	}
-}
-
-// インタラクト可能なオブジェクトを探して実行する
-void ABoarPlayerCharacter::Interact()
-{
-	if (IsActionLocked())	return;
-	
-	UWorld* World = GetWorld();
-	if (World == nullptr)	return;
-
-	SetPlayerActionState(EPlayerActionState::Interact);
-	
-	// カメラ位置を始点、カメラの前方向を判定方向とする
-	const FVector Start = FollowCamera ? FollowCamera->GetComponentLocation() : GetActorLocation();
-	const FVector Direction = FollowCamera ? FollowCamera->GetForwardVector() : GetActorForwardVector();
-	const FVector End = Start + Direction * InteractDistance;
-
-	// 自分自身には当たらないようにする
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(this);
-
-	// 前方へSphereSweepを行い、Interact対象を検索する
-	FHitResult HitResult;
-	const bool bHit = World->SweepSingleByChannel(
-		HitResult,
-		Start,
-		End,
-		FQuat::Identity,
-		ECC_Visibility,
-		FCollisionShape::MakeSphere(InteractRadius),
-		QueryParams
-	);
-
-	if (!bHit)
-	{
-		UpdateGroundActionState(bHadMoveInput);
-		return;
-	}
-	
-	// Interactableインターフェースを実装しているActorならInteractを呼び出す
-	AActor* HitActor = HitResult.GetActor();
-	if (HitActor && HitActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
-	{
-		IInteractable::Execute_Interact(HitActor, this);
-	}
-
-	UpdateGroundActionState(bHadMoveInput);
 }
 
 void ABoarPlayerCharacter::Capture()
@@ -285,6 +290,7 @@ void ABoarPlayerCharacter::BeginStun()
 {
 	bIsStunned = true;
 	SetPlayerActionState(EPlayerActionState::Stun);
+	StopGadgetUse();
 	StopDash();
 	
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
