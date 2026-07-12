@@ -12,6 +12,7 @@
 #include "EnhancedInputComponent.h"
 #include "CombatLifeBar.h"
 #include "Engine/DamageEvents.h"
+#include "Interaction/AttackActivatable.h"
 #include "TimerManager.h"
 #include "Engine/LocalPlayer.h"
 #include "CombatPlayerController.h"
@@ -291,6 +292,15 @@ void ACombatCharacter::DoAttackTrace(FName DamageSourceBone)
 		// iterate over each object hit
 		for (const FHitResult& CurrentHit : OutHits)
 		{
+			// 攻撃ヒット時に、起動可能オブジェクト（スイッチ等）へ通知する。
+			if (AActor* HitActor = CurrentHit.GetActor())
+			{
+				if (HitActor->GetClass()->ImplementsInterface(UAttackActivatable::StaticClass()))
+				{
+					IAttackActivatable::Execute_ActivateByAttack(HitActor, this, this);
+				}
+			}
+
 			// check if we've hit a damageable actor
 			ICombatDamageable* Damageable = Cast<ICombatDamageable>(CurrentHit.GetActor());
 
@@ -565,4 +575,3 @@ void ACombatCharacter::NotifyControllerChanged()
 		PC->SetRespawnTransform(GetActorTransform());
 	}
 }
-
