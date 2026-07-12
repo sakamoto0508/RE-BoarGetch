@@ -99,6 +99,55 @@ void ABoarPlayerController::SetupInputComponent()
 		//Startedボタンを押した瞬間
 		EnhancedInput->BindAction(GadgetAction,ETriggerEvent::Started,this,&ABoarPlayerController::UseGadget);
 	}
+
+	////////////////////////////////////////////////////////////
+	// Interact
+	////////////////////////////////////////////////////////////
+
+	if (InteractAction)
+	{
+		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &ABoarPlayerController::Interact);
+	}
+
+	////////////////////////////////////////////////////////////
+	// Dash
+	////////////////////////////////////////////////////////////
+
+	if (DashAction)
+	{
+		EnhancedInput->BindAction(DashAction, ETriggerEvent::Started, this, &ABoarPlayerController::DashStarted);
+		EnhancedInput->BindAction(DashAction, ETriggerEvent::Completed, this, &ABoarPlayerController::DashCompleted);
+		// フォーカス外れ等で入力がキャンセルされた場合も必ずダッシュ解除する。
+		EnhancedInput->BindAction(DashAction, ETriggerEvent::Canceled, this, &ABoarPlayerController::DashCompleted);
+	}
+
+	////////////////////////////////////////////////////////////
+	// Gadget Slot Switch (R1 + face button)
+	////////////////////////////////////////////////////////////
+
+	if (GadgetModifierAction)
+	{
+		EnhancedInput->BindAction(GadgetModifierAction, ETriggerEvent::Started, this, &ABoarPlayerController::GadgetModifierStarted);
+		EnhancedInput->BindAction(GadgetModifierAction, ETriggerEvent::Completed, this, &ABoarPlayerController::GadgetModifierCompleted);
+		EnhancedInput->BindAction(GadgetModifierAction, ETriggerEvent::Canceled, this, &ABoarPlayerController::GadgetModifierCompleted);
+	}
+
+	if (GadgetSlot1Action)
+	{
+		EnhancedInput->BindAction(GadgetSlot1Action, ETriggerEvent::Started, this, &ABoarPlayerController::SwitchGadgetSlot1);
+	}
+	if (GadgetSlot2Action)
+	{
+		EnhancedInput->BindAction(GadgetSlot2Action, ETriggerEvent::Started, this, &ABoarPlayerController::SwitchGadgetSlot2);
+	}
+	if (GadgetSlot3Action)
+	{
+		EnhancedInput->BindAction(GadgetSlot3Action, ETriggerEvent::Started, this, &ABoarPlayerController::SwitchGadgetSlot3);
+	}
+	if (GadgetSlot4Action)
+	{
+		EnhancedInput->BindAction(GadgetSlot4Action, ETriggerEvent::Started, this, &ABoarPlayerController::SwitchGadgetSlot4);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,6 +196,73 @@ void ABoarPlayerController::UseGadget()
 	{
 		UE_LOG(LogTemp, Log, TEXT("[Input] UseGadget pressed"));
 		PlayerCharacter->UseGadget();
+	}
+}
+
+void ABoarPlayerController::Interact()
+{
+	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
+	{
+		PlayerCharacter->Interact();
+	}
+}
+
+void ABoarPlayerController::DashStarted()
+{
+	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
+	{
+		PlayerCharacter->StartDash();
+	}
+}
+
+void ABoarPlayerController::DashCompleted()
+{
+	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
+	{
+		PlayerCharacter->StopDash();
+	}
+}
+
+void ABoarPlayerController::GadgetModifierStarted()
+{
+	bIsGadgetModifierHeld = true;
+}
+
+void ABoarPlayerController::GadgetModifierCompleted()
+{
+	bIsGadgetModifierHeld = false;
+}
+
+void ABoarPlayerController::SwitchGadgetSlot1()
+{
+	TrySwitchGadgetSlot(0);
+}
+
+void ABoarPlayerController::SwitchGadgetSlot2()
+{
+	TrySwitchGadgetSlot(1);
+}
+
+void ABoarPlayerController::SwitchGadgetSlot3()
+{
+	TrySwitchGadgetSlot(2);
+}
+
+void ABoarPlayerController::SwitchGadgetSlot4()
+{
+	TrySwitchGadgetSlot(3);
+}
+
+void ABoarPlayerController::TrySwitchGadgetSlot(int32 SlotIndex)
+{
+	if (!bIsGadgetModifierHeld)
+	{
+		return;
+	}
+
+	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
+	{
+		PlayerCharacter->SwitchGadgetSlot(SlotIndex);
 	}
 }
 

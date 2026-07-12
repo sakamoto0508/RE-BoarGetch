@@ -78,6 +78,48 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetAction;
 
+	///<summary>
+	///	インタラクト入力（Digital）
+	///</summary>
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInputAction> InteractAction;
+
+	///<summary>
+	///	ダッシュ入力（Digital/Hold）
+	///</summary>
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInputAction> DashAction;
+
+	///<summary>
+	///	ガジェット切替モディファイア入力（R1想定）
+	///</summary>
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInputAction> GadgetModifierAction;
+
+	///<summary>
+	///	ガジェットスロット1入力（□想定）
+	///</summary>
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInputAction> GadgetSlot1Action;
+
+	///<summary>
+	///	ガジェットスロット2入力（△想定）
+	///</summary>
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInputAction> GadgetSlot2Action;
+
+	///<summary>
+	///	ガジェットスロット3入力（○想定）
+	///</summary>
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInputAction> GadgetSlot3Action;
+
+	///<summary>
+	///	ガジェットスロット4入力（×想定）
+	///</summary>
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInputAction> GadgetSlot4Action;
+
 	//-------------------------------------------------
 	// Input Functions
 	//-------------------------------------------------
@@ -107,6 +149,29 @@ private:
 	///</summary>
 	void UseGadget();
 
+	///<summary>
+	///	インタラクト入力を受け取る。
+	///</summary>
+	void Interact();
+
+	///<summary>
+	///	ダッシュ開始入力を受け取る。
+	///</summary>
+	void DashStarted();
+
+	///<summary>
+	///	ダッシュ終了入力を受け取る。
+	///</summary>
+	void DashCompleted();
+
+	void GadgetModifierStarted();
+	void GadgetModifierCompleted();
+	void SwitchGadgetSlot1();
+	void SwitchGadgetSlot2();
+	void SwitchGadgetSlot3();
+	void SwitchGadgetSlot4();
+	void TrySwitchGadgetSlot(int32 SlotIndex);
+
 	//-------------------------------------------------
 	// Utility
 	//-------------------------------------------------
@@ -119,4 +184,6 @@ private:
 	///	現在操作しているPlayerCharacterを取得。
 	///</summary>
 	ABoarPlayerCharacter* GetBoarCharacter() const;
+
+	bool bIsGadgetModifierHeld = false;
 };
