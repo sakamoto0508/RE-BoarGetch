@@ -9,10 +9,10 @@
 UGadgetComponent::UGadgetComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	EquippedGadgetSlots.SetNum(MaxGadgetSlots);
 }
 
 
-// Called when the game starts
 void UGadgetComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -20,16 +20,18 @@ void UGadgetComponent::BeginPlay()
 	OwningPawn = Cast<APawn>(GetOwner());
 	UE_LOG(LogTemp, Log, TEXT("[Gadget] Owner pawn: %s"), *GetNameSafe(OwningPawn.Get()));
 
-	if (DefaultGadgetClass)
+	InitializeDefaultSlots();
+
+	const int32 FirstSlot = FindFirstValidSlot();
+	if (FirstSlot != INDEX_NONE)
 	{
-		const bool bEquipped = EquipGadget(DefaultGadgetClass);
-		UE_LOG(LogTemp, Log, TEXT("[Gadget] Default equip %s: %s"),
-			bEquipped ? TEXT("success") : TEXT("failed"),
-			*GetNameSafe(DefaultGadgetClass.Get()));
+		const bool bEquipped = SwitchGadgetBySlot(FirstSlot);
+		UE_LOG(LogTemp, Log, TEXT("[Gadget] Initial slot %d equip: %s"),
+			FirstSlot, bEquipped ? TEXT("success") : TEXT("failed"));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] DefaultGadgetClass is not set"));
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] No valid gadget slot is configured"));
 	}
 }
 
@@ -95,4 +97,79 @@ bool UGadgetComponent::SwitchGadget(TSubclassOf<AGadgetBase> NewGadgetClass)
 	if (NewGadgetClass == nullptr) return false;
 	
 	return EquipGadget(NewGadgetClass);
+}
+
+bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> GadgetClass)
+{
+	if (!IsValidSlotIndex(SlotIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Invalid slot index: %d"), SlotIndex);
+		return false;
+	}
+
+	EquippedGadgetSlots[SlotIndex] = GadgetClass;
+	return true;
+}
+
+bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
+{
+	if (!IsValidSlotIndex(SlotIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Switch failed: invalid slot index %d"), SlotIndex);
+		return false;
+	}
+
+	TSubclassOf<AGadgetBase> SlotClass = EquippedGadgetSlots[SlotIndex];
+	if (SlotClass == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Switch failed: slot %d is empty"), SlotIndex);
+		return false;
+	}
+
+	if (!EquipGadget(SlotClass))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Switch failed: slot %d equip error"), SlotIndex);
+		return false;
+	}
+
+	CurrentGadgetSlotIndex = SlotIndex;
+	UE_LOG(LogTemp, Log, TEXT("[Gadget] Switched to slot %d (%s)"), SlotIndex, *GetNameSafe(SlotClass.Get()));
+	return true;
+}
+
+bool UGadgetComponent::IsValidSlotIndex(int32 SlotIndex) const
+{
+	return SlotIndex >= 0 && SlotIndex < MaxGadgetSlots && EquippedGadgetSlots.IsValidIndex(SlotIndex);
+}
+
+int32 UGadgetComponent::FindFirstValidSlot() const
+{
+	for (int32 SlotIndex = 0; SlotIndex < EquippedGadgetSlots.Num(); ++SlotIndex)
+	{
+		if (EquippedGadgetSlots[SlotIndex] != nullptr)
+		{
+			return SlotIndex;
+		}
+	}
+
+	return INDEX_NONE;
+}
+
+void UGadgetComponent::InitializeDefaultSlots()
+{
+	EquippedGadgetSlots.SetNum(MaxGadgetSlots);
+	for (int32 i = 0; i < MaxGadgetSlots; ++i)
+	{
+		EquippedGadgetSlots[i] = nullptr;
+	}
+
+	for (int32 i = 0; i < DefaultGadgetSlots.Num() && i < MaxGadgetSlots; ++i)
+	{
+		EquippedGadgetSlots[i] = DefaultGadgetSlots[i];
+	}
+
+	if (DefaultGadgetSlots.Num() == 0 && DefaultGadgetClass)
+	{
+		EquippedGadgetSlots[0] = DefaultGadgetClass;
+	}
 }

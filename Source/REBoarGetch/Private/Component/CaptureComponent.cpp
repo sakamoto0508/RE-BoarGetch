@@ -20,7 +20,7 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 	}
 
 	bIsCaptured = true;
-
+	
 	if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
 	{
 		if (UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement())

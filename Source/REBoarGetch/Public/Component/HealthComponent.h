@@ -58,15 +58,15 @@ protected:
 
 private:
 	/// <summary>
-	/// 最大 HP です。
+	/// 最大 HP です（プレイヤー仕様に合わせて5スタック想定）。
 	/// BP で調整できるようにしています。
 	/// </summary>
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
-	float MaxHealth = 100.0f;
+	float MaxHealth = 5.0f;
 
 	/// <summary>現在 HP です。</summary>
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
-	float CurrentHealth = 100.0f;
+	float CurrentHealth = 5.0f;
 
 	/// <summary>HP を範囲内に収めて通知します。</summary>
 	void ClampAndBroadcastHealth();
