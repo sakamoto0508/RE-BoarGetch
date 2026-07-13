@@ -3,6 +3,7 @@
 
 #include "Cage/Cage.h"
 #include "Boar/BoarBase.h"
+#include "AIController.h"
 
 // Sets default values
 ACage::ACage()
@@ -17,4 +18,14 @@ void ACage::CollectBoar(ABoarBase* Boar)
 	CapturedBoars.Add(Boar);
 	Boar->SetActorLocation(GetActorLocation());
 	UE_LOG(LogTemp, Log, TEXT("[Cage] Collected %s Total=%d"), *GetNameSafe(Boar), CapturedBoars.Num());
+}
+
+void ACage::ApplyDamage(float Damage)
+{
+	HP -= Damage;
+
+	if (HP <= 0.f)
+	{
+		Destroy();
+	}
 }

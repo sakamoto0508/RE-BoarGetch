@@ -88,7 +88,8 @@ protected:
 	/// <summary>
 	/// クールタイムです。
 	/// </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float CooldownSeconds = 1.0f;
 
 	/// <summary>
@@ -106,7 +107,7 @@ protected:
 	/// <summary>
 	/// クールタイム解除用のタイマーです。
 	/// </summary>
-	FTimerHandle CooldownTimerHandle = FTimerHandle();	//明示的初期化。
+	FTimerHandle CooldownTimerHandle = FTimerHandle(); //明示的初期化。
 
 	/// <summary>
 	/// クールタイムを開始します。

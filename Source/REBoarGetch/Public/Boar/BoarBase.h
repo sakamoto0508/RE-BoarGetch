@@ -220,12 +220,7 @@ private:
 	/// <summary> 巡回パスです。 </summary>
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Boar|AI", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<APatrolPath> PatrolPath;
-
-	/// <summary> 現在の巡回ポイント </summary>
-	UPROPERTY(VisibleAnywhere)
-	int32 CurrentPatrolIndex = 0;
-
-
+	
 	/// <summary>
 	/// イノシシのステータスを管理するコンポーネントです。
 	/// </summary>

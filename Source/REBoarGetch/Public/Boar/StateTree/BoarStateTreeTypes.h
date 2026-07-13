@@ -60,8 +60,12 @@ struct FBoarStateTreeInstanceData
 	/// <summary>巡回地点です。</summary>
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	FVector PatrolLocation = FVector::ZeroVector;
-	
+
 	/// <summary>現在の巡回ポイント番号です。</summary>
 	UPROPERTY(VisibleAnywhere, Category = "Output")
 	int32 CurrentPatrolIndex = 0;
+
+	/// <summary> プレイヤーから逃げる場所。</summary>
+	UPROPERTY(VisibleAnywhere, Category="Output")
+	FVector EscapeLocation = FVector::ZeroVector;
 };

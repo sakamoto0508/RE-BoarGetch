@@ -42,7 +42,7 @@ private:
 	void CaptureOverlappingBoars();
 
 	/// <summary> ネットの捕獲範囲です。</summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true", ClampMin = "100.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	float CaptureRadius = 300.0f;
 
 	/// <summary> 捕獲判定用のコリジョンです。</summary>
