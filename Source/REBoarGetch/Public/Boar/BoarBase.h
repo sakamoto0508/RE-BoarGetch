@@ -10,6 +10,7 @@
 class UCaptureComponent;
 class ACage;
 class APawn;
+class APatrolPath;
 
 UENUM(BlueprintType)
 enum class EBoarArchetype : uint8
@@ -26,11 +27,11 @@ class REBOARGETCH_API ABoarBase : public ACharacter
 {
 	GENERATED_BODY()
 
-public:	
+public:
 	ABoarBase();
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
-	
+
 	/// <summary>
 	/// イノシシを捕まえます。
 	/// </summary>
@@ -48,7 +49,7 @@ public:
 	/// </summary>
 	UFUNCTION(BlueprintCallable, Category = "Boar|AI")
 	bool RefreshPerceptionTargets();
-	
+
 	/// <summary> 現在認識中のプレイヤーです。 </summary>
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	APawn* GetPerceivedPlayer() const { return PerceivedPlayer; }
@@ -113,6 +114,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool IsStaminaRecovering() const { return bIsRecoveringStamina; }
 
+	/// <summary> パトロールパスを返します。 </summary>
+	UFUNCTION(BlueprintPure)
+	APatrolPath* GetPatrolPath() const { return PatrolPath; }
+
 private:
 	/// <summary> 種別ごとの共通AIパラメータを適用します。 </summary>
 	void ApplyArchetypeDefaults();
@@ -131,27 +136,33 @@ private:
 	EBoarArchetype BoarArchetype = EBoarArchetype::Normal;
 
 	/// <summary> 視認距離です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float SightRange = 1200.0f;
 
 	/// <summary> 追跡に入る目安距離です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float ChaseRange = 900.0f;
 
 	/// <summary> 逃走を優先する目安距離です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float EscapeRange = 500.0f;
 
 	/// <summary> 檻を狙う優先度係数です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float CagePriorityWeight = 1.0f;
 
 	/// <summary> プレイヤーを狙う優先度係数です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float PlayerPriorityWeight = 1.0f;
 
 	/// <summary> 逃走を選ぶ優先度係数です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float EscapePriorityWeight = 1.0f;
 
 	/// <summary> 檻を攻撃対象に含めるかです。 </summary>
@@ -163,19 +174,23 @@ private:
 	bool bUseStamina = false;
 
 	/// <summary> 最大スタミナです。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float MaxStamina = 100.0f;
 
 	/// <summary> 走行時のスタミナ消費速度です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float StaminaDrainPerSecond = 20.0f;
 
 	/// <summary> 停止時のスタミナ回復速度です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float StaminaRecoveryPerSecond = 25.0f;
 
 	/// <summary> スタミナ0から回復復帰する比率です。 </summary>
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
 	float StaminaRecoverExitRatio = 0.4f;
 
 	/// <summary> 認識中のプレイヤーです。 </summary>
@@ -189,18 +204,27 @@ private:
 	/// <summary> プレイヤーとの距離です。 </summary>
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	float PerceivedPlayerDistance = BIG_NUMBER;
-	
+
 	/// <summary> 檻との距離です。 </summary>
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	float PerceivedCageDistance = BIG_NUMBER;
 
 	/// <summary> 現在スタミナです。 </summary>
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",meta = (AllowPrivateAccess = "true"))
 	float CurrentStamina = 100.0f;
 
 	/// <summary> スタミナ回復待機中かです。 </summary>
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",meta = (AllowPrivateAccess = "true"))
 	bool bIsRecoveringStamina = false;
+
+	/// <summary> 巡回パスです。 </summary>
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Boar|AI", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<APatrolPath> PatrolPath;
+
+	/// <summary> 現在の巡回ポイント </summary>
+	UPROPERTY(VisibleAnywhere)
+	int32 CurrentPatrolIndex = 0;
+
 
 	/// <summary>
 	/// イノシシのステータスを管理するコンポーネントです。

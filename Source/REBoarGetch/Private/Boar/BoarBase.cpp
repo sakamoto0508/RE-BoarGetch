@@ -109,6 +109,18 @@ bool ABoarBase::RefreshPerceptionTargets()
 
 	const bool bPlayerInSight = PerceivedPlayer != nullptr && PerceivedPlayerDistance <= SightRange;
 	const bool bCageInSight = PerceivedCage != nullptr && PerceivedCageDistance <= SightRange;
+	// 視認範囲外ならターゲットから外す
+	if (!bPlayerInSight)
+	{
+		PerceivedPlayer = nullptr;
+		PerceivedPlayerDistance = BIG_NUMBER;
+	}
+
+	if (!bCageInSight)
+	{
+		PerceivedCage = nullptr;
+		PerceivedCageDistance = BIG_NUMBER;
+	}
 	return bPlayerInSight || bCageInSight;
 }
 
