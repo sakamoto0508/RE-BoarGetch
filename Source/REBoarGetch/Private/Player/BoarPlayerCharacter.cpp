@@ -159,21 +159,16 @@ void ABoarPlayerCharacter::StartGadgetUse()
 	if (GadgetComponent && !IsActionLocked())
 	{
 		if (bIsGadgetInUse)
-		{
 			return;
-		}
-
+		
 		AGadgetBase* CurrentGadget = GadgetComponent->GetCurrentGadget();
-		if (CurrentGadget == nullptr)
-		{
+		if (CurrentGadget == nullptr) 
 			return;
-		}
+		
 
 		CurrentGadgetUseStyle = CurrentGadget->GetUseStyle();
 		if (!GadgetComponent->BeginUseCurrentGadget())
-		{
 			return;
-		}
 
 		bIsGadgetInUse = true;
 		SetPlayerActionState(EPlayerActionState::UseGadget);
@@ -323,14 +318,11 @@ void ABoarPlayerCharacter::EndInvincible()
 void ABoarPlayerCharacter::UpdateGroundActionState(bool bHasMoveInput)
 {
 	if (IsActionLocked())
-	{
 		return;
-	}
-
+	
 	if (GetCharacterMovement() && GetCharacterMovement()->IsFalling())
-	{
 		return;
-	}
+	
 
 	if (!bHasMoveInput)
 	{

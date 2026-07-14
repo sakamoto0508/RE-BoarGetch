@@ -11,14 +11,20 @@ ANetGadget::ANetGadget()
 	PrimaryActorTick.bCanEverTick = false;
 	// ネットは単発ガジェットとして扱う。
 	UseStyle = EGadgetUseStyle::OneShot;
-
+	// 新しいルートコンポーネント（シーンコンポーネント）を作成して設定。
+	USceneComponent* DummyRoot = CreateDefaultSubobject<USceneComponent>(TEXT("DummyRoot"));
+	SetRootComponent(DummyRoot);
+	// スフィアコリジョンを作成。
 	CaptureCollision = CreateDefaultSubobject<USphereComponent>(TEXT("CaptureCollision"));
-	SetRootComponent(CaptureCollision);
-	// 初期設定。
+	// スフィアコリジョンをルート（DummyRoot）の子階層として繋ぐ。
+	CaptureCollision->SetupAttachment(DummyRoot);
+	// センサーの大きさを決める。
 	CaptureCollision->SetSphereRadius(CaptureRadius);
+	// 初期状態ではセンサーを「オフ」にする。
 	CaptureCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// センサーの「属性」を決める。
 	CaptureCollision->SetCollisionObjectType(ECC_WorldDynamic);
-	// PawnとのみOverlapする。
+	// PawnのみOverlapする。
 	CaptureCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
 	CaptureCollision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	CaptureCollision->SetGenerateOverlapEvents(true);
