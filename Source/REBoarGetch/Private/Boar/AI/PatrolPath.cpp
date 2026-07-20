@@ -8,6 +8,8 @@ APatrolPath::APatrolPath()
 	SetRootComponent(Root);
 }
 
+// 不正なIndexならActor自身の位置を返す。
+// クラッシュ防止用。
 FVector APatrolPath::GetPatrolPoint(int32 Index) const
 {
 	if (!PatrolPoints.IsValidIndex(Index)) return GetActorLocation();

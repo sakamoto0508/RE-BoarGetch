@@ -13,7 +13,9 @@ ABoarAIController::ABoarAIController()
 	StateTreeAI->SetStartLogicAutomatically(false);
 	bAttachToPawn = true;
 }
-// Pawnを所持したときにAIを開始する
+
+// PawnのPossessが完了してからStateTreeを開始する。
+// BeginPlayより後に開始することで、Pawnの初期化完了後にAIが動く。
 void ABoarAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);

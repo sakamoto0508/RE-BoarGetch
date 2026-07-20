@@ -56,9 +56,7 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::EnterState(FStateTreeExecutionConte
 		InstanceData.bPreferCage = false;
 
 		// 逃走状態ならTask成功、それ以外は失敗。
-		return InstanceData.bPreferEscape
-			? EStateTreeRunStatus::Succeeded
-			: EStateTreeRunStatus::Failed;
+		return InstanceData.bPreferEscape? EStateTreeRunStatus::Succeeded: EStateTreeRunStatus::Failed;
 	}
 
 	// プレイヤーまでの距離を優先度係数で補正したスコアを計算する。

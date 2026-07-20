@@ -37,6 +37,12 @@ public:
 	/// </summary>
 	UFUNCTION(BlueprintCallable, Category = "Boar")
 	void Capture();
+	
+	/// <summary>
+	/// イノシシが解放されたときに呼ばれる関数。
+	/// </summary>
+	UFUNCTION(BlueprintCallable, Category = "Boar")
+	void ReleaseBoar();
 
 	/// <summary>
 	/// 捕まっているかどうかを返します。

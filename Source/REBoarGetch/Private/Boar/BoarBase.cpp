@@ -35,8 +35,10 @@ void ABoarBase::Tick(float DeltaSeconds)
 // 捕獲処理。成功時はGameModeへ通知して共通後処理へ流す。
 void ABoarBase::Capture()
 {
-	if (CaptureComponent == nullptr) return;
-	if (!CaptureComponent->Capture(nullptr))	return;
+	if (CaptureComponent == nullptr) 
+		return;
+	if (!CaptureComponent->Capture(nullptr))	
+		return;
 	
 	// 捕獲成功後のゲーム進行（檻送致・カウント・ドロップ）はGameModeに集約する。
 	if (ABoarGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
@@ -65,15 +67,14 @@ bool ABoarBase::RefreshPerceptionTargets()
 
 	UWorld* World = GetWorld();
 	if (World == nullptr)
-	{
 		return false;
-	}
-
+	
 	PerceivedPlayer = nullptr;
 	PerceivedCage = nullptr;
 	PerceivedPlayerDistance = BIG_NUMBER;
 	PerceivedCageDistance = BIG_NUMBER;
 
+	//playerを取得。
 	const int32 NumPlayers = UGameplayStatics::GetNumPlayerControllers(World);
 	for (int32 i = 0; i < NumPlayers; ++i)
 	{
@@ -91,6 +92,7 @@ bool ABoarBase::RefreshPerceptionTargets()
 		}
 	}
 
+	//一番近い檻を取得。
 	for (TActorIterator<ACage> It(World); It; ++It)
 	{
 		ACage* Cage = *It;
@@ -134,17 +136,18 @@ void ABoarBase::SetBoarArchetype(EBoarArchetype NewArchetype)
 }
 
 // 逃走優先かどうかを返す。スタミナ回復中は強制的に逃走側へ寄せる。
+// スタミナ回復中は優先度に関係なく逃走を選ぶ。
+// それ以外は設定された優先度で判定する。
 bool ABoarBase::ShouldPreferEscape() const
 {
 	if (bUseStamina && bIsRecoveringStamina)
-	{
 		return true;
-	}
-
+	
 	return EscapePriorityWeight > FMath::Max(PlayerPriorityWeight, CagePriorityWeight);
 }
 
 // スタミナの正規化値を返す。スタミナ非対応種別は常に1.0を返す。
+// TODO:これは後で派生クラスでBP側から設定できるようにするか、DataAsset化するか検討する。
 float ABoarBase::GetStaminaNormalized() const
 {
 	if (!bUseStamina || MaxStamina <= KINDA_SMALL_NUMBER)
@@ -156,6 +159,7 @@ float ABoarBase::GetStaminaNormalized() const
 }
 
 // 種別に応じた基本パラメータを一括設定する。
+// TODO:これは後で派生クラスでBP側から設定できるようにするか、DataAsset化するか検討する。
 void ABoarBase::ApplyArchetypeDefaults()
 {
 	switch (BoarArchetype)
@@ -213,10 +217,8 @@ void ABoarBase::ApplyArchetypeDefaults()
 void ABoarBase::UpdateStamina(float DeltaSeconds)
 {
 	if (!bUseStamina || IsCaptured())
-	{
 		return;
-	}
-
+	
 	if (MaxStamina <= KINDA_SMALL_NUMBER)
 	{
 		CurrentStamina = 0.0f;
@@ -248,6 +250,7 @@ void ABoarBase::UpdateStamina(float DeltaSeconds)
 
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
+		//TODO: ここは後で派生クラスでBP側から設定できるようにするか、DataAsset化するか検討する。
 		const float BaseSpeed = 450.0f;
 		Move->MaxWalkSpeed = bIsRecoveringStamina ? BaseSpeed * 0.35f : BaseSpeed;
 	}
