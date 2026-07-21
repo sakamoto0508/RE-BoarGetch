@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AITypes.h"
 #include "GameFramework/Character.h"
+#include "Navigation/PathFollowingComponent.h"
 #include "BoarBase.generated.h"
 
 //class UBoarStatusComponent;
@@ -125,6 +127,13 @@ public:
 	APatrolPath* GetPatrolPath() const { return PatrolPath; }
 
 private:
+	/** 檻から離れる移動が完了したとき、通常のStateTree AIを再開します。 */
+	UFUNCTION()
+	void HandleReleaseMoveCompleted(FAIRequestID RequestID, EPathFollowingResult::Type Result);
+
+	/** 解放移動の監視を終了し、通常のStateTree AIへ戻します。 */
+	void FinishReleaseMovement();
+
 	/** 種別ごとの共通AIパラメータを適用します。 */
 	void ApplyArchetypeDefaults();
 
@@ -136,6 +145,21 @@ private:
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boar|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCaptureComponent> CaptureComponent;
+
+	/** 檻から解放するときにNavMesh上の出現地点を探す半径です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|Capture",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float ReleaseRadius = 300.0f;
+
+	/** 解放移動を完了と判定する目的地からの距離です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|Capture",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float ReleaseAcceptanceRadius = 50.0f;
+
+	/** 現在、檻から歩いて離れている途中かを表します。 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Capture",
+		meta = (AllowPrivateAccess = "true"))
+	bool bIsLeavingCage = false;
 
 	/** イノシシ種別です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))

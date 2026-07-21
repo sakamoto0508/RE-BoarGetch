@@ -2,6 +2,8 @@
 
 
 #include "Boar/BoarBase.h"
+#include "AIController.h"
+#include "BrainComponent.h"
 #include "Cage/Cage.h"
 #include "Component/CaptureComponent.h"
 #include "Core/BoarGameMode.h"
@@ -9,6 +11,8 @@
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "NavigationSystem.h"
+#include "Navigation/PathFollowingComponent.h"
 
 // コンストラクタ。捕獲用コンポーネントを生成し、種別差分用にTickを有効化する。
 ABoarBase::ABoarBase()
@@ -146,10 +150,106 @@ bool ABoarBase::ShouldPreferEscape() const
 	return EscapePriorityWeight > FMath::Max(PlayerPriorityWeight, CagePriorityWeight);
 }
 
-//檻が破壊されたときにイノシシが呼ぶ処理。
+/** 檻が破壊されたときに、捕獲中のイノシシを解放して周囲へ移動させる。 */
 void ABoarBase::ReleaseBoar()
 {
-	
+	// 捕獲済みの個体だけを解放対象にし、二重解放を防止する。
+	if (CaptureComponent == nullptr || !CaptureComponent->IsCaptured())
+		return;
+
+	// 捕獲時に停止したAIと、檻から歩いて出るための目的地を準備する。
+	AAIController* AIController = Cast<AAIController>(GetController());
+	FVector ReleaseLocation = GetActorLocation();
+	bool bFoundReleaseLocation = false;
+
+	// 瞬間移動は行わず、現在地から到達可能なNavMesh上の地点を移動先にする。
+	if (UWorld* World = GetWorld())
+	{
+		if (UNavigationSystemV1* NavigationSystem = UNavigationSystemV1::GetCurrent(World))
+		{
+			FNavLocation NavLocation;
+			// ランダムな到達可能ポイントを取得
+			// 中心位置、探索半径、検索結果
+			bFoundReleaseLocation = NavigationSystem->GetRandomReachablePointInRadius(
+				GetActorLocation(), ReleaseRadius, NavLocation);
+			if (bFoundReleaseLocation)
+			{
+				ReleaseLocation = NavLocation.Location;
+			}
+		}
+	}
+
+	if (AIController)
+	{
+		// 通常StateTreeのMove Toと解放移動が競合しないよう、一時的に停止する。
+		AIController->StopMovement();
+		if (UBrainComponent* BrainComponent = AIController->GetBrainComponent())
+		{
+			BrainComponent->StopLogic(TEXT("Leaving cage"));
+		}
+	}
+
+	if (!CaptureComponent->Release())
+	{
+		FinishReleaseMovement();
+		return;
+	}
+
+	PerceivedPlayer = nullptr;
+	PerceivedCage = nullptr;
+	PerceivedPlayerDistance = BIG_NUMBER;
+	PerceivedCageDistance = BIG_NUMBER;
+
+	if (AIController == nullptr || !bFoundReleaseLocation)
+	{
+		FinishReleaseMovement();
+		UE_LOG(LogTemp, Warning, TEXT("[Boar] Released %s without release movement."),
+			*GetNameSafe(this));
+		return;
+	}
+
+	bIsLeavingCage = true;
+	// 解放移動が終わったタイミングで通常StateTreeへ復帰するため、完了通知を監視する。
+	AIController->ReceiveMoveCompleted.AddUniqueDynamic(
+		this, &ABoarBase::HandleReleaseMoveCompleted);
+
+	const EPathFollowingRequestResult::Type MoveResult = AIController->MoveToLocation(
+		ReleaseLocation, ReleaseAcceptanceRadius);
+
+	if (MoveResult != EPathFollowingRequestResult::RequestSuccessful)
+	{
+		FinishReleaseMovement();
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Boar] Released %s. MoveTarget=%s"),
+		*GetNameSafe(this), *ReleaseLocation.ToCompactString());
+}
+
+void ABoarBase::HandleReleaseMoveCompleted(
+	FAIRequestID RequestID, EPathFollowingResult::Type Result)
+{
+	// 成否にかかわらず解放移動を終了し、通常AIが停止したままになることを防ぐ。
+	(void)RequestID;
+	(void)Result;
+	FinishReleaseMovement();
+}
+
+void ABoarBase::FinishReleaseMovement()
+{
+	bIsLeavingCage = false;
+
+	if (AAIController* AIController = Cast<AAIController>(GetController()))
+	{
+		// 次回の解放時に通知が重複しないよう、登録したDelegateを解除する。
+		AIController->ReceiveMoveCompleted.RemoveDynamic(
+			this, &ABoarBase::HandleReleaseMoveCompleted);
+
+		if (UBrainComponent* BrainComponent = AIController->GetBrainComponent())
+		{
+			// 解放移動後は既存のStateTreeに制御を戻し、通常の徘徊を再開する。
+			BrainComponent->RestartLogic();
+		}
+	}
 }
 
 // スタミナの正規化値を返す。スタミナ非対応種別は常に1.0を返す。

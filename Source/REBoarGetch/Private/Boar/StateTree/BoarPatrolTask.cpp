@@ -1,7 +1,7 @@
 #include "Boar/StateTree/BoarPatrolTask.h"
 
 #include "Boar/BoarBase.h"
-#include "Boar/AI/PatrolPath.h"
+#include "NavigationSystem.h"
 
 #include "StateTreeExecutionContext.h"
 #include "StateTreeExecutionTypes.h"
@@ -13,41 +13,33 @@ EStateTreeRunStatus FStateTreeBoarPatrolTask::EnterState(
 	(void)Transition;
 
 	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
-
+	
+	// StateTreeを実行しているイノシシを取得する。
 	ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get());
 	if (Boar == nullptr)
 	{
 		return EStateTreeRunStatus::Failed;
 	}
 
-	APatrolPath* PatrolPath = Boar->GetPatrolPath();
-	if (PatrolPath == nullptr)
+	// このワールドで経路探索を担当するNavigationSystemを取得する。
+	UNavigationSystemV1* NavigationSystem = UNavigationSystemV1::GetCurrent(Boar->GetWorld());
+	if (NavigationSystem == nullptr)
 	{
 		return EStateTreeRunStatus::Failed;
 	}
 
-	const int32 NumPoints = PatrolPath->GetPointCount();
-	if (NumPoints == 0)
+	FNavLocation PatrolNavLocation;
+
+	// 現在地の周辺から、NavMesh経由で到達可能な地点だけを候補にする。
+	const bool bFoundPatrolLocation = NavigationSystem->GetRandomReachablePointInRadius(
+			Boar->GetActorLocation(), PatrolRadius, PatrolNavLocation);
+	if (!bFoundPatrolLocation)
 	{
 		return EStateTreeRunStatus::Failed;
 	}
 
-	if (InstanceData.CurrentPatrolIndex >= NumPoints)
-	{
-		InstanceData.CurrentPatrolIndex = 0;
-	}
-
-	// 今回向かう巡回地点
-	InstanceData.PatrolLocation =
-		PatrolPath->GetPatrolPoint(InstanceData.CurrentPatrolIndex);
-
-	// 次回用
-	InstanceData.CurrentPatrolIndex++;
-
-	if (InstanceData.CurrentPatrolIndex >= NumPoints)
-	{
-		InstanceData.CurrentPatrolIndex = 0;
-	}
+	// 後続のStateTree Move Toタスクが使用する目的地を設定する。
+	InstanceData.PatrolLocation = PatrolNavLocation.Location;
 
 	return EStateTreeRunStatus::Succeeded;
 }

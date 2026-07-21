@@ -12,15 +12,16 @@ struct FStateTreeBoarPatrolTask : public FStateTreeTaskCommonBase
 
 	using FInstanceDataType = FBoarStateTreeInstanceData;
 	
-	/** 巡回ポイントの配列です。 */
-	UPROPERTY(EditAnywhere, Category = "Boar|Patrol")
-	TArray<FVector> PatrolPoints;
+	/** 現在地を中心に、NavMesh上の徘徊地点を探す半径です。 */
+	UPROPERTY(EditAnywhere, Category = "Boar|Patrol", meta = (ClampMin = "0.0"))
+	float PatrolRadius = 1000.0f;
+
 	virtual const UStruct* GetInstanceDataType() const override
 	{
 		return FInstanceDataType::StaticStruct();
 	}
 	
-	/** 巡回ポイントを順番に巡回するタスクです。 */
+	/** NavMesh上から到達可能な徘徊地点をランダムに選択するタスクです。 */
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
 		const FStateTreeTransitionResult& Transition) const override;
 };
