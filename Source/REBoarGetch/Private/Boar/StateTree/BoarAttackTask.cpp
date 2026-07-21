@@ -12,6 +12,7 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::EnterState(FStateTreeExecutionCont
 
 	FInstanceDataType& InstanceData =
 		Context.GetInstanceData(*this);
+	ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get());
 
 	ACage* Cage = InstanceData.TargetCage.Get();
 
@@ -21,6 +22,10 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::EnterState(FStateTreeExecutionCont
 	}
 
 	Cage->ApplyDamage(Damage);
+	if (Boar)
+	{
+		Boar->PrintAIStateDebug(TEXT("AttackCage"), Cage->GetActorLocation());
+	}
 
 	return EStateTreeRunStatus::Succeeded;
 }

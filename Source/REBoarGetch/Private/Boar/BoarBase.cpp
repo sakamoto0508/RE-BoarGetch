@@ -11,6 +11,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 
@@ -78,7 +79,7 @@ bool ABoarBase::RefreshPerceptionTargets()
 	PerceivedPlayerDistance = BIG_NUMBER;
 	PerceivedCageDistance = BIG_NUMBER;
 
-	//playerを取得。
+	// 視界条件を満たすプレイヤーのうち、一番近い対象を取得する。
 	const int32 NumPlayers = UGameplayStatics::GetNumPlayerControllers(World);
 	for (int32 i = 0; i < NumPlayers; ++i)
 	{
@@ -89,14 +90,14 @@ bool ABoarBase::RefreshPerceptionTargets()
 		}
 
 		const float Distance = FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
-		if (Distance < PerceivedPlayerDistance)
+		if (Distance < PerceivedPlayerDistance && CanDetectTarget(PlayerPawn, Distance))
 		{
 			PerceivedPlayer = PlayerPawn;
 			PerceivedPlayerDistance = Distance;
 		}
 	}
 
-	//一番近い檻を取得。
+	// 視界条件を満たす檻のうち、一番近い対象を取得する。
 	for (TActorIterator<ACage> It(World); It; ++It)
 	{
 		ACage* Cage = *It;
@@ -106,28 +107,50 @@ bool ABoarBase::RefreshPerceptionTargets()
 		}
 
 		const float Distance = FVector::Dist(GetActorLocation(), Cage->GetActorLocation());
-		if (Distance < PerceivedCageDistance)
+		if (Distance < PerceivedCageDistance && CanDetectTarget(Cage, Distance))
 		{
 			PerceivedCage = Cage;
 			PerceivedCageDistance = Distance;
 		}
 	}
 
-	const bool bPlayerInSight = PerceivedPlayer != nullptr && PerceivedPlayerDistance <= SightRange;
-	const bool bCageInSight = PerceivedCage != nullptr && PerceivedCageDistance <= SightRange;
-	// 視認範囲外ならターゲットから外す
-	if (!bPlayerInSight)
-	{
-		PerceivedPlayer = nullptr;
-		PerceivedPlayerDistance = BIG_NUMBER;
-	}
+	return PerceivedPlayer != nullptr || PerceivedCage != nullptr;
+}
 
-	if (!bCageInSight)
-	{
-		PerceivedCage = nullptr;
-		PerceivedCageDistance = BIG_NUMBER;
-	}
-	return bPlayerInSight || bCageInSight;
+bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
+{
+	if (TargetActor == nullptr || Distance > SightRange)
+		return false;
+
+	const FVector ToTarget =
+		(TargetActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+	const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
+	const float HalfSightAngle = FMath::Clamp(SightAngleDegrees * 0.5f, 0.0f, 180.0f);
+	const float SightDotThreshold =
+		FMath::Cos(FMath::DegreesToRadians(HalfSightAngle));
+	const bool bInsideSightAngle =
+		FVector::DotProduct(Forward, ToTarget) >= SightDotThreshold;
+	const bool bInsideAbsoluteRange = Distance <= AbsoluteDetectionRange;
+
+	// 通常は正面の視野角内だけ認識し、至近距離では角度条件を免除する。
+	if (!bInsideSightAngle && !bInsideAbsoluteRange)
+		return false;
+
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+		return false;
+
+	FHitResult HitResult;
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BoarSight), false, this);
+	const bool bHit = World->LineTraceSingleByChannel(
+		HitResult,
+		GetPawnViewLocation(),
+		TargetActor->GetActorLocation(),
+		ECC_Visibility,
+		QueryParams);
+
+	// 何も遮らない、または最初に対象自身へ当たった場合だけ認識する。
+	return !bHit || HitResult.GetActor() == TargetActor;
 }
 
 // 種別変更API。BPやデバッグ用途でランタイム切替できるようにする。
@@ -148,6 +171,34 @@ bool ABoarBase::ShouldPreferEscape() const
 		return true;
 	
 	return EscapePriorityWeight > FMath::Max(PlayerPriorityWeight, CagePriorityWeight);
+}
+
+void ABoarBase::PrintAIStateDebug(const FString& StateName) const
+{
+	if (!bEnableAIStateDebugPrint)
+		return;
+
+	const FString Message = FString::Printf(
+		TEXT("[%s] State: %s"), *GetNameSafe(this), *StateName);
+	const FName DebugKey(*FString::Printf(TEXT("BoarAI_%u"), GetUniqueID()));
+
+	UKismetSystemLibrary::PrintString(
+		this, Message, true, true, FLinearColor::Yellow, 2.0f, DebugKey);
+}
+
+void ABoarBase::PrintAIStateDebug(
+	const FString& StateName, const FVector& TargetLocation) const
+{
+	if (!bEnableAIStateDebugPrint)
+		return;
+
+	const FString Message = FString::Printf(
+		TEXT("[%s] State: %s | Target: %s"),
+		*GetNameSafe(this), *StateName, *TargetLocation.ToCompactString());
+	const FName DebugKey(*FString::Printf(TEXT("BoarAI_%u"), GetUniqueID()));
+
+	UKismetSystemLibrary::PrintString(
+		this, Message, true, true, FLinearColor(0.0f, 1.0f, 1.0f), 2.0f, DebugKey);
 }
 
 /** 檻が破壊されたときに、捕獲中のイノシシを解放して周囲へ移動させる。 */

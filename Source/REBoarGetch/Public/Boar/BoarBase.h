@@ -126,7 +126,16 @@ public:
 	UFUNCTION(BlueprintPure)
 	APatrolPath* GetPatrolPath() const { return PatrolPath; }
 
+	/** 現在のAIステートを画面とログへデバッグ表示します。 */
+	void PrintAIStateDebug(const FString& StateName) const;
+
+	/** 現在のAIステートと移動先を画面とログへデバッグ表示します。 */
+	void PrintAIStateDebug(const FString& StateName, const FVector& TargetLocation) const;
+
 private:
+	/** 距離・視野角・遮蔽・絶対発見距離から対象を認識できるか判定します。 */
+	bool CanDetectTarget(const AActor* TargetActor, float Distance) const;
+
 	/** 檻から離れる移動が完了したとき、通常のStateTree AIを再開します。 */
 	UFUNCTION()
 	void HandleReleaseMoveCompleted(FAIRequestID RequestID, EPathFollowingResult::Type Result);
@@ -161,6 +170,11 @@ private:
 		meta = (AllowPrivateAccess = "true"))
 	bool bIsLeavingCage = false;
 
+	/** AIステートと目的地のPrint String表示を有効にするかです。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boar|AI|Debug",
+		meta = (AllowPrivateAccess = "true"))
+	bool bEnableAIStateDebugPrint = true;
+
 	/** イノシシ種別です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	EBoarArchetype BoarArchetype = EBoarArchetype::Normal;
@@ -169,6 +183,16 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float SightRange = 1200.0f;
+
+	/** 正面を中心とした視界全体の角度です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Perception",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "360.0"))
+	float SightAngleDegrees = 120.0f;
+
+	/** 視野角の外でも対象を必ず発見する距離です。遮蔽物は無視しません。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Perception",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AbsoluteDetectionRange = 200.0f;
 
 	/** 追跡に入る目安距離です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",

@@ -45,6 +45,10 @@ struct FBoarStateTreeInstanceData
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bPreferCage = false;
 
+	/** プレイヤーの追跡・攻撃を優先するかです。 */
+	UPROPERTY(VisibleAnywhere, Category="Output")
+	bool bPreferPlayer = false;
+
 	/** 逃走を優先するかです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bPreferEscape = false;

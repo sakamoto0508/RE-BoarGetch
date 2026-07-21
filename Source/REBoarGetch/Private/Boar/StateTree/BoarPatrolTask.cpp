@@ -40,6 +40,7 @@ EStateTreeRunStatus FStateTreeBoarPatrolTask::EnterState(
 
 	// 後続のStateTree Move Toタスクが使用する目的地を設定する。
 	InstanceData.PatrolLocation = PatrolNavLocation.Location;
+	Boar->PrintAIStateDebug(TEXT("Patrol"), InstanceData.PatrolLocation);
 
 	return EStateTreeRunStatus::Succeeded;
 }

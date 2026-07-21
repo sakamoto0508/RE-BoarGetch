@@ -23,6 +23,7 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::EnterState(FStateTreeExecutionConte
 		InstanceData.TargetCage = nullptr;
 		InstanceData.bHasTargetInSight = false;
 		InstanceData.bPreferCage = false;
+		InstanceData.bPreferPlayer = false;
 		InstanceData.bPreferEscape = false;
 		InstanceData.bCanAttackCage = false;
 		return EStateTreeRunStatus::Failed;
@@ -42,44 +43,67 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::EnterState(FStateTreeExecutionConte
 	InstanceData.DistanceToCage = Boar->GetPerceivedCageDistance();
 	// 現在檻を攻撃できる状態か更新する。
 	InstanceData.bCanAttackCage = Boar->CanAttackCage();
-	// 逃走を優先する状態か更新する。
-	InstanceData.bPreferEscape = Boar->ShouldPreferEscape();
-
 	// プレイヤー・檻を認識しているか判定する。
 	const bool bHasPlayer = InstanceData.TargetPlayer != nullptr;
 	const bool bHasCage = InstanceData.TargetCage != nullptr && InstanceData.bCanAttackCage;
+	InstanceData.bPreferPlayer = false;
+	InstanceData.bPreferCage = false;
+	InstanceData.bPreferEscape = false;
+
+	// 種類ごとの仕様に従い、発見した対象への反応を決定する。
+	switch (Boar->GetBoarArchetype())
+	{
+	case EBoarArchetype::Normal:
+		InstanceData.bPreferEscape = bHasPlayer;
+		InstanceData.bPreferCage = !bHasPlayer && bHasCage;
+		break;
+	case EBoarArchetype::Red:
+		InstanceData.bPreferPlayer = bHasPlayer;
+		InstanceData.bPreferCage = !bHasPlayer && bHasCage;
+		break;
+	case EBoarArchetype::Blue:
+		InstanceData.bPreferEscape = bHasPlayer;
+		break;
+	case EBoarArchetype::CageBreaker:
+		InstanceData.bPreferCage = bHasCage;
+		InstanceData.bPreferPlayer = !bHasCage && bHasPlayer;
+		break;
+	case EBoarArchetype::EscapeSpecialist:
+		InstanceData.bPreferEscape = bHasPlayer;
+		InstanceData.bPreferCage = !bHasPlayer && bHasCage;
+		break;
+	default:
+		break;
+	}
 
 	// プレイヤーも檻も見つかっていない場合。
 	if (!bHasPlayer && !bHasCage)
 	{
 		// 優先対象は存在しない。
 		InstanceData.bPreferCage = false;
+		Boar->PrintAIStateDebug(TEXT("Patrol"));
 
-		// 逃走状態ならTask成功、それ以外は失敗。
-		return InstanceData.bPreferEscape? EStateTreeRunStatus::Succeeded: EStateTreeRunStatus::Failed;
+		// 対象がいないことは正常な徘徊状態なので、失敗として扱わない。
+		return EStateTreeRunStatus::Succeeded;
 	}
 
-	// プレイヤーまでの距離を優先度係数で補正したスコアを計算する。
-	// 優先度係数が大きいほどプレイヤーを選びやすくなる。
-	const float PlayerScore = bHasPlayer
-		? Boar->GetPerceivedPlayerDistance() /
-			FMath::Max(Boar->GetPlayerPriorityWeight(), KINDA_SMALL_NUMBER)
-		: BIG_NUMBER;
+	if (InstanceData.bPreferEscape)
+	{
+		Boar->PrintAIStateDebug(TEXT("Escape"));
+	}
+	else if (InstanceData.bPreferPlayer)
+	{
+		Boar->PrintAIStateDebug(TEXT("ChasePlayer"),
+			InstanceData.TargetPlayer->GetActorLocation());
+	}
+	else if (InstanceData.bPreferCage)
+	{
+		Boar->PrintAIStateDebug(TEXT("ChaseCage"),
+			InstanceData.TargetCage->GetActorLocation());
+	}
 
-	// 檻までの距離を優先度係数で補正したスコアを計算する。
-	// 優先度係数が大きいほど檻を選びやすくなる。
-	const float CageScore = bHasCage
-		? Boar->GetPerceivedCageDistance() /
-			FMath::Max(Boar->GetCagePriorityWeight(), KINDA_SMALL_NUMBER)
-		: BIG_NUMBER;
-
-	// スコアが小さい対象を優先ターゲットとして選択する。
-	InstanceData.bPreferCage = CageScore < PlayerScore;
-
-	// 認識対象が存在する、または逃走状態ならTask成功。
-	return (InstanceData.bHasTargetInSight || InstanceData.bPreferEscape)
-		? EStateTreeRunStatus::Succeeded
-		: EStateTreeRunStatus::Failed;
+	// 認識結果は出力値とTransition Conditionで分岐するため、更新できた時点で成功とする。
+	return EStateTreeRunStatus::Succeeded;
 }
 
 // StateTreeエディタ上に表示するノード名を返す。
