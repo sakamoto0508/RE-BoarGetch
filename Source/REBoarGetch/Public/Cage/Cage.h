@@ -48,7 +48,7 @@ public:
 	/// 檻が破壊されているかを返します。
 	/// </summary>
 	UFUNCTION(BlueprintCallable, Category = "Cage")
-	bool GetIsCageDestroyed() const { return CurrentHp <= 0.f; }
+	bool GetIsCageDestroyed() const { return bIsDestroyed; }
 
 private:
 	/// <summary>

@@ -146,6 +146,12 @@ bool ABoarBase::ShouldPreferEscape() const
 	return EscapePriorityWeight > FMath::Max(PlayerPriorityWeight, CagePriorityWeight);
 }
 
+//檻が破壊されたときにイノシシが呼ぶ処理。
+void ABoarBase::ReleaseBoar()
+{
+	
+}
+
 // スタミナの正規化値を返す。スタミナ非対応種別は常に1.0を返す。
 // TODO:これは後で派生クラスでBP側から設定できるようにするか、DataAsset化するか検討する。
 float ABoarBase::GetStaminaNormalized() const
