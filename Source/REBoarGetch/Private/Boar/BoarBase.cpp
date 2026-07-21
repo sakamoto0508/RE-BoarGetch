@@ -30,7 +30,7 @@ void ABoarBase::BeginPlay()
 	CurrentStamina = MaxStamina;
 }
 
-// 種別差分のうち、スタミナ制御（青イノシシ）を毎フレーム更新する。
+// スタミナ制御を毎フレーム更新する。
 void ABoarBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -117,19 +117,23 @@ bool ABoarBase::RefreshPerceptionTargets()
 	return PerceivedPlayer != nullptr || PerceivedCage != nullptr;
 }
 
+// ターゲットを認識できるか判定する。
 bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 {
 	if (TargetActor == nullptr || Distance > SightRange)
 		return false;
-
-	const FVector ToTarget =
-		(TargetActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+	
+	// targetとの距離
+	const FVector ToTarget = (TargetActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+	// 自身の正面方向
 	const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
+	// 視野角の半分
 	const float HalfSightAngle = FMath::Clamp(SightAngleDegrees * 0.5f, 0.0f, 180.0f);
-	const float SightDotThreshold =
-		FMath::Cos(FMath::DegreesToRadians(HalfSightAngle));
-	const bool bInsideSightAngle =
-		FVector::DotProduct(Forward, ToTarget) >= SightDotThreshold;
+	// 視野角判定に使用する内積の閾値
+	const float SightDotThreshold = FMath::Cos(FMath::DegreesToRadians(HalfSightAngle));
+	// 正面方向内かどうか
+	const bool bInsideSightAngle = FVector::DotProduct(Forward, ToTarget) >= SightDotThreshold;
+	// 至近距離内かどうか
 	const bool bInsideAbsoluteRange = Distance <= AbsoluteDetectionRange;
 
 	// 通常は正面の視野角内だけ認識し、至近距離では角度条件を免除する。
@@ -141,7 +145,11 @@ bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 		return false;
 
 	FHitResult HitResult;
+	// RayCastみたいなもん。LineTraceというらしい。
+	// デバッグやProfilerで「BoarSight」という名前を付けるためにSCENE_QUERY_STATを使う。
+	// bTraceComplex=falseで、コリジョンの単純形状で判定する。trueならメッシュのポリゴン単位まで判定する。
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BoarSight), false, this);
+	// Visibilityチャンネルだけ判定します。
 	const bool bHit = World->LineTraceSingleByChannel(
 		HitResult,
 		GetPawnViewLocation(),
@@ -328,14 +336,14 @@ void ABoarBase::ApplyArchetypeDefaults()
 		bCanAttackCage = true;
 		bUseStamina = false;
 		break;
-	case EBoarArchetype::Red:
+	case EBoarArchetype::PlayerAttacker:
 		PlayerPriorityWeight = 1.8f;
 		CagePriorityWeight = 0.8f;
 		EscapePriorityWeight = 0.4f;
 		bCanAttackCage = true;
 		bUseStamina = false;
 		break;
-	case EBoarArchetype::Blue:
+	case EBoarArchetype::EscapeSpecialist:
 		PlayerPriorityWeight = 0.4f;
 		CagePriorityWeight = 0.1f;
 		EscapePriorityWeight = 2.2f;
@@ -350,13 +358,6 @@ void ABoarBase::ApplyArchetypeDefaults()
 		PlayerPriorityWeight = 0.7f;
 		CagePriorityWeight = 2.2f;
 		EscapePriorityWeight = 0.5f;
-		bCanAttackCage = true;
-		bUseStamina = false;
-		break;
-	case EBoarArchetype::EscapeSpecialist:
-		PlayerPriorityWeight = 0.5f;
-		CagePriorityWeight = 0.6f;
-		EscapePriorityWeight = 2.5f;
 		bCanAttackCage = true;
 		bUseStamina = false;
 		break;

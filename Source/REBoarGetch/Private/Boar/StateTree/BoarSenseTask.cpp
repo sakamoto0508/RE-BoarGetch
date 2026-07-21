@@ -57,20 +57,16 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::EnterState(FStateTreeExecutionConte
 		InstanceData.bPreferEscape = bHasPlayer;
 		InstanceData.bPreferCage = !bHasPlayer && bHasCage;
 		break;
-	case EBoarArchetype::Red:
+	case EBoarArchetype::PlayerAttacker:
 		InstanceData.bPreferPlayer = bHasPlayer;
 		InstanceData.bPreferCage = !bHasPlayer && bHasCage;
 		break;
-	case EBoarArchetype::Blue:
+	case EBoarArchetype::EscapeSpecialist:
 		InstanceData.bPreferEscape = bHasPlayer;
 		break;
 	case EBoarArchetype::CageBreaker:
 		InstanceData.bPreferCage = bHasCage;
 		InstanceData.bPreferPlayer = !bHasCage && bHasPlayer;
-		break;
-	case EBoarArchetype::EscapeSpecialist:
-		InstanceData.bPreferEscape = bHasPlayer;
-		InstanceData.bPreferCage = !bHasPlayer && bHasCage;
 		break;
 	default:
 		break;

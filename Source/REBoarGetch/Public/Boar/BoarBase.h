@@ -18,10 +18,9 @@ UENUM(BlueprintType)
 enum class EBoarArchetype : uint8
 {
 	Normal,
-	Red,
-	Blue,
+	PlayerAttacker,
+	EscapeSpecialist,
 	CageBreaker,
-	EscapeSpecialist
 };
 
 UCLASS()
