@@ -3,9 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Delegates/Delegate.h"
 #include "GameFramework/Actor.h"
 #include "Cage.generated.h"
-#include "Delegates/Delegate.h"
 
 class ABoarBase;
 
@@ -37,7 +37,7 @@ public:
 
 	/** 檻が破壊されたときに呼ばれるイベントです。 */
 	UPROPERTY(BlueprintAssignable, Category = "Cage|Events")
-	FOnCageDestroyed OnDestroyed;
+	FOnCageDestroyed OnCageDestroyed;
 
 	/** 檻が再出現したときに呼ばれるイベントです。 */
 	UPROPERTY(BlueprintAssignable, Category = "Cage|Events")

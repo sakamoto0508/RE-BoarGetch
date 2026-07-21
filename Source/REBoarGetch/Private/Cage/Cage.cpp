@@ -48,7 +48,8 @@ void ACage::ApplyDamage(float Damage)
 		return;
 
 	CurrentHp = FMath::Clamp(CurrentHp - Damage, 0.0f, MaxHp);
-
+	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
+	
 	if (CurrentHp <= 0.0f)
 	{
 		DestroyCage();
@@ -61,6 +62,8 @@ void ACage::DestroyCage()
 	if (bIsDestroyed) return;
 	bIsDestroyed = true;
 
+	OnCageDestroyed.Broadcast();
+	
 	// Actor自体はDestroyせず、非表示にして当たり判定を停止する。
 	// Destroy()すると、このActor自身から復活処理を呼べなくなる。
 	SetActorHiddenInGame(true);
@@ -98,6 +101,9 @@ void ACage::RespawnCage()
 	CurrentHp = MaxHp;
 	bIsDestroyed = false;
 
+	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
+	OnRespawned.Broadcast();
+	
 	//まず、見た目を復活。
 	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
