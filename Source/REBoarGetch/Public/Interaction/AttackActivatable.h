@@ -17,7 +17,7 @@ class REBOARGETCH_API IAttackActivatable
 	GENERATED_BODY()
 
 public:
-	///<summary> 攻撃ヒットでオブジェクトを起動します。 </summary>
+	/** 攻撃ヒットでオブジェクトを起動します。 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "REBoarGetch|Interaction")
 	void ActivateByAttack(AActor* AttackInstigator, AActor* AttackSource);
 };

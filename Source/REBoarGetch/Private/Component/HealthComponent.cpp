@@ -1,27 +1,27 @@
 #include "Component/HealthComponent.h"
 
-/// <summary>
-/// コンストラクタです。
-/// HP は毎フレーム更新しないので Tick は不要です。
-/// </summary>
+/**
+ * コンストラクタです。
+ * HP は毎フレーム更新しないので Tick は不要です。
+ */
 UHealthComponent::UHealthComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-/// <summary>
-/// 初期化処理です。
-/// ゲーム開始時に HP を満タンに戻します。
-/// </summary>
+/**
+ * 初期化処理です。
+ * ゲーム開始時に HP を満タンに戻します。
+ */
 void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	ResetHealth();
 }
 
-/// <summary>
-/// ダメージを受けます。
-/// </summary>
+/**
+ * ダメージを受けます。
+ */
 void UHealthComponent::TakeDamage(float DamageAmount)
 {
 	if (DamageAmount <= 0.0f || IsDead())	return;
@@ -32,9 +32,9 @@ void UHealthComponent::TakeDamage(float DamageAmount)
 	if (IsDead())	OnDeath.Broadcast();
 }
 
-/// <summary>
-/// HP を回復します。
-/// </summary>
+/**
+ * HP を回復します。
+ */
 void UHealthComponent::Heal(float HealAmount)
 {
 	if (HealAmount <= 0.0f || IsDead())	return;
@@ -43,26 +43,26 @@ void UHealthComponent::Heal(float HealAmount)
 	ClampAndBroadcastHealth();
 }
 
-/// <summary>
-/// HP を最大値まで戻します。
-/// </summary>
+/**
+ * HP を最大値まで戻します。
+ */
 void UHealthComponent::ResetHealth()
 {
 	CurrentHealth = MaxHealth;
 	ClampAndBroadcastHealth();
 }
 
-/// <summary>
-/// 死亡状態かどうかを返します。
-/// </summary>
+/**
+ * 死亡状態かどうかを返します。
+ */
 bool UHealthComponent::IsDead() const
 {
 	return CurrentHealth <= 0.0f;
 }
 
-/// <summary>
-/// HP を範囲内に収めて通知します。
-/// </summary>
+/**
+ * HP を範囲内に収めて通知します。
+ */
 void UHealthComponent::ClampAndBroadcastHealth()
 {
 	CurrentHealth = FMath::Clamp(CurrentHealth, 0.0f, MaxHealth);

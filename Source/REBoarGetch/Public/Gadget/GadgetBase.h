@@ -13,10 +13,10 @@ enum class EGadgetUseStyle : uint8
 	Hold
 };
 
-/// <summary>
-/// ガチャメカの基底クラスです。
-/// Net / Radar / Jet などはここから派生します。
-/// </summary>
+/**
+ * ガチャメカの基底クラスです。
+ * Net / Radar / Jet などはここから派生します。
+ */
 UCLASS()
 class REBOARGETCH_API AGadgetBase : public AActor
 {
@@ -26,50 +26,50 @@ public:
 	// Sets default values for this actor's properties
 	AGadgetBase();
 
-	/// <summary>
-	/// ガチャメカを使用します。
-	/// 派生クラスで実際の効果を実装します。
-	/// 一時的な参照なのでポインタ。
-	/// </summary>
+	/**
+	 * ガチャメカを使用します。
+	 * 派生クラスで実際の効果を実装します。
+	 * 一時的な参照なのでポインタ。
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Gadget")
 	void Use(AActor* TargetActor);
 
-	/// <summary>
-	/// C++ 側のデフォルト挙動です。
-	/// 一時的な参照なのでポインタ。
-	/// </summary>
+	/**
+	 * C++ 側のデフォルト挙動です。
+	 * 一時的な参照なのでポインタ。
+	 */
 	virtual void Use_Implementation(AActor* TargetActor);
 
-	/// <summary>
-	/// 使用可能かどうかを返します。
-	/// </summary>
+	/**
+	 * 使用可能かどうかを返します。
+	 */
 	UFUNCTION(BlueprintPure, Category="Gadget")
 	bool CanUse() const { return !bIsOnCooldown; }
 
-	/// <summary>
-	/// 現在使用中かどうかを返します。
-	/// </summary>
+	/**
+	 * 現在使用中かどうかを返します。
+	 */
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	bool IsUsing() const { return bIsUsing; }
 
-	/// <summary>
-	/// ガジェットの使用タイプ（単発/継続）を返します。
-	/// </summary>
+	/**
+	 * ガジェットの使用タイプ（単発/継続）を返します。
+	 */
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	EGadgetUseStyle GetUseStyle() const { return UseStyle; }
 
-	/// <summary>
-	/// 使用開始時に呼ばれる入口です。
-	/// Character側はこの関数を呼んで使用ライフサイクルを開始します。
-	/// </summary>
+	/**
+	 * 使用開始時に呼ばれる入口です。
+	 * Character側はこの関数を呼んで使用ライフサイクルを開始します。
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Gadget")
 	void BeginUse(AActor* TargetActor);
 	virtual void BeginUse_Implementation(AActor* TargetActor);
 
-	/// <summary>
-	/// 使用終了時に呼ばれる入口です。
-	/// Hold系ガジェットの停止処理に使います。
-	/// </summary>
+	/**
+	 * 使用終了時に呼ばれる入口です。
+	 * Hold系ガジェットの停止処理に使います。
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Gadget")
 	void EndUse(AActor* TargetActor);
 	virtual void EndUse_Implementation(AActor* TargetActor);
@@ -78,49 +78,49 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	/// <summary>
-	/// 使用タイプです。
-	/// OneShotは押下時に完結、Holdは押している間継続します。
-	/// </summary>
+	/**
+	 * 使用タイプです。
+	 * OneShotは押下時に完結、Holdは押している間継続します。
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	EGadgetUseStyle UseStyle = EGadgetUseStyle::OneShot;
 
-	/// <summary>
-	/// クールタイムです。
-	/// </summary>
+	/**
+	 * クールタイムです。
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget",
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float CooldownSeconds = 1.0f;
 
-	/// <summary>
-	/// クールタイム中かどうかです。
-	/// </summary>
+	/**
+	 * クールタイム中かどうかです。
+	 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	bool bIsOnCooldown = false;
 
-	/// <summary>
-	/// 使用中かどうかです。
-	/// </summary>
+	/**
+	 * 使用中かどうかです。
+	 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	bool bIsUsing = false;
 
-	/// <summary>
-	/// クールタイム解除用のタイマーです。
-	/// </summary>
+	/**
+	 * クールタイム解除用のタイマーです。
+	 */
 	FTimerHandle CooldownTimerHandle = FTimerHandle(); //明示的初期化。
 
-	/// <summary>
-	/// クールタイムを開始します。
-	/// </summary>
+	/**
+	 * クールタイムを開始します。
+	 */
 	void StartCooldown();
 
-	/// <summary>
-	/// クールタイム終了処理です。
-	/// </summary>
+	/**
+	 * クールタイム終了処理です。
+	 */
 	void FinishCooldown();
 
-	/// <summary>
-	/// 攻撃ヒット対象に起動通知を送ります（ダメージ系ガジェット用）。
-	/// </summary>
+	/**
+	 * 攻撃ヒット対象に起動通知を送ります（ダメージ系ガジェット用）。
+	 */
 	void TryActivateByAttack(AActor* HitActor, AActor* AttackInstigator);
 };

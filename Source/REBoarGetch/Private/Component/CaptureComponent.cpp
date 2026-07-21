@@ -8,7 +8,7 @@ UCaptureComponent::UCaptureComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-/// <summary>捕獲を実行します。</summary>
+/** 捕獲を実行します。 */
 bool UCaptureComponent::Capture(AActor* Capturer)
 {
 	if (bIsCaptured || GetOwner() == nullptr)
@@ -41,7 +41,7 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 	return true;
 }
 
-/// <summary>捕獲解除を実行します。</summary>
+/** 捕獲解除を実行します。 */
 bool UCaptureComponent::Release()
 {
 	if (!bIsCaptured || GetOwner() == nullptr)

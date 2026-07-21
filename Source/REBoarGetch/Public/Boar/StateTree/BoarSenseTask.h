@@ -23,12 +23,12 @@ struct FStateTreeBoarSenseTask : public FStateTreeTaskCommonBase
 		return FInstanceDataType::StaticStruct();
 	}
 	
-	///<summary> プレイヤー・檻の認識情報を更新し、次に優先して行動する対象（プレイヤーまたは檻）を決定します。 </summary>
+	/** プレイヤー・檻の認識情報を更新し、次に優先して行動する対象（プレイヤーまたは檻）を決定します。 */
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
 		const FStateTreeTransitionResult& Transition) const override;
 
 #if WITH_EDITOR
-	///<summary> ノードの説明を取得します。 </summary>
+	/** ノードの説明を取得します。 */
 	virtual FText GetDescription(const FGuid& ID,FStateTreeDataView InstanceDataView,
 		const IStateTreeBindingLookup& BindingLookup,
 		EStateTreeNodeFormatting Formatting = EStateTreeNodeFormatting::Text) const override;

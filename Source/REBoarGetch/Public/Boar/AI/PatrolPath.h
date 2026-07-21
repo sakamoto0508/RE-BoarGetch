@@ -14,29 +14,29 @@ class REBOARGETCH_API APatrolPath : public AActor
 public:
 	APatrolPath();
 
-	/// <summary>
-	/// 指定したIndexの巡回ポイントを返します。
-	/// </summary>
+	/**
+	 * 指定したIndexの巡回ポイントを返します。
+	 */
 	UFUNCTION(BlueprintPure, Category="Patrol")
 	FVector GetPatrolPoint(int32 Index) const;
 
-	/// <summary>
-	/// 巡回ポイント数を返します。
-	/// </summary>
+	/**
+	 * 巡回ポイント数を返します。
+	 */
 	UFUNCTION(BlueprintPure, Category="Patrol")
 	int32 GetPointCount() const;
 
 private:
 
-	/// <summary>
-	/// ルートです。
-	/// </summary>
+	/**
+	 * ルートです。
+	 */
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> Root;
 
-	/// <summary>
-	/// 巡回ポイントです。
-	/// </summary>
+	/**
+	 * 巡回ポイントです。
+	 */
 	UPROPERTY(EditInstanceOnly, Category="Patrol")
 	TArray<TObjectPtr<USceneComponent>> PatrolPoints;
 };

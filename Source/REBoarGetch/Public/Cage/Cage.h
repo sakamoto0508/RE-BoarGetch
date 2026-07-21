@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Cage.generated.h"
+#include "Delegates/Delegate.h"
 
 class ABoarBase;
 
@@ -12,7 +13,7 @@ UCLASS()
 class REBOARGETCH_API ACage : public AActor
 {
 	GENERATED_BODY()
-	
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -20,80 +21,76 @@ protected:
 public:
 	ACage();
 
-	/// <summary>
-	/// イノシシを檻に入れます。
-	/// </summary>
+	/** 檻のHP変更を通知するデリゲートです。 */
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+		FOnCageHealthChanged, float, CurrentHp, float, MaxHp);
+
+	/** 檻の破壊を通知するデリゲートです。 */
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCageDestroyed);
+
+	/** 檻の再出現を通知するデリゲートです。 */
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCageRespawned);
+
+	/** 檻のHPが変更されたときに呼ばれるイベントです。 */
+	UPROPERTY(BlueprintAssignable, Category = "Cage|Events")
+	FOnCageHealthChanged OnHealthChanged;
+
+	/** 檻が破壊されたときに呼ばれるイベントです。 */
+	UPROPERTY(BlueprintAssignable, Category = "Cage|Events")
+	FOnCageDestroyed OnDestroyed;
+
+	/** 檻が再出現したときに呼ばれるイベントです。 */
+	UPROPERTY(BlueprintAssignable, Category = "Cage|Events")
+	FOnCageRespawned OnRespawned;
+
+	/** 捕獲したイノシシを檻へ収容します。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
 	void CollectBoar(ABoarBase* Boar);
 
-	/// <summary>
-	/// 収容イノシシ数を返します。
-	/// </summary>
+	/** 収容中のイノシシ数を返します。 */
 	UFUNCTION(BlueprintPure, Category = "Cage")
 	int32 GetCapturedBoarCount() const { return CapturedBoars.Num(); }
 
-	/// <summary>
-	/// 檻の耐久値を返します。
-	/// </summary>
+	/** 檻の現在HPを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Cage")
 	float GetHP() const { return CurrentHp; }
 
-	/// <summary>
-	/// 檻にダメージを与えます。
-	/// </summary>
+	/** 檻へダメージを与えます。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
 	void ApplyDamage(float Damage);
 
-	/// <summary>
-	/// 檻が破壊されているかを返します。
-	/// </summary>
+	/** 檻が破壊状態かどうかを返します。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
 	bool GetIsCageDestroyed() const { return bIsDestroyed; }
 
 private:
-	/// <summary>
-	/// 収容中のイノシシです。
-	/// </summary>
+	/** 収容中のイノシシです。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Cage", meta = (AllowPrivateAccess = "true"))
 	TArray<TObjectPtr<ABoarBase>> CapturedBoars;
 
-	/// <summary>
-	/// 檻を破壊します。
-	/// </summary>
+	/** 檻を破壊状態にします。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
 	void DestroyCage();
 
-	/// <summary>
-	/// 檻を再出現させます。
-	/// </summary>
+	/** 檻を再出現させます。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
 	void RespawnCage();
 
-	/// <summary>
-	/// 檻の現在の耐久値です。
-	/// </summary>
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Cage", meta=(AllowPrivateAccess="true"))
+	/** 檻の現在HPです。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true"))
 	float CurrentHp = 100.f;
 
-	/// <summary>
-	/// 檻の最大耐久値です。
-	/// </summary>
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Cage", meta=(AllowPrivateAccess="true"))
+	/** 檻の最大HPです。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true"))
 	float MaxHp = 100.f;
 
-	/// <summary>
-	/// 檻が破壊された後、再出現するまでの時間です。
-	/// </summary>
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Cage", meta=(AllowPrivateAccess="true"))
+	/** 檻が破壊されてから再出現するまでの時間です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true"))
 	float RespawnDelay = 10.f;
-	
-	/// <summary>
-	/// 檻の復活処理に使用するタイマーハンドルです。
-	/// </summary>
+
+	/** 檻の再出現処理に使用するタイマーハンドルです。 */
 	FTimerHandle RespawnTimerHandle;
 
-	/// <summary>
-	/// 二重に破壊処理が実行されることを防ぎます。
-	/// </summary>
+	/** 破壊処理の多重実行を防ぐためのフラグです。 */
 	bool bIsDestroyed = false;
 };

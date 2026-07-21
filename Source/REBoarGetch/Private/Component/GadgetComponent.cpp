@@ -35,7 +35,7 @@ void UGadgetComponent::BeginPlay()
 	}
 }
 
-///<summary> ガジェットを装備します。 ///</summary>
+/** ガジェットを装備します。 */
 bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 {
 	if (GadgetClass == nullptr || OwningPawn == nullptr)
@@ -62,9 +62,9 @@ bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 	return true;
 }
 
-/// <summary>
-/// 現在のガチャメカを外します。
-/// </summary>
+/**
+ * 現在のガチャメカを外します。
+ */
 void UGadgetComponent::UnequipGadget()
 {
 	if (CurrentGadget == nullptr)	return;
@@ -73,18 +73,18 @@ void UGadgetComponent::UnequipGadget()
 	CurrentGadget = nullptr;
 }
 
-/// <summary>
-/// 現在装備中のガチャメカを使います。
-/// </summary>
+/**
+ * 現在装備中のガチャメカを使います。
+ */
 bool UGadgetComponent::UseCurrentGadget()
 {
 	// 旧APIは互換維持のため開始APIへ委譲する。
 	return BeginUseCurrentGadget();
 }
 
-/// <summary>
-/// 現在装備中のガジェット使用を開始します。
-/// </summary>
+/**
+ * 現在装備中のガジェット使用を開始します。
+ */
 bool UGadgetComponent::BeginUseCurrentGadget()
 {
 	if (CurrentGadget == nullptr)
@@ -98,9 +98,9 @@ bool UGadgetComponent::BeginUseCurrentGadget()
 	return true;
 }
 
-/// <summary>
-/// 現在装備中のガジェット使用を終了します。
-/// </summary>
+/**
+ * 現在装備中のガジェット使用を終了します。
+ */
 bool UGadgetComponent::EndUseCurrentGadget()
 {
 	if (CurrentGadget == nullptr)
@@ -114,9 +114,9 @@ bool UGadgetComponent::EndUseCurrentGadget()
 	return true;
 }
 
-/// <summary>
-/// ガチャメカを切り替えます。
-/// </summary>
+/**
+ * ガチャメカを切り替えます。
+ */
 bool UGadgetComponent::SwitchGadget(TSubclassOf<AGadgetBase> NewGadgetClass)
 {
 	if (NewGadgetClass == nullptr) return false;

@@ -13,10 +13,10 @@ void AGadgetBase::BeginPlay()
 	Super::BeginPlay();
 }
 
-/// <summary>
-/// ガチャメカを使用します。
-/// 派生クラスで個別の効果を追加するための入口です。
-/// </summary>
+/**
+ * ガチャメカを使用します。
+ * 派生クラスで個別の効果を追加するための入口です。
+ */
 void AGadgetBase::Use_Implementation(AActor* TargetActor)
 {
 	if (!CanUse()) return;
@@ -25,10 +25,10 @@ void AGadgetBase::Use_Implementation(AActor* TargetActor)
 	StartCooldown();
 }
 
-/// <summary>
-/// 使用開始時の共通処理です。
-/// 既存ガジェット互換のため、内部でUse()を呼び出して効果処理を実行します。
-/// </summary>
+/**
+ * 使用開始時の共通処理です。
+ * 既存ガジェット互換のため、内部でUse()を呼び出して効果処理を実行します。
+ */
 void AGadgetBase::BeginUse_Implementation(AActor* TargetActor)
 {
 	if (!CanUse() || bIsUsing)
@@ -46,10 +46,10 @@ void AGadgetBase::BeginUse_Implementation(AActor* TargetActor)
 	}
 }
 
-/// <summary>
-/// 使用終了時の共通処理です。
-/// Hold系は終了時点でクールタイムを開始します。
-/// </summary>
+/**
+ * 使用終了時の共通処理です。
+ * Hold系は終了時点でクールタイムを開始します。
+ */
 void AGadgetBase::EndUse_Implementation(AActor* TargetActor)
 {
 	(void)TargetActor;
@@ -65,9 +65,9 @@ void AGadgetBase::EndUse_Implementation(AActor* TargetActor)
 	}
 }
 
-/// <summary>
-/// クールタイムを開始します。
-/// </summary>
+/**
+ * クールタイムを開始します。
+ */
 void AGadgetBase::StartCooldown()
 {
 	if (CooldownSeconds <= 0.0f) return;
@@ -87,17 +87,17 @@ void AGadgetBase::StartCooldown()
 	);
 }
 
-/// <summary>
-/// クールタイム終了処理です。
-/// </summary>
+/**
+ * クールタイム終了処理です。
+ */
 void AGadgetBase::FinishCooldown()
 {
 	bIsOnCooldown = false;
 }
 
-/// <summary>
-/// 攻撃ヒットしたActorが攻撃起動I/Fを実装していれば通知を送ります。
-/// </summary>
+/**
+ * 攻撃ヒットしたActorが攻撃起動I/Fを実装していれば通知を送ります。
+ */
 void AGadgetBase::TryActivateByAttack(AActor* HitActor, AActor* AttackInstigator)
 {
 	if (HitActor == nullptr || !HitActor->GetClass()->ImplementsInterface(UAttackActivatable::StaticClass()))

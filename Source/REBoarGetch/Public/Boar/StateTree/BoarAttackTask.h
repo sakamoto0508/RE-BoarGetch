@@ -12,23 +12,23 @@ struct FStateTreeBoarAttackTask : public FStateTreeTaskCommonBase
 
 	using FInstanceDataType = FBoarStateTreeInstanceData;
 
-	///<summary>
-	/// 攻撃力。
-	/// </summary>
+	/**
+	 * 攻撃力。
+	 */
 	UPROPERTY(EditAnywhere, Category="Attack")
 	float Damage = 10.f;
 
-	///<summary>
-	/// インスタンスデータの型を返します。
-	///</summary>
+	/**
+	 * インスタンスデータの型を返します。
+	 */
 	virtual const UStruct* GetInstanceDataType() const override
 	{
 		return FInstanceDataType::StaticStruct();
 	}
 
-	///<summary>
-	/// ケージを攻撃するタスク。
-	///</summary>
+	/**
+	 * ケージを攻撃するタスク。
+	 */
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
 		const FStateTreeTransitionResult& Transition) const override;
 };

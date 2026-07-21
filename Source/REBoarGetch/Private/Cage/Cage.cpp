@@ -16,7 +16,7 @@ ACage::ACage()
 void ACage::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	CurrentHp = MaxHp;
 	bIsDestroyed = false;
 }
@@ -35,7 +35,8 @@ void ACage::CollectBoar(ABoarBase* Boar)
 	if (Boar == nullptr) return;
 	if (bIsDestroyed) return;
 
-	CapturedBoars.Add(Boar);
+	//配列に同じ要素が存在しない場合だけ追加する関数。
+	CapturedBoars.AddUnique(Boar);
 	Boar->SetActorLocation(GetActorLocation());
 	UE_LOG(LogTemp, Log, TEXT("[Cage] Collected %s Total=%d"), *GetNameSafe(Boar), CapturedBoars.Num());
 }
@@ -43,9 +44,12 @@ void ACage::CollectBoar(ABoarBase* Boar)
 //檻へのダメージ。イノシシが呼び出す関数。
 void ACage::ApplyDamage(float Damage)
 {
-	CurrentHp -= Damage;
+	if (bIsDestroyed || Damage <= 0.0f)
+		return;
 
-	if (CurrentHp <= 0.f)
+	CurrentHp = FMath::Clamp(CurrentHp - Damage, 0.0f, MaxHp);
+
+	if (CurrentHp <= 0.0f)
 	{
 		DestroyCage();
 	}
@@ -62,7 +66,7 @@ void ACage::DestroyCage()
 	SetActorHiddenInGame(true);
 	SetActorEnableCollision(false);
 	SetActorTickEnabled(false);
-	
+
 	// 捕まっているイノシシを解放する処理
 	for (ABoarBase* Boar : CapturedBoars)
 	{
@@ -72,7 +76,7 @@ void ACage::DestroyCage()
 		}
 	}
 	CapturedBoars.Empty();
-	
+
 	// RespawnDelay秒後にRespawnCageを1回だけ呼び出す。
 	// このタイマーはゲーム時間を基準に進むため、
 	// 通常のポーズ中は停止し、スローモーション中は遅く進む。
@@ -90,15 +94,15 @@ void ACage::DestroyCage()
 void ACage::RespawnCage()
 {
 	if (!bIsDestroyed) return;
-	
+
 	CurrentHp = MaxHp;
 	bIsDestroyed = false;
-	
+
 	//まず、見た目を復活。
 	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
 	SetActorTickEnabled(true);
-	
+
 	// 実行済みタイマーのハンドルを明示的にクリアする。
 	GetWorldTimerManager().ClearTimer(RespawnTimerHandle);
 }

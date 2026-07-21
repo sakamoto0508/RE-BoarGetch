@@ -15,23 +15,23 @@ class REBOARGETCH_API UCaptureComponent : public UActorComponent
 public:
 	UCaptureComponent();
 
-	/// <summary>捕獲を実行します。</summary>
+	/** 捕獲を実行します。 */
 	UFUNCTION(BlueprintCallable, Category="REBoarGetch|Capture")
 	bool Capture(AActor* Capturer);
 
-	/// <summary>捕獲解除を実行します。</summary>
+	/** 捕獲解除を実行します。 */
 	UFUNCTION(BlueprintCallable, Category="REBoarGetch|Capture")
 	bool Release();
 
-	/// <summary>捕獲中か返します。</summary>
+	/** 捕獲中か返します。 */
 	UFUNCTION(BlueprintPure, Category="REBoarGetch|Capture")
 	bool IsCaptured() const { return bIsCaptured; }
 
-	/// <summary>捕獲イベントです。</summary>
+	/** 捕獲イベントです。 */
 	UPROPERTY(BlueprintAssignable, Category="REBoarGetch|Capture")
 	FOnCapturedSignature OnCaptured;
 
-	/// <summary>捕獲解除イベントです。</summary>
+	/** 捕獲解除イベントです。 */
 	UPROPERTY(BlueprintAssignable, Category="REBoarGetch|Capture")
 	FOnReleasedSignature OnReleased;
 

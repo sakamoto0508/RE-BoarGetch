@@ -12,17 +12,17 @@ struct FStateTreeBoarEscapeTask : public FStateTreeTaskCommonBase
 
 	using FInstanceDataType = FBoarStateTreeInstanceData;
 
-	///<summary>
-	/// インスタンスデータの型を返します。
-	///</summary>
+	/**
+	 * インスタンスデータの型を返します。
+	 */
 	virtual const UStruct* GetInstanceDataType() const override
 	{
 		return FInstanceDataType::StaticStruct();
 	}
 
-	///<summary>
-	/// プレイヤーから逃げる方向を計算し、逃走地点を決定します。
-	///</summary>
+	/**
+	 * プレイヤーから逃げる方向を計算し、逃走地点を決定します。
+	 */
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
 		const FStateTreeTransitionResult& Transition) const override;
 };

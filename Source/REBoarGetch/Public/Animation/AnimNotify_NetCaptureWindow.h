@@ -16,7 +16,7 @@ public:
 	virtual FString GetNotifyName_Implementation() const override;
 
 protected:
-	/// <summary>trueで捕獲判定ON、falseでOFFのNotifyとして使います。</summary>
+	/** trueで捕獲判定ON、falseでOFFのNotifyとして使います。 */
 	UPROPERTY(EditAnywhere, Category = "Net")
 	bool bEnableCaptureWindow = true;
 };

@@ -12,7 +12,7 @@ struct FStateTreeBoarPatrolTask : public FStateTreeTaskCommonBase
 
 	using FInstanceDataType = FBoarStateTreeInstanceData;
 	
-	/// <summary> 巡回ポイントの配列です。 </summary>
+	/** 巡回ポイントの配列です。 */
 	UPROPERTY(EditAnywhere, Category = "Boar|Patrol")
 	TArray<FVector> PatrolPoints;
 	virtual const UStruct* GetInstanceDataType() const override
@@ -20,7 +20,7 @@ struct FStateTreeBoarPatrolTask : public FStateTreeTaskCommonBase
 		return FInstanceDataType::StaticStruct();
 	}
 	
-	/// <summary> 巡回ポイントを順番に巡回するタスクです。 </summary>
+	/** 巡回ポイントを順番に巡回するタスクです。 */
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
 		const FStateTreeTransitionResult& Transition) const override;
 };

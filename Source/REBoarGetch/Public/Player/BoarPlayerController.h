@@ -34,7 +34,7 @@ protected:
 	 * Enhanced Input の設定を行う。
 	 * 入力が来たらMove()が呼ばれる。
 	 */
-	///<summary> 入力設定を行う。///</summary>
+	/** 入力設定を行う。 */
 	virtual void SetupInputComponent() override;
 
 private:
@@ -42,10 +42,10 @@ private:
 	// Input Mapping
 	//-------------------------------------------------
 
-	///<summary> 
-	///	使用するInput Mapping Context
-	///	BPで設定する。
-	///</summary>
+	/**
+	 * 使用するInput Mapping Context
+	 * BPで設定する。
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
@@ -53,64 +53,64 @@ private:
 	// Input Actions
 	//-------------------------------------------------
 	
-	///<summary>
-	///	移動入力（Axis2D）
-	///</summary>
+	/**
+	 * 移動入力（Axis2D）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> MoveAction;
 	
-	///<summary>
-	///	カメラ入力(Axis2D)
-	///</summary>
+	/**
+	 * カメラ入力(Axis2D)
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> LookAction;
 
 	
-	///<summary>
-	///	ジャンプ入力（Digital）
-	///</summary>
+	/**
+	 * ジャンプ入力（Digital）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> JumpAction;
 
-	///<summary>
-	///	ガジェット入力（Digital）
-	///</summary>
+	/**
+	 * ガジェット入力（Digital）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetAction;
 
-	///<summary>
-	///	ダッシュ入力（Digital/Hold）
-	///</summary>
+	/**
+	 * ダッシュ入力（Digital/Hold）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> DashAction;
 
-	///<summary>
-	///	ガジェット切替モディファイア入力（R1想定）
-	///</summary>
+	/**
+	 * ガジェット切替モディファイア入力（R1想定）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetModifierAction;
 
-	///<summary>
-	///	ガジェットスロット1入力（□想定）
-	///</summary>
+	/**
+	 * ガジェットスロット1入力（□想定）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot1Action;
 
-	///<summary>
-	///	ガジェットスロット2入力（△想定）
-	///</summary>
+	/**
+	 * ガジェットスロット2入力（△想定）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot2Action;
 
-	///<summary>
-	///	ガジェットスロット3入力（○想定）
-	///</summary>
+	/**
+	 * ガジェットスロット3入力（○想定）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot3Action;
 
-	///<summary>
-	///	ガジェットスロット4入力（×想定）
-	///</summary>
+	/**
+	 * ガジェットスロット4入力（×想定）
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot4Action;
 
@@ -118,44 +118,44 @@ private:
 	// Input Functions
 	//-------------------------------------------------
 	
-	///<summary>
-	///	移動入力を受け取る。
-	///</summary>
+	/**
+	 * 移動入力を受け取る。
+	 */
 	void Move(const FInputActionValue& Value);
 	
-	///<summary>
-	///	カメラ入力を受け取る。
-	///</summary>
+	/**
+	 * カメラ入力を受け取る。
+	 */
 	void Look(const FInputActionValue& Value);
 
-	///<summary>
-	///	ジャンプ開始入力を受け取る。
-	///</summary>
+	/**
+	 * ジャンプ開始入力を受け取る。
+	 */
 	void JumpStarted();
 
-	///<summary>
-	///	ジャンプ終了入力を受け取る。
-	///</summary>
+	/**
+	 * ジャンプ終了入力を受け取る。
+	 */
 	void JumpCompleted();
 
-	///<summary>
-	///	ガジェット使用開始入力を受け取る。
-	///</summary>
+	/**
+	 * ガジェット使用開始入力を受け取る。
+	 */
 	void GadgetStarted();
 
-	///<summary>
-	///	ガジェット使用終了入力を受け取る。
-	///</summary>
+	/**
+	 * ガジェット使用終了入力を受け取る。
+	 */
 	void GadgetCompleted();
 
-	///<summary>
-	///	ダッシュ開始入力を受け取る。
-	///</summary>
+	/**
+	 * ダッシュ開始入力を受け取る。
+	 */
 	void DashStarted();
 
-	///<summary>
-	///	ダッシュ終了入力を受け取る。
-	///</summary>
+	/**
+	 * ダッシュ終了入力を受け取る。
+	 */
 	void DashCompleted();
 
 	void GadgetModifierStarted();
@@ -174,9 +174,9 @@ private:
 	 * GetPawn()を毎回Castするだけなので
 	 * メンバ変数を持たずに済みます。
 	 */
-	///<summary>
-	///	現在操作しているPlayerCharacterを取得。
-	///</summary>
+	/**
+	 * 現在操作しているPlayerCharacterを取得。
+	 */
 	ABoarPlayerCharacter* GetBoarCharacter() const;
 
 	bool bIsGadgetModifierHeld = false;

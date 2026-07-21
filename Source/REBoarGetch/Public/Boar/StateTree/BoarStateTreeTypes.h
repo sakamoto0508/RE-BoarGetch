@@ -13,59 +13,59 @@ struct FBoarStateTreeInstanceData
 {
 	GENERATED_BODY()
 
-	/// <summary>実行中のイノシシです。</summary>
+	/** 実行中のイノシシです。 */
 	UPROPERTY(VisibleAnywhere, Category="Context")
 	TObjectPtr<APawn> NPC;
 
-	/// <summary>実行中のAIControllerです。</summary>
+	/** 実行中のAIControllerです。 */
 	UPROPERTY(VisibleAnywhere, Category="Context")
 	TObjectPtr<AAIController> Controller;
 
-	/// <summary>認識中プレイヤーです。</summary>
+	/** 認識中プレイヤーです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	TObjectPtr<APawn> TargetPlayer;
 
-	/// <summary>認識中の檻です。</summary>
+	/** 認識中の檻です。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	TObjectPtr<ACage> TargetCage;
 
-	/// <summary>認識中プレイヤーが存在するかです。</summary>
+	/** 認識中プレイヤーが存在するかです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bHasTargetPlayer = false;
 
-	/// <summary>認識中の檻が存在するかです。</summary>
+	/** 認識中の檻が存在するかです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bHasTargetCage = false;
 
-	/// <summary>視界内に対象が存在するかです。</summary>
+	/** 視界内に対象が存在するかです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bHasTargetInSight = false;
 
-	/// <summary>檻を優先するかです。</summary>
+	/** 檻を優先するかです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bPreferCage = false;
 
-	/// <summary>逃走を優先するかです。</summary>
+	/** 逃走を優先するかです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bPreferEscape = false;
 
-	/// <summary>檻を攻撃できるかです。</summary>
+	/** 檻を攻撃できるかです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bCanAttackCage = true;
 
-	/// <summary>檻までの距離です。</summary>
+	/** 檻までの距離です。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	float DistanceToCage = BIG_NUMBER;
 
-	/// <summary>巡回地点です。</summary>
+	/** 巡回地点です。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	FVector PatrolLocation = FVector::ZeroVector;
 
-	/// <summary>現在の巡回ポイント番号です。</summary>
+	/** 現在の巡回ポイント番号です。 */
 	UPROPERTY(VisibleAnywhere, Category = "Output")
 	int32 CurrentPatrolIndex = 0;
 
-	/// <summary> プレイヤーから逃げる場所。</summary>
+	/** プレイヤーから逃げる場所。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	FVector EscapeLocation = FVector::ZeroVector;
 };

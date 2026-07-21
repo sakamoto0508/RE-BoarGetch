@@ -20,14 +20,14 @@ public:
 	// Sets default values for this actor's properties
 	ANetGadget();
 	
-	/// <summary> ネットを使用します。 </summary>
+	/** ネットを使用します。 */
 	virtual void Use_Implementation(AActor* TargetActor) override;
 
-	/// <summary> 捕獲判定を有効化します。AnimNotify から呼び出します。 </summary>
+	/** 捕獲判定を有効化します。AnimNotify から呼び出します。 */
 	UFUNCTION(BlueprintCallable, Category = "Gadget|Net")
 	void BeginCaptureWindow();
 
-	/// <summary> 捕獲判定を無効化します。AnimNotify から呼び出します。 </summary>
+	/** 捕獲判定を無効化します。AnimNotify から呼び出します。 */
 	UFUNCTION(BlueprintCallable, Category = "Gadget|Net")
 	void EndCaptureWindow();
 
@@ -41,15 +41,15 @@ private:
 
 	void CaptureOverlappingBoars();
 
-	/// <summary> ネットの捕獲範囲です。</summary>
+	/** ネットの捕獲範囲です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	float CaptureRadius = 300.0f;
 
-	/// <summary> 捕獲判定用のコリジョンです。</summary>
+	/** 捕獲判定用のコリジョンです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> CaptureCollision;
 
-	/// <sumarry> 捕獲判定用のコリジョンが有効かどうかです。AnimNotify で制御します。</sumarry>					
+	/** 捕獲判定用のコリジョンが有効かどうかです。AnimNotify で制御します。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	bool bCaptureWindowActive = false;
 };

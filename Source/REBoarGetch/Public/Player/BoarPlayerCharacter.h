@@ -43,47 +43,47 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
 
-	/// <summary>ガジェット使用開始時のアニメ通知入口です（AnimBP側で実装）。</summary>
+	/** ガジェット使用開始時のアニメ通知入口です（AnimBP側で実装）。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Gadget")
 	void OnGadgetUseStarted(EGadgetUseStyle UseStyle, AGadgetBase* Gadget);
 
-	/// <summary>ガジェット使用終了時のアニメ通知入口です（AnimBP側で実装）。</summary>
+	/** ガジェット使用終了時のアニメ通知入口です（AnimBP側で実装）。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Gadget")
 	void OnGadgetUseStopped(EGadgetUseStyle UseStyle, AGadgetBase* Gadget);
 
 public:
 
-	///<summary> 移動。///</sumarry>
+	/** 移動。 */
 	void Move(const FVector2D& Input);
 
-	///<summary> 視点操作。///</sumarry>
+	/** 視点操作。 */
 	void Look(const FVector2D& Input);
 
-	///<summary> ジャンプスタート。///</sumarry>
+	/** ジャンプスタート。 */
 	void StartJump();
 
-	///<summary> ジャンプ終了。///</sumarry>
+	/** ジャンプ終了。 */
 	void StopJump();
 
-	///<summary> ダッシュ開始。///</summary>
+	/** ダッシュ開始。 */
 	void StartDash();
 
-	///<summary> ダッシュ終了。///</summary>
+	/** ダッシュ終了。 */
 	void StopDash();
 
-	///<summary> ガジェットを使用。///</summary>
+	/** ガジェットを使用。 */
 	void UseGadget();
 
-	///<summary> ガジェット使用開始。///</summary>
+	/** ガジェット使用開始。 */
 	void StartGadgetUse();
 
-	///<summary> ガジェット使用終了。///</summary>
+	/** ガジェット使用終了。 */
 	void StopGadgetUse();
 
-	///<summary> 指定スロットのガジェットへ切替。///</summary>
+	/** 指定スロットのガジェットへ切替。 */
 	void SwitchGadgetSlot(int32 SlotIndex);
 
-	///<summary> 捕獲開始。///</summary>
+	/** 捕獲開始。 */
 	void Capture();
 
 	//-------------------------------------------------
@@ -114,14 +114,14 @@ public:
 		return CurrentActionState;
 	}
 
-	/// <summary> ガジェット使用中かを返します。 </summary>
+	/** ガジェット使用中かを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Player|Gadget")
 	bool IsGadgetInUse() const
 	{
 		return bIsGadgetInUse;
 	}
 
-	/// <summary> 現在ガジェットの使用タイプを返します。 </summary>
+	/** 現在ガジェットの使用タイプを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Player|Gadget")
 	EGadgetUseStyle GetCurrentGadgetUseStyle() const
 	{
@@ -135,20 +135,20 @@ public:
 	// }
 
 private:
-	/// <summary>被弾判定用。イノシシ接触時にダメージ/スタン/無敵を開始します。</summary>
+	/** 被弾判定用。イノシシ接触時にダメージ/スタン/無敵を開始します。 */
 	UFUNCTION()
 	void OnCapsuleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	/// <summary>死亡イベント受信時にGameModeへ通知します。</summary>
+	/** 死亡イベント受信時にGameModeへ通知します。 */
 	UFUNCTION()
 	void OnDeath();
 
-	/// <summary>移動停止を伴うスタン状態を開始します。</summary>
+	/** 移動停止を伴うスタン状態を開始します。 */
 	void BeginStun();
-	/// <summary>スタン終了後に通常移動へ復帰します。</summary>
+	/** スタン終了後に通常移動へ復帰します。 */
 	void EndStun();
-	/// <summary>被弾直後の無敵時間を終了します。</summary>
+	/** 被弾直後の無敵時間を終了します。 */
 	void EndInvincible();
 	void UpdateGroundActionState(bool bHasMoveInput);
 	void SetPlayerActionState(EPlayerActionState NewState);
@@ -167,7 +167,7 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCaptureComponent> CaptureComponent;
 
-	///<summary> 独自のカメラ制御用Component。（Aim・LockOnなどを担当）///</summary>
+	/** 独自のカメラ制御用Component。（Aim・LockOnなどを担当） */
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
 	//TObjectPtr<UCameraComponent> CameraComponentEx;
 
@@ -175,52 +175,52 @@ private:
 	// Movement Settings
 	//-------------------------------------------------
 	
-	///<summary> Yaw回転速度。///</summary>
+	/** Yaw回転速度。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement",meta = (AllowPrivateAccess = "true"))
 	float RotationRate = 720.f;
 
-	///<summary> ジャンプ速度。///</summary>
+	/** ジャンプ速度。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement",meta = (AllowPrivateAccess = "true"))
 	float JumpVelocity = 700.f;
 
-	///<summary> ジャンプ可能回数です（2で二段ジャンプ）。///</summary>
+	/** ジャンプ可能回数です（2で二段ジャンプ）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement",meta = (AllowPrivateAccess = "true", ClampMin = "1"))
 	int32 MaxJumpCountSetting = 2;
 
-	///<summary> 空中での操作性。///</summary>
+	/** 空中での操作性。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement"
 		,meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
 	float AirControl = 0.35f;
 
-	///<summary> 通常時の移動速度です。///</summary>
+	/** 通常時の移動速度です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float WalkSpeed = 500.0f;
 
-	///<summary> ダッシュ時の移動速度です。///</summary>
+	/** ダッシュ時の移動速度です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float DashSpeed = 900.0f;
 
-	///<summary> 被弾時のスタン秒数です。///</summary>
+	/** 被弾時のスタン秒数です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float StunDuration = 0.5f;
 
-	///<summary> 被弾後の無敵秒数です。///</summary>
+	/** 被弾後の無敵秒数です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float InvincibleDuration = 1.0f;
 
-	///<summary> 被弾時に減るHP量です。///</summary>
+	/** 被弾時に減るHP量です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float ContactDamage = 1.0f;
 
-	///<summary> TPS用のカメラブームです。 </summary>
+	/** TPS用のカメラブームです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
 
-	///<summary> TPS用の追従カメラです。 </summary>
+	/** TPS用の追従カメラです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UCameraComponent> FollowCamera;
 
-	///<summary> BPで調整しやすいカメラ距離です。 </summary>
+	/** BPで調整しやすいカメラ距離です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
 	float CameraArmLength = 350.0f;
 

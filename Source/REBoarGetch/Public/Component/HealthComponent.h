@@ -9,10 +9,10 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedSignature, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
 
-/// <summary>
-/// HP を Character から切り離すためのコンポーネントです。
-/// Unity でいうと、HP ロジック専用の MonoBehaviour に近い役割です。
-/// </summary>
+/**
+ * HP を Character から切り離すためのコンポーネントです。
+ * Unity でいうと、HP ロジック専用の MonoBehaviour に近い役割です。
+ */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UHealthComponent : public UActorComponent
 {
@@ -21,35 +21,35 @@ class REBOARGETCH_API UHealthComponent : public UActorComponent
 public:
 	UHealthComponent();
 
-	///<summary> ダメージを受けます	///</sumarry>
+	/** ダメージを受けます */
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void TakeDamage(float DamageAmount);
 	
-	///<summary> HPを回復します	///</sumarry>
+	/** HPを回復します */
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void Heal(float HealAmount);
 	
-	///<summary> HPReset	///</summary>
+	/** HPReset */
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void ResetHealth();
 	
-	/// <summary> 死亡状態かどうかを返します。</summary>
+	/** 死亡状態かどうかを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Health")
 	bool IsDead() const;
 
-	/// <summary> 現在 HP を返します。</summary>
+	/** 現在 HP を返します。 */
 	UFUNCTION(BlueprintPure, Category = "Health")
 	float GetCurrentHealth() const { return CurrentHealth; }
 
-	/// <summary> 最大 HP を返します。</summary>
+	/** 最大 HP を返します。 */
 	UFUNCTION(BlueprintPure, Category = "Health")
 	float GetMaxHealth() const { return MaxHealth; }
 
-	/// <summary> HP変化通知イベントです。 UI 更新に使いやすくしてあります。</summary>
+	/** HP変化通知イベントです。 UI 更新に使いやすくしてあります。 */
 	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnHealthChangedSignature OnHealthChanged;
 
-	/// <summary> 死亡通知イベントです。</summary>
+	/** 死亡通知イベントです。 */
 	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnDeathSignature OnDeath;
 
@@ -57,17 +57,17 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	/// <summary>
-	/// 最大 HP です（プレイヤー仕様に合わせて5スタック想定）。
-	/// BP で調整できるようにしています。
-	/// </summary>
+	/**
+	 * 最大 HP です（プレイヤー仕様に合わせて5スタック想定）。
+	 * BP で調整できるようにしています。
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
 	float MaxHealth = 5.0f;
 
-	/// <summary>現在 HP です。</summary>
+	/** 現在 HP です。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
 	float CurrentHealth = 5.0f;
 
-	/// <summary>HP を範囲内に収めて通知します。</summary>
+	/** HP を範囲内に収めて通知します。 */
 	void ClampAndBroadcastHealth();
 };
