@@ -1,17 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
 #include "BoarSaveGame.generated.h"
 
-/**
- * 
- */
+/** セーブ対象データを追加するための基底SaveGameです。 */
 UCLASS()
 class UBoarSaveGame : public USaveGame
 {
 	GENERATED_BODY()
-	
 };

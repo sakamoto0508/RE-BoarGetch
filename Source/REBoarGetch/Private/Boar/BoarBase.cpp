@@ -312,7 +312,6 @@ void ABoarBase::FinishReleaseMovement()
 }
 
 // スタミナの正規化値を返す。スタミナ非対応種別は常に1.0を返す。
-// TODO:これは後で派生クラスでBP側から設定できるようにするか、DataAsset化するか検討する。
 float ABoarBase::GetStaminaNormalized() const
 {
 	if (!bUseStamina || MaxStamina <= KINDA_SMALL_NUMBER)
@@ -323,46 +322,36 @@ float ABoarBase::GetStaminaNormalized() const
 	return FMath::Clamp(CurrentStamina / MaxStamina, 0.0f, 1.0f);
 }
 
-// 種別に応じた基本パラメータを一括設定する。
-// TODO:これは後で派生クラスでBP側から設定できるようにするか、DataAsset化するか検討する。
+// DataAssetから種別に応じた基本パラメータを一括設定する。
 void ABoarBase::ApplyArchetypeDefaults()
 {
-	switch (BoarArchetype)
+	const FBoarArchetypeSettings& Settings = BoarDataAsset
+		? BoarDataAsset->GetSettings(BoarArchetype)
+		: UBoarDataAsset::GetDefaultSettings(BoarArchetype);
+
+	PlayerPriorityWeight = Settings.PlayerPriorityWeight;
+	CagePriorityWeight = Settings.CagePriorityWeight;
+	EscapePriorityWeight = Settings.EscapePriorityWeight;
+	bCanAttackCage = Settings.bCanAttackCage;
+	CageAttackDamage = Settings.CageAttackDamage;
+	SightRange = Settings.SightRange;
+	SightAngleDegrees = Settings.SightAngleDegrees;
+	AbsoluteDetectionRange = Settings.AbsoluteDetectionRange;
+	ChaseRange = Settings.ChaseRange;
+	EscapeRange = Settings.EscapeRange;
+	bUseStamina = Settings.bUseStamina;
+	MaxStamina = Settings.MaxStamina;
+	StaminaDrainPerSecond = Settings.StaminaDrainPerSecond;
+	StaminaRecoveryPerSecond = Settings.StaminaRecoveryPerSecond;
+	StaminaRecoverExitRatio = Settings.StaminaRecoverExitRatio;
+	BaseWalkSpeed = Settings.BaseWalkSpeed;
+	StaminaRecoverySpeedMultiplier = Settings.StaminaRecoverySpeedMultiplier;
+	MovingSpeedThreshold = Settings.MovingSpeedThreshold;
+
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
-	case EBoarArchetype::Normal:
-		PlayerPriorityWeight = 0.8f;
-		CagePriorityWeight = 0.9f;
-		EscapePriorityWeight = 1.4f;
-		bCanAttackCage = true;
-		bUseStamina = false;
-		break;
-	case EBoarArchetype::PlayerAttacker:
-		PlayerPriorityWeight = 1.8f;
-		CagePriorityWeight = 0.8f;
-		EscapePriorityWeight = 0.4f;
-		bCanAttackCage = true;
-		bUseStamina = false;
-		break;
-	case EBoarArchetype::EscapeSpecialist:
-		PlayerPriorityWeight = 0.4f;
-		CagePriorityWeight = 0.1f;
-		EscapePriorityWeight = 2.2f;
-		bCanAttackCage = false;
-		bUseStamina = true;
-		MaxStamina = 100.0f;
-		StaminaDrainPerSecond = 30.0f;
-		StaminaRecoveryPerSecond = 35.0f;
-		StaminaRecoverExitRatio = 0.4f;
-		break;
-	case EBoarArchetype::CageBreaker:
-		PlayerPriorityWeight = 0.7f;
-		CagePriorityWeight = 2.2f;
-		EscapePriorityWeight = 0.5f;
-		bCanAttackCage = true;
-		bUseStamina = false;
-		break;
-	default:
-		break;
+		Move->RotationRate.Yaw = Settings.TurnRateDegreesPerSecond;
+		Move->MaxWalkSpeed = BaseWalkSpeed;
 	}
 
 	if (!bUseStamina)
@@ -385,7 +374,7 @@ void ABoarBase::UpdateStamina(float DeltaSeconds)
 	}
 
 	const FVector Velocity = GetVelocity();
-	const bool bIsMoving = Velocity.SizeSquared2D() > FMath::Square(10.0f);
+	const bool bIsMoving = Velocity.SizeSquared2D() > FMath::Square(MovingSpeedThreshold);
 
 	if (bIsMoving && !bIsRecoveringStamina)
 	{
@@ -408,8 +397,8 @@ void ABoarBase::UpdateStamina(float DeltaSeconds)
 
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
-		//TODO: ここは後で派生クラスでBP側から設定できるようにするか、DataAsset化するか検討する。
-		const float BaseSpeed = 450.0f;
-		Move->MaxWalkSpeed = bIsRecoveringStamina ? BaseSpeed * 0.35f : BaseSpeed;
+		Move->MaxWalkSpeed = bIsRecoveringStamina
+			? BaseWalkSpeed * StaminaRecoverySpeedMultiplier
+			: BaseWalkSpeed;
 	}
 }

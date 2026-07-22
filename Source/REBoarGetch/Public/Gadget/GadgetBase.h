@@ -75,9 +75,6 @@ public:
 	virtual void EndUse_Implementation(AActor* TargetActor);
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
 	/**
 	 * 使用タイプです。
 	 * OneShotは押下時に完結、Holdは押している間継続します。

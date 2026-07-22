@@ -21,11 +21,13 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::EnterState(FStateTreeExecutionCont
 		return EStateTreeRunStatus::Failed;
 	}
 
-	Cage->ApplyDamage(Damage);
-	if (Boar)
+	if (Boar == nullptr)
 	{
-		Boar->PrintAIStateDebug(TEXT("AttackCage"), Cage->GetActorLocation());
+		return EStateTreeRunStatus::Failed;
 	}
+
+	Cage->ApplyDamage(Boar->GetCageAttackDamage());
+	Boar->PrintAIStateDebug(TEXT("AttackCage"), Cage->GetActorLocation());
 
 	return EStateTreeRunStatus::Succeeded;
 }

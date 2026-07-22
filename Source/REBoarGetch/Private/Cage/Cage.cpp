@@ -17,6 +17,7 @@ void ACage::BeginPlay()
 {
 	Super::BeginPlay();
 
+	MaxHp = FMath::Max(MaxHp, 1.0f);
 	CurrentHp = MaxHp;
 	bIsDestroyed = false;
 }
@@ -73,7 +74,7 @@ void ACage::DestroyCage()
 	// 捕まっているイノシシを解放する処理
 	for (ABoarBase* Boar : CapturedBoars)
 	{
-		if (Boar)
+		if (IsValid(Boar))
 		{
 			Boar->ReleaseBoar();
 		}

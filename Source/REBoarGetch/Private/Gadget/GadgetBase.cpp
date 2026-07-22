@@ -8,11 +8,6 @@ AGadgetBase::AGadgetBase()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-void AGadgetBase::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
 /**
  * ガチャメカを使用します。
  * 派生クラスで個別の効果を追加するための入口です。

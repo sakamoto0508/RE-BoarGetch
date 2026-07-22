@@ -13,12 +13,6 @@ struct FStateTreeBoarAttackTask : public FStateTreeTaskCommonBase
 	using FInstanceDataType = FBoarStateTreeInstanceData;
 
 	/**
-	 * 攻撃力。
-	 */
-	UPROPERTY(EditAnywhere, Category="Attack")
-	float Damage = 10.f;
-
-	/**
 	 * インスタンスデータの型を返します。
 	 */
 	virtual const UStruct* GetInstanceDataType() const override

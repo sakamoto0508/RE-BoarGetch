@@ -21,7 +21,8 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 
 	bIsCaptured = true;
 	
-	if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+	APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (ACharacter* OwnerCharacter = Cast<ACharacter>(OwnerPawn))
 	{
 		if (UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement())
 		{
@@ -30,7 +31,7 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 		}
 	}
 
-	if (AAIController* AI = Cast<AAIController>(Cast<APawn>(GetOwner()) ? Cast<APawn>(GetOwner())->GetController() : nullptr))
+	if (AAIController* AI = OwnerPawn ? Cast<AAIController>(OwnerPawn->GetController()) : nullptr)
 	{
 		AI->StopMovement();
 	}

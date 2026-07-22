@@ -81,11 +81,11 @@ private:
 	float CurrentHp = 100.f;
 
 	/** 檻の最大HPです。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
 	float MaxHp = 100.f;
 
 	/** 檻が破壊されてから再出現するまでの時間です。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float RespawnDelay = 10.f;
 
 	/** 檻の再出現処理に使用するタイマーハンドルです。 */

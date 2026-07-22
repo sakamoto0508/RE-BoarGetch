@@ -1,17 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GadgetDataAsset.generated.h"
 
-/**
- * 
- */
-UCLASS()
+/** ガジェット共通設定を追加するための基底DataAssetです。 */
+UCLASS(BlueprintType)
 class UGadgetDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
-	
 };

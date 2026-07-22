@@ -1,5 +1,1 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "BoarPlayerState.h"
-
+#include "Player/BoarPlayerState.h"

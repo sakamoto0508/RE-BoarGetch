@@ -38,12 +38,10 @@ void UGadgetComponent::BeginPlay()
 /** ガジェットを装備します。 */
 bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 {
-	if (GadgetClass == nullptr || OwningPawn == nullptr)
+	if (GadgetClass == nullptr || !IsValid(OwningPawn))
 	{
 		return false;
 	}
-
-	UnequipGadget();
 
 	UWorld* World = GetWorld();
 	if (World == nullptr) return false;
@@ -53,12 +51,15 @@ bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 	SpawnParams.Instigator = OwningPawn->GetInstigator();
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	CurrentGadget = World->SpawnActor<AGadgetBase>
+	AGadgetBase* NewGadget = World->SpawnActor<AGadgetBase>
 		(GadgetClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 
-	if (CurrentGadget == nullptr) return false;
+	if (NewGadget == nullptr) return false;
 
-	CurrentGadget->AttachToActor(OwningPawn, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	// Spawn に失敗した場合も現在の装備を失わないよう、新しい Actor の生成後に入れ替える。
+	UnequipGadget();
+	CurrentGadget = NewGadget;
+	CurrentGadget->AttachToActor(OwningPawn.Get(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	return true;
 }
 
@@ -67,10 +68,12 @@ bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
  */
 void UGadgetComponent::UnequipGadget()
 {
-	if (CurrentGadget == nullptr)	return;
-
-	CurrentGadget->Destroy();
+	if (IsValid(CurrentGadget))
+	{
+		CurrentGadget->Destroy();
+	}
 	CurrentGadget = nullptr;
+	CurrentGadgetSlotIndex = INDEX_NONE;
 }
 
 /**
@@ -87,7 +90,7 @@ bool UGadgetComponent::UseCurrentGadget()
  */
 bool UGadgetComponent::BeginUseCurrentGadget()
 {
-	if (CurrentGadget == nullptr)
+	if (!IsValid(CurrentGadget))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Gadget] BeginUse failed: CurrentGadget is null"));
 		return false;
@@ -103,7 +106,7 @@ bool UGadgetComponent::BeginUseCurrentGadget()
  */
 bool UGadgetComponent::EndUseCurrentGadget()
 {
-	if (CurrentGadget == nullptr)
+	if (!IsValid(CurrentGadget))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Gadget] EndUse failed: CurrentGadget is null"));
 		return false;

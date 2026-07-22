@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AITypes.h"
+#include "Boar/BoarDataAsset.h"
 #include "GameFramework/Character.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "BoarBase.generated.h"
@@ -13,15 +14,6 @@ class UCaptureComponent;
 class ACage;
 class APawn;
 class APatrolPath;
-
-UENUM(BlueprintType)
-enum class EBoarArchetype : uint8
-{
-	Normal,
-	PlayerAttacker,
-	EscapeSpecialist,
-	CageBreaker,
-};
 
 UCLASS()
 class REBOARGETCH_API ABoarBase : public ACharacter
@@ -101,6 +93,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool CanAttackCage() const { return bCanAttackCage; }
 
+	/** 現在の種類が檻へ与えるダメージです。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|AI")
+	float GetCageAttackDamage() const { return CageAttackDamage; }
+
 	/** 現在の種別設定を返します。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	EBoarArchetype GetBoarArchetype() const { return BoarArchetype; }
@@ -178,6 +174,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	EBoarArchetype BoarArchetype = EBoarArchetype::Normal;
 
+	/** 種別ごとのAI・スタミナ・移動設定です。未設定時は従来の既定値を使用します。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UBoarDataAsset> BoarDataAsset;
+
 	/** 視認距離です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
@@ -222,6 +222,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	bool bCanAttackCage = true;
 
+	/** 檻への1回分の攻撃力です。DataAssetの設定から適用されます。 */
+	float CageAttackDamage = 10.0f;
+
 	/** スタミナ制御を使う種別かです。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true"))
 	bool bUseStamina = false;
@@ -245,6 +248,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
 	float StaminaRecoverExitRatio = 0.4f;
+
+	/** 通常時の移動速度です。DataAssetの設定から適用されます。 */
+	float BaseWalkSpeed = 450.0f;
+
+	/** スタミナ回復待機中の移動速度倍率です。 */
+	float StaminaRecoverySpeedMultiplier = 0.35f;
+
+	/** 移動中と判定する速度のしきい値です。 */
+	float MovingSpeedThreshold = 10.0f;
 
 	/** 認識中のプレイヤーです。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
