@@ -12,6 +12,17 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::EnterState(FStateTreeExecutionConte
 	, const FStateTreeTransitionResult& Transition) const
 {
 	(void)Transition;
+	return UpdateSense(Context);
+}
+
+EStateTreeRunStatus FStateTreeBoarSenseTask::Tick(FStateTreeExecutionContext& Context, float DeltaTime) const
+{
+	(void)DeltaTime;
+	return UpdateSense(Context);
+}
+
+EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionContext& Context) const
+{
 	// StateTreeが保持しているインスタンスデータを取得する。
 	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	// このStateTreeを実行しているイノシシを取得する。
@@ -28,7 +39,7 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::EnterState(FStateTreeExecutionConte
 		InstanceData.bCanAttackCage = false;
 		return EStateTreeRunStatus::Failed;
 	}
-	
+
 	// Perceptionを更新し、現在認識している対象を取得する。
 	InstanceData.bHasTargetInSight = Boar->RefreshPerceptionTargets();
 	// 認識しているプレイヤーを保存する。
@@ -80,7 +91,7 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::EnterState(FStateTreeExecutionConte
 		Boar->PrintAIStateDebug(TEXT("Patrol"));
 
 		// 対象がいないことは正常な徘徊状態なので、失敗として扱わない。
-		return EStateTreeRunStatus::Succeeded;
+		return EStateTreeRunStatus::Running;
 	}
 
 	if (InstanceData.bPreferEscape)
@@ -90,22 +101,23 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::EnterState(FStateTreeExecutionConte
 	else if (InstanceData.bPreferPlayer)
 	{
 		Boar->PrintAIStateDebug(TEXT("ChasePlayer"),
-			InstanceData.TargetPlayer->GetActorLocation());
+		                        InstanceData.TargetPlayer->GetActorLocation());
 	}
 	else if (InstanceData.bPreferCage)
 	{
 		Boar->PrintAIStateDebug(TEXT("ChaseCage"),
-			InstanceData.TargetCage->GetActorLocation());
+		                        InstanceData.TargetCage->GetActorLocation());
 	}
 
 	// 認識結果は出力値とTransition Conditionで分岐するため、更新できた時点で成功とする。
-	return EStateTreeRunStatus::Succeeded;
+	return EStateTreeRunStatus::Running;
 }
 
 // StateTreeエディタ上に表示するノード名を返す。
 #if WITH_EDITOR
 FText FStateTreeBoarSenseTask::GetDescription(const FGuid& ID, FStateTreeDataView InstanceDataView,
-	const IStateTreeBindingLookup& BindingLookup, EStateTreeNodeFormatting Formatting) const
+                                              const IStateTreeBindingLookup& BindingLookup,
+                                              EStateTreeNodeFormatting Formatting) const
 {
 	(void)ID;
 	(void)InstanceDataView;
@@ -114,4 +126,3 @@ FText FStateTreeBoarSenseTask::GetDescription(const FGuid& ID, FStateTreeDataVie
 	return FText::FromString(TEXT("<b>Sense Player/Cage</b>"));
 }
 #endif
-

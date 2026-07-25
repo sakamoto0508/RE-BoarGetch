@@ -42,5 +42,5 @@ EStateTreeRunStatus FStateTreeBoarPatrolTask::EnterState(
 	InstanceData.PatrolLocation = PatrolNavLocation.Location;
 	Boar->PrintAIStateDebug(TEXT("Patrol"), InstanceData.PatrolLocation);
 
-	return EStateTreeRunStatus::Succeeded;
+	return EStateTreeRunStatus::Running;
 }
