@@ -61,6 +61,10 @@ struct FBoarStateTreeInstanceData
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	float DistanceToCage = BIG_NUMBER;
 
+	/** 檻攻撃判定のデバッグ表示を最後に行った時刻です。 */
+	UPROPERTY()
+	float LastCageAttackDebugTime = -BIG_NUMBER;
+
 	/** 巡回地点です。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	FVector PatrolLocation = FVector::ZeroVector;

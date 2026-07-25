@@ -209,6 +209,29 @@ void ABoarBase::PrintAIStateDebug(
 		this, Message, true, true, FLinearColor(0.0f, 1.0f, 1.0f), 2.0f, DebugKey);
 }
 
+/** 檻攻撃への遷移判定に使用する値を画面とログへ表示する。 */
+void ABoarBase::PrintCageAttackDebug(
+	const float DistanceToCage,
+	const bool bHasTargetCage,
+	const bool bCanAttack,
+	const bool bPreferCage) const
+{
+	if (!bEnableAIStateDebugPrint)
+		return;
+
+	const FString Message = FString::Printf(
+		TEXT("[%s] CageAttackCheck | Distance=%.1f cm | HasTarget=%s | CanAttack=%s | PreferCage=%s"),
+		*GetNameSafe(this),
+		DistanceToCage,
+		bHasTargetCage ? TEXT("true") : TEXT("false"),
+		bCanAttack ? TEXT("true") : TEXT("false"),
+		bPreferCage ? TEXT("true") : TEXT("false"));
+	const FName DebugKey(*FString::Printf(TEXT("BoarCageAttack_%u"), GetUniqueID()));
+
+	UKismetSystemLibrary::PrintString(
+		this, Message, true, true, FLinearColor::Green, 1.1f, DebugKey);
+}
+
 /** 檻が破壊されたときに、捕獲中のイノシシを解放して周囲へ移動させる。 */
 void ABoarBase::ReleaseBoar()
 {

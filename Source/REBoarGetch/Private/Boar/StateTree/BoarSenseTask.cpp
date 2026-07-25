@@ -84,6 +84,21 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 	}
 
 	// プレイヤーも檻も見つかっていない場合。
+	if (InstanceData.bHasTargetCage)
+	{
+		const float CurrentTime = Boar->GetWorld()->GetTimeSeconds();
+		constexpr float DebugInterval = 1.0f;
+		if (CurrentTime - InstanceData.LastCageAttackDebugTime >= DebugInterval)
+		{
+			InstanceData.LastCageAttackDebugTime = CurrentTime;
+			Boar->PrintCageAttackDebug(
+				InstanceData.DistanceToCage,
+				InstanceData.bHasTargetCage,
+				InstanceData.bCanAttackCage,
+				InstanceData.bPreferCage);
+		}
+	}
+
 	if (!bHasPlayer && !bHasCage)
 	{
 		// 優先対象は存在しない。

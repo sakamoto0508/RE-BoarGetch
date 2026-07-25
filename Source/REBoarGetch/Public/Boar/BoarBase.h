@@ -93,6 +93,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool CanAttackCage() const { return bCanAttackCage; }
 
+	/** 檻攻撃への遷移判定に使用する値をデバッグ表示します。 */
+	void PrintCageAttackDebug(
+		float DistanceToCage,
+		bool bHasTargetCage,
+		bool bCanAttack,
+		bool bPreferCage) const;
+
 	/** 現在の種類が檻へ与えるダメージです。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	float GetCageAttackDamage() const { return CageAttackDamage; }
