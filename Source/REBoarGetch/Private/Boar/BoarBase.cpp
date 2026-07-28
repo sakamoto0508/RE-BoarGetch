@@ -100,12 +100,19 @@ bool ABoarBase::RefreshPerceptionTargets()
 	for (TActorIterator<ACage> It(World); It; ++It)
 	{
 		ACage* Cage = *It;
-		if (Cage == nullptr)
+		// 破壊済みの檻は認識対象から除外する
+		if (Cage == nullptr || Cage->GetIsCageDestroyed())
 		{
 			continue;
 		}
 
-		const float Distance = FVector::Dist(GetActorLocation(), Cage->GetActorLocation());
+		FVector ClosestPointOnCage;
+		const float CollisionDistance = Cage->ActorGetDistanceToCollision(
+			GetActorLocation(), ECC_Pawn, ClosestPointOnCage);
+		
+		const float Distance = CollisionDistance >= 0.0f
+			? CollisionDistance
+			: FVector::Dist(GetActorLocation(), Cage->GetActorLocation());
 		if (Distance < PerceivedCageDistance && CanDetectTarget(Cage, Distance))
 		{
 			PerceivedCage = Cage;
