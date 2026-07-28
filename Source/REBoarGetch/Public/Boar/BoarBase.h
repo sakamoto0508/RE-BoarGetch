@@ -94,12 +94,6 @@ public:
 	bool CanAttackCage() const { return bCanAttackCage; }
 
 	/** 檻攻撃への遷移判定に使用する値をデバッグ表示します。 */
-	void PrintCageAttackDebug(
-		float DistanceToCage,
-		bool bHasTargetCage,
-		bool bCanAttack,
-		bool bPreferCage) const;
-
 	/** 現在の種類が檻へ与えるダメージです。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	float GetCageAttackDamage() const { return CageAttackDamage; }
@@ -129,11 +123,7 @@ public:
 	APatrolPath* GetPatrolPath() const { return PatrolPath; }
 
 	/** 現在のAIステートを画面とログへデバッグ表示します。 */
-	void PrintAIStateDebug(const FString& StateName) const;
-
 	/** 現在のAIステートと移動先を画面とログへデバッグ表示します。 */
-	void PrintAIStateDebug(const FString& StateName, const FVector& TargetLocation) const;
-
 private:
 	/** 距離・視野角・遮蔽・絶対発見距離から対象を認識できるか判定します。 */
 	bool CanDetectTarget(const AActor* TargetActor, float Distance) const;
@@ -173,10 +163,6 @@ private:
 	bool bIsLeavingCage = false;
 
 	/** AIステートと目的地のPrint String表示を有効にするかです。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boar|AI|Debug",
-		meta = (AllowPrivateAccess = "true"))
-	bool bEnableAIStateDebugPrint = true;
-
 	/** イノシシ種別です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	EBoarArchetype BoarArchetype = EBoarArchetype::Normal;

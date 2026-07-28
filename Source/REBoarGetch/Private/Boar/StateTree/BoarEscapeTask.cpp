@@ -52,7 +52,5 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 	}
 
 	InstanceData.EscapeLocation = Result.Location;
-	Boar->PrintAIStateDebug(TEXT("Escape"), InstanceData.EscapeLocation);
-
 	return EStateTreeRunStatus::Running;
 }

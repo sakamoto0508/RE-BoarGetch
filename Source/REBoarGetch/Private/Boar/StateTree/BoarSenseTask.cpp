@@ -84,44 +84,12 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 	}
 
 	// プレイヤーも檻も見つかっていない場合。
-	if (InstanceData.bHasTargetCage)
-	{
-		const float CurrentTime = Boar->GetWorld()->GetTimeSeconds();
-		constexpr float DebugInterval = 1.0f;
-		if (CurrentTime - InstanceData.LastCageAttackDebugTime >= DebugInterval)
-		{
-			InstanceData.LastCageAttackDebugTime = CurrentTime;
-			Boar->PrintCageAttackDebug(
-				InstanceData.DistanceToCage,
-				InstanceData.bHasTargetCage,
-				InstanceData.bCanAttackCage,
-				InstanceData.bPreferCage);
-		}
-	}
-
 	if (!bHasPlayer && !bHasCage)
 	{
 		// 優先対象は存在しない。
 		InstanceData.bPreferCage = false;
-		Boar->PrintAIStateDebug(TEXT("Patrol"));
-
 		// 対象がいないことは正常な徘徊状態なので、失敗として扱わない。
 		return EStateTreeRunStatus::Running;
-	}
-
-	if (InstanceData.bPreferEscape)
-	{
-		Boar->PrintAIStateDebug(TEXT("Escape"));
-	}
-	else if (InstanceData.bPreferPlayer)
-	{
-		Boar->PrintAIStateDebug(TEXT("ChasePlayer"),
-		                        InstanceData.TargetPlayer->GetActorLocation());
-	}
-	else if (InstanceData.bPreferCage)
-	{
-		Boar->PrintAIStateDebug(TEXT("ChaseCage"),
-		                        InstanceData.TargetCage->GetActorLocation());
 	}
 
 	// 認識結果は出力値とTransition Conditionで分岐するため、更新できた時点で成功とする。

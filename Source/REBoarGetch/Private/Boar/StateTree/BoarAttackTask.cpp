@@ -27,7 +27,5 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::EnterState(FStateTreeExecutionCont
 	}
 
 	Cage->ApplyDamage(Boar->GetCageAttackDamage());
-	Boar->PrintAIStateDebug(TEXT("AttackCage"), Cage->GetActorLocation());
-
 	return EStateTreeRunStatus::Succeeded;
 }
