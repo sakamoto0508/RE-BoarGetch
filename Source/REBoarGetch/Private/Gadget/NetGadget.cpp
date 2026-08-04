@@ -9,6 +9,7 @@
 ANetGadget::ANetGadget()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	EquipSocketName = TEXT("NetSocket");
 	// ネットは単発ガジェットとして扱う。
 	UseStyle = EGadgetUseStyle::OneShot;
 	// 新しいルートコンポーネント（シーンコンポーネント）を作成して設定。
@@ -18,8 +19,6 @@ ANetGadget::ANetGadget()
 	CaptureCollision = CreateDefaultSubobject<USphereComponent>(TEXT("CaptureCollision"));
 	// スフィアコリジョンをルート（DummyRoot）の子階層として繋ぐ。
 	CaptureCollision->SetupAttachment(DummyRoot);
-	// センサーの大きさを決める。
-	CaptureCollision->SetSphereRadius(CaptureRadius);
 	// 初期状態ではセンサーを「オフ」にする。
 	CaptureCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	// センサーの「属性」を決める。
@@ -49,7 +48,6 @@ void ANetGadget::BeginCaptureWindow()
 {
 	if (CaptureCollision == nullptr)	return;
 	// SphereCollisionを有効化。
-	CaptureCollision->SetSphereRadius(CaptureRadius);
 	CaptureCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	bCaptureWindowActive = true;
 	// 既に範囲内にいるイノシシも判定する。

@@ -29,12 +29,27 @@ public:
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Game")
 	int32 GetCapturedBoarCount() const { return CapturedBoarCount; }
 
+	/** 現在のステージ設定を返します。 */
+	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")
+	class UStageConfig* GetStageConfig() const { return StageConfig; }
+
 protected:
 	/** ゲームオーバー演出・遷移をBP側で実装するためのイベントです。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Game")
 	void OnGameOver();
 
+	/** ステージクリア演出や画面遷移をBlueprint側で実装するためのイベントです。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
+	void OnStageCleared();
+
 private:
+	/** 現在の捕獲数がステージクリア条件を満たしたか評価します。 */
+	void EvaluateStageClearCondition();
+
+	/** ステージ固有の設定です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UStageConfig> StageConfig;
+
 	/** 捕獲時に回復ピックアップを出す確率です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Capture", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
 	float HealItemDropChance = 0.3f;
@@ -46,4 +61,7 @@ private:
 	/** 現在の累計捕獲数です。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "REBoarGetch|Capture", meta = (AllowPrivateAccess = "true"))
 	int32 CapturedBoarCount = 0;
+
+	/** ステージクリア要求の多重発生を防ぎます。 */
+	bool bStageClearRequested = false;
 };

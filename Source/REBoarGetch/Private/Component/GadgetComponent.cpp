@@ -2,6 +2,8 @@
 
 #include "Engine/World.h"
 #include "Gadget/GadgetBase.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
 
 
@@ -9,6 +11,8 @@
 UGadgetComponent::UGadgetComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	// ゲーム開始前からスロット数を固定しておく。 
+	// 実際の初期装備内容はBeginPlayのInitializeDefaultSlotsで設定する。
 	EquippedGadgetSlots.SetNum(MaxGadgetSlots);
 }
 
@@ -22,6 +26,7 @@ void UGadgetComponent::BeginPlay()
 
 	InitializeDefaultSlots();
 
+	// スロット0から順番に確認し最初にガジェットが登録されているスロットを初期装備にする。
 	const int32 FirstSlot = FindFirstValidSlot();
 	if (FirstSlot != INDEX_NONE)
 	{
@@ -39,27 +44,53 @@ void UGadgetComponent::BeginPlay()
 bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 {
 	if (GadgetClass == nullptr || !IsValid(OwningPawn))
-	{
 		return false;
-	}
-
+	
 	UWorld* World = GetWorld();
-	if (World == nullptr) return false;
+	
+	if (World == nullptr) 
+		return false;
 
 	FActorSpawnParameters SpawnParams;
+	// Spawnされたガジェットの所有者をプレイヤーPawnに設定する。
 	SpawnParams.Owner = OwningPawn;
 	SpawnParams.Instigator = OwningPawn->GetInstigator();
+	// 装備用ガジェットは衝突によってSpawnに失敗してほしくないため周囲のCollision状態にかかわらず必ず生成する。
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	AGadgetBase* NewGadget = World->SpawnActor<AGadgetBase>
 		(GadgetClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 
-	if (NewGadget == nullptr) return false;
+	if (NewGadget == nullptr) 
+		return false;
+
+	// ガジェットはCharacterのSkeletalMeshにあるSocketへ装備するため、所有者PawnをACharacterへ変換してMeshを取得する。
+	ACharacter* OwningCharacter = Cast<ACharacter>(OwningPawn.Get());
+	USkeletalMeshComponent* CharacterMesh = OwningCharacter ? OwningCharacter->GetMesh() : nullptr;
+	// 装備先のSocket名はガジェット側に持たせる。これにより、ガジェットごとに異なるSocketへ装備できる。
+	const FName EquipSocketName = NewGadget->GetEquipSocketName();
+	
+	// CharacterのMesh、Socket名、実際のSocketの存在を確認する。
+	if (CharacterMesh == nullptr || EquipSocketName.IsNone() || !CharacterMesh->DoesSocketExist(EquipSocketName))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Equip failed: Socket '%s' was not found on '%s'"),
+			*EquipSocketName.ToString(), *GetNameSafe(CharacterMesh));
+		NewGadget->Destroy();
+		return false;
+	}
+
+	if (!NewGadget->AttachToComponent(CharacterMesh,FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			EquipSocketName))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Equip failed: Could not attach '%s' to Socket '%s'"),
+			*GetNameSafe(NewGadget), *EquipSocketName.ToString());
+		NewGadget->Destroy();
+		return false;
+	}
 
 	// Spawn に失敗した場合も現在の装備を失わないよう、新しい Actor の生成後に入れ替える。
 	UnequipGadget();
 	CurrentGadget = NewGadget;
-	CurrentGadget->AttachToActor(OwningPawn.Get(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	return true;
 }
 
@@ -74,15 +105,6 @@ void UGadgetComponent::UnequipGadget()
 	}
 	CurrentGadget = nullptr;
 	CurrentGadgetSlotIndex = INDEX_NONE;
-}
-
-/**
- * 現在装備中のガチャメカを使います。
- */
-bool UGadgetComponent::UseCurrentGadget()
-{
-	// 旧APIは互換維持のため開始APIへ委譲する。
-	return BeginUseCurrentGadget();
 }
 
 /**
@@ -194,11 +216,6 @@ void UGadgetComponent::InitializeDefaultSlots()
 	for (int32 i = 0; i < DefaultGadgetSlots.Num() && i < MaxGadgetSlots; ++i)
 	{
 		EquippedGadgetSlots[i] = DefaultGadgetSlots[i];
-	}
-
-	if (DefaultGadgetSlots.Num() == 0 && DefaultGadgetClass)
-	{
-		EquippedGadgetSlots[0] = DefaultGadgetClass;
 	}
 }
 

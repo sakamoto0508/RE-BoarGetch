@@ -41,10 +41,6 @@ private:
 
 	void CaptureOverlappingBoars();
 
-	/** ネットの捕獲範囲です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
-	float CaptureRadius = 300.0f;
-
 	/** 捕獲判定用のコリジョンです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> CaptureCollision;

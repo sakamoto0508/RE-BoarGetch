@@ -14,6 +14,7 @@ class UCaptureComponent;
 class ACage;
 class APawn;
 class APatrolPath;
+class UAnimSequenceBase;
 
 UCLASS()
 class REBOARGETCH_API ABoarBase : public ACharacter
@@ -97,6 +98,40 @@ public:
 	/** 現在の種類が檻へ与えるダメージです。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	float GetCageAttackDamage() const { return CageAttackDamage; }
+
+	/** 現在の予兆アニメーションまたは仮設定から攻撃予兆時間を返します。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|AI|Attack")
+	float GetAttackTelegraphDuration() const;
+
+	/** 攻撃予兆アニメーションの再生速度を返します。 */
+	float GetAttackTelegraphPlayRate() const { return AttackTelegraphPlayRate; }
+
+	/** 突進速度を返します。 */
+	float GetChargeSpeed() const { return ChargeSpeed; }
+
+	/** 突進の着弾距離を返します。 */
+	float GetChargeImpactDistance() const { return ChargeImpactDistance; }
+
+	/** 突進の最大継続時間を返します。 */
+	float GetChargeMaxDuration() const { return ChargeMaxDuration; }
+
+	/** 着弾後の後退距離を返します。 */
+	float GetAttackRetreatDistance() const { return AttackRetreatDistance; }
+
+	/** 着弾後の後退速度を返します。 */
+	float GetAttackRetreatSpeed() const { return AttackRetreatSpeed; }
+
+	/** 攻撃予兆開始をアニメーションBlueprintへ通知します。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Boar|Animation")
+	void OnAttackTelegraphStarted(float Duration, float PlayRate);
+
+	/** 突進開始をアニメーションBlueprintへ通知します。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Boar|Animation")
+	void OnChargeStarted();
+
+	/** 突進攻撃終了をアニメーションBlueprintへ通知します。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Boar|Animation")
+	void OnChargeAttackFinished();
 
 	/** 現在の種別設定を返します。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
@@ -217,6 +252,30 @@ private:
 
 	/** 檻への1回分の攻撃力です。DataAssetの設定から適用されます。 */
 	float CageAttackDamage = 10.0f;
+
+	/** 攻撃予兆に使用するアニメーションです。 */
+	TObjectPtr<UAnimSequenceBase> AttackTelegraphAnimation;
+
+	/** 予兆アニメーション未指定時に使用する仮の待機秒数です。 */
+	float AttackTelegraphDuration = 1.0f;
+
+	/** 予兆アニメーションの再生速度です。 */
+	float AttackTelegraphPlayRate = 1.0f;
+
+	/** 突進中の移動速度です。 */
+	float ChargeSpeed = 1000.0f;
+
+	/** 檻への着弾と判定する表面距離です。 */
+	float ChargeImpactDistance = 30.0f;
+
+	/** 突進の最大継続時間です。 */
+	float ChargeMaxDuration = 2.0f;
+
+	/** 着弾後に後退する距離です。 */
+	float AttackRetreatDistance = 200.0f;
+
+	/** 着弾後に後退する速度です。 */
+	float AttackRetreatSpeed = 300.0f;
 
 	/** スタミナ制御を使う種別かです。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true"))

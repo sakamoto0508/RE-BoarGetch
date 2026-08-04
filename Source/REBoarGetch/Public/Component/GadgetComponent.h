@@ -10,9 +10,18 @@ class AGadgetBase;
 class APawn;
 enum class EGadgetUseStyle : uint8;
 
-/**
- * ガチャメカの装備・切り替え・使用をまとめるコンポーネントです。
- * Unity で武器管理を Player 本体に全部書かずに分ける感覚と同じです。
+/** 
+ * プレイヤーが所持するガジェットを管理するComponentです。 
+ * 主に以下の処理を担当します。 
+ *  ・ガジェットの生成と装備 
+ *  ・現在のガジェットの破棄 
+ *  ・ガジェット使用の開始と終了 
+ *  ・最大4つのガジェットスロットの管理
+ *  ・指定スロットへの装備切り替え 
+ *  ・ゲーム開始時の初期ガジェット装備 * 
+ *  ガジェットに関する処理をPlayerCharacterから分離することで、
+ *  プレイヤー本体の責務が増えすぎないようにしています。 
+ *  
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UGadgetComponent : public UActorComponent
@@ -36,13 +45,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Gadget")
 	void UnequipGadget();
 	
-	/**
-	 * 現在装備中のガチャメカを使います。
-	 * 成功ならtrue,失敗ならfalseを返します。
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Gadget")
-	bool UseCurrentGadget();
-
 	/**
 	 * 現在装備中のガジェット使用を開始します。
 	 * Hold系はこの開始状態を維持します。
@@ -98,17 +100,15 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	/** プレイヤーが使用できるガジェットスロットの最大数です。 */
 	static constexpr int32 MaxGadgetSlots = 4;
 
+	/** 指令された番号が有効なスロット範囲か確認します。*/
 	bool IsValidSlotIndex(int32 SlotIndex) const;
+	/** ガジェットが登録されている最初のスロットを検索しています。 */
 	int32 FindFirstValidSlot() const;
+	/** エディタで設定された初期ガジェットから実際に使用するスロット配列を構築します。 */
 	void InitializeDefaultSlots();
-
-	/**
-	 * 旧互換用の初期装備クラスです（DefaultGadgetSlotsが空の場合のみ使用）。
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Gadget")
-	TSubclassOf<AGadgetBase> DefaultGadgetClass;
 
 	/**
 	 * 初期装備スロットです。最大4件までを使用します。

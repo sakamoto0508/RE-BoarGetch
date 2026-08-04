@@ -59,6 +59,12 @@ public:
 	EGadgetUseStyle GetUseStyle() const { return UseStyle; }
 
 	/**
+	 * 装備時に接続するSocket名を返します。
+	 */
+	UFUNCTION(BlueprintPure, Category = "Gadget|Equip")
+	FName GetEquipSocketName() const { return EquipSocketName; }
+
+	/**
 	 * 使用開始時に呼ばれる入口です。
 	 * Character側はこの関数を呼んで使用ライフサイクルを開始します。
 	 */
@@ -75,6 +81,12 @@ public:
 	virtual void EndUse_Implementation(AActor* TargetActor);
 
 protected:
+	/**
+	 * 装備時に接続するプレイヤーMeshのSocket名です。
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Equip", meta = (AllowPrivateAccess = "true"))
+	FName EquipSocketName = TEXT("GadgetSocket");
+
 	/**
 	 * 使用タイプです。
 	 * OneShotは押下時に完結、Holdは押している間継続します。

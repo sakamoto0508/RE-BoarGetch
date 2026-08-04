@@ -4,6 +4,9 @@
 #include "Cage/Cage.h"
 #include "Boar/BoarBase.h"
 #include "AIController.h"
+#include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SceneComponent.h"
 #include "TimerManager.h"
 #include "Component/CaptureComponent.h"
 
@@ -11,6 +14,16 @@
 ACage::ACage()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	SetRootComponent(SceneRoot);
+
+	CapturedBoarArea = CreateDefaultSubobject<UBoxComponent>(TEXT("CapturedBoarArea"));
+	CapturedBoarArea->SetupAttachment(SceneRoot);
+	CapturedBoarArea->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+	CapturedBoarArea->SetBoxExtent(FVector(200.0f, 200.0f, 100.0f));
+	CapturedBoarArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	CapturedBoarArea->SetGenerateOverlapEvents(false);
 }
 
 void ACage::BeginPlay()
@@ -36,10 +49,56 @@ void ACage::CollectBoar(ABoarBase* Boar)
 	if (Boar == nullptr) return;
 	if (bIsDestroyed) return;
 
-	//配列に同じ要素が存在しない場合だけ追加する関数。
-	CapturedBoars.AddUnique(Boar);
-	Boar->SetActorLocation(GetActorLocation());
+	// 破棄済みの参照を除外し、新しい個体が空いた収容枠を利用できるようにする。
+	CapturedBoars.RemoveAll([](const TObjectPtr<ABoarBase>& CapturedBoar)
+	{
+		return !IsValid(CapturedBoar);
+	});
+
+	// AddUniqueは同じイノシシが既に配列に存在する場合、重複して追加せず、既存要素のインデックスを返す。
+	const int32 SlotIndex = CapturedBoars.AddUnique(Boar);
+	
+	// 配列上の位置に対応する収容座標へイノシシを移動させる。
+	// TeleportPhysicsを指定することで、物理速度による移動ではなく 指定した座標へ即座に配置する。
+	Boar->SetActorLocation(
+		GetCapturedBoarLocation(SlotIndex, Boar),
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics);
 	UE_LOG(LogTemp, Log, TEXT("[Cage] Collected %s Total=%d"), *GetNameSafe(Boar), CapturedBoars.Num());
+}
+
+FVector ACage::GetCapturedBoarLocation(int32 SlotIndex, const ABoarBase* Boar) const
+{
+	if (CapturedBoarArea == nullptr)
+		return GetActorLocation();
+
+	const int32 BoarsPerRow = FMath::Max(1, CapturedBoarsPerRow);
+	FVector2D SlotOffset = CapturedBoarCenterOffset;
+
+	// 1頭目は中央へ置き、2頭目以降は中央の前後へ交互に列を増やす。
+	if (SlotIndex > 0)
+	{
+		const int32 GridIndex = SlotIndex - 1;
+		const int32 Row = GridIndex / BoarsPerRow + 1;
+		const int32 Column = GridIndex % BoarsPerRow;
+		const float CenteredColumn = static_cast<float>(Column) - static_cast<float>(BoarsPerRow - 1) * 0.5f;
+		const int32 SignedRow = (Row % 2 == 1) ? (Row + 1) / 2 : -(Row / 2);
+
+		SlotOffset.X += CenteredColumn * CapturedBoarSpacing;
+		SlotOffset.Y += static_cast<float>(SignedRow) * CapturedBoarSpacing;
+	}
+
+	const FVector AreaExtent = CapturedBoarArea->GetScaledBoxExtent();
+	const float CapsuleHalfHeight = Boar && Boar->GetCapsuleComponent()
+		? Boar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
+		: 0.0f;
+
+	return CapturedBoarArea->GetComponentLocation()
+		+ CapturedBoarArea->GetForwardVector() * SlotOffset.X
+		+ CapturedBoarArea->GetRightVector() * SlotOffset.Y
+		+ CapturedBoarArea->GetUpVector()
+			* (-AreaExtent.Z + CapsuleHalfHeight + CapturedBoarFloorOffset);
 }
 
 //檻へのダメージ。イノシシが呼び出す関数。

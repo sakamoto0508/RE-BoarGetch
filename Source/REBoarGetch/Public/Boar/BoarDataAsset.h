@@ -4,6 +4,8 @@
 #include "Engine/DataAsset.h"
 #include "BoarDataAsset.generated.h"
 
+class UAnimSequenceBase;
+
 UENUM(BlueprintType)
 enum class EBoarArchetype : uint8
 {
@@ -33,6 +35,38 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat", meta = (ClampMin = "0.0"))
 	float CageAttackDamage = 10.0f;
+
+	/** 攻撃予兆に使用するアニメーションです。指定時はクリップ長を予兆時間に使用します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge")
+	TObjectPtr<UAnimSequenceBase> AttackTelegraphAnimation;
+
+	/** 予兆アニメーション未指定時に使用する仮の待機秒数です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge", meta = (ClampMin = "0.0"))
+	float AttackTelegraphDuration = 1.0f;
+
+	/** 予兆アニメーションの再生速度です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge", meta = (ClampMin = "0.01"))
+	float AttackTelegraphPlayRate = 1.0f;
+
+	/** 突進中の移動速度です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge", meta = (ClampMin = "0.0"))
+	float ChargeSpeed = 1000.0f;
+
+	/** 檻への着弾と判定する表面距離です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge", meta = (ClampMin = "0.0"))
+	float ChargeImpactDistance = 30.0f;
+
+	/** 突進が終了しない場合に打ち切る秒数です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge", meta = (ClampMin = "0.1"))
+	float ChargeMaxDuration = 2.0f;
+
+	/** 着弾後に後退する距離です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge", meta = (ClampMin = "0.0"))
+	float AttackRetreatDistance = 200.0f;
+
+	/** 着弾後に後退する速度です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge", meta = (ClampMin = "0.0"))
+	float AttackRetreatSpeed = 300.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perception", meta = (ClampMin = "0.0"))
 	float SightRange = 1200.0f;

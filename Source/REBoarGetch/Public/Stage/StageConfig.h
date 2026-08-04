@@ -9,4 +9,9 @@ UCLASS(BlueprintType)
 class REBOARGETCH_API UStageConfig : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
+
+public:
+	/** ステージクリアに必要な累計捕獲数です。0以下の場合は捕獲数によるクリア判定を無効にします。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Clear", meta = (ClampMin = "0"))
+	int32 TargetCaptureCount = 0;
 };

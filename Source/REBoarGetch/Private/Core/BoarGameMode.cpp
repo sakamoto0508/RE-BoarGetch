@@ -8,6 +8,7 @@
 #include "Item/HealPickup.h"
 #include "Player/BoarPlayerController.h"
 #include "Player/BoarPlayerCharacter.h"
+#include "Stage/StageConfig.h"
 #include "EngineUtils.h"
 
 ABoarGameMode::ABoarGameMode()
@@ -43,7 +44,27 @@ void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 			const FVector SpawnLocation = Boar->GetActorLocation() + FVector(0.0f, 0.0f, 40.0f);
 			World->SpawnActor<AHealPickup>(HealPickupClass, SpawnLocation, FRotator::ZeroRotator);
 		}
+
+		// 捕獲に伴う既存の後処理を終えてから、画面遷移を起こし得るクリアイベントを通知します。
+		EvaluateStageClearCondition();
 	}
+}
+
+void ABoarGameMode::EvaluateStageClearCondition()
+{
+	if (bStageClearRequested || StageConfig == nullptr)
+	{
+		return;
+	}
+
+	const int32 TargetCaptureCount = StageConfig->TargetCaptureCount;
+	if (TargetCaptureCount <= 0 || CapturedBoarCount < TargetCaptureCount)
+	{
+		return;
+	}
+
+	bStageClearRequested = true;
+	OnStageCleared();
 }
 
 void ABoarGameMode::HandlePlayerDeath(ABoarPlayerCharacter* PlayerCharacter)

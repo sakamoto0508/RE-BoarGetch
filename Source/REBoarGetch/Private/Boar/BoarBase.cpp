@@ -3,6 +3,7 @@
 
 #include "Boar/BoarBase.h"
 #include "AIController.h"
+#include "Animation/AnimSequenceBase.h"
 #include "BrainComponent.h"
 #include "Cage/Cage.h"
 #include "Component/CaptureComponent.h"
@@ -187,6 +188,17 @@ bool ABoarBase::ShouldPreferEscape() const
 	return EscapePriorityWeight > FMath::Max(PlayerPriorityWeight, CagePriorityWeight);
 }
 
+float ABoarBase::GetAttackTelegraphDuration() const
+{
+	if (AttackTelegraphAnimation)
+	{
+		return AttackTelegraphAnimation->GetPlayLength()
+			/ FMath::Max(AttackTelegraphPlayRate, 0.01f);
+	}
+
+	return FMath::Max(AttackTelegraphDuration, 0.0f);
+}
+
 /** 檻攻撃への遷移判定に使用する値を画面とログへ表示する。 */
 /** 檻が破壊されたときに、捕獲中のイノシシを解放して周囲へ移動させる。 */
 void ABoarBase::ReleaseBoar()
@@ -313,6 +325,14 @@ void ABoarBase::ApplyArchetypeDefaults()
 	EscapePriorityWeight = Settings.EscapePriorityWeight;
 	bCanAttackCage = Settings.bCanAttackCage;
 	CageAttackDamage = Settings.CageAttackDamage;
+	AttackTelegraphAnimation = Settings.AttackTelegraphAnimation;
+	AttackTelegraphDuration = Settings.AttackTelegraphDuration;
+	AttackTelegraphPlayRate = Settings.AttackTelegraphPlayRate;
+	ChargeSpeed = Settings.ChargeSpeed;
+	ChargeImpactDistance = Settings.ChargeImpactDistance;
+	ChargeMaxDuration = Settings.ChargeMaxDuration;
+	AttackRetreatDistance = Settings.AttackRetreatDistance;
+	AttackRetreatSpeed = Settings.AttackRetreatSpeed;
 	SightRange = Settings.SightRange;
 	SightAngleDegrees = Settings.SightAngleDegrees;
 	AbsoluteDetectionRange = Settings.AbsoluteDetectionRange;

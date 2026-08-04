@@ -29,6 +29,18 @@ enum class EPlayerActionState : uint8
 	Capture
 };
 
+/**
+ * プレイヤーキャラクターを管理するクラスです。
+ *
+ * 主に以下の処理を担当します。
+ * ・カメラ基準のキャラクター移動
+ * ・ジャンプと二段ジャンプ
+ * ・ダッシュ
+ * ・ガジェットの使用と切り替え
+ * ・イノシシの捕獲
+ * ・イノシシ接触時のダメージ、スタン、無敵時間
+ * ・プレイヤー行動状態の管理
+ */
 UCLASS()
 class REBOARGETCH_API ABoarPlayerCharacter : public ACharacter
 {
@@ -50,6 +62,14 @@ protected:
 	/** ガジェット使用終了時のアニメ通知入口です（AnimBP側で実装）。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Gadget")
 	void OnGadgetUseStopped(EGadgetUseStyle UseStyle, AGadgetBase* Gadget);
+	
+	/** ガジェット使用アニメーションの終了時に呼び出します。 */
+	UFUNCTION(BlueprintCallable, Category = "Player|Gadget")
+	void FinishGadgetUseAnimation(bool bWasInterrupted);
+	
+	/** ガジェット使用アニメーションが中断されたことをAnimBPへ通知します。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Animation")
+	void OnGadgetUseInterrupted();
 
 public:
 
@@ -71,9 +91,6 @@ public:
 	/** ダッシュ終了。 */
 	void StopDash();
 
-	/** ガジェットを使用。 */
-	void UseGadget();
-
 	/** ガジェット使用開始。 */
 	void StartGadgetUse();
 
@@ -90,24 +107,28 @@ public:
 	// Getter
 	//-------------------------------------------------
 
+	/** プレイヤーのHP管理Componentを取得します。 */
 	UFUNCTION(BlueprintPure, Category = "Player")
 	UHealthComponent* GetHealthComponent() const
 	{
 		return HealthComponent;
 	}
 
+	/** プレイヤーのガジェット管理Componentを取得します。 */
 	UFUNCTION(BlueprintPure, Category = "Player")
 	UGadgetComponent* GetGadgetComponent() const
 	{
 		return GadgetComponent;
 	}
 
+	/** プレイヤーの捕獲管理Componentを取得します。 */
 	UFUNCTION(BlueprintPure, Category = "Player")
 	UCaptureComponent* GetCaptureComponent() const
 	{
 		return CaptureComponent;
 	}
 
+	/** 現在のプレイヤー行動状態を取得します。 */
 	UFUNCTION(BlueprintPure, Category = "Player")
 	EPlayerActionState GetPlayerActionState() const
 	{
@@ -128,12 +149,6 @@ public:
 		return CurrentGadgetUseStyle;
 	}
 
-	// UFUNCTION(BlueprintPure, Category = "Player")
-	// UCameraComponent* GetCameraComponentEx() const
-	// {
-	// 	return CameraComponentEx;
-	// }
-
 private:
 	/** 被弾判定用。イノシシ接触時にダメージ/スタン/無敵を開始します。 */
 	UFUNCTION()
@@ -146,12 +161,23 @@ private:
 
 	/** 移動停止を伴うスタン状態を開始します。 */
 	void BeginStun();
+	
 	/** スタン終了後に通常移動へ復帰します。 */
 	void EndStun();
+	
 	/** 被弾直後の無敵時間を終了します。 */
 	void EndInvincible();
+	
+	/** ガジェット使用終了処理。 */
+	void EndGadgetUse(bool bWasInterrupted);
+	
+	/**  地上での入力状態に応じてIdle・Walk・Runを設定します。 */
 	void UpdateGroundActionState(bool bHasMoveInput);
+	
+	/** プレイヤーの現在行動状態を変更します。 */
 	void SetPlayerActionState(EPlayerActionState NewState);
+	
+	/** プレイヤーの行動入力を禁止する状態か確認します。 */
 	bool IsActionLocked() const;
 
 	//-------------------------------------------------
@@ -230,8 +256,12 @@ private:
 	bool bIsInvincible = false;
 	bool bIsGadgetInUse = false;
 	bool bHadMoveInput = false;
+	/** 現在使用しているガジェットの使用形式です。 */
 	EGadgetUseStyle CurrentGadgetUseStyle = EGadgetUseStyle::OneShot;
+	/** 現在のプレイヤー行動状態です。 */
 	EPlayerActionState CurrentActionState = EPlayerActionState::Idle;
+	/** スタン終了処理を実行するTimerの識別子です。 */
 	FTimerHandle StunTimerHandle;
+	/** 無敵時間終了処理を実行するTimerの識別子です。 */
 	FTimerHandle InvincibleTimerHandle;
 };

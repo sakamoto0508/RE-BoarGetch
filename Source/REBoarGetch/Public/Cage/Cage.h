@@ -8,7 +8,23 @@
 #include "Cage.generated.h"
 
 class ABoarBase;
+class UBoxComponent;
+class USceneComponent;
 
+/** 
+ * * 捕獲したイノシシを収容する檻を管理するActorです。 
+ *   主に以下の処理を担当します。 
+ *  ・捕獲されたイノシシの収容 
+ *  ・収容されたイノシシの配置位置計算 
+ *  ・檻のHP管理 
+ *  ・檻の破壊と再出現
+ *  ・檻の破壊時に収容中のイノシシを解放 
+ *  ・HP変更、破壊、再出現イベントの通知 * 
+ *  檻は破壊時にActor自体をDestroyせず、
+ *  一時的に非表示・Collision無効の状態にします。
+ *  これにより、同じActorから一定時間後の再出現処理を実行できます。 
+ * 
+ */
 UCLASS()
 class REBOARGETCH_API ACage : public AActor
 {
@@ -22,8 +38,7 @@ public:
 	ACage();
 
 	/** 檻のHP変更を通知するデリゲートです。 */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-		FOnCageHealthChanged, float, CurrentHp, float, MaxHp);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCageHealthChanged, float, CurrentHp, float, MaxHp);
 
 	/** 檻の破壊を通知するデリゲートです。 */
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCageDestroyed);
@@ -64,9 +79,42 @@ public:
 	bool GetIsCageDestroyed() const { return bIsDestroyed; }
 
 private:
+	/** 指定された収容枠に対応するイノシシの配置位置を返します。 */
+	FVector GetCapturedBoarLocation(int32 SlotIndex, const ABoarBase* Boar) const;
+
+	/** 檻のコンポーネントを接続するルートです。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cage|Components",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USceneComponent> SceneRoot;
+
+	/** 捕獲したイノシシを配置する範囲です。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cage|Components",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UBoxComponent> CapturedBoarArea;
+
 	/** 収容中のイノシシです。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Cage", meta = (AllowPrivateAccess = "true"))
 	TArray<TObjectPtr<ABoarBase>> CapturedBoars;
+
+	/** 檻中央を基準にした収容位置のXYオフセットです。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage|Capture Layout",
+		meta = (AllowPrivateAccess = "true"))
+	FVector2D CapturedBoarCenterOffset = FVector2D::ZeroVector;
+
+	/** 収容したイノシシ同士の配置間隔です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage|Capture Layout",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float CapturedBoarSpacing = 140.0f;
+
+	/** 収容位置を一列に並べる最大数です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage|Capture Layout",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1"))
+	int32 CapturedBoarsPerRow = 3;
+
+	/** 檻の床面から追加する高さです。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage|Capture Layout",
+		meta = (AllowPrivateAccess = "true"))
+	float CapturedBoarFloorOffset = 2.0f;
 
 	/** 檻を破壊状態にします。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
@@ -81,11 +129,11 @@ private:
 	float CurrentHp = 100.f;
 
 	/** 檻の最大HPです。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage",meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
 	float MaxHp = 100.f;
 
 	/** 檻が破壊されてから再出現するまでの時間です。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float RespawnDelay = 10.f;
 
 	/** 檻の再出現処理に使用するタイマーハンドルです。 */
