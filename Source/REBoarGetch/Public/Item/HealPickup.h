@@ -8,12 +8,14 @@ class USphereComponent;
 class UPrimitiveComponent;
 struct FHitResult;
 
+/** プレイヤーが接触するとHPを回復し、その後消滅するピックアップActorです。 */
 UCLASS()
 class REBOARGETCH_API AHealPickup : public AActor
 {
 	GENERATED_BODY()
 
 public:
+	/** 取得判定Collisionを生成し、接触Callbackを登録します。 */
 	AHealPickup();
 
 private:

@@ -5,6 +5,7 @@
 #include "BoarStateTreeTypes.h"
 #include "BoarPatrolTask.generated.h"
 
+/** イノシシが次に向かう巡回地点をNavMesh上から選ぶStateTreeタスクです。 */
 USTRUCT(meta=(DisplayName="Boar Patrol", Category="Boar"))
 struct FStateTreeBoarPatrolTask : public FStateTreeTaskCommonBase
 {
@@ -16,6 +17,7 @@ struct FStateTreeBoarPatrolTask : public FStateTreeTaskCommonBase
 	UPROPERTY(EditAnywhere, Category = "Boar|Patrol", meta = (ClampMin = "0.0"))
 	float PatrolRadius = 1000.0f;
 
+	/** このタスクが使用する共有インスタンスデータ型を返します。 */
 	virtual const UStruct* GetInstanceDataType() const override
 	{
 		return FInstanceDataType::StaticStruct();

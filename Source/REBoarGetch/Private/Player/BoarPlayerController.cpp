@@ -5,7 +5,15 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
+#include "Component/HealthComponent.h"
+#include "Core/BoarGameMode.h"
 #include "Player/BoarPlayerCharacter.h"
+#include "Stage/StageConfig.h"
+#include "UI/BoarHUDWidget.h"
+#include "UI/BoarResultWidget.h"
+
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -25,6 +33,7 @@ ABoarPlayerController::ABoarPlayerController()
 void ABoarPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+	RestoreGameplayInputState();
 
 	// LocalPlayerが持つEnhanced Input Subsystemを取得する。
 	if (UEnhancedInputLocalPlayerSubsystem* InputSubsystem =
@@ -41,6 +50,49 @@ void ABoarPlayerController::BeginPlay()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Input] EnhancedInputLocalPlayerSubsystem is null"));
 	}
+
+	CreatePlayerHUD();
+}
+
+void ABoarPlayerController::RestoreGameplayInputState()
+{
+	bResultScreenActive = false;
+	bResultTransitionRequested = false;
+	bIsGadgetModifierHeld = false;
+
+	ResetIgnoreMoveInput();
+	ResetIgnoreLookInput();
+	FlushPressedKeys();
+
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	SetShowMouseCursor(false);
+}
+
+void ABoarPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	BindPlayerHealth(Cast<ABoarPlayerCharacter>(InPawn));
+}
+
+void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (ABoarGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
+	{
+		GameMode->OnCapturedBoarCountChanged.RemoveDynamic(
+			this,
+			&ABoarPlayerController::HandleCapturedBoarCountChanged);
+	}
+
+	if (ObservedHealthComponent)
+	{
+		ObservedHealthComponent->OnHealthChanged.RemoveDynamic(
+			this,
+			&ABoarPlayerController::HandleHealthChanged);
+		ObservedHealthComponent = nullptr;
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,11 +196,191 @@ void ABoarPlayerController::SetupInputComponent()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+// Gameplay HUD
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ABoarPlayerController::CreatePlayerHUD()
+{
+	if (!IsLocalController() || PlayerHUDWidget || PlayerHUDWidgetClass == nullptr)
+	{
+		return;
+	}
+
+	PlayerHUDWidget = CreateWidget<UBoarHUDWidget>(this, PlayerHUDWidgetClass);
+	if (PlayerHUDWidget == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[HUD] Failed to create player HUD widget"));
+		return;
+	}
+
+	PlayerHUDWidget->AddToViewport(0);
+	PlayerHUDWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+
+	if (ABoarGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
+	{
+		GameMode->OnCapturedBoarCountChanged.AddUniqueDynamic(
+			this,
+			&ABoarPlayerController::HandleCapturedBoarCountChanged);
+
+		const UStageConfig* StageConfig = GameMode->GetStageConfig();
+		HandleCapturedBoarCountChanged(
+			GameMode->GetCapturedBoarCount(),
+			StageConfig ? StageConfig->TargetCaptureCount : 0);
+	}
+
+	BindPlayerHealth(GetBoarCharacter());
+}
+
+void ABoarPlayerController::BindPlayerHealth(ABoarPlayerCharacter* PlayerCharacter)
+{
+	UHealthComponent* NewHealthComponent =
+		PlayerCharacter ? PlayerCharacter->GetHealthComponent() : nullptr;
+
+	if (ObservedHealthComponent == NewHealthComponent)
+	{
+		if (ObservedHealthComponent)
+		{
+			HandleHealthChanged(
+				ObservedHealthComponent->GetCurrentHealth(),
+				ObservedHealthComponent->GetMaxHealth());
+		}
+		return;
+	}
+
+	if (ObservedHealthComponent)
+	{
+		ObservedHealthComponent->OnHealthChanged.RemoveDynamic(
+			this,
+			&ABoarPlayerController::HandleHealthChanged);
+	}
+
+	ObservedHealthComponent = NewHealthComponent;
+	if (ObservedHealthComponent)
+	{
+		ObservedHealthComponent->OnHealthChanged.AddUniqueDynamic(
+			this,
+			&ABoarPlayerController::HandleHealthChanged);
+		HandleHealthChanged(
+			ObservedHealthComponent->GetCurrentHealth(),
+			ObservedHealthComponent->GetMaxHealth());
+	}
+}
+
+void ABoarPlayerController::HandleCapturedBoarCountChanged(int32 CurrentCount, int32 TargetCount)
+{
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->UpdateCaptureCount(CurrentCount, TargetCount);
+	}
+}
+
+void ABoarPlayerController::HandleHealthChanged(float CurrentHealth, float MaxHealth)
+{
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Result UI
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ABoarPlayerController::HandleStageCleared(int32 CapturedCount, int32 TargetCount)
+{
+	if (!IsLocalController() || bResultScreenActive || ResultWidgetClass == nullptr)
+	{
+		return;
+	}
+
+	bResultScreenActive = true;
+	SetIgnoreMoveInput(true);
+	SetIgnoreLookInput(true);
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
+	{
+		PlayerCharacter->StopDash();
+
+		if (UCharacterMovementComponent* Movement = PlayerCharacter->GetCharacterMovement())
+		{
+			Movement->StopMovementImmediately();
+		}
+	}
+
+	ResultWidget = CreateWidget<UBoarResultWidget>(this, ResultWidgetClass);
+	if (ResultWidget == nullptr)
+	{
+		bResultScreenActive = false;
+		SetIgnoreMoveInput(false);
+		SetIgnoreLookInput(false);
+		UE_LOG(LogTemp, Warning, TEXT("[Result] Failed to create result widget"));
+		return;
+	}
+
+	ResultWidget->OnRetryRequested.AddUniqueDynamic(this, &ABoarPlayerController::RetryCurrentStage);
+	ResultWidget->OnTitleRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToTitle);
+	ResultWidget->AddToViewport(100);
+	ResultWidget->InitializeResult(CapturedCount, TargetCount);
+
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(ResultWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	SetShowMouseCursor(true);
+	ResultWidget->FocusInitialControl();
+}
+
+void ABoarPlayerController::RetryCurrentStage()
+{
+	if (bResultTransitionRequested)
+	{
+		return;
+	}
+
+	bResultTransitionRequested = true;
+	if (ResultWidget)
+	{
+		ResultWidget->SetIsEnabled(false);
+	}
+
+	const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this, true);
+	if (CurrentLevelName.IsEmpty())
+	{
+		bResultTransitionRequested = false;
+		return;
+	}
+
+	UGameplayStatics::OpenLevel(this, FName(*CurrentLevelName));
+}
+
+void ABoarPlayerController::ReturnToTitle()
+{
+	if (bResultTransitionRequested || TitleLevelName.IsNone())
+	{
+		return;
+	}
+
+	bResultTransitionRequested = true;
+	if (ResultWidget)
+	{
+		ResultWidget->SetIsEnabled(false);
+	}
+
+	UGameplayStatics::OpenLevel(this, TitleLevelName);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Input
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ABoarPlayerController::Move(const FInputActionValue& Value)
 {
+	if (bResultScreenActive) return;
+
 	/*
 	 * Character取得毎回GetPawn()から取得する。
 	 * Possessが切り替わっても 常に最新のCharacterになる。
@@ -161,6 +393,8 @@ void ABoarPlayerController::Move(const FInputActionValue& Value)
 
 void ABoarPlayerController::Look(const FInputActionValue& Value)
 {
+	if (bResultScreenActive) return;
+
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
 		PlayerCharacter->Look(Value.Get<FVector2D>());
@@ -169,6 +403,8 @@ void ABoarPlayerController::Look(const FInputActionValue& Value)
 
 void ABoarPlayerController::JumpStarted()
 {
+	if (bResultScreenActive) return;
+
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
 		PlayerCharacter->StartJump();
@@ -177,6 +413,8 @@ void ABoarPlayerController::JumpStarted()
 
 void ABoarPlayerController::JumpCompleted()
 {
+	if (bResultScreenActive) return;
+
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
 		PlayerCharacter->StopJump();
@@ -185,6 +423,8 @@ void ABoarPlayerController::JumpCompleted()
 
 void ABoarPlayerController::GadgetStarted()
 {
+	if (bResultScreenActive) return;
+
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
 		UE_LOG(LogTemp, Log, TEXT("[Input] Gadget started"));
@@ -194,6 +434,8 @@ void ABoarPlayerController::GadgetStarted()
 
 void ABoarPlayerController::GadgetCompleted()
 {
+	if (bResultScreenActive) return;
+
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
 		UE_LOG(LogTemp, Log, TEXT("[Input] Gadget completed"));
@@ -203,6 +445,8 @@ void ABoarPlayerController::GadgetCompleted()
 
 void ABoarPlayerController::DashStarted()
 {
+	if (bResultScreenActive) return;
+
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
 		PlayerCharacter->StartDash();
@@ -211,6 +455,8 @@ void ABoarPlayerController::DashStarted()
 
 void ABoarPlayerController::DashCompleted()
 {
+	if (bResultScreenActive) return;
+
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
 		PlayerCharacter->StopDash();
@@ -219,11 +465,15 @@ void ABoarPlayerController::DashCompleted()
 
 void ABoarPlayerController::GadgetModifierStarted()
 {
+	if (bResultScreenActive) return;
+
 	bIsGadgetModifierHeld = true;
 }
 
 void ABoarPlayerController::GadgetModifierCompleted()
 {
+	if (bResultScreenActive) return;
+
 	bIsGadgetModifierHeld = false;
 }
 
@@ -249,6 +499,8 @@ void ABoarPlayerController::SwitchGadgetSlot4()
 
 void ABoarPlayerController::TrySwitchGadgetSlot(int32 SlotIndex)
 {
+	if (bResultScreenActive) return;
+
 	if (!bIsGadgetModifierHeld)
 	{
 		return;

@@ -8,11 +8,15 @@
 class ACage;
 class APawn;
 
+/** 檻への突進攻撃を構成する進行フェーズです。 */
 UENUM()
 enum class EBoarChargeAttackPhase : uint8
 {
+	/** 攻撃前に停止し、プレイヤーへ突進を予告するフェーズです。 */
 	Telegraph,
+	/** 固定した方向へ高速移動し、檻との接触時にダメージを与えるフェーズです。 */
 	Charge,
+	/** 攻撃後に開始地点付近へ戻り、次の行動へ移れる状態にするフェーズです。 */
 	Retreat
 };
 
@@ -49,11 +53,13 @@ struct FBoarAttackTaskInstanceData
 	bool bCleanupCompleted = false;
 };
 
+/** 予兆・突進・後退の順で檻への攻撃を制御するStateTreeタスクです。 */
 USTRUCT(meta=(DisplayName="Attack Cage", Category="Boar"))
 struct FStateTreeBoarAttackTask : public FStateTreeTaskCommonBase
 {
 	GENERATED_BODY()
 
+	/** 攻撃フェーズを毎フレーム進行するようタスクを初期化します。 */
 	FStateTreeBoarAttackTask()
 	{
 		bShouldCallTick = true;

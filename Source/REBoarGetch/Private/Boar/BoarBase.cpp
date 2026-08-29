@@ -192,8 +192,7 @@ float ABoarBase::GetAttackTelegraphDuration() const
 {
 	if (AttackTelegraphAnimation)
 	{
-		return AttackTelegraphAnimation->GetPlayLength()
-			/ FMath::Max(AttackTelegraphPlayRate, 0.01f);
+		return AttackTelegraphAnimation->GetPlayLength() / FMath::Max(AttackTelegraphPlayRate, 0.01f);
 	}
 
 	return FMath::Max(AttackTelegraphDuration, 0.0f);
@@ -360,6 +359,7 @@ void ABoarBase::ApplyArchetypeDefaults()
 }
 
 // 青イノシシ向けのスタミナ更新。移動中は消費、停止中は回復させる。
+// 多分後で青イノシシ用の派生クラスを作る予定。
 void ABoarBase::UpdateStamina(float DeltaSeconds)
 {
 	if (!bUseStamina || IsCaptured())

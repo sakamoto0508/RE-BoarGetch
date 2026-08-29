@@ -6,12 +6,14 @@
 
 class USceneComponent;
 
+/** レベル上に配置した複数の巡回地点をイノシシAIへ提供するActorです。 */
 UCLASS()
 class REBOARGETCH_API APatrolPath : public AActor
 {
 	GENERATED_BODY()
 
 public:
+	/** ルートComponentと巡回地点管理用の初期状態を構築します。 */
 	APatrolPath();
 
 	/**

@@ -10,6 +10,8 @@ class AGadgetBase;
 class APawn;
 enum class EGadgetUseStyle : uint8;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGadgetLoadoutChanged);
+
 /** 
  * プレイヤーが所持するガジェットを管理するComponentです。 
  * 主に以下の処理を担当します。 
@@ -30,6 +32,7 @@ class REBOARGETCH_API UGadgetComponent : public UActorComponent
 
 public:
 	// Sets default values for this component's properties
+	/** Tickを使用しないガジェット管理Componentの初期状態を構築します。 */
 	UGadgetComponent();
 
 	/**
@@ -77,6 +80,10 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Gadget")
 	bool SwitchGadgetBySlot(int32 SlotIndex);
+
+	/** スロット内容または選択中スロットが変わったときに通知します。 */
+	UPROPERTY(BlueprintAssignable, Category = "Gadget")
+	FOnGadgetLoadoutChanged OnGadgetLoadoutChanged;
 	
 	/**
 	 * 現在のガチャメカを返します。
@@ -85,8 +92,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	AGadgetBase* GetCurrentGadget() const { return CurrentGadget; }
 
+	/** 現在選択中のガジェットスロット番号を返します。未選択時はINDEX_NONEです。 */
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	int32 GetCurrentGadgetSlotIndex() const { return CurrentGadgetSlotIndex; }
+
+	/** 指定スロットに設定されているガジェットClassを返します。空または範囲外ならnullです。 */
+	UFUNCTION(BlueprintPure, Category = "Gadget")
+	TSubclassOf<AGadgetBase> GetGadgetSlotClass(int32 SlotIndex) const;
 
 	/**
 	 * 現在ガジェットの使用タイプを返します。
@@ -97,6 +109,7 @@ public:
 	
 protected:
 	// Called when the game starts
+	/** 所有Pawnを取得し、初期スロットと初期装備を準備します。 */
 	virtual void BeginPlay() override;
 
 private:

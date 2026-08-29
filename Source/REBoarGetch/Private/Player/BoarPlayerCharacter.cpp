@@ -161,9 +161,21 @@ void ABoarPlayerCharacter::Look(const FVector2D& Input)
 void ABoarPlayerCharacter::StartJump()
 {
 	if (IsActionLocked()) return;
+	if (!CanJump()) return;
+	
+	// JumpCurrentCountはJump()の実処理より前の値
+	// 地上ジャンプ前は0、二段ジャンプ前は1
+	const bool bIsDoubleJump =
+		GetCharacterMovement() &&
+		GetCharacterMovement()->IsFalling() &&
+		JumpCurrentCount >= 1;
 
 	Jump();
-	SetPlayerActionState(JumpCurrentCount >= 2 ? EPlayerActionState::DoubleJump : EPlayerActionState::Jump);
+
+	SetPlayerActionState(
+		bIsDoubleJump
+			? EPlayerActionState::DoubleJump
+			: EPlayerActionState::Jump);
 }
 
 void ABoarPlayerCharacter::StopJump()

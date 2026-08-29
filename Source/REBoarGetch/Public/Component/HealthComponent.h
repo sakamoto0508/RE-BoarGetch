@@ -6,7 +6,9 @@
 #include "Components/ActorComponent.h"
 #include "HealthComponent.generated.h"
 
+/** 現在HPと最大HPを購読先へ通知するデリゲート型です。 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedSignature, float, CurrentHealth, float, MaxHealth);
+/** HPが0へ到達したことを購読先へ通知するデリゲート型です。 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
 
 /**
@@ -19,6 +21,7 @@ class REBOARGETCH_API UHealthComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
+	/** Tickを使用しないHP管理Componentの初期状態を構築します。 */
 	UHealthComponent();
 
 	/** ダメージを受けます */
@@ -54,6 +57,7 @@ public:
 	FOnDeathSignature OnDeath;
 
 protected:
+	/** 現在HPを最大HPで初期化し、初期値を購読先へ通知します。 */
 	virtual void BeginPlay() override;
 
 private:

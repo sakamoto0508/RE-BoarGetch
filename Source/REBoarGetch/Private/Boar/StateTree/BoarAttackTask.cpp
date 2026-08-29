@@ -12,28 +12,26 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::EnterState(FStateTreeExecutionCont
 {
 	(void)Transition;
 
-	FInstanceDataType& InstanceData =
-		Context.GetInstanceData(*this);
+	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get());
 
 	ACage* Cage = InstanceData.TargetCage.Get();
 
 	if (Cage == nullptr)
-	{
 		return EStateTreeRunStatus::Failed;
-	}
 
 	if (Boar == nullptr)
-	{
 		return EStateTreeRunStatus::Failed;
-	}
+	
 
+	// 再利用されるインスタンスデータを攻撃開始時の予兆状態へ戻す。
 	InstanceData.Phase = EBoarChargeAttackPhase::Telegraph;
 	InstanceData.PhaseElapsedTime = 0.0f;
 	InstanceData.ChargeDirection = FVector::ForwardVector;
 	InstanceData.RetreatStartLocation = Boar->GetActorLocation();
 	InstanceData.bCleanupCompleted = false;
 
+	// 攻撃終了時に必ず戻せるよう、変更前の速度を保存してから移動を停止する。
 	if (UCharacterMovementComponent* Movement = Boar->GetCharacterMovement())
 	{
 		InstanceData.OriginalWalkSpeed = Movement->MaxWalkSpeed;
@@ -74,6 +72,7 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::Tick(
 	switch (InstanceData.Phase)
 	{
 	case EBoarChargeAttackPhase::Telegraph:
+		// 予兆時間中はその場に留まり、終了時点の檻方向を突進方向として固定する。
 		if (InstanceData.PhaseElapsedTime < Boar->GetAttackTelegraphDuration())
 		{
 			return EStateTreeRunStatus::Running;
@@ -99,12 +98,14 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::Tick(
 
 	case EBoarChargeAttackPhase::Charge:
 	{
+		// 檻のCollision表面までの距離で着弾を判定し、未着弾なら固定方向へ進み続ける。
 		FVector ClosestPointOnCage;
 		const float DistanceToCage = Cage->ActorGetDistanceToCollision(
 			Boar->GetActorLocation(), ECC_Pawn, ClosestPointOnCage);
 		const bool bReachedCage = DistanceToCage >= 0.0f
 			&& DistanceToCage <= Boar->GetChargeImpactDistance();
 
+		// 檻が移動・消失しても突進が永久継続しないよう最大時間でも打ち切る。
 		if (!bReachedCage && InstanceData.PhaseElapsedTime < Boar->GetChargeMaxDuration())
 		{
 			Boar->AddMovementInput(InstanceData.ChargeDirection, 1.0f);
@@ -128,6 +129,7 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::Tick(
 	}
 
 	case EBoarChargeAttackPhase::Retreat:
+		// 着弾地点から所定距離だけ突進方向の逆へ後退し、通常AIへ制御を返す。
 		if (FVector::DistSquared2D(Boar->GetActorLocation(), InstanceData.RetreatStartLocation)
 			>= FMath::Square(Boar->GetAttackRetreatDistance()))
 		{
@@ -154,6 +156,7 @@ void FStateTreeBoarAttackTask::ExitState(
 void FStateTreeBoarAttackTask::FinishAttack(
 	FInstanceDataType& InstanceData, ABoarBase* Boar) const
 {
+	// Tick完了とExitStateの両方から呼ばれるため、復元処理は一度だけ実行する。
 	if (Boar == nullptr || InstanceData.bCleanupCompleted)
 		return;
 

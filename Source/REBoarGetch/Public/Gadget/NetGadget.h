@@ -11,6 +11,7 @@ class USphereComponent;
 class UPrimitiveComponent;
 struct FHitResult;
 
+/** アニメーション中の判定窓に重なったイノシシを捕獲する網ガジェットです。 */
 UCLASS()
 class REBOARGETCH_API ANetGadget : public AGadgetBase
 {
@@ -18,6 +19,7 @@ class REBOARGETCH_API ANetGadget : public AGadgetBase
 
 public:
 	// Sets default values for this actor's properties
+	/** 捕獲Collisionと網用Socketを設定します。 */
 	ANetGadget();
 	
 	/** ネットを使用します。 */
@@ -32,13 +34,16 @@ public:
 	void EndCaptureWindow();
 
 private:
+	/** 捕獲判定窓の開始後に侵入したActorをイノシシとして捕獲できるか判定します。 */
 	UFUNCTION()
 	void OnCaptureCollisionBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
 		const FHitResult& SweepResult);
 
+	/** 未捕獲のイノシシであれば捕獲処理を実行し、成功可否を返します。 */
 	bool TryCaptureBoar(ABoarBase* Boar);
 
+	/** 判定窓開始時点ですでにCollision内にいる全イノシシを捕獲対象として処理します。 */
 	void CaptureOverlappingBoars();
 
 	/** 捕獲判定用のコリジョンです。 */

@@ -26,6 +26,7 @@ struct FBoarEscapeTaskInstanceData
 	FVector EscapeLocation = FVector::ZeroVector;
 };
 
+/** 認識したプレイヤーから離れる方向へ逃走地点を決定するStateTreeタスクです。 */
 USTRUCT(meta=(DisplayName="Boar Escape", Category="Boar"))
 struct FStateTreeBoarEscapeTask : public FStateTreeTaskCommonBase
 {

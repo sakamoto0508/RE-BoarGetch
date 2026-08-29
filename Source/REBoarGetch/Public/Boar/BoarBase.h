@@ -22,8 +22,11 @@ class REBOARGETCH_API ABoarBase : public ACharacter
 	GENERATED_BODY()
 
 public:
+	/** 捕獲Componentを生成し、AI更新用Tickを有効化します。 */
 	ABoarBase();
+	/** 種別設定と初期スタミナを適用します。 */
 	virtual void BeginPlay() override;
+	/** 種別がスタミナを使用する場合に消費・回復状態を更新します。 */
 	virtual void Tick(float DeltaSeconds) override;
 
 	/**

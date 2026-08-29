@@ -151,6 +151,7 @@ bool UGadgetComponent::SwitchGadget(TSubclassOf<AGadgetBase> NewGadgetClass)
 
 bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> GadgetClass)
 {
+	// 固定4枠の外側へ書き込まないよう、配列アクセス前に番号を検証する。
 	if (!IsValidSlotIndex(SlotIndex))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Invalid slot index: %d"), SlotIndex);
@@ -158,11 +159,13 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 	}
 
 	EquippedGadgetSlots[SlotIndex] = GadgetClass;
+	OnGadgetLoadoutChanged.Broadcast();
 	return true;
 }
 
 bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
 {
+	// 切替に失敗した場合は現在装備を維持するため、先にスロットとクラスを検証する。
 	if (!IsValidSlotIndex(SlotIndex))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Switch failed: invalid slot index %d"), SlotIndex);
@@ -184,16 +187,24 @@ bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
 
 	CurrentGadgetSlotIndex = SlotIndex;
 	UE_LOG(LogTemp, Log, TEXT("[Gadget] Switched to slot %d (%s)"), SlotIndex, *GetNameSafe(SlotClass.Get()));
+	OnGadgetLoadoutChanged.Broadcast();
 	return true;
+}
+
+TSubclassOf<AGadgetBase> UGadgetComponent::GetGadgetSlotClass(int32 SlotIndex) const
+{
+	return IsValidSlotIndex(SlotIndex) ? EquippedGadgetSlots[SlotIndex] : nullptr;
 }
 
 bool UGadgetComponent::IsValidSlotIndex(int32 SlotIndex) const
 {
+	// 定数上の最大数と、実際に確保済みの配列範囲の両方を満たす必要がある。
 	return SlotIndex >= 0 && SlotIndex < MaxGadgetSlots && EquippedGadgetSlots.IsValidIndex(SlotIndex);
 }
 
 int32 UGadgetComponent::FindFirstValidSlot() const
 {
+	// 初期装備は番号の小さい有効スロットを優先する。
 	for (int32 SlotIndex = 0; SlotIndex < EquippedGadgetSlots.Num(); ++SlotIndex)
 	{
 		if (EquippedGadgetSlots[SlotIndex] != nullptr)
@@ -207,6 +218,7 @@ int32 UGadgetComponent::FindFirstValidSlot() const
 
 void UGadgetComponent::InitializeDefaultSlots()
 {
+	// Editor配列の要素数にかかわらず、ランタイム側は常に4枠へ正規化する。
 	EquippedGadgetSlots.SetNum(MaxGadgetSlots);
 	for (int32 i = 0; i < MaxGadgetSlots; ++i)
 	{
@@ -221,5 +233,6 @@ void UGadgetComponent::InitializeDefaultSlots()
 
 EGadgetUseStyle UGadgetComponent::GetCurrentGadgetUseStyle() const
 {
+	// 未装備時は押下終了処理を要求しない安全な既定値としてOneShotを返す。
 	return CurrentGadget ? CurrentGadget->GetUseStyle() : EGadgetUseStyle::OneShot;
 }

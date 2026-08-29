@@ -8,6 +8,7 @@ class AAIController;
 class ACage;
 class APawn;
 
+/** StateTreeの各タスク間で共有する、イノシシAIの認識結果と行動用データです。 */
 USTRUCT()
 struct FBoarStateTreeInstanceData
 {

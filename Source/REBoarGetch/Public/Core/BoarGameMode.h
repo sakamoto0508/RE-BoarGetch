@@ -6,6 +6,12 @@
 #include "GameFramework/GameModeBase.h"
 #include "BoarGameMode.generated.h"
 
+/** 捕獲数が変化したとき、現在数と目標数をHUDへ通知します。 */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FOnCapturedBoarCountChangedSignature,
+	int32, CurrentCount,
+	int32, TargetCount);
+
 /**
  * ゲームのルール全体を管理します。
  * 今は空でOK。将来、ステージクリア判定などを追加します。
@@ -16,6 +22,7 @@ class REBOARGETCH_API ABoarGameMode : public AGameModeBase
 	GENERATED_BODY()
 
 public:
+	/** このゲームで使用するPlayerControllerとデフォルトPawnを設定します。 */
 	ABoarGameMode();
 
 	/** 捕獲成功時の共通後処理（檻送致/カウント/ドロップ）を実行します。 */
@@ -26,12 +33,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Game")
 	void HandlePlayerDeath(class ABoarPlayerCharacter* PlayerCharacter);
 
+	/** 現在の累計捕獲数を返します。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Game")
 	int32 GetCapturedBoarCount() const { return CapturedBoarCount; }
 
 	/** 現在のステージ設定を返します。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")
 	class UStageConfig* GetStageConfig() const { return StageConfig; }
+
+	/** 捕獲数が変化したことをHUDなどへ通知します。 */
+	UPROPERTY(BlueprintAssignable, Category = "REBoarGetch|Capture")
+	FOnCapturedBoarCountChangedSignature OnCapturedBoarCountChanged;
 
 protected:
 	/** ゲームオーバー演出・遷移をBP側で実装するためのイベントです。 */

@@ -31,10 +31,13 @@ class REBOARGETCH_API ACage : public AActor
 	GENERATED_BODY()
 
 protected:
+	/** HPを初期化し、初回のHP通知を行います。 */
 	virtual void BeginPlay() override;
+	/** レベル終了時に再出現Timerを解除し、破棄後のCallback実行を防ぎます。 */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
+	/** 収容範囲など、檻を構成するComponentの初期状態を構築します。 */
 	ACage();
 
 	/** 檻のHP変更を通知するデリゲートです。 */

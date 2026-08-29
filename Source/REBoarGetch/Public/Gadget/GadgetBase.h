@@ -6,10 +6,15 @@
 #include "GameFramework/Actor.h"
 #include "GadgetBase.generated.h"
 
+class UGadgetDataAsset;
+
+/** 入力に対してガジェット効果を単発実行するか、押下中継続するかを表します。 */
 UENUM(BlueprintType)
 enum class EGadgetUseStyle : uint8
 {
+	/** 押した瞬間に効果が完結する使用形式です。 */
 	OneShot,
+	/** 押している間だけ効果を継続し、入力終了時に停止する使用形式です。 */
 	Hold
 };
 
@@ -24,6 +29,7 @@ class REBOARGETCH_API AGadgetBase : public AActor
 
 public:
 	// Sets default values for this actor's properties
+	/** Tickを使用しないガジェットActorの初期状態を構築します。 */
 	AGadgetBase();
 
 	/**
@@ -64,12 +70,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Gadget|Equip")
 	FName GetEquipSocketName() const { return EquipSocketName; }
 
+	/** UIを含む各機能が共有するガジェット定義を返します。 */
+	UFUNCTION(BlueprintPure, Category = "Gadget")
+	const UGadgetDataAsset* GetGadgetDefinition() const { return GadgetDefinition; }
+
 	/**
 	 * 使用開始時に呼ばれる入口です。
 	 * Character側はこの関数を呼んで使用ライフサイクルを開始します。
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Gadget")
 	void BeginUse(AActor* TargetActor);
+	/** Blueprintで上書きされない場合の使用開始処理です。 */
 	virtual void BeginUse_Implementation(AActor* TargetActor);
 
 	/**
@@ -78,9 +89,14 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Gadget")
 	void EndUse(AActor* TargetActor);
+	/** Blueprintで上書きされない場合の使用終了処理です。 */
 	virtual void EndUse_Implementation(AActor* TargetActor);
 
 protected:
+	/** 表示情報などを一元管理するガジェット定義です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget")
+	TObjectPtr<UGadgetDataAsset> GadgetDefinition;
+
 	/**
 	 * 装備時に接続するプレイヤーMeshのSocket名です。
 	 */

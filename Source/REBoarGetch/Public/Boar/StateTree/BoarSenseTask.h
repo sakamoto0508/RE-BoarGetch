@@ -5,6 +5,7 @@
 #include "BoarStateTreeTypes.h"
 #include "BoarSenseTask.generated.h"
 
+/** プレイヤーと檻を認識し、次に優先する行動対象を共有データへ反映するStateTreeタスクです。 */
 USTRUCT(meta=(DisplayName="Sense Player/Cage", Category="Boar"))
 struct FStateTreeBoarSenseTask : public FStateTreeTaskCommonBase
 {
@@ -12,12 +13,14 @@ struct FStateTreeBoarSenseTask : public FStateTreeTaskCommonBase
 
 	using FInstanceDataType = FBoarStateTreeInstanceData;
 	
+	/** 毎フレーム認識情報を更新するようタスクを初期化します。 */
 	FStateTreeBoarSenseTask()
 	{
 		bShouldCallTick = true;
 		//bShouldStateChangeOnReselect = false;
 	}
 
+	/** このタスクが使用する共有インスタンスデータ型を返します。 */
 	virtual const UStruct* GetInstanceDataType() const override
 	{
 		return FInstanceDataType::StaticStruct();

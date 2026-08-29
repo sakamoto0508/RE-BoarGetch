@@ -15,17 +15,27 @@ class UPrimitiveComponent;
 class ABoarBase;
 struct FHitResult;
 
+/** アニメーションや入力可否の判断に使用するプレイヤーの行動状態です。 */
 UENUM(BlueprintType)
 enum class EPlayerActionState : uint8
 {
+	/** 地上で入力がなく待機している状態です。 */
 	Idle,
+	/** 通常速度で地上移動している状態です。 */
 	Walk,
+	/** ダッシュ速度で地上移動している状態です。 */
 	Run,
+	/** 1回目のジャンプで上昇している状態です。 */
 	Jump,
+	/** 2回目のジャンプで上昇している状態です。 */
 	DoubleJump,
+	/** 空中を落下している状態です。 */
 	Fall,
+	/** 被弾によって操作不能になっている状態です。 */
 	Stun,
+	/** ガジェットを使用している状態です。 */
 	UseGadget,
+	/** 捕獲処理を実行している状態です。 */
 	Capture
 };
 
@@ -48,11 +58,14 @@ class REBOARGETCH_API ABoarPlayerCharacter : public ACharacter
 
 public:
 
+	/** Component、カメラ、移動設定を含むプレイヤーの初期状態を構築します。 */
 	ABoarPlayerCharacter();
 
 protected:
 
+	/** HPイベントと接触判定を登録し、ゲーム開始時の状態を初期化します。 */
 	virtual void BeginPlay() override;
+	/** 地上・上昇・落下への遷移に合わせてプレイヤー行動状態を更新します。 */
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
 
 	/** ガジェット使用開始時のアニメ通知入口です（AnimBP側で実装）。 */
@@ -184,12 +197,15 @@ private:
 	// Components
 	//-------------------------------------------------
 
+	/** プレイヤーのHPと死亡通知を管理するComponentです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHealthComponent> HealthComponent;
 
+	/** ガジェットのスロット、装備、使用状態を管理するComponentです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UGadgetComponent> GadgetComponent;
 
+	/** プレイヤー自身の捕獲状態を管理するComponentです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCaptureComponent> CaptureComponent;
 
@@ -251,10 +267,15 @@ private:
 	float CameraArmLength = 350.0f;
 
 	// 一時状態フラグ。入力・被弾処理のガード条件として使う。
+	/** ダッシュ入力が有効で、現在ダッシュ速度を適用しているかを表します。 */
 	bool bIsDashing = false;
+	/** スタン中で移動やガジェット入力を受け付けない状態かを表します。 */
 	bool bIsStunned = false;
+	/** 接触ダメージを重複して受けない無敵時間中かを表します。 */
 	bool bIsInvincible = false;
+	/** ガジェットの開始から共通終了処理までの使用中状態を表します。 */
 	bool bIsGadgetInUse = false;
+	/** 直前の移動更新で入力が存在したかを保持し、状態更新の重複を抑えます。 */
 	bool bHadMoveInput = false;
 	/** 現在使用しているガジェットの使用形式です。 */
 	EGadgetUseStyle CurrentGadgetUseStyle = EGadgetUseStyle::OneShot;
