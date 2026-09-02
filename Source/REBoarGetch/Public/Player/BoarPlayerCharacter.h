@@ -10,7 +10,6 @@ class UGadgetComponent;
 class UCaptureComponent;
 class UCameraComponent;
 class USpringArmComponent;
-class UCameraComponent;
 class UPrimitiveComponent;
 class ABoarBase;
 struct FHitResult;
@@ -114,6 +113,10 @@ public:
 	void SwitchGadgetSlot(int32 SlotIndex);
 
 	/** 捕獲開始。 */
+	/**
+	 * 将来の「プレイヤーが捕獲される」ルール用入口です。
+	 * 現在のゲームプレイ経路からは未使用ですが、Capture状態とComponentを一式で残しています。
+	 */
 	void Capture();
 
 	//-------------------------------------------------

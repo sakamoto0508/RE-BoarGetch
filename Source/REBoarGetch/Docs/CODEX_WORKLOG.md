@@ -1,6 +1,6 @@
 # RE:BoarGetch Codex Worklog
 
-最終更新: 2026-08-28
+最終更新: 2026-08-29
 
 ## このファイルの目的
 
@@ -33,7 +33,9 @@ Blueprint、Animation Blueprint、MontageなどのContentアセットは、こ�
 
 `WBP_PlayerHUD`のHP／捕獲数表示、値更新、Result表示時の非表示、Retry後の再表示までPIE確認済みです。
 
-**次に着手する推奨タスクは、NotionのP1タスク「UI：現在ガジェットと4スロット表示」です。**
+ガジェット4スロットHUDのC++実装まで完了しました。Blueprint設定とPIE確認は未完了です。
+
+**次に行う作業は、`WBP_PlayerHUD`と各Gadget Definitionへ下記参照を設定し、PIEで切替表示を確認することです。**
 
 ```text
 目標捕獲数に到達
@@ -45,6 +47,45 @@ Blueprint、Animation Blueprint、MontageなどのContentアセットは、こ�
 ```
 
 スタン用アニメーションはユーザーの希望により後回しです。
+
+---
+
+## 0. ガジェット4スロットHUD（2026-08-29）
+
+### C++実装済み・PIE未確認
+
+- `UGadgetComponent::OnGadgetLoadoutChanged`を追加し、スロット内容の設定成功時と選択スロット切替成功時だけ通知
+- `GetGadgetSlotClass()`で0～3の装備Classを安全に取得可能
+- `UGadgetDataAsset::DisplayIcon`を追加
+- `AGadgetBase::GadgetDefinition`を追加し、装備Actor ClassのClass Defaultsから共通定義を参照
+- `ABoarPlayerController`がGadgetComponentの変更通知を購読し、毎Tickではなくイベント駆動でHUDへ4枠と選択番号を転送
+- `UBoarHUDWidget::UpdateGadgetSlots()`が、装備済み枠のImageへDefinitionのIconを設定
+- 空スロットはアイコンImageだけをCollapsedにし、Designer側の空枠背景は残す
+- 選択中だけアウトライン用Widgetを表示し、未選択枠はHidden
+- 固定名の`BindWidget`／`BindWidgetOptional`は不使用
+- UE 5.8 UHTと変更ソースのコンパイル、import library生成まで成功
+- 最終DLLリンクのみ、Unreal EditorとRider LLDBがDLLを使用中のため`LNK1104`で未完了
+
+### Blueprint設定
+
+1. 各ガジェット用`UGadgetDataAsset`で`Display Icon`を設定する
+2. 各`AGadgetBase`派生BlueprintのClass Defaultsで`Gadget Definition`を設定する
+3. `WBP_PlayerHUD`に4個の空枠背景、4個のガジェット用Image、4個の選択アウトライン用Widgetを配置する
+4. Class Defaults > `HUD Widget References`で次を設定する
+   - `Gadget Icon Widget Names`: Slot 1～4のImage名を順番に4件
+   - `Gadget Selection Widget Names`: Slot 1～4のアウトラインWidget名を順番に4件
+5. 空枠背景は上記配列へ登録しない。常時表示のDesigner要素として残す
+
+### PIE受け入れ確認（未実施）
+
+- 4枠すべての空枠背景が表示される
+- 空スロットにはガジェット画像が表示されない
+- 装備済みスロットには対応する`DisplayIcon`が表示される
+- 初期選択枠にアウトラインが表示される
+- R1 + 各スロット入力の切替と同時にアウトラインと装備内容が更新される
+- 空スロット入力では現在装備と選択枠が変わらない
+
+Cooldown表示は今回のスコープ外です。ユーザーからPIE成功の報告を受けた後、Notionタスク「UI：現在ガジェットと4スロット表示」の受け入れ条件を再確認し、満たした場合だけ`Done`へ更新します。
 
 ---
 
@@ -415,6 +456,23 @@ Event OnStageCleared
 ---
 
 ## 6. 後回し・未完了
+
+### C++コメント整備・リファクタリング（2026-08-29）
+
+実施済み:
+
+- `ABoarPlayerController`の責務、入力登録、HUD購読、Result入力切替のコメントを処理理由まで含めて整理
+- 実処理のない`ABoarPlayerController`コンストラクタを削除
+- `BeginPlay()`で`LocalPlayer`、Enhanced Input Subsystem、Mapping Contextを個別にnull確認し、設定不備のWarningを詳細化
+- `OnPossess()`内の同一Character Castを1回へ集約
+- Enhanced Input Componentの型不一致時にWarningを出して安全に中断
+- `ABoarBase`の捕獲、認識、Visibility Trace、解放移動、スタミナ制御のコメントを詳細化
+- スタミナ非対応または捕獲中のBoarはActor Tickを停止し、種別変更・解放時に必要な場合だけ再開
+- 重複していた`UCameraComponent`前方宣言、空のデバッグコメント、コメントアウトされた`UBoarStatusComponent`残骸を削除
+- Player側の`Capture()`、`CaptureComponent`、`EPlayerActionState::Capture`は現在未使用だが、将来の「プレイヤーが捕獲される」機能一式として保持し、その旨をコメント化
+- `APatrolPath`参照は現在のランダムNavMesh巡回では未使用だが、固定巡回再導入用として保持
+- UHT成功、変更C++ソースのコンパイル成功
+- 最終DLLリンクのみ、Unreal EditorとRider LLDBが`UnrealEditor-REBoarGetch.dll`を使用中のため未完了。両方を閉じて再ビルドすること
 
 ### 性能調査: PIEで約20 FPS（2026-08-28、調査継続）
 

@@ -40,4 +40,64 @@ void UBoarHUDWidget::ResolveWidgetReferences()
 			? GadgetIconWidgetNames[SlotIndex] : NAME_None;
 		const FName SelectionName = GadgetSelectionWidgetNames.IsValidIndex(SlotIndex)
 			? GadgetSelectionWidgetNames[SlotIndex] : NAME_None;
-		GadgetIconWidgets.Add(WidgetTree ? Cast<UImage>(WidgetTree->FindWidget(Ico
+		GadgetIconWidgets.Add(WidgetTree ? Cast<UImage>(WidgetTree->FindWidget(IconName)) : nullptr);
+		GadgetSelectionWidgets.Add(WidgetTree ? WidgetTree->FindWidget(SelectionName) : nullptr);
+	}
+}
+
+void UBoarHUDWidget::UpdateGadgetSlots(
+	const TArray<TSubclassOf<AGadgetBase>>& GadgetSlots,
+	int32 SelectedSlotIndex)
+{
+	for (int32 SlotIndex = 0; SlotIndex < 4; ++SlotIndex)
+	{
+		UTexture2D* DisplayIcon = nullptr;
+		if (GadgetSlots.IsValidIndex(SlotIndex) && GadgetSlots[SlotIndex])
+		{
+			const AGadgetBase* GadgetDefaults = GadgetSlots[SlotIndex]->GetDefaultObject<AGadgetBase>();
+			const UGadgetDataAsset* Definition = GadgetDefaults ? GadgetDefaults->GetGadgetDefinition() : nullptr;
+			DisplayIcon = Definition ? Definition->DisplayIcon : nullptr;
+		}
+
+		if (GadgetIconWidgets.IsValidIndex(SlotIndex) && GadgetIconWidgets[SlotIndex])
+		{
+			GadgetIconWidgets[SlotIndex]->SetBrushFromTexture(DisplayIcon, true);
+			GadgetIconWidgets[SlotIndex]->SetVisibility(
+				DisplayIcon ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+		}
+
+		if (GadgetSelectionWidgets.IsValidIndex(SlotIndex) && GadgetSelectionWidgets[SlotIndex])
+		{
+			GadgetSelectionWidgets[SlotIndex]->SetVisibility(
+				SlotIndex == SelectedSlotIndex
+					? ESlateVisibility::SelfHitTestInvisible
+					: ESlateVisibility::Hidden);
+		}
+	}
+}
+
+void UBoarHUDWidget::UpdateCaptureCount(int32 CurrentCount, int32 TargetCount)
+{
+	if (CapturedCountText)
+	{
+		CapturedCountText->SetText(FText::AsNumber(CurrentCount));
+	}
+
+	if (TargetCountText)
+	{
+		TargetCountText->SetText(FText::AsNumber(TargetCount));
+	}
+}
+
+void UBoarHUDWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
+{
+	if (CurrentHealthText)
+	{
+		CurrentHealthText->SetText(FText::AsNumber(FMath::RoundToInt(CurrentHealth)));
+	}
+
+	if (MaxHealthText)
+	{
+		MaxHealthText->SetText(FText::AsNumber(FMath::RoundToInt(MaxHealth)));
+	}
+}

@@ -10,16 +10,16 @@ class UInputMappingContext;
 class UBoarHUDWidget;
 class UBoarResultWidget;
 class UHealthComponent;
+class UGadgetComponent;
 class ABoarPlayerCharacter;
 
 /**
- * @brief プレイヤーの入力を管理するクラス。
- * このクラスの責務
- * ・Enhanced Input の設定
- * ・入力の受付
- * ・PlayerCharacterへ入力を渡す
+ * ローカルプレイヤーの入力と画面UIを仲介するControllerです。
  *
- * このクラスではゲームロジックを書かない。
+ * Enhanced InputのActionを受け取り、実際の移動・ジャンプ・ガジェット処理は
+ * Possess中のABoarPlayerCharacterへ委譲します。また、Character/GameModeの変更通知を
+ * HUDへ中継し、ステージクリア時だけゲーム入力からResult UI入力へ切り替えます。
+ * ダメージ計算や捕獲条件などのゲームルールは、このクラスでは扱いません。
  */
 UCLASS()
 class REBOARGETCH_API ABoarPlayerController : public APlayerController
@@ -27,9 +27,6 @@ class REBOARGETCH_API ABoarPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	/** Enhanced Inputを使用するプレイヤーControllerの初期状態を構築します。 */
-	ABoarPlayerController();
-
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
 	void HandleStageCleared(int32 CapturedCount, int32 TargetCount);
 
@@ -41,12 +38,7 @@ protected:
 	/** PlayerController終了時にHUD用イベント購読を解除します。 */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	/*
-	 *SetupInputComponent()
-	 * Enhanced Input の設定を行う。
-	 * 入力が来たらMove()が呼ばれる。
-	 */
-	/** 入力設定を行う。 */
+	/** 設定済みInput ActionをEnhanced Input Componentへ登録します。未設定Actionは安全に無視します。 */
 	virtual void SetupInputComponent() override;
 
 private:
@@ -66,14 +58,25 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UHealthComponent> ObservedHealthComponent;
 
-	/** HUDを生成し、現在値とイベント購読を設定します。 */
+	/** 現在購読中のGadget Componentです。Possess切り替え時の解除に使用します。 */
+	UPROPERTY(Transient)
+	TObjectPtr<UGadgetComponent> ObservedGadgetComponent;
+
+	/** ローカルControllerにHUDを一度だけ生成し、初期値の反映とイベント購読を行います。 */
 	void CreatePlayerHUD();
 
 	/** Level開始時にリザルト画面で設定した入力ロックを解除します。 */
 	void RestoreGameplayInputState();
 
-	/** 指定CharacterのHealth ComponentをHUDへ接続します。 */
+	/** HP通知の購読先を指定Characterへ付け替え、現在HPを即時反映します。 */
 	void BindPlayerHealth(ABoarPlayerCharacter* PlayerCharacter);
+
+	/** ガジェット通知の購読先を指定Characterへ付け替え、現在4スロットを即時反映します。 */
+	void BindPlayerGadgets(ABoarPlayerCharacter* PlayerCharacter);
+
+	/** 現在の4スロットと選択枠をHUDへ反映します。 */
+	UFUNCTION()
+	void HandleGadgetLoadoutChanged();
 
 	/** 捕獲数変更通知をHUDへ反映します。 */
 	UFUNCTION()
@@ -99,10 +102,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
 	FName TitleLevelName;
 
-	/** リザルト表示後のゲームプレイ入力を明示的に遮断します。 */
+	/** Result表示中にEnhanced Inputの各入口を遮断するフラグです。 */
 	bool bResultScreenActive = false;
 
-	/** Level遷移要求の連打を防ぎます。 */
+	/** Retry/Titleの同時押しや連打による複数OpenLevel要求を防ぎます。 */
 	bool bResultTransitionRequested = false;
 
 	UFUNCTION()
@@ -115,10 +118,7 @@ private:
 	// Input Mapping
 	//-------------------------------------------------
 
-	/**
-	 * 使用するInput Mapping Context
-	 * BPで設定する。
-	 */
+	/** BeginPlay時にPriority 0で登録するMapping Contextです。Controller Blueprintで設定します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
@@ -250,13 +250,7 @@ private:
 	// Utility
 	//-------------------------------------------------
 
-	/**
-	 * GetPawn()を毎回Castするだけなので
-	 * メンバ変数を持たずに済みます。
-	 */
-	/**
-	 * 現在操作しているPlayerCharacterを取得。
-	 */
+	/** 現在Possess中のPawnをBoarPlayerCharacterとして取得します。キャッシュせずPossess変更へ追従します。 */
 	ABoarPlayerCharacter* GetBoarCharacter() const;
 
 	/** ガジェット切替モディファイアを押している間だけtrueになります。 */

@@ -15,35 +15,40 @@
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 
-// コンストラクタ。捕獲用コンポーネントを生成し、種別差分用にTickを有効化する。
+// UObject生成中はDataAsset由来の種別設定がまだ確定していないため、Tick可否はBeginPlayで決める。
 ABoarBase::ABoarBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	CaptureComponent = CreateDefaultSubobject<UCaptureComponent>(TEXT("CaptureComponent"));
 }
 
-// ゲーム開始時に種別ごとの初期値を適用し、スタミナを初期化する。
+// Blueprintの既定値を含めてActorが完成した後にDataAsset設定を適用する。
+// スタミナ非対応個体は毎フレーム処理が不要なのでActor Tick自体を止める。
 void ABoarBase::BeginPlay()
 {
 	Super::BeginPlay();
 	ApplyArchetypeDefaults();
 	CurrentStamina = MaxStamina;
+	SetActorTickEnabled(bUseStamina);
 }
 
-// スタミナ制御を毎フレーム更新する。
+// Tickが有効なのは原則としてスタミナ対応かつ未捕獲の個体だけ。
 void ABoarBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	UpdateStamina(DeltaSeconds);
 }
 
-// 捕獲処理。成功時はGameModeへ通知して共通後処理へ流す。
+// Componentで二重捕獲を拒否してから、GameModeへ檻収容・カウント・ドロップ処理を委譲する。
 void ABoarBase::Capture()
 {
-	if (CaptureComponent == nullptr) 
+	if (CaptureComponent == nullptr)
 		return;
-	if (!CaptureComponent->Capture(nullptr))	
+	if (!CaptureComponent->Capture(nullptr))
 		return;
+
+	// 捕獲中は移動もスタミナ変化もないため、解放されるまでTickを停止する。
+	SetActorTickEnabled(false);
 	
 	// 捕獲成功後のゲーム進行（檻送致・カウント・ドロップ）はGameModeに集約する。
 	if (ABoarGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
@@ -58,7 +63,8 @@ bool ABoarBase::IsCaptured() const
 	return CaptureComponent != nullptr && CaptureComponent->IsCaptured();
 }
 
-// 周囲のプレイヤー/檻を探索し、距離付きの認識データへ反映する。
+// 各候補を「安い距離判定 -> 視野角 -> Visibility Trace」の順で絞り込み、
+// 条件を満たした最寄り対象だけをStateTree向けキャッシュへ保存する。
 bool ABoarBase::RefreshPerceptionTargets()
 {
 	if (IsCaptured())
@@ -130,17 +136,13 @@ bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 	if (TargetActor == nullptr || Distance > SightRange)
 		return false;
 	
-	// targetとの距離
+	// 水平方向のAIなので、高低差を除いた方向ベクトルで視野角を判定する。
 	const FVector ToTarget = (TargetActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
-	// 自身の正面方向
 	const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
-	// 視野角の半分
+	// 設定値は視野全体の角度なので、正面ベクトルとの比較には半角を使う。
 	const float HalfSightAngle = FMath::Clamp(SightAngleDegrees * 0.5f, 0.0f, 180.0f);
-	// 視野角判定に使用する内積の閾値
 	const float SightDotThreshold = FMath::Cos(FMath::DegreesToRadians(HalfSightAngle));
-	// 正面方向内かどうか
 	const bool bInsideSightAngle = FVector::DotProduct(Forward, ToTarget) >= SightDotThreshold;
-	// 至近距離内かどうか
 	const bool bInsideAbsoluteRange = Distance <= AbsoluteDetectionRange;
 
 	// 通常は正面の視野角内だけ認識し、至近距離では角度条件を免除する。
@@ -152,11 +154,10 @@ bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 		return false;
 
 	FHitResult HitResult;
-	// RayCastみたいなもん。LineTraceというらしい。
-	// デバッグやProfilerで「BoarSight」という名前を付けるためにSCENE_QUERY_STATを使う。
-	// bTraceComplex=falseで、コリジョンの単純形状で判定する。trueならメッシュのポリゴン単位まで判定する。
+	// SCENE_QUERY_STAT名を付け、Insights/Collision Analyzerで視界Traceだけ識別できるようにする。
+	// 複雑なMeshポリゴン判定は不要なのでbTraceComplex=falseとし、自分自身は除外する。
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BoarSight), false, this);
-	// Visibilityチャンネルだけ判定します。
+	// 最初の遮蔽物だけ分かればよいためSingle Traceを使う。
 	const bool bHit = World->LineTraceSingleByChannel(
 		HitResult,
 		GetPawnViewLocation(),
@@ -164,7 +165,7 @@ bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 		ECC_Visibility,
 		QueryParams);
 
-	// 何も遮らない、または最初に対象自身へ当たった場合だけ認識する。
+	// Traceが何にも当たらない場合と、対象自身が最初に当たる場合だけ視線が通っている。
 	return !bHit || HitResult.GetActor() == TargetActor;
 }
 
@@ -198,7 +199,6 @@ float ABoarBase::GetAttackTelegraphDuration() const
 	return FMath::Max(AttackTelegraphDuration, 0.0f);
 }
 
-/** 檻攻撃への遷移判定に使用する値を画面とログへ表示する。 */
 /** 檻が破壊されたときに、捕獲中のイノシシを解放して周囲へ移動させる。 */
 void ABoarBase::ReleaseBoar()
 {
@@ -243,6 +243,9 @@ void ABoarBase::ReleaseBoar()
 		FinishReleaseMovement();
 		return;
 	}
+
+	// 捕獲前と同じく、スタミナ対応種別だけ毎フレーム更新へ戻す。
+	SetActorTickEnabled(bUseStamina);
 
 	PerceivedPlayer = nullptr;
 	PerceivedCage = nullptr;
@@ -356,10 +359,13 @@ void ABoarBase::ApplyArchetypeDefaults()
 	{
 		bIsRecoveringStamina = false;
 	}
+
+	// ランタイムで種別を切り替えた場合もTick状態を新しい設定へ同期する。
+	SetActorTickEnabled(bUseStamina && !IsCaptured());
 }
 
-// 青イノシシ向けのスタミナ更新。移動中は消費、停止中は回復させる。
-// 多分後で青イノシシ用の派生クラスを作る予定。
+// スタミナ対応種別の移動状態を更新する。消費中に0へ到達すると回復モードへ入り、
+// 設定比率まで回復するまでは速度を落とす。これにより0付近で状態が毎Frame往復するのを防ぐ。
 void ABoarBase::UpdateStamina(float DeltaSeconds)
 {
 	if (!bUseStamina || IsCaptured())

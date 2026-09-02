@@ -9,7 +9,6 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "BoarBase.generated.h"
 
-//class UBoarStatusComponent;
 class UCaptureComponent;
 class ACage;
 class APawn;
@@ -22,22 +21,18 @@ class REBOARGETCH_API ABoarBase : public ACharacter
 	GENERATED_BODY()
 
 public:
-	/** 捕獲Componentを生成し、AI更新用Tickを有効化します。 */
+	/** 捕獲Componentを生成します。TickはBeginPlay後、スタミナを使う種別だけ有効になります。 */
 	ABoarBase();
 	/** 種別設定と初期スタミナを適用します。 */
 	virtual void BeginPlay() override;
 	/** 種別がスタミナを使用する場合に消費・回復状態を更新します。 */
 	virtual void Tick(float DeltaSeconds) override;
 
-	/**
-	 * イノシシを捕まえます。
-	 */
+	/** 捕獲Componentの状態を確定し、成功時だけGameModeへ捕獲後処理を通知します。 */
 	UFUNCTION(BlueprintCallable, Category = "Boar")
 	void Capture();
 	
-	/**
-	 * イノシシが解放されたときに呼ばれる関数。
-	 */
+	/** 捕獲済み個体を解放し、到達可能なNavMesh地点まで歩かせてから通常AIへ戻します。 */
 	UFUNCTION(BlueprintCallable, Category = "Boar")
 	void ReleaseBoar();
 
@@ -48,7 +43,8 @@ public:
 	bool IsCaptured() const;
 
 	/**
-	 * 周囲のプレイヤー・檻を探索し、認識データを更新します。
+	 * 周囲のプレイヤーと檻を同期探索し、距離・視野角・遮蔽条件を満たす最寄り対象を保存します。
+	 * StateTree Sense Taskから反復されるため、呼び出し側が更新頻度を管理してください。
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Boar|AI")
 	bool RefreshPerceptionTargets();
@@ -97,7 +93,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool CanAttackCage() const { return bCanAttackCage; }
 
-	/** 檻攻撃への遷移判定に使用する値をデバッグ表示します。 */
 	/** 現在の種類が檻へ与えるダメージです。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	float GetCageAttackDamage() const { return CageAttackDamage; }
@@ -156,12 +151,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool IsStaminaRecovering() const { return bIsRecoveringStamina; }
 
-	/** パトロールパスを返します。 */
+	/** 旧来の固定巡回ルートを返します。現在のランダムNavMesh巡回では未使用です。 */
 	UFUNCTION(BlueprintPure)
 	APatrolPath* GetPatrolPath() const { return PatrolPath; }
 
-	/** 現在のAIステートを画面とログへデバッグ表示します。 */
-	/** 現在のAIステートと移動先を画面とログへデバッグ表示します。 */
 private:
 	/** 距離・視野角・遮蔽・絶対発見距離から対象を認識できるか判定します。 */
 	bool CanDetectTarget(const AActor* TargetActor, float Distance) const;
@@ -337,13 +330,7 @@ private:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",meta = (AllowPrivateAccess = "true"))
 	bool bIsRecoveringStamina = false;
 
-	/** 巡回パスです。 */
+	/** 固定巡回を再導入する場合に使う予約参照です。現在のStateTree Patrol Taskからは未使用です。 */
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Boar|AI", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<APatrolPath> PatrolPath;
-	
-	/**
-	 * イノシシのステータスを管理するコンポーネントです。
-	 */
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boar|Components", meta = (AllowPrivateAccess = "true"))
-	//TObjectPtr<UBoarStatusComponent> StatusComponent;
 };

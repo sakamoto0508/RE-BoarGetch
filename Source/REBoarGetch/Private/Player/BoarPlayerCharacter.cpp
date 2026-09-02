@@ -136,7 +136,8 @@ void ABoarPlayerCharacter::Move(const FVector2D& Input)
 // カメラを回転させる
 void ABoarPlayerCharacter::Look(const FVector2D& Input)
 {
-	if (Controller == nullptr) return;
+	if (Controller == nullptr)
+		return;
 
 	// ControllerのYawを変更し、SpringArmをプレイヤーの周囲に回転させる。
 	if (!FMath::IsNearlyZero(Input.X))
@@ -163,17 +164,14 @@ void ABoarPlayerCharacter::StartJump()
 	if (IsActionLocked()) return;
 	if (!CanJump()) return;
 	
-	// JumpCurrentCountはJump()の実処理より前の値
 	// 地上ジャンプ前は0、二段ジャンプ前は1
-	const bool bIsDoubleJump =
-		GetCharacterMovement() &&
+	const bool bIsDoubleJump = GetCharacterMovement() &&
 		GetCharacterMovement()->IsFalling() &&
 		JumpCurrentCount >= 1;
 
 	Jump();
 
-	SetPlayerActionState(
-		bIsDoubleJump
+	SetPlayerActionState(bIsDoubleJump
 			? EPlayerActionState::DoubleJump
 			: EPlayerActionState::Jump);
 }
