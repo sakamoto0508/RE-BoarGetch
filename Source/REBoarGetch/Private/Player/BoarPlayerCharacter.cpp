@@ -61,6 +61,7 @@ void ABoarPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 接触判定のイベント登録。
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
 	{
 		// プレイヤー被弾判定はカプセル接触で受ける。
@@ -102,17 +103,6 @@ void ABoarPlayerCharacter::Move(const FVector2D& Input)
 	const FVector Forward = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
 	const FVector Right = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
 	const FVector DesiredDirection = Forward * Input.Y + Right * Input.X;
-
-	// ガジェット使用中は位置を動かさず、移動入力の方向へ向きだけを変更する。
-	if (bIsGadgetInUse)
-	{
-		if (!DesiredDirection.IsNearlyZero())
-		{
-			SetActorRotation(DesiredDirection.Rotation());
-		}
-		bHadMoveInput = false;
-		return;
-	}
 
 	if (IsActionLocked())
 		return;
@@ -163,7 +153,7 @@ void ABoarPlayerCharacter::StartJump()
 {
 	if (IsActionLocked()) return;
 	if (!CanJump()) return;
-	
+
 	// 地上ジャンプ前は0、二段ジャンプ前は1
 	const bool bIsDoubleJump = GetCharacterMovement() &&
 		GetCharacterMovement()->IsFalling() &&
@@ -172,8 +162,8 @@ void ABoarPlayerCharacter::StartJump()
 	Jump();
 
 	SetPlayerActionState(bIsDoubleJump
-			? EPlayerActionState::DoubleJump
-			: EPlayerActionState::Jump);
+		                     ? EPlayerActionState::DoubleJump
+		                     : EPlayerActionState::Jump);
 }
 
 void ABoarPlayerCharacter::StopJump()
@@ -199,6 +189,16 @@ void ABoarPlayerCharacter::StartGadgetUse()
 			return;
 
 		bIsGadgetInUse = true;
+
+		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		{
+			// ガジェット使用中は移動入力を受けても動かないようにする。
+			Move->StopMovementImmediately();
+			Move->bOrientRotationToMovement = false;
+		}
+
+		bHadMoveInput = false;
+
 		SetPlayerActionState(EPlayerActionState::UseGadget);
 		OnGadgetUseStarted(CurrentGadgetUseStyle, CurrentGadget);
 
@@ -230,7 +230,7 @@ void ABoarPlayerCharacter::SwitchGadgetSlot(int32 SlotIndex)
 {
 	if (GadgetComponent == nullptr || IsActionLocked())
 		return;
-	
+
 	if (bIsGadgetInUse)
 	{
 		// 継続使用形式のガジェットを使用中に装備変更する場合 前のガジェットの終了処理を先に行う。
@@ -255,7 +255,7 @@ void ABoarPlayerCharacter::Capture()
 
 void ABoarPlayerCharacter::StartDash()
 {
-	if (IsActionLocked()) 
+	if (IsActionLocked())
 		return;
 
 	bIsDashing = true;
@@ -290,7 +290,7 @@ void ABoarPlayerCharacter::OnCapsuleBeginOverlap(UPrimitiveComponent* Overlapped
 	// 無敵中・スタン中は追加ダメージを受けないComponentや接触相手が無効な場合も処理しない。
 	if (bIsInvincible || bIsStunned || HealthComponent == nullptr || OtherActor == nullptr || OtherActor == this)
 		return;
-	
+
 	if (Cast<ABoarBase>(OtherActor) == nullptr)
 		return;
 
@@ -371,6 +371,12 @@ void ABoarPlayerCharacter::EndGadgetUse(bool bWasInterrupted)
 	}
 
 	bIsGadgetInUse = false;
+	
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+	{
+		Move->bOrientRotationToMovement = true;
+	}
+	
 	// AnimBPへ通常終了または中断終了したことを通知する。
 	OnGadgetUseStopped(CurrentGadgetUseStyle, CurrentGadget);
 
@@ -390,7 +396,7 @@ void ABoarPlayerCharacter::UpdateGroundActionState(bool bHasMoveInput)
 
 	if (GetCharacterMovement() && GetCharacterMovement()->IsFalling())
 		return;
-	
+
 	if (!bHasMoveInput)
 	{
 		SetPlayerActionState(EPlayerActionState::Idle);
