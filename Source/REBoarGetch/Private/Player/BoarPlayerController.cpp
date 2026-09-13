@@ -17,10 +17,6 @@
 #include "Kismet/GameplayStatics.h"
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// BeginPlay
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ABoarPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -114,10 +110,6 @@ void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// SetupInputComponent
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ABoarPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -131,10 +123,6 @@ void ABoarPlayerController::SetupInputComponent()
 			*GetNameSafe(InputComponent));
 		return;
 	}
-	
-	////////////////////////////////////////////////////////////
-	// Move
-	////////////////////////////////////////////////////////////
 
 	if (MoveAction)
 	{
@@ -142,19 +130,11 @@ void ABoarPlayerController::SetupInputComponent()
 		EnhancedInput->BindAction(MoveAction,ETriggerEvent::Triggered,this,&ABoarPlayerController::Move);
 	}
 
-	////////////////////////////////////////////////////////////
-	// Look
-	////////////////////////////////////////////////////////////
-
 	if (LookAction)
 	{
 		// Mouse/GamepadのAxis2D入力が続く間、Camera入力をCharacterへ渡す。
 		EnhancedInput->BindAction(LookAction,ETriggerEvent::Triggered,this,&ABoarPlayerController::Look);
 	}
-
-	////////////////////////////////////////////////////////////
-	// Jump
-	////////////////////////////////////////////////////////////
 
 	if (JumpAction)
 	{
@@ -165,10 +145,6 @@ void ABoarPlayerController::SetupInputComponent()
 		EnhancedInput->BindAction(JumpAction,ETriggerEvent::Completed,this,&ABoarPlayerController::JumpCompleted);
 	}
 
-	////////////////////////////////////////////////////////////
-	// Gadget
-	////////////////////////////////////////////////////////////
-
 	if (GadgetAction)
 	{
 		// Started/Completed/Canceled を分けて、ガジェット使用ライフサイクルを管理する。
@@ -176,10 +152,6 @@ void ABoarPlayerController::SetupInputComponent()
 		EnhancedInput->BindAction(GadgetAction, ETriggerEvent::Completed, this, &ABoarPlayerController::GadgetCompleted);
 		EnhancedInput->BindAction(GadgetAction, ETriggerEvent::Canceled, this, &ABoarPlayerController::GadgetCompleted);
 	}
-
-	////////////////////////////////////////////////////////////
-	// Dash
-	////////////////////////////////////////////////////////////
 
 	if (DashAction)
 	{
@@ -189,10 +161,6 @@ void ABoarPlayerController::SetupInputComponent()
 		// フォーカス外れ等で入力がキャンセルされた場合も必ずダッシュ解除する。
 		EnhancedInput->BindAction(DashAction, ETriggerEvent::Canceled, this, &ABoarPlayerController::DashCompleted);
 	}
-
-	////////////////////////////////////////////////////////////
-	// Gadget Slot Switch (R1 + face button)
-	////////////////////////////////////////////////////////////
 
 	if (GadgetModifierAction)
 	{
@@ -221,9 +189,6 @@ void ABoarPlayerController::SetupInputComponent()
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Gameplay HUD
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ABoarPlayerController::CreatePlayerHUD()
 {
@@ -331,7 +296,7 @@ void ABoarPlayerController::BindPlayerHealth(ABoarPlayerCharacter* PlayerCharact
 		}
 		return;
 	}
-
+	
 	if (ObservedHealthComponent)
 	{
 		// 破棄済み/非PossessのCharacterからHP変更を受け取らないよう購読解除する。
@@ -340,12 +305,14 @@ void ABoarPlayerController::BindPlayerHealth(ABoarPlayerCharacter* PlayerCharact
 			&ABoarPlayerController::HandleHealthChanged);
 	}
 
+	//監視対象を新しいHPへ変更。
 	ObservedHealthComponent = NewHealthComponent;
 	if (ObservedHealthComponent)
 	{
 		ObservedHealthComponent->OnHealthChanged.AddUniqueDynamic(
 			this,
 			&ABoarPlayerController::HandleHealthChanged);
+		//現在のHPをすぐHUDへ反映。
 		HandleHealthChanged(
 			ObservedHealthComponent->GetCurrentHealth(),
 			ObservedHealthComponent->GetMaxHealth());
@@ -370,9 +337,6 @@ void ABoarPlayerController::HandleHealthChanged(float CurrentHealth, float MaxHe
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Result UI
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ABoarPlayerController::HandleStageCleared(int32 CapturedCount, int32 TargetCount)
 {

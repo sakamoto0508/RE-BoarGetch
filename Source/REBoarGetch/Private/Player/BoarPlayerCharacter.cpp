@@ -190,16 +190,19 @@ void ABoarPlayerCharacter::StartGadgetUse()
 
 		bIsGadgetInUse = true;
 
-		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		if (UCharacterMovementComponent* Move = GetCharacterMovement();
+				Move && !CurrentGadget->CanMoveWhileUsing())
 		{
-			// ガジェット使用中は移動入力を受けても動かないようにする。
-			Move->StopMovementImmediately();
-			Move->bOrientRotationToMovement = false;
+				// ガジェット使用中は移動入力を受けても動かないようにする。
+				Move->StopMovementImmediately();
+				// 移動方向へキャラクターを自動回転させる機能をオフ。
+				Move->bOrientRotationToMovement = false;
 		}
 
 		bHadMoveInput = false;
 
 		SetPlayerActionState(EPlayerActionState::UseGadget);
+		//BPイベントでガジェット使用開始を通知する。
 		OnGadgetUseStarted(CurrentGadgetUseStyle, CurrentGadget);
 
 		UpdateGroundActionState(bHadMoveInput);
@@ -371,12 +374,12 @@ void ABoarPlayerCharacter::EndGadgetUse(bool bWasInterrupted)
 	}
 
 	bIsGadgetInUse = false;
-	
+
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
 		Move->bOrientRotationToMovement = true;
 	}
-	
+
 	// AnimBPへ通常終了または中断終了したことを通知する。
 	OnGadgetUseStopped(CurrentGadgetUseStyle, CurrentGadget);
 

@@ -1,16 +1,17 @@
 # RE:BoarGetch Codex Worklog
 
-最終更新: 2026-08-29
+最終更新: 2026-09-14
 
 ## このファイルの目的
 
 別のCodexタスクや新しいチャットで作業を再開するときの引き継ぎ資料です。
 最初にこのファイルを読み、完了済みの作業を重複して実装せず、未完了項目と次の作業候補を確認してください。
 
-このファイルには、次の2種類の情報を区別して記録しています。
+このファイルには、次の確認方法を区別して記録しています。
 
 - **コード確認済み**: `Source/REBoarGetch` のC++で存在を確認したもの
 - **ユーザーPIE確認済み**: Unreal Editor上のBlueprintやアセットを含め、ユーザーが実動作を確認したもの
+- **MCP／画面確認済み**: Unreal MCPでアセットや実行時状態を取得し、必要に応じてPIE画面でも確認したもの
 
 Blueprint、Animation Blueprint、MontageなどのContentアセットは、このSourceディレクトリだけでは内容を完全に検査できません。ユーザーPIE確認済みの記録を現状の根拠として扱ってください。
 
@@ -33,9 +34,26 @@ Blueprint、Animation Blueprint、MontageなどのContentアセットは、こ�
 
 `WBP_PlayerHUD`のHP／捕獲数表示、値更新、Result表示時の非表示、Retry後の再表示までPIE確認済みです。
 
-ガジェット4スロットHUDのC++実装まで完了しました。Blueprint設定とPIE確認は未完了です。
+ガジェット4スロットHUDのC++実装とBlueprint設定は完了しました。2026-09-13にUnreal MCPで実アセットを編集し、Compile・Save・再取得、およびPIE初期表示を確認しました。入力による切替の受け入れ確認は未完了です。
 
-**次に行う作業は、`WBP_PlayerHUD`と各Gadget Definitionへ下記参照を設定し、PIEで切替表示を確認することです。**
+Audio Managerは2026-09-14に`UBoarAudioManagerSubsystem`としてC++実装し、UE 5.8 Editorビルド成功済みです。Soundアセット接続とPIE再生確認は未完了です。
+
+**次に行う作業は、R1＋十字キーの追加Mappingを実機ゲームパッドで検証し、複数装備での切替と空スロット入力をPIEで確認することです。**
+
+### 続行作業の確定結果（2026-09-13）
+
+- 開始時にUnreal MCPで現在Level `/Game/Level/Test`、利用可能Toolset、既存HUD／ロビーを再取得。終了時のLevelは `/Game/Maps/L_Lobby`、PIEは終了済み。
+- WBP_PlayerHUDのDesigner、26 WidgetのTree、Class Defaults、EventGraph、Controller参照とC++通知経路を確認。既存4スロット表示を保持し、Widgetの再作成・削除・親変更は行っていない。CompileWidgetBlueprint=true、Save=true、再取得した2配列が一致しis_dirty=false。
+- TestでPIEを再実行し、4背景、Slot 1のアミアイコンと選択枠、空Slot 2〜4、HP 5/5、捕獲数0/2を画面確認。Ctrl+3送信後は表示を維持したが、空スロット拒否ログが出ず入力受付の証明は未確認。
+- `/Game/Input/IMC_Default` のdefaultKeyMappingsに5件追加。Gamepad_RightShoulder→IA_GadgetModifier、DPad Left→IA_North（Slot 1）、Up→IA_West（Slot 2）、Right→IA_East（Slot 3）、Down→IA_South（Slot 4）。Controllerの実際のAction参照に対応。元の21件は再取得比較で完全保持、計26件。既存のジャンプ／キーボード入力は維持。Save=true、is_dirty=false。実機R1＋十字キーおよび複数装備切替は未確認。フェイスボタン切替は未追加。
+- 既存 `/Game/Maps/L_Lobby` に円形広場、4本の柱、12分割アーチ、ガジェット展示台、誘導タイル、境界ボラードなど56 Actorを追加。既存21 Actorのマテリアルをロビー配色に設定。既存の床、Player Start、練習段差・Ramp、境界Collision、照明、Stage 1 Triggerを保持。
+- 新規Material Instanceは `/Game/Lobby/Materials/MI_Lobby_Ivory`、`MI_Lobby_Ice`、`MI_Lobby_Cyan`、`MI_Lobby_Coral`、`MI_Lobby_Yellow`、`MI_Lobby_Navy`。同名不存在を確認後に作成。全て既存 `/Game/LevelPrototyping/Materials/M_FlatCol` を親として再利用。新規Texture／Mesh／ベースMaterialなし。既存Engine Cube／Cylinder、プロジェクトSM_Rampも再利用。
+- 既存 `/Game/BP/Lobby/BP_GM_Lobby` と `/Game/BP/Lobby/BP_PC_Lobby` を保持。GameModeBase系とHUD Class=Noneを再確認。両BPのwarnings_as_errors付きCompile成功。Map、両BP、HUD、6 MIのSave=true、全てis_dirty=false。Map再ロード後に追加56 ActorをMCPで再取得。
+- L_LobbyのMap Checkは0 Error／0 Warning。PIEでPlayer Startから開始でき、Stage 1入口が正面に見えること、ステージHUD非表示、前進（座標変化）とジャンプ（画面）を確認。全域走行、手動カメラ操作、外周すべてでの落下防止受け入れ試験は未確認。
+- Stage 1入口は目印とTriggerのみで未接続。正式な移動先Stage 1 Mapが未確定のためTestへ勝手に接続しない。Project SettingsのDefault Map変更なし。
+- 別ChatGPTタスク「ロビー空間デザイン提案」でリサーチを実行し回収。円形中心、入口への直線視界、左右の回遊、明るい6色の提案を集約して独自のCircle Port構成へ反映。特定作品のアセットは新規コピーしていない。
+- 参照リンク: [PlayStation公式](https://www.playstation.com/ja-jp/games/ape-escape/)、[Epicのレベルブロックアウト](https://dev.epicgames.com/documentation/unreal-engine/designer-01-project-setup-and-level-blockout-in-unreal-engine?lang=ja)。詳細リサーチはChatGPTタスクID `6aa68e8e-f6c4-83ee-9d52-15645647700e`。
+- Notionは変更せず。全受け入れ条件のPIE成功を確認していないためDoneにしない。
 
 ```text
 目標捕獲数に到達
@@ -50,9 +68,66 @@ Blueprint、Animation Blueprint、MontageなどのContentアセットは、こ�
 
 ---
 
-## 0. ガジェット4スロットHUD（2026-08-29）
+## 0A. Audio Manager（2026-09-14）
 
 ### C++実装済み・PIE未確認
+
+- `UBoarAudioManagerSubsystem`を`UGameInstanceSubsystem`として追加し、Level遷移をまたぐ共通オーディオ窓口を実装
+- `PlayBGM()`は同一BGMの不要な再起動を防止し、任意のFade Inに対応
+- `StopBGM()`は任意のFade Outに対応
+- `PlaySoundEffect2D()`でUI／非空間SEを再生
+- `PlaySoundEffectAtLocation()`でワールド位置SEを再生
+- Master／BGM／SE音量を0～1へClampして管理
+- BGMのみLevel遷移をまたいで継続。SEは呼び出し時の音量を反映するFire-and-forget方式
+- `Deinitialize()`でDelegate解除とBGM停止を実施
+- UE 5.8 `REBoarGetchEditor Win64 Development`のUHT、コンパイル、DLLリンク成功
+
+関連ファイル:
+
+- [BoarAudioManagerSubsystem.h](../Public/Audio/BoarAudioManagerSubsystem.h)
+- [BoarAudioManagerSubsystem.cpp](../Private/Audio/BoarAudioManagerSubsystem.cpp)
+
+Blueprintでは`Get Game Instance Subsystem`から`BoarAudioManagerSubsystem`を取得して呼び出します。BGM／SEアセットの割り当て、ロビーとStage 1でのBGM切替、音量変更、Level遷移中の継続はPIE未確認です。
+
+---
+
+## 0. ガジェット4スロットHUD（2026-09-13更新）
+
+### アセット編集・初期表示確認（2026-09-13）
+
+**MCP／画面確認済み。入力切替を含む全受け入れ条件の完了ではありません。**
+
+- 操作前に現在Level `/Game/Level/Test` とToolset一覧（52件）を再取得
+- 本ログ、`UBoarHUDWidget`、`ABoarPlayerController`、`UGadgetComponent`、`UGadgetDataAsset`、`AGadgetBase`のC++を確認
+- 変更したContentアセットは `/Game/BP/Widget/WBP_PlayerHUD` のみ。新規アセット作成、既存アセットの削除・置換・名前変更、親クラス変更はなし
+- 親クラスは `/Script/REBoarGetch.BoarHUDWidget`、既存Widget 14個を保持し12個追加（計26個）
+- 空だった既存`GadgetPanel`を右上Anchor、右余白32／上余白32、252×252に設定。`HitTestInvisible`で子を含め入力判定を無効化
+- Slot 1=左(0,86)、2=上(86,0)、3=右(172,86)、4=下(86,172)。各80×80、アイコンは内側8の64×64、AutoSize無効
+- 各枠は`GadgetSlotNBackground`、`GadgetSlotNIcon`、`GadgetSlotNSelection`（N=1～4）の3層。ZOrderは0／1／2
+- 適切な空枠・アウトラインTextureはプロジェクト内検索で見つからず、無関係な画像は使用しない。背景は濃色の単色RoundedBox Brush、選択枠は透明塗り＋オレンジ色の幅4アウトライン
+- Class Defaultsの`Gadget Icon Widget Names`は`GadgetSlot1Icon`～`GadgetSlot4Icon`、`Gadget Selection Widget Names`は`GadgetSlot1Selection`～`GadgetSlot4Selection`の順。背景は登録しない
+- HP／捕獲数の既存Widgetと配置を変更せず、参照名`CurrentHP`、`MaxHP`、`CurrentCaptureCount`、`TargetCaptureCount`を再取得で確認。Cooldown表示は追加していない
+- `/Game/Level/Test`のWorld Settings → `/Game/BP/GameMode/BP_BoarGameMode` → `/Game/BP/Player/BP_BoarPlayerController` → `WBP_PlayerHUD`の参照を確認
+- Gadget Definitionは `/Game/DataAssets/Gadget/DA_Gadget` の1件、Gadget Actor Blueprintは `/Game/BP/Gadget/BP_NetGadget` の1件を検索で確認。既存`GadgetDefinition`参照と`DisplayIcon=/Game/InportAssets/Image/Gadget/NetGadget`は設定済みで、Texture画像も確認。今回変更なし。発見したDefinitionのDisplayIcon未設定は0件
+- `/Game/BP/Player/BP_PlayerCharacter`の初期装備はSlot 1の`BP_NetGadget`のみ。Slot 2～4は空（未設定アイコンとは区別）
+- `CompileWidgetBlueprint=true`、`save_assets=true`。保存後にDesigner構造・Brush・配置・名前配列を再取得し一致、`is_dirty=false`を確認。PIE終了後にもCompile・Save成功、LogBlueprintに対象のコンパイルエラーなし
+
+PIE確認結果:
+
+1. **確認済み**: 十字型の4背景が表示される
+2. **確認済み**: 空のSlot 2～4にはアイコンが表示されない
+3. **確認済み**: Slot 1に既存DisplayIconのアミ画像が表示される
+4. **確認済み**: 初期選択Slot 1だけにオレンジ色アウトライン。MCP実行時取得でも`CurrentGadgetSlotIndex=0`、装備は`BP_NetGadget_C_0`、初期装備成功ログあり
+5. **未確認**: R1＋スロット入力による即時移動。現在の`IMC_Default`にはR1／ゲームパッドスロットのMappingがなく、ガジェットModifierはLeftControlのみ。複数の装備済み枠もない
+6. **未確認**: 空スロット入力で選択と装備が維持されること。Slate MCPの`Ctrl+Three`送信はtrueを返したが、切替／空スロット拒否ログは発生せず、ゲーム側の入力受付を証明できない
+
+PIE画面でHP=5/5、捕獲数=0/2の表示も確認。ダメージ・回復・捕獲による値更新の今回の再試験は未確認。PIEは終了済み。
+
+入力設定の注意: ControllerのSlot 1=IA_North、Slot 2=IA_West、Slot 3=IA_East、Slot 4=IA_South。数字キーはOne→North、Two→South、Three→West、Four→East。HUDの左／上／右／下の順序とは別の既存設定として確認し、今回は変更していない。
+
+既存ログにGameFeatureDataのAsset Manager設定エラーと`/Game/BP/NewBlueprint`欠落のロード警告あり。HUDコンパイルエラーとは別件で今回未修正。Notionは更新せず、全PIE受け入れ確認までDoneにしない。
+
+### C++実装記録（2026-08-29時点）
 
 - `UGadgetComponent::OnGadgetLoadoutChanged`を追加し、スロット内容の設定成功時と選択スロット切替成功時だけ通知
 - `GetGadgetSlotClass()`で0～3の装備Classを安全に取得可能
@@ -66,7 +141,7 @@ Blueprint、Animation Blueprint、MontageなどのContentアセットは、こ�
 - UE 5.8 UHTと変更ソースのコンパイル、import library生成まで成功
 - 最終DLLリンクのみ、Unreal EditorとRider LLDBがDLLを使用中のため`LNK1104`で未完了
 
-### Blueprint設定
+### Blueprint設定手順（上記のとおり設定確認済み）
 
 1. 各ガジェット用`UGadgetDataAsset`で`Display Icon`を設定する
 2. 各`AGadgetBase`派生BlueprintのClass Defaultsで`Gadget Definition`を設定する
@@ -76,7 +151,7 @@ Blueprint、Animation Blueprint、MontageなどのContentアセットは、こ�
    - `Gadget Selection Widget Names`: Slot 1～4のアウトラインWidget名を順番に4件
 5. 空枠背景は上記配列へ登録しない。常時表示のDesigner要素として残す
 
-### PIE受け入れ確認（未実施）
+### PIE受け入れ条件（最新の確認結果は上記）
 
 - 4枠すべての空枠背景が表示される
 - 空スロットにはガジェット画像が表示されない

@@ -47,6 +47,12 @@ public:
 	virtual void Use_Implementation(AActor* TargetActor);
 
 	/**
+	 * 使用中に移動可能かどうかを返します。
+	 */
+	UFUNCTION(BlueprintPure, Category="Gadget")
+	bool CanMoveWhileUsing() const { return bCanMoveWhileUsing; }
+
+	/**
 	 * 使用可能かどうかを返します。
 	 */
 	UFUNCTION(BlueprintPure, Category="Gadget")
@@ -116,6 +122,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget",
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float CooldownSeconds = 1.0f;
+
+	/**
+	 * 使用中に移動可能かどうかです。
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta =(AllowPrivateAccess = "true"))
+	bool bCanMoveWhileUsing = false;
 
 	/**
 	 * クールタイム中かどうかです。
