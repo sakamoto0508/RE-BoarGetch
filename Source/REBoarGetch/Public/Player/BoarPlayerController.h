@@ -98,21 +98,18 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UBoarResultWidget> ResultWidget;
 
-	/** タイトルへ戻る際に開くLevel名です。 */
+	/** リザルト終了時に戻るLobby Level名です。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
-	FName TitleLevelName;
+	FName LobbyLevelName = TEXT("L_Lobby");
 
 	/** Result表示中にEnhanced Inputの各入口を遮断するフラグです。 */
 	bool bResultScreenActive = false;
 
-	/** Retry/Titleの同時押しや連打による複数OpenLevel要求を防ぎます。 */
+	/** 任意入力の連打による複数OpenLevel要求を防ぎます。 */
 	bool bResultTransitionRequested = false;
 
 	UFUNCTION()
-	void RetryCurrentStage();
-
-	UFUNCTION()
-	void ReturnToTitle();
+	void ReturnToLobby();
 
 	//-------------------------------------------------
 	// Input Mapping

@@ -378,26 +378,25 @@ void ABoarPlayerController::HandleStageCleared(int32 CapturedCount, int32 Target
 		return;
 	}
 
-	// Widgetはボタンの意味だけを通知し、実際のLevel遷移はControllerが担当する。
-	ResultWidget->OnRetryRequested.AddUniqueDynamic(this, &ABoarPlayerController::RetryCurrentStage);
-	ResultWidget->OnTitleRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToTitle);
+	// Widgetは任意入力だけを通知し、実際のLobby遷移はControllerが担当する。
+	ResultWidget->OnDismissRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToLobby);
 	// ZOrder 100で通常HUDより前面へ表示し、確定した捕獲数を渡す。
 	ResultWidget->AddToViewport(100);
 	ResultWidget->InitializeResult(CapturedCount, TargetCount);
 
-	// Gameplay入力をUI Onlyへ切り替え、Keyboard/Gamepadの初期FocusもResultへ設定する。
+	// Gameplay入力をUI Onlyへ切り替え、任意入力を受け取るResult WidgetへFocusを設定する。
 	FInputModeUIOnly InputMode;
 	InputMode.SetWidgetToFocus(ResultWidget->TakeWidget());
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	SetInputMode(InputMode);
-	SetShowMouseCursor(true);
-	ResultWidget->FocusInitialControl();
+	SetShowMouseCursor(false);
+	ResultWidget->FocusForDismissInput();
 }
 
-void ABoarPlayerController::RetryCurrentStage()
+void ABoarPlayerController::ReturnToLobby()
 {
-	// ボタン連打で同じLevelを複数回Openしないよう、最初の要求だけ受け付ける。
-	if (bResultTransitionRequested)
+	// 任意入力の連打中もLobbyを複数回Openしないよう、最初の要求だけ受け付ける。
+	if (bResultTransitionRequested || LobbyLevelName.IsNone())
 	{
 		return;
 	}
@@ -405,36 +404,11 @@ void ABoarPlayerController::RetryCurrentStage()
 	bResultTransitionRequested = true;
 	if (ResultWidget)
 	{
-		// Levelロード開始までの短い間も、別ボタンを押せないようWidget全体を無効化する。
+		// Levelロード開始までの短い間も追加入力を受けないようWidget全体を無効化する。
 		ResultWidget->SetIsEnabled(false);
 	}
 
-	// PIE接頭辞(UEDPIE_0_等)を除いた元のPackage名を取得して同じStageを再読込する。
-	const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this, true);
-	if (CurrentLevelName.IsEmpty())
-	{
-		bResultTransitionRequested = false;
-		return;
-	}
-
-	UGameplayStatics::OpenLevel(this, FName(*CurrentLevelName));
-}
-
-void ABoarPlayerController::ReturnToTitle()
-{
-	// 遷移中、またはController BlueprintでTitle Levelが未設定なら要求を無視する。
-	if (bResultTransitionRequested || TitleLevelName.IsNone())
-	{
-		return;
-	}
-
-	bResultTransitionRequested = true;
-	if (ResultWidget)
-	{
-		ResultWidget->SetIsEnabled(false);
-	}
-
-	UGameplayStatics::OpenLevel(this, TitleLevelName);
+	UGameplayStatics::OpenLevel(this, LobbyLevelName);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

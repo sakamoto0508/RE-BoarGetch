@@ -9,6 +9,7 @@
 #include "Player/BoarPlayerController.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Stage/StageConfig.h"
+#include "Stage/BoarSpawnPoint.h"
 #include "EngineUtils.h"
 
 ABoarGameMode::ABoarGameMode()
@@ -50,6 +51,81 @@ void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 		// 捕獲に伴う既存の後処理を終えてから、画面遷移を起こし得るクリアイベントを通知します。
 		EvaluateStageClearCondition();
 	}
+}
+
+void ABoarGameMode::StartPlay()
+{
+	Super::StartPlay();
+	SpawnConfiguredBoars();
+}
+
+void ABoarGameMode::SpawnConfiguredBoars()
+{
+	// Spawn Entryが空なら、既存Levelに手置きされたBoarだけを使用する。
+	if (!StageConfig || StageConfig->BoarSpawnEntries.IsEmpty())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	TArray<ABoarSpawnPoint*> SpawnPoints;
+	for (TActorIterator<ABoarSpawnPoint> It(World); It; ++It)
+	{
+		SpawnPoints.Add(*It);
+	}
+
+	if (SpawnPoints.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Stage] %s has BoarSpawnEntries but no BoarSpawnPoint actors."),
+			*GetNameSafe(StageConfig));
+		return;
+	}
+
+	const int32 TotalSpawnCount = StageConfig->GetTotalBoarSpawnCount();
+	if (StageConfig->TargetCaptureCount > TotalSpawnCount)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Stage] TargetCaptureCount (%d) exceeds configured Boar spawn count (%d)."),
+			StageConfig->TargetCaptureCount,
+			TotalSpawnCount);
+	}
+
+	int32 SpawnPointIndex = 0;
+	int32 SpawnedCount = 0;
+	for (const FBoarSpawnEntry& Entry : StageConfig->BoarSpawnEntries)
+	{
+		if (!Entry.BoarClass || Entry.Count <= 0)
+		{
+			continue;
+		}
+
+		for (int32 CountIndex = 0; CountIndex < Entry.Count; ++CountIndex)
+		{
+			ABoarSpawnPoint* SpawnPoint = SpawnPoints[SpawnPointIndex % SpawnPoints.Num()];
+			++SpawnPointIndex;
+
+			FActorSpawnParameters SpawnParameters;
+			SpawnParameters.SpawnCollisionHandlingOverride =
+				ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+			if (World->SpawnActor<ABoarBase>(Entry.BoarClass, SpawnPoint->GetActorTransform(), SpawnParameters))
+			{
+				++SpawnedCount;
+			}
+		}
+	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[Stage] Spawned %d of %d configured Boars using %d spawn points."),
+		SpawnedCount,
+		TotalSpawnCount,
+		SpawnPoints.Num());
 }
 
 void ABoarGameMode::EvaluateStageClearCondition()

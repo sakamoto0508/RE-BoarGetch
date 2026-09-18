@@ -46,6 +46,9 @@ public:
 	FOnCapturedBoarCountChangedSignature OnCapturedBoarCountChanged;
 
 protected:
+	/** Stage開始時にStageConfigのSpawn EntryからBoarを生成します。 */
+	virtual void StartPlay() override;
+
 	/** ゲームオーバー演出・遷移をBP側で実装するためのイベントです。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Game")
 	void OnGameOver();
@@ -55,6 +58,9 @@ protected:
 	void OnStageCleared();
 
 private:
+	/** Level内のBoarSpawnPointを使用して設定済みBoarを生成します。 */
+	void SpawnConfiguredBoars();
+
 	/** 現在の捕獲数がステージクリア条件を満たしたか評価します。 */
 	void EvaluateStageClearCondition();
 

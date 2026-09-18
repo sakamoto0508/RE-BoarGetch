@@ -3,6 +3,7 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Blueprint/WidgetTree.h"
+#include "Input/Reply.h"
 
 namespace
 {
@@ -22,24 +23,28 @@ void UBoarResultWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	ResolveWidgetReferences();
-
-	if (RetryButton)
-	{
-		RetryButton->OnClicked.AddUniqueDynamic(this, &UBoarResultWidget::HandleRetryClicked);
-	}
-
-	if (TitleButton)
-	{
-		TitleButton->OnClicked.AddUniqueDynamic(this, &UBoarResultWidget::HandleTitleClicked);
-	}
+	SetIsFocusable(true);
 }
 
 void UBoarResultWidget::ResolveWidgetReferences()
 {
 	CapturedCountText = ResolveNamedWidget<UTextBlock>(WidgetTree, CapturedCountTextWidgetName);
 	TargetCountText = ResolveNamedWidget<UTextBlock>(WidgetTree, TargetCountTextWidgetName);
-	RetryButton = ResolveNamedWidget<UButton>(WidgetTree, RetryButtonWidgetName);
-	TitleButton = ResolveNamedWidget<UButton>(WidgetTree, TitleButtonWidgetName);
+
+	// 新仕様ではリザルト上に操作Buttonを表示せず、画面全体で任意入力を受け付ける。
+	// 既存WBPに旧Retry／Title Buttonが残っていても表示されないよう一括で隠す。
+	if (WidgetTree)
+	{
+		TArray<UWidget*> AllWidgets;
+		WidgetTree->GetAllWidgets(AllWidgets);
+		for (UWidget* Widget : AllWidgets)
+		{
+			if (UButton* Button = Cast<UButton>(Widget))
+			{
+				Button->SetVisibility(ESlateVisibility::Collapsed);
+			}
+		}
+	}
 
 	if (!CapturedCountText)
 	{
@@ -50,26 +55,6 @@ void UBoarResultWidget::ResolveWidgetReferences()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s: TargetCountTextWidgetName is unset or does not reference a TextBlock."), *GetName());
 	}
-
-	if (!RetryButton)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: RetryButtonWidgetName is unset or does not reference a Button."), *GetName());
-	}
-}
-
-void UBoarResultWidget::NativeDestruct()
-{
-	if (RetryButton)
-	{
-		RetryButton->OnClicked.RemoveDynamic(this, &UBoarResultWidget::HandleRetryClicked);
-	}
-
-	if (TitleButton)
-	{
-		TitleButton->OnClicked.RemoveDynamic(this, &UBoarResultWidget::HandleTitleClicked);
-	}
-
-	Super::NativeDestruct();
 }
 
 void UBoarResultWidget::InitializeResult(int32 CapturedCount, int32 TargetCount)
@@ -85,20 +70,27 @@ void UBoarResultWidget::InitializeResult(int32 CapturedCount, int32 TargetCount)
 	}
 }
 
-void UBoarResultWidget::FocusInitialControl()
+void UBoarResultWidget::FocusForDismissInput()
 {
-	if (RetryButton)
-	{
-		RetryButton->SetUserFocus(GetOwningPlayer());
-	}
+	SetUserFocus(GetOwningPlayer());
 }
 
-void UBoarResultWidget::HandleRetryClicked()
+FReply UBoarResultWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
-	OnRetryRequested.Broadcast();
+	(void)InGeometry;
+	(void)InKeyEvent;
+	return RequestDismiss();
 }
 
-void UBoarResultWidget::HandleTitleClicked()
+FReply UBoarResultWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	OnTitleRequested.Broadcast();
+	(void)InGeometry;
+	(void)InMouseEvent;
+	return RequestDismiss();
+}
+
+FReply UBoarResultWidget::RequestDismiss()
+{
+	OnDismissRequested.Broadcast();
+	return FReply::Handled();
 }
