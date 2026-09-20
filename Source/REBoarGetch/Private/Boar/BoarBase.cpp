@@ -36,12 +36,16 @@ void ABoarBase::BeginPlay()
 void ABoarBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+		if (!Mode->CanAdvanceStage()) return;
 	UpdateStamina(DeltaSeconds);
 }
 
 // Componentで二重捕獲を拒否してから、GameModeへ檻収容・カウント・ドロップ処理を委譲する。
 void ABoarBase::Capture()
 {
+	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+		if (!Mode->CanAdvanceStage()) return;
 	if (CaptureComponent == nullptr)
 		return;
 	if (!CaptureComponent->Capture(nullptr))
@@ -202,6 +206,8 @@ float ABoarBase::GetAttackTelegraphDuration() const
 /** 檻が破壊されたときに、捕獲中のイノシシを解放して周囲へ移動させる。 */
 void ABoarBase::ReleaseBoar()
 {
+	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+		if (!Mode->CanAdvanceStage()) return;
 	// 捕獲済みの個体だけを解放対象にし、二重解放を防止する。
 	if (CaptureComponent == nullptr || !CaptureComponent->IsCaptured())
 		return;
@@ -243,6 +249,7 @@ void ABoarBase::ReleaseBoar()
 		FinishReleaseMovement();
 		return;
 	}
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It) It->ForgetBoar(this);
 
 	// 捕獲前と同じく、スタミナ対応種別だけ毎フレーム更新へ戻す。
 	SetActorTickEnabled(bUseStamina);
@@ -299,7 +306,8 @@ void ABoarBase::FinishReleaseMovement()
 		if (UBrainComponent* BrainComponent = AIController->GetBrainComponent())
 		{
 			// 解放移動後は既存のStateTreeに制御を戻し、通常の徘徊を再開する。
-			BrainComponent->RestartLogic();
+			const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
+			if (!Mode || Mode->CanAdvanceStage()) BrainComponent->RestartLogic();
 		}
 	}
 }

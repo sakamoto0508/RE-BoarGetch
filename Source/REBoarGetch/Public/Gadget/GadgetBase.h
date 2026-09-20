@@ -31,6 +31,8 @@ public:
 	// Sets default values for this actor's properties
 	/** Tickを使用しないガジェットActorの初期状態を構築します。 */
 	AGadgetBase();
+	/** 終了演出中はCooldownを停止します。通常PauseはWorld側で停止します。 */
+	void SetStageStopped(bool bStopped);
 
 	/**
 	 * ガチャメカを使用します。

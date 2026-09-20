@@ -39,6 +39,12 @@ protected:
 public:
 	/** 収容範囲など、檻を構成するComponentの初期状態を構築します。 */
 	ACage();
+	/** 無被弾時間と自然回復だけをゲーム時間で更新します。 */
+	virtual void Tick(float DeltaSeconds) override;
+	/** 終了演出中の復活Timerと自然回復を停止します。 */
+	void SetStageStopped(bool bStopped);
+	/** 外部解放・Actor破棄時にも収容数を正しく減らします。 */
+	void ForgetBoar(ABoarBase* Boar);
 
 	/** 檻のHP変更を通知するデリゲートです。 */
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCageHealthChanged, float, CurrentHp, float, MaxHp);
@@ -67,7 +73,7 @@ public:
 
 	/** 収容中のイノシシ数を返します。 */
 	UFUNCTION(BlueprintPure, Category = "Cage")
-	int32 GetCapturedBoarCount() const { return CapturedBoars.Num(); }
+	int32 GetCapturedBoarCount() const;
 
 	/** 檻の現在HPを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Cage")
@@ -82,6 +88,16 @@ public:
 	bool GetIsCageDestroyed() const { return bIsDestroyed; }
 
 private:
+	void NotifyHousedCountChanged();
+	UFUNCTION() void HandleHousedBoarDestroyed(AActor* Actor);
+	bool CanAdvance() const;
+	bool bStageStopped = false;
+	float SecondsSinceDamage = 0.0f;
+	/** 回復量は未調整です。0で無効、Editorでステージごとに設定します。 */
+	UPROPERTY(EditAnywhere, Category = "Cage|Recovery", meta = (ClampMin = "0.0"))
+	float RecoveryPerSecond = 0.0f;
+	UPROPERTY(EditAnywhere, Category = "Cage|Recovery", meta = (ClampMin = "0.0"))
+	float RecoveryDelay = 0.0f;
 	/** 指定された収容枠に対応するイノシシの配置位置を返します。 */
 	FVector GetCapturedBoarLocation(int32 SlotIndex, const ABoarBase* Boar) const;
 

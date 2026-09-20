@@ -21,6 +21,10 @@ public:
 	/** @brief Boar生成位置として使用するScene Rootを構築します。 */
 	ABoarSpawnPoint();
 
+	/** 新方式で参照する固定IDです。Level内で一意に設定してください。 */
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn")
+	FName SpawnPointId;
+
 private:
 	/** Spawn位置と向きの基点です。 */
 	UPROPERTY(VisibleAnywhere, Category = "REBoarGetch|Stage|Spawn")

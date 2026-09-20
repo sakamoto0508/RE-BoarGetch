@@ -1,4 +1,6 @@
 #include "Component/HealthComponent.h"
+#include "Core/BoarGameMode.h"
+#include "Engine/World.h"
 
 /**
  * コンストラクタです。
@@ -24,6 +26,8 @@ void UHealthComponent::BeginPlay()
  */
 void UHealthComponent::TakeDamage(float DamageAmount)
 {
+	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
+		if (!Mode->CanAdvanceStage()) return;
 	if (DamageAmount <= 0.0f || IsDead())	return;
 	
 	CurrentHealth -= DamageAmount;
@@ -37,6 +41,8 @@ void UHealthComponent::TakeDamage(float DamageAmount)
  */
 void UHealthComponent::Heal(float HealAmount)
 {
+	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
+		if (!Mode->CanAdvanceStage()) return;
 	if (HealAmount <= 0.0f || IsDead())	return;
 	
 	CurrentHealth += HealAmount;

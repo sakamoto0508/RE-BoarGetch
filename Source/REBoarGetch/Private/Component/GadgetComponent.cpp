@@ -5,6 +5,10 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
+#include "Player/BoarPlayerCharacter.h"
+#include "BoarGameInstance.h"
+#include "BoarSaveGame.h"
+#include "GadgetDataAsset.h"
 
 
 // Sets default values for this component's properties
@@ -25,6 +29,23 @@ void UGadgetComponent::BeginPlay()
 	UE_LOG(LogTemp, Log, TEXT("[Gadget] Owner pawn: %s"), *GetNameSafe(OwningPawn.Get()));
 
 	InitializeDefaultSlots();
+	if (const UBoarGameInstance* Instance = GetWorld()->GetGameInstance<UBoarGameInstance>())
+	{
+		const UBoarSaveGame* Save = Instance->GetProgress();
+		if (Save && Save->bHasSavedLoadout && Save->GadgetLoadout.Num() == MaxGadgetSlots)
+		{
+			TArray<TSubclassOf<AGadgetBase>> Restored;
+			bool bCanRestore = true;
+			for (FName Id : Save->GadgetLoadout)
+			{
+				TSubclassOf<AGadgetBase> Class = Instance->FindGadgetClass(Id);
+				if (!Id.IsNone() && !Class) bCanRestore = false;
+				Restored.Add(Class);
+			}
+			if (bCanRestore) EquippedGadgetSlots = Restored;
+			else UE_LOG(LogTemp, Error, TEXT("[Gadget] Saved loadout has unresolved IDs; defaults retained, save unchanged."));
+		}
+	}
 
 	// スロット0から順番に確認し最初にガジェットが登録されているスロットを初期装備にする。
 	const int32 FirstSlot = FindFirstValidSlot();
@@ -101,6 +122,8 @@ void UGadgetComponent::UnequipGadget()
 {
 	if (IsValid(CurrentGadget))
 	{
+		if (ABoarPlayerCharacter* Player = Cast<ABoarPlayerCharacter>(OwningPawn)) Player->InterruptGadgetUse();
+		CurrentGadget->EndUse(OwningPawn);
 		CurrentGadget->Destroy();
 	}
 	CurrentGadget = nullptr;
@@ -158,7 +181,43 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 		return false;
 	}
 
-	EquippedGadgetSlots[SlotIndex] = GadgetClass;
+	if (EquippedGadgetSlots[SlotIndex] == GadgetClass) return true;
+	UBoarGameInstance* Instance = GetWorld() ? GetWorld()->GetGameInstance<UBoarGameInstance>() : nullptr;
+	const UGadgetDataAsset* Definition = GadgetClass ? GadgetClass.GetDefaultObject()->GetGadgetDefinition() : nullptr;
+	if (Instance && Definition && !Definition->GadgetId.IsNone() && !Instance->IsGadgetUnlocked(Definition->GadgetId)) return false;
+	TArray<TSubclassOf<AGadgetBase>> NewSlots = EquippedGadgetSlots;
+	// 同じガジェットを選ぶと元の枠を空にして移動します。
+	for (int32 Index = 0; Index < MaxGadgetSlots; ++Index)
+		if (GadgetClass && NewSlots[Index] == GadgetClass) NewSlots[Index] = nullptr;
+	NewSlots[SlotIndex] = GadgetClass;
+	const int32 PreviousSlot = CurrentGadgetSlotIndex;
+	if (IsValidSlotIndex(PreviousSlot) && NewSlots[PreviousSlot] != EquippedGadgetSlots[PreviousSlot])
+	{
+		if (NewSlots[PreviousSlot])
+		{
+			if (!EquipGadget(NewSlots[PreviousSlot])) return false;
+			CurrentGadgetSlotIndex = PreviousSlot;
+		}
+		else
+		{
+			UnequipGadget();
+			CurrentGadgetSlotIndex = PreviousSlot;
+		}
+	}
+	EquippedGadgetSlots = NewSlots;
+	if (Instance)
+	{
+		TArray<FName> Ids;
+		bool bHasStableIds = true;
+		for (const TSubclassOf<AGadgetBase>& Class : EquippedGadgetSlots)
+		{
+			const UGadgetDataAsset* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
+			if (Class && (!Def || Def->GadgetId.IsNone())) bHasStableIds = false;
+			Ids.Add(Def ? Def->GadgetId : NAME_None);
+		}
+		if (!bHasStableIds || !Instance->SaveGadgetLoadout(Ids))
+			UE_LOG(LogTemp, Error, TEXT("[Gadget] Loadout changed but not saved; check GadgetId/catalog/save status."));
+	}
 	OnGadgetLoadoutChanged.Broadcast();
 	return true;
 }
@@ -173,10 +232,13 @@ bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
 	}
 
 	TSubclassOf<AGadgetBase> SlotClass = EquippedGadgetSlots[SlotIndex];
+	if (CurrentGadgetSlotIndex == SlotIndex && IsValid(CurrentGadget)) return true;
 	if (SlotClass == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Switch failed: slot %d is empty"), SlotIndex);
-		return false;
+		UnequipGadget();
+		CurrentGadgetSlotIndex = SlotIndex;
+		OnGadgetLoadoutChanged.Broadcast();
+		return true;
 	}
 
 	if (!EquipGadget(SlotClass))

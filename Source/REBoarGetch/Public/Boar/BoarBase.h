@@ -21,6 +21,9 @@ class REBOARGETCH_API ABoarBase : public ACharacter
 	GENERATED_BODY()
 
 public:
+	/** 永続個体IDです。手置きはEditor、生成個体はStageConfigから設定します。 */
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Boar|Identity")
+	FName BoarUniqueId;
 	/** 捕獲Componentを生成します。TickはBeginPlay後、スタミナを使う種別だけ有効になります。 */
 	ABoarBase();
 	/** 種別設定と初期スタミナを適用します。 */

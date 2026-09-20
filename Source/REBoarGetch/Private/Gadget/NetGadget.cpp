@@ -39,6 +39,7 @@ void ANetGadget::Use_Implementation(AActor* TargetActor)
 	(void)TargetActor;
 
 	EndCaptureWindow();
+	AttemptedBoarsThisUse.Reset();
 
 	StartCooldown();
 }
@@ -83,7 +84,8 @@ void ANetGadget::OnCaptureCollisionBeginOverlap(UPrimitiveComponent* OverlappedC
 // イノシシの捕獲を試みる
 bool ANetGadget::TryCaptureBoar(ABoarBase* Boar)
 {
-	if (!bCaptureWindowActive || Boar == nullptr || Boar->IsCaptured())	return false;
+	if (!bCaptureWindowActive || Boar == nullptr || Boar->IsCaptured() || AttemptedBoarsThisUse.Contains(Boar)) return false;
+	AttemptedBoarsThisUse.Add(Boar);
 	
 	Boar->Capture();
 	UE_LOG(LogTemp, Log, TEXT("[Net] Captured %s"), *GetNameSafe(Boar));

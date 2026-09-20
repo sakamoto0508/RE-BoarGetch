@@ -1,4 +1,11 @@
 #include "Gadget/GadgetBase.h"
+#include "TimerManager.h"
+
+void AGadgetBase::SetStageStopped(bool bStopped)
+{
+	if (bStopped) GetWorldTimerManager().PauseTimer(CooldownTimerHandle);
+	else GetWorldTimerManager().UnPauseTimer(CooldownTimerHandle);
+}
 #include "Interaction/AttackActivatable.h"
 #include "TimerManager.h"
 #include "Engine/World.h"

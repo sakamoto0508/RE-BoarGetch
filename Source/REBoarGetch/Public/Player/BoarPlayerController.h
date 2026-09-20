@@ -9,6 +9,7 @@ class UInputAction;
 class UInputMappingContext;
 class UBoarHUDWidget;
 class UBoarResultWidget;
+class UBoarGameOverWidget;
 class UHealthComponent;
 class UGadgetComponent;
 class ABoarPlayerCharacter;
@@ -29,6 +30,10 @@ class REBOARGETCH_API ABoarPlayerController : public APlayerController
 public:
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
 	void HandleStageCleared(int32 CapturedCount, int32 TargetCount);
+	/** 終了演出からUIまでゲーム入力を遮断します。 */
+	void SetStageInputBlocked(bool bBlocked);
+	void HandleStageGameOver();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage") void RetryStage();
 
 protected:
 	/** 入力Mapping Contextをローカルプレイヤーへ登録します。 */
@@ -42,6 +47,9 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
+	TSubclassOf<UBoarGameOverWidget> GameOverWidgetClass;
+	UPROPERTY(Transient) TObjectPtr<UBoarGameOverWidget> GameOverWidget;
 	//-------------------------------------------------
 	// Gameplay HUD
 	//-------------------------------------------------

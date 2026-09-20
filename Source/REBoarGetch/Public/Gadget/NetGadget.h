@@ -16,6 +16,8 @@ UCLASS()
 class REBOARGETCH_API ANetGadget : public AGadgetBase
 {
 	GENERATED_BODY()
+	/** 一振り中に処理した個体です。即解放されても同じ振りで再捕獲しません。 */
+	TSet<TWeakObjectPtr<class ABoarBase>> AttemptedBoarsThisUse;
 
 public:
 	// Sets default values for this actor's properties

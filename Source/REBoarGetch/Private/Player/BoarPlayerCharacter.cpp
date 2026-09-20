@@ -296,6 +296,8 @@ void ABoarPlayerCharacter::OnCapsuleBeginOverlap(UPrimitiveComponent* Overlapped
 
 	if (Cast<ABoarBase>(OtherActor) == nullptr)
 		return;
+	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+		if (!Mode->CanAdvanceStage()) return;
 
 	// ダメージを受けてスタン状態にする
 	HealthComponent->TakeDamage(ContactDamage);
@@ -340,6 +342,8 @@ void ABoarPlayerCharacter::BeginStun()
 void ABoarPlayerCharacter::EndStun()
 {
 	bIsStunned = false;
+	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+		if (!Mode->CanAdvanceStage()) return;
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
 		Move->SetMovementMode(MOVE_Walking);
@@ -417,5 +421,7 @@ void ABoarPlayerCharacter::SetPlayerActionState(EPlayerActionState NewState)
 
 bool ABoarPlayerCharacter::IsActionLocked() const
 {
+	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
+		if (!Mode->CanAdvanceStage()) return true;
 	return bIsStunned || bIsGadgetInUse;
 }

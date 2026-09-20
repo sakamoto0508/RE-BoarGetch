@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Stage/StageRunData.h"
 #include "BoarResultWidget.generated.h"
 
 class UTextBlock;
@@ -17,6 +18,11 @@ class REBOARGETCH_API UBoarResultWidget : public UUserWidget
 public:
 	/** リザルトへ表示する捕獲数を設定します。 */
 	void InitializeResult(int32 CapturedCount, int32 TargetCount);
+	/** 保存前に確定した今回の結果だけを受け取ります。 */
+	void InitializeRunResult(const FStageRunData& Run);
+	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result") FStageRunData ResultData;
+	/** NEW個体一覧などをReusable Widgetへ展開するための通知です。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Result") void OnRunResultUpdated();
 
 	/** 任意入力を受け取れるようWidget自身へフォーカスを設定します。 */
 	void FocusForDismissInput();
@@ -26,6 +32,9 @@ public:
 	FOnResultDismissRequested OnDismissRequested;
 
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName ClearTimeTextWidgetName;
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName NewBoarCountTextWidgetName;
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName SpecialCoinCountTextWidgetName;
 	virtual void NativeConstruct() override;
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;

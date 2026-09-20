@@ -108,6 +108,8 @@ public:
 
 	/** ガジェット使用終了。 */
 	void StopGadgetUse();
+	/** 装備変更・Stage終了から既存の中断経路を呼び出します。 */
+	void InterruptGadgetUse() { EndGadgetUse(true); }
 
 	/** 指定スロットのガジェットへ切替。 */
 	void SwitchGadgetSlot(int32 SlotIndex);

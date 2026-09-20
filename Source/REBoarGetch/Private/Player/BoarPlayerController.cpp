@@ -12,6 +12,7 @@
 #include "Stage/StageConfig.h"
 #include "UI/BoarHUDWidget.h"
 #include "UI/BoarResultWidget.h"
+#include "UI/BoarGameOverWidget.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -341,7 +342,7 @@ void ABoarPlayerController::HandleHealthChanged(float CurrentHealth, float MaxHe
 void ABoarPlayerController::HandleStageCleared(int32 CapturedCount, int32 TargetCount)
 {
 	// Server側、二重通知、Widget Class未設定ではResult画面を生成しない。
-	if (!IsLocalController() || bResultScreenActive || ResultWidgetClass == nullptr)
+	if (!IsLocalController() || ResultWidget || ResultWidgetClass == nullptr)
 	{
 		return;
 	}
@@ -383,6 +384,8 @@ void ABoarPlayerController::HandleStageCleared(int32 CapturedCount, int32 Target
 	// ZOrder 100で通常HUDより前面へ表示し、確定した捕獲数を渡す。
 	ResultWidget->AddToViewport(100);
 	ResultWidget->InitializeResult(CapturedCount, TargetCount);
+	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+		ResultWidget->InitializeRunResult(Mode->GetStageRunData());
 
 	// Gameplay入力をUI Onlyへ切り替え、任意入力を受け取るResult WidgetへFocusを設定する。
 	FInputModeUIOnly InputMode;
@@ -409,6 +412,45 @@ void ABoarPlayerController::ReturnToLobby()
 	}
 
 	UGameplayStatics::OpenLevel(this, LobbyLevelName);
+}
+
+void ABoarPlayerController::SetStageInputBlocked(bool bBlocked)
+{
+	bResultScreenActive = bBlocked;
+	SetIgnoreMoveInput(bBlocked);
+	SetIgnoreLookInput(bBlocked);
+	FlushPressedKeys();
+}
+
+void ABoarPlayerController::HandleStageGameOver()
+{
+	if (!IsLocalController() || GameOverWidget) return;
+	SetStageInputBlocked(true);
+	if (PlayerHUDWidget) PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+	if (!GameOverWidgetClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GameOver] GameOverWidgetClass is not configured. Result is not used for GameOver."));
+		return;
+	}
+	GameOverWidget = CreateWidget<UBoarGameOverWidget>(this, GameOverWidgetClass);
+	if (!GameOverWidget) return;
+	GameOverWidget->OnRetryRequested.AddUniqueDynamic(this, &ABoarPlayerController::RetryStage);
+	GameOverWidget->OnLobbyRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToLobby);
+	GameOverWidget->AddToViewport(100);
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(GameOverWidget->TakeWidget());
+	SetInputMode(InputMode);
+	SetShowMouseCursor(true);
+	GameOverWidget->FocusInitialChoice();
+}
+
+void ABoarPlayerController::RetryStage()
+{
+	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
+	if (bResultTransitionRequested || !Mode || Mode->GetStageState() != EBoarStageState::GameOver) return;
+	bResultTransitionRequested = true;
+	// Map再読込でHP・檻・Boar・Timerを初期化し、GameInstanceの保存済み装備は維持します。
+	UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this, true)));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

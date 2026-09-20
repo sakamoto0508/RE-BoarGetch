@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Stage/StageConfig.h"
 #include "UI/BoarLobbyWidget.h"
+#include "BoarGameInstance.h"
 
 AStageEntrance::AStageEntrance()
 {
@@ -137,6 +138,15 @@ void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfi
 	}
 
 	// 最初の要求で即座に再入力を遮断してから、Soft World参照のLevelを開く。
+	if (UBoarGameInstance* Instance = GetGameInstance<UBoarGameInstance>())
+	{
+		if (!Instance->IsStageUnlocked(RequestedStageConfig)) return;
+		if (!Instance->SaveLastAttemptedStage(RequestedStageConfig->StageId))
+		{
+			UE_LOG(LogTemp, Error, TEXT("[StageEntrance] Last stage could not be saved; travel canceled."));
+			return;
+		}
+	}
 	bTravelRequested = true;
 	if (LobbyWidget)
 	{

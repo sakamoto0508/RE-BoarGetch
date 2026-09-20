@@ -75,6 +75,20 @@ void UBoarResultWidget::FocusForDismissInput()
 	SetUserFocus(GetOwningPlayer());
 }
 
+void UBoarResultWidget::InitializeRunResult(const FStageRunData& Run)
+{
+	if (!Run.bResultFrozen) return;
+	ResultData = Run;
+	if (CapturedCountText) CapturedCountText->SetText(FText::AsNumber(Run.CurrentHousedCount));
+	if (UTextBlock* Text = ResolveNamedWidget<UTextBlock>(WidgetTree, ClearTimeTextWidgetName))
+		Text->SetText(FText::AsTimespan(FTimespan::FromSeconds(Run.ClearTimeSeconds)));
+	if (UTextBlock* Text = ResolveNamedWidget<UTextBlock>(WidgetTree, NewBoarCountTextWidgetName))
+		Text->SetText(FText::AsNumber(Run.NewBoarUniqueIds.Num()));
+	if (UTextBlock* Text = ResolveNamedWidget<UTextBlock>(WidgetTree, SpecialCoinCountTextWidgetName))
+		Text->SetText(FText::AsNumber(Run.SpecialCoinIds.Num()));
+	OnRunResultUpdated();
+}
+
 FReply UBoarResultWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	(void)InGeometry;
