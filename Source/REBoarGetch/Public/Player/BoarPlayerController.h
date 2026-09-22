@@ -34,13 +34,18 @@ public:
 	void HandleStageCleared(int32 CapturedCount, int32 TargetCount);
 	/** 終了演出からUIまでゲーム入力を遮断します。 */
 	void SetStageInputBlocked(bool bBlocked);
+	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	void HandleStageGameOver();
+	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage") void RetryStage();
+	/** ポーズ画面を開き、ゲーム入力を遮断します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenPauseMenu();
+	/** ポーズ画面を閉じてゲーム入力へ戻す。*/
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void ResumeFromPause();
+	/** ポーズ画面からステージを離脱します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void LeaveStageFromPause();
+	/** ポーズメニューが開いているかどうかを返します。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|UI") bool IsPauseMenuOpen() const { return PauseWidget != nullptr; }
-	bool IsPauseMenuKey(FKey Key) const { return Key == PauseKeyboardKey || Key == PauseGamepadKey; }
 
 protected:
 	/** 入力Mapping Contextをローカルプレイヤーへ登録します。 */
@@ -49,24 +54,26 @@ protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	/** PlayerController終了時にHUD用イベント購読を解除します。 */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
 	/** 設定済みInput ActionをEnhanced Input Componentへ登録します。未設定Actionは安全に無視します。 */
 	virtual void SetupInputComponent() override;
 
 private:
-	/** 未設定の画面ではポーズメニューを使用しません。 */
-	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
+	/** ポーズメニューWidget Blueprintクラスです。 */
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarPauseWidget> PauseWidgetClass;
+	
+	/** ポーズメニューWidgetのインスタンスです。 */
 	UPROPERTY(Transient) TObjectPtr<UBoarPauseWidget> PauseWidget;
-	/** 初期キーボード割当。既存の入力アセットは変更せず、Editorで調整できます。 */
-	UPROPERTY(EditDefaultsOnly, Category = "Input") FKey PauseKeyboardKey = EKeys::P;
-	UPROPERTY(EditDefaultsOnly, Category = "Input") FKey PauseGamepadKey = EKeys::Gamepad_Special_Right;
-	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
+	
+	/** ゲームオーバー画面Widget Blueprintクラスです。 */
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarGameOverWidget> GameOverWidgetClass;
+	
+	/**	 現在表示中のゲームオーバーWidgetです。 */
 	UPROPERTY(Transient) TObjectPtr<UBoarGameOverWidget> GameOverWidget;
 
 	/** ゲームプレイ中に常時表示するHUD Widget Blueprintクラスです。 */
-	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarHUDWidget> PlayerHUDWidgetClass;
 
 	/** 現在表示中のゲームプレイHUDです。 */
@@ -190,10 +197,12 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot4Action;
-
-	//-------------------------------------------------
-	// Input Functions
-	//-------------------------------------------------
+	
+	/**
+	 *	 ポーズ入力（Digital）
+	 */
+	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInputAction> PauseAction;
 	
 	/**
 	 * 移動入力を受け取る。
@@ -249,11 +258,7 @@ private:
 	void SwitchGadgetSlot4();
 	/** 切替条件を満たす場合に指定スロットへの変更をCharacterへ依頼します。 */
 	void TrySwitchGadgetSlot(int32 SlotIndex);
-
-	//-------------------------------------------------
-	// Utility
-	//-------------------------------------------------
-
+	
 	/** 現在Possess中のPawnをBoarPlayerCharacterとして取得します。キャッシュせずPossess変更へ追従します。 */
 	ABoarPlayerCharacter* GetBoarCharacter() const;
 

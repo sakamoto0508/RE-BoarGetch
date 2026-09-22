@@ -116,13 +116,6 @@ void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ABoarPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
-	// UIOnly中の閉じる操作はPause Widgetが受け持ちます。
-	if (InputComponent)
-	{
-		if (PauseKeyboardKey.IsValid()) InputComponent->BindKey(PauseKeyboardKey, IE_Pressed, this, &ABoarPlayerController::OpenPauseMenu);
-		if (PauseGamepadKey.IsValid() && PauseGamepadKey != PauseKeyboardKey)
-			InputComponent->BindKey(PauseGamepadKey, IE_Pressed, this, &ABoarPlayerController::OpenPauseMenu);
-	}
 
 	// Project側のInputComponent classがEnhanced Inputでない場合、ActionをBindできない。
 	// Cast失敗を許容しておくことで、設定ミスでもController生成自体は継続できる。
