@@ -37,7 +37,7 @@ void ABoarPlayerController::BeginPlay()
 	{
 		// Priority 0をゲームプレイ入力の基準レイヤーとして使用する。
 		// 将来、メニュー等を追加する場合は、より高いPriorityのContextで上書きできる。
-		InputSubsystem->AddMappingContext(DefaultMappingContext, 0);
+		AddOwnedMappingContext(DefaultMappingContext, 0);
 		UE_LOG(LogTemp, Log, TEXT("[Input] MappingContext added: %s"), *GetNameSafe(DefaultMappingContext));
 	}
 	else if (IsLocalController())
@@ -48,6 +48,7 @@ void ABoarPlayerController::BeginPlay()
 	}
 
 	// Mapping Context登録後にHUDを生成し、現在Possess中のCharacterとGameModeへ接続する。
+	AddOwnedMappingContext(GlobalMappingContext, 10);
 	CreatePlayerHUD();
 }
 
@@ -55,8 +56,8 @@ void ABoarPlayerController::RestoreGameplayInputState()
 {
 	// PlayerControllerはLevel再読み込み後も再利用される場合があるため、Result表示時に変更した
 	// ignore-input、押下中キー、Mouse/UI入力状態を明示的にゲーム開始状態へ戻す。
-	bResultScreenActive = false;
-	bResultTransitionRequested = false;
+	bGameplayInputBlocked = false;
+	bLevelTransitionRequested = false;
 	bIsGadgetModifierHeld = false;
 
 	// Result表示時に設定した移動・視点ロックを解除する。
@@ -85,6 +86,7 @@ void ABoarPlayerController::OnPossess(APawn* InPawn)
 void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	ResumeFromPause();
+	while (!OwnedMappingContexts.IsEmpty()) RemoveOwnedMappingContext(OwnedMappingContexts.Last());
 	// Controller破棄後にDynamic Delegateからコールバックされないよう、
 	// BeginPlay/CreatePlayerHUD/OnPossessで登録した購読をすべて解除する。
 	if (ABoarGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
@@ -190,6 +192,14 @@ void ABoarPlayerController::SetupInputComponent()
 	{
 		EnhancedInput->BindAction(GadgetSlot4Action, ETriggerEvent::Started, this, &ABoarPlayerController::SwitchGadgetSlot4);
 	}
+	if (PauseAction)
+	{
+		EnhancedInput->BindAction(PauseAction, ETriggerEvent::Started, this, &ABoarPlayerController::TogglePauseMenu);
+	}
+	if (UIBackAction)
+	{
+		EnhancedInput->BindAction(UIBackAction, ETriggerEvent::Started, this, &ABoarPlayerController::ResumeFromPause);
+	}
 }
 
 
@@ -271,8 +281,8 @@ void ABoarPlayerController::HandleGadgetLoadoutChanged()
 
 	TArray<TSubclassOf<AGadgetBase>> GadgetSlots;
 	// HUD仕様は4枠固定。空スロットはnullptrのClassとしてそのままWidgetへ渡す。
-	GadgetSlots.Reserve(4);
-	for (int32 SlotIndex = 0; SlotIndex < 4; ++SlotIndex)
+	GadgetSlots.Reserve(ObservedGadgetComponent->GetGadgetSlotCount());
+	for (int32 SlotIndex = 0; SlotIndex < ObservedGadgetComponent->GetGadgetSlotCount(); ++SlotIndex)
 	{
 		GadgetSlots.Add(ObservedGadgetComponent->GetGadgetSlotClass(SlotIndex));
 	}
@@ -341,18 +351,16 @@ void ABoarPlayerController::HandleHealthChanged(float CurrentHealth, float MaxHe
 }
 
 
-void ABoarPlayerController::HandleStageCleared(int32 CapturedCount, int32 TargetCount)
+void ABoarPlayerController::HandleStageCleared(const FStageRunData& Run, int32 TargetCount)
 {
 	// Server側、二重通知、Widget Class未設定ではResult画面を生成しない。
-	if (!IsLocalController() || ResultWidget || ResultWidgetClass == nullptr)
+	if (!IsLocalController() || ResultWidget || !Run.bResultFrozen)
 	{
 		return;
 	}
 
 	// Enhanced Inputの各コールバックもこのフラグを見るため、Widget生成より先に入力を遮断する。
-	bResultScreenActive = true;
-	SetIgnoreMoveInput(true);
-	SetIgnoreLookInput(true);
+	SetStageInputBlocked(true);
 	if (PlayerHUDWidget)
 	{
 		// Resultと通常HUDが重ならないよう非表示にする。Retry後はLevel開始時に再生成される。
@@ -370,24 +378,20 @@ void ABoarPlayerController::HandleStageCleared(int32 CapturedCount, int32 Target
 		}
 	}
 
-	ResultWidget = CreateWidget<UBoarResultWidget>(this, ResultWidgetClass);
+	if (ResultWidgetClass) ResultWidget = CreateWidget<UBoarResultWidget>(this, ResultWidgetClass);
 	if (ResultWidget == nullptr)
 	{
-		bResultScreenActive = false;
-		// Widget生成失敗時にゲームが操作不能にならないよう、直前の入力ロックを巻き戻す。
-		SetIgnoreMoveInput(false);
-		SetIgnoreLookInput(false);
-		UE_LOG(LogTemp, Warning, TEXT("[Result] Failed to create result widget"));
-		return;
+		// Actor停止済みのStageは再開せず、任意入力で戻れる最小画面へ切り替えます。
+		UE_LOG(LogTemp, Warning, TEXT("[Result] Using native fallback widget."));
+		ResultWidget = CreateWidget<UBoarResultWidget>(this, UBoarResultWidget::StaticClass());
 	}
+	if (!ResultWidget) { ReturnToLobby(); return; }
 
 	// Widgetは任意入力だけを通知し、実際のLobby遷移はControllerが担当する。
 	ResultWidget->OnDismissRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToLobby);
 	// ZOrder 100で通常HUDより前面へ表示し、確定した捕獲数を渡す。
 	ResultWidget->AddToViewport(100);
-	ResultWidget->InitializeResult(CapturedCount, TargetCount);
-	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		ResultWidget->InitializeRunResult(Mode->GetStageRunData());
+	ResultWidget->InitializeResult(Run, TargetCount);
 
 	// Gameplay入力をUI Onlyへ切り替え、任意入力を受け取るResult WidgetへFocusを設定する。
 	FInputModeUIOnly InputMode;
@@ -401,25 +405,29 @@ void ABoarPlayerController::HandleStageCleared(int32 CapturedCount, int32 Target
 void ABoarPlayerController::ReturnToLobby()
 {
 	// 任意入力の連打中もLobbyを複数回Openしないよう、最初の要求だけ受け付ける。
-	if (bResultTransitionRequested || LobbyLevelName.IsNone())
+	if (bLevelTransitionRequested || (LobbyLevel.IsNull() && LobbyLevelName.IsNone()))
 	{
 		return;
 	}
 
-	bResultTransitionRequested = true;
+	bLevelTransitionRequested = true;
 	if (ResultWidget)
 	{
 		// Levelロード開始までの短い間も追加入力を受けないようWidget全体を無効化する。
 		ResultWidget->SetIsEnabled(false);
 	}
 
-	UGameplayStatics::OpenLevel(this, LobbyLevelName);
+	if (!LobbyLevel.IsNull()) UGameplayStatics::OpenLevelBySoftObjectPtr(this, LobbyLevel);
+	else UGameplayStatics::OpenLevel(this, LobbyLevelName);
 }
 
 void ABoarPlayerController::SetStageInputBlocked(bool bBlocked)
 {
 	if (bBlocked) ResumeFromPause();
-	bResultScreenActive = bBlocked;
+	// Ignore入力は加算式なので、状態が変わるときだけ1回設定します。
+	if (bGameplayInputBlocked == bBlocked) return;
+	bGameplayInputBlocked = bBlocked;
+	if (bBlocked) bIsGadgetModifierHeld = false;
 	SetIgnoreMoveInput(bBlocked);
 	SetIgnoreLookInput(bBlocked);
 	FlushPressedKeys();
@@ -430,13 +438,13 @@ void ABoarPlayerController::HandleStageGameOver()
 	if (!IsLocalController() || GameOverWidget) return;
 	SetStageInputBlocked(true);
 	if (PlayerHUDWidget) PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
-	if (!GameOverWidgetClass)
+	if (GameOverWidgetClass) GameOverWidget = CreateWidget<UBoarGameOverWidget>(this, GameOverWidgetClass);
+	if (!GameOverWidget)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[GameOver] GameOverWidgetClass is not configured. Result is not used for GameOver."));
-		return;
+		UE_LOG(LogTemp, Warning, TEXT("[GameOver] Using native Retry/Lobby fallback widget."));
+		GameOverWidget = CreateWidget<UBoarGameOverWidget>(this, UBoarGameOverWidget::StaticClass());
 	}
-	GameOverWidget = CreateWidget<UBoarGameOverWidget>(this, GameOverWidgetClass);
-	if (!GameOverWidget) return;
+	if (!GameOverWidget) { ReturnToLobby(); return; }
 	GameOverWidget->OnRetryRequested.AddUniqueDynamic(this, &ABoarPlayerController::RetryStage);
 	GameOverWidget->OnLobbyRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToLobby);
 	GameOverWidget->AddToViewport(100);
@@ -450,23 +458,35 @@ void ABoarPlayerController::HandleStageGameOver()
 void ABoarPlayerController::RetryStage()
 {
 	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
-	if (bResultTransitionRequested || !Mode || Mode->GetStageState() != EBoarStageState::GameOver) return;
-	bResultTransitionRequested = true;
+	if (bLevelTransitionRequested || !Mode || Mode->GetStageState() != EBoarStageState::GameOver) return;
+	bLevelTransitionRequested = true;
 	// Map再読込でHP・檻・Boar・Timerを初期化し、GameInstanceの保存済み装備は維持します。
 	UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this, true)));
 }
 
 
+void ABoarPlayerController::TogglePauseMenu()
+{
+	if (PauseWidget) ResumeFromPause();
+	else OpenPauseMenu();
+}
+
 void ABoarPlayerController::OpenPauseMenu()
 {
 	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
 	// Lobby/Title、終了演出、他のPauseとの競合、および多重生成を防ぎます。
-	if (!IsLocalController() || PauseWidget || !PauseWidgetClass || bResultScreenActive ||
-		bResultTransitionRequested || !Mode || !Mode->CanAdvanceStage() || UGameplayStatics::IsGamePaused(this)) return;
+	if (!IsLocalController() || PauseWidget || !PauseWidgetClass || bGameplayInputBlocked ||
+		bLevelTransitionRequested || !Mode || !Mode->CanAdvanceStage() || UGameplayStatics::IsGamePaused(this)) return;
 	auto* Widget = CreateWidget<UBoarPauseWidget>(this, PauseWidgetClass);
 	if (!Widget) return;
 	if (!SetPause(true)) return;
 	PauseWidget = Widget;
+	// 旧BPは入口の判定で保護し、専用Context設定済みの画面だけ切り替えます。
+	if (GlobalMappingContext && UIMappingContext)
+	{
+		RemoveOwnedMappingContext(DefaultMappingContext);
+		AddOwnedMappingContext(UIMappingContext, 20);
+	}
 	// 押下状態を持ち越さず、既存のアクション終了経路を使用します。
 	bIsGadgetModifierHeld = false;
 	if (auto* PlayerCharacter = GetBoarCharacter())
@@ -480,7 +500,8 @@ void ABoarPlayerController::OpenPauseMenu()
 	SetIgnoreMoveInput(true);
 	SetIgnoreLookInput(true);
 	Widget->AddToViewport(80);
-	FInputModeUIOnly ModeUI;
+	FInputModeGameAndUI ModeUI;
+	ModeUI.SetHideCursorDuringCapture(false);
 	ModeUI.SetWidgetToFocus(Widget->TakeWidget());
 	ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	SetInputMode(ModeUI);
@@ -494,6 +515,8 @@ void ABoarPlayerController::ResumeFromPause()
 	SetPause(false);
 	PauseWidget->RemoveFromParent();
 	PauseWidget = nullptr;
+	RemoveOwnedMappingContext(UIMappingContext);
+	AddOwnedMappingContext(DefaultMappingContext, 0);
 	if (auto* PlayerCharacter = GetBoarCharacter()) PlayerCharacter->SetMenuOpen(false);
 	SetIgnoreMoveInput(false);
 	SetIgnoreLookInput(false);
@@ -505,7 +528,7 @@ void ABoarPlayerController::ResumeFromPause()
 
 void ABoarPlayerController::LeaveStageFromPause()
 {
-	if (!PauseWidget || LobbyLevelName.IsNone() || bResultTransitionRequested) return;
+	if (!PauseWidget || (LobbyLevel.IsNull() && LobbyLevelName.IsNone()) || bLevelTransitionRequested) return;
 	ResumeFromPause();
 	// 途中退出は既存のLobby遷移だけを呼び、Clear結果を保存しません。
 	ReturnToLobby();
@@ -514,7 +537,7 @@ void ABoarPlayerController::LeaveStageFromPause()
 void ABoarPlayerController::Move(const FInputActionValue& Value)
 {
 	// Result表示中はInput Modeとは別に入口でも遮断し、入力状態変更の隙間を防ぐ。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	// Axis2DをCharacterへ渡す。移動方向のWorld変換やAction Lock判定はCharacter側の責務。
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
@@ -526,7 +549,7 @@ void ABoarPlayerController::Move(const FInputActionValue& Value)
 void ABoarPlayerController::Look(const FInputActionValue& Value)
 {
 	// Camera感度やYaw/Pitch反映はCharacter側へ委譲する。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -537,7 +560,7 @@ void ABoarPlayerController::Look(const FInputActionValue& Value)
 void ABoarPlayerController::JumpStarted()
 {
 	// Jump可能回数、Stun、Gadget使用中などの可否判定はCharacter側で行う。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -548,7 +571,7 @@ void ABoarPlayerController::JumpStarted()
 void ABoarPlayerController::JumpCompleted()
 {
 	// ボタンを離したことだけを通知し、CharacterMovementのJump保持を終了する。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -559,7 +582,7 @@ void ABoarPlayerController::JumpCompleted()
 void ABoarPlayerController::GadgetStarted()
 {
 	// Cooldownや装備有無、Action LockはGadget/Character側で検証する。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -571,7 +594,7 @@ void ABoarPlayerController::GadgetStarted()
 void ABoarPlayerController::GadgetCompleted()
 {
 	// Canceledもこの関数へBindされるため、フォーカス喪失時にも押下状態を終了できる。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -583,7 +606,7 @@ void ABoarPlayerController::GadgetCompleted()
 void ABoarPlayerController::DashStarted()
 {
 	// Controllerは入力開始だけを通知し、速度変更とAction StateはCharacterが管理する。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -594,7 +617,7 @@ void ABoarPlayerController::DashStarted()
 void ABoarPlayerController::DashCompleted()
 {
 	// Completed/Canceledの両方から呼ばれ、Dash速度が残らないよう必ず終了通知する。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -605,7 +628,7 @@ void ABoarPlayerController::DashCompleted()
 void ABoarPlayerController::GadgetModifierStarted()
 {
 	// Face Buttonを通常操作ではなくガジェット選択として解釈する期間を開始する。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	bIsGadgetModifierHeld = true;
 }
@@ -613,7 +636,7 @@ void ABoarPlayerController::GadgetModifierStarted()
 void ABoarPlayerController::GadgetModifierCompleted()
 {
 	// Canceled時にもfalseへ戻し、フォーカス復帰後に選択モードが残るのを防ぐ。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	bIsGadgetModifierHeld = false;
 }
@@ -641,7 +664,7 @@ void ABoarPlayerController::SwitchGadgetSlot4()
 void ABoarPlayerController::TrySwitchGadgetSlot(int32 SlotIndex)
 {
 	// Result中、またはModifierなしのFace Button入力ではガジェットを切り替えない。
-	if (bResultScreenActive || PauseWidget) return;
+	if (!CanProcessGameplayInput()) return;
 
 	if (!bIsGadgetModifierHeld)
 	{
@@ -659,4 +682,26 @@ ABoarPlayerCharacter* ABoarPlayerController::GetBoarCharacter() const
 	// CharacterをメンバにキャッシュするとRespawn/Possess変更時に古い参照が残り得るため、
 	// 必要な時点のGetPawn()を毎回Castして常に現在の操作対象を返す。
 	return Cast<ABoarPlayerCharacter>(GetPawn());
+}
+
+bool ABoarPlayerController::CanProcessGameplayInput() const
+{
+	return !bGameplayInputBlocked && !PauseWidget && !bLevelTransitionRequested;
+}
+
+void ABoarPlayerController::AddOwnedMappingContext(UInputMappingContext* Context, int32 Priority)
+{
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	auto* Subsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
+	if (!Subsystem || !Context || Subsystem->HasMappingContext(Context)) return;
+	Subsystem->AddMappingContext(Context, Priority);
+	OwnedMappingContexts.AddUnique(Context);
+}
+
+void ABoarPlayerController::RemoveOwnedMappingContext(UInputMappingContext* Context)
+{
+	if (!Context || !OwnedMappingContexts.Remove(Context)) return;
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (auto* Subsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr)
+		Subsystem->RemoveMappingContext(Context);
 }

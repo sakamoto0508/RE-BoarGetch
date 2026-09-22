@@ -4,6 +4,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Gadget/GadgetBase.h"
+#include "Component/GadgetComponent.h"
 #include "Gadget/GadgetDataAsset.h"
 
 namespace
@@ -34,7 +35,7 @@ void UBoarHUDWidget::ResolveWidgetReferences()
 
 	GadgetIconWidgets.Reset();
 	GadgetSelectionWidgets.Reset();
-	for (int32 SlotIndex = 0; SlotIndex < 4; ++SlotIndex)
+	for (int32 SlotIndex = 0; SlotIndex < UGadgetComponent::GetGadgetSlotCount(); ++SlotIndex)
 	{
 		const FName IconName = GadgetIconWidgetNames.IsValidIndex(SlotIndex)
 			? GadgetIconWidgetNames[SlotIndex] : NAME_None;
@@ -49,7 +50,7 @@ void UBoarHUDWidget::UpdateGadgetSlots(
 	const TArray<TSubclassOf<AGadgetBase>>& GadgetSlots,
 	int32 SelectedSlotIndex)
 {
-	for (int32 SlotIndex = 0; SlotIndex < 4; ++SlotIndex)
+	for (int32 SlotIndex = 0; SlotIndex < UGadgetComponent::GetGadgetSlotCount(); ++SlotIndex)
 	{
 		UTexture2D* DisplayIcon = nullptr;
 		if (GadgetSlots.IsValidIndex(SlotIndex) && GadgetSlots[SlotIndex])

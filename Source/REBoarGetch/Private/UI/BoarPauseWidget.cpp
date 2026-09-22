@@ -2,7 +2,6 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Player/BoarPlayerController.h"
-#include "InputCoreTypes.h"
 
 void UBoarPauseWidget::NativeConstruct()
 {
@@ -31,16 +30,4 @@ void UBoarPauseWidget::Resume()
 void UBoarPauseWidget::LeaveStage()
 {
 	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->LeaveStageFromPause();
-}
-FReply UBoarPauseWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
-{
-	const FKey Key = Event.GetKey();
-	const auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer());
-	if (Key == EKeys::Escape || Key == EKeys::Gamepad_FaceButton_Right || (PC && PC->IsPauseMenuKey(Key)))
-	{
-		// 長押しリピートで閉じ直後に再表示しないよう、最初の押下だけ扱います。
-		if (!Event.IsRepeat()) Resume();
-		return FReply::Handled();
-	}
-	return Super::NativeOnPreviewKeyDown(Geometry, Event);
 }

@@ -15,7 +15,6 @@ public:
 	void FocusInitialChoice();
 protected:
 	virtual void NativeConstruct() override;
-	virtual FReply NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
 	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings") FName ResumeButtonName;
 	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings") FName LobbyButtonName;
 private:

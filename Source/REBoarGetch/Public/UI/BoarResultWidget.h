@@ -10,16 +10,14 @@ class UTextBlock;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnResultDismissRequested);
 
 /** ステージ終了時のプレイ結果を表示する基底Widgetです。 */
-UCLASS(Abstract, Blueprintable)
+UCLASS(Blueprintable)
 class REBOARGETCH_API UBoarResultWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
 	/** リザルトへ表示する捕獲数を設定します。 */
-	void InitializeResult(int32 CapturedCount, int32 TargetCount);
-	/** 保存前に確定した今回の結果だけを受け取ります。 */
-	void InitializeRunResult(const FStageRunData& Run);
+	void InitializeResult(const FStageRunData& Run, int32 TargetCount);
 	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result") FStageRunData ResultData;
 	/** NEW個体一覧などをReusable Widgetへ展開するための通知です。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Result") void OnRunResultUpdated();
@@ -32,6 +30,7 @@ public:
 	FOnResultDismissRequested OnDismissRequested;
 
 protected:
+	virtual void NativeOnInitialized() override;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName ClearTimeTextWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName NewBoarCountTextWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName SpecialCoinCountTextWidgetName;

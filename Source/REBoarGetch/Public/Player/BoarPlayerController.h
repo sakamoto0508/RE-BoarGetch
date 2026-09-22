@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
-#include "InputCoreTypes.h"
 #include "BoarPlayerController.generated.h"
 
 class UInputAction;
@@ -15,6 +14,7 @@ class UBoarPauseWidget;
 class UHealthComponent;
 class UGadgetComponent;
 class ABoarPlayerCharacter;
+struct FStageRunData;
 
 /**
  * ローカルプレイヤーの入力と画面UIを仲介するControllerです。
@@ -31,7 +31,7 @@ class REBOARGETCH_API ABoarPlayerController : public APlayerController
 
 public:
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
-	void HandleStageCleared(int32 CapturedCount, int32 TargetCount);
+	void HandleStageCleared(const FStageRunData& Run, int32 TargetCount);
 	/** 終了演出からUIまでゲーム入力を遮断します。 */
 	void SetStageInputBlocked(bool bBlocked);
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
@@ -40,6 +40,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage") void RetryStage();
 	/** ポーズ画面を開き、ゲーム入力を遮断します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenPauseMenu();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void TogglePauseMenu();
 	/** ポーズ画面を閉じてゲーム入力へ戻す。*/
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void ResumeFromPause();
 	/** ポーズ画面からステージを離脱します。 */
@@ -123,12 +124,21 @@ private:
 	/** リザルト終了時に戻るLobby Level名です。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
 	FName LobbyLevelName = TEXT("L_Lobby");
+	/** 新規設定はAsset参照を使用。旧BPのLevel名は移行互換用に残します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
+	TSoftObjectPtr<UWorld> LobbyLevel;
 
 	/** Result表示中にEnhanced Inputの各入口を遮断するフラグです。 */
-	bool bResultScreenActive = false;
+	bool bGameplayInputBlocked = false;
 
 	/** 任意入力の連打による複数OpenLevel要求を防ぎます。 */
-	bool bResultTransitionRequested = false;
+	bool bLevelTransitionRequested = false;
+	bool CanProcessGameplayInput() const;
+	void AddOwnedMappingContext(UInputMappingContext* Context, int32 Priority);
+	void RemoveOwnedMappingContext(UInputMappingContext* Context);
+	UPROPERTY(Transient) TArray<TObjectPtr<UInputMappingContext>> OwnedMappingContexts;
+	UPROPERTY(EditDefaultsOnly, Category = "Input") TObjectPtr<UInputMappingContext> GlobalMappingContext;
+	UPROPERTY(EditDefaultsOnly, Category = "Input") TObjectPtr<UInputMappingContext> UIMappingContext;
 
 	UFUNCTION()
 	void ReturnToLobby();
@@ -203,6 +213,7 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> PauseAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Input") TObjectPtr<UInputAction> UIBackAction;
 	
 	/**
 	 * 移動入力を受け取る。

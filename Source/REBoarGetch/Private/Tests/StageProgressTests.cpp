@@ -5,6 +5,37 @@
 #include "BoarSaveGame.h"
 #include "Boar/BoarBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
+#include "Player/BoarPlayerController.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStageInputLockTest, "REBoarGetch.Spec.StageInputLockOwnership",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FStageInputLockTest::RunTest(const FString& Parameters)
+{
+	const auto Initialization = UWorld::InitializationValues().AllowAudioPlayback(false)
+		.CreatePhysicsScene(false).CreateNavigation(false).CreateAISystem(false);
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true,
+		ERHIFeatureLevel::Num, &Initialization);
+	if (!TestNotNull(TEXT("入力検証World"), World)) return false;
+	ABoarPlayerController* PC = World->SpawnActor<ABoarPlayerController>();
+	if (TestNotNull(TEXT("Controller"), PC))
+	{
+		PC->SetStageInputBlocked(true);
+		PC->SetStageInputBlocked(true); // Stage停止→終了UIの順を再現します。
+		PC->SetStageInputBlocked(false);
+		TestFalse(TEXT("重複通知後も移動ロックが残らない"), PC->IsMoveInputIgnored());
+		TestFalse(TEXT("重複通知後も視点ロックが残らない"), PC->IsLookInputIgnored());
+		PC->SetIgnoreMoveInput(true);
+		PC->SetIgnoreLookInput(true);
+		PC->SetStageInputBlocked(true);
+		PC->SetStageInputBlocked(false);
+		PC->SetStageInputBlocked(false);
+		TestTrue(TEXT("他責務の移動ロックを解除しない"), PC->IsMoveInputIgnored());
+		TestTrue(TEXT("他責務の視点ロックを解除しない"), PC->IsLookInputIgnored());
+	}
+	World->DestroyWorld(false);
+	return true;
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStageEndPriorityTest, "REBoarGetch.Spec.StageEndPriority",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

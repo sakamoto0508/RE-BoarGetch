@@ -66,7 +66,8 @@ void ABoarGameMode::StartPlay()
 	Super::StartPlay();
 	StageRunData = FStageRunData();
 	StageRunData.StageId = StageConfig ? StageConfig->StageId : NAME_None;
-	// Superで既存CageのBeginPlayを完了してから生成し、最後にプレイヤーを開始します。
+	// SuperはPlayerも含む既存ActorのBeginPlayを実行するため、Player開始順までは保証しません。
+	// 厳密なCage→Boar→Player順は、別途明示的な初期化処理が必要です。
 	SpawnConfiguredBoars();
 	SpawnConfiguredSpecialCoins();
 	WorldTickEndHandle = FWorldDelegates::OnWorldTickEnd.AddUObject(this, &ABoarGameMode::HandleWorldTickEnd);
@@ -286,7 +287,7 @@ void ABoarGameMode::CompleteStageEndPresentation()
 	ABoarPlayerController* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (!PC) return;
 	bEndUIShown = true;
-	if (StageState == EBoarStageState::Cleared) PC->HandleStageCleared(CapturedBoarCount, StageConfig->TargetCaptureCount);
+	if (StageState == EBoarStageState::Cleared) PC->HandleStageCleared(StageRunData, StageConfig->TargetCaptureCount);
 	else PC->HandleStageGameOver();
 }
 
