@@ -1,0 +1,2111 @@
+{
+  "CanvasPanel": {
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "SelfHitTestInvisible"
+  },
+  "HPPanel": {
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "SelfHitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 4,
+          "top": -0.31999969482421875,
+          "right": 634.7428588867188,
+          "bottom": 156.03427124023438
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 0
+    }
+  },
+  "HorizontalBox_21": {
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "SelfHitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 0,
+          "top": 0,
+          "right": 635.7714233398438,
+          "bottom": 150.6857147216797
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 0
+    }
+  },
+  "HPLabel": {
+    "text": "HP : ",
+    "colorAndOpacity": {
+      "specifiedColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      },
+      "colorUseRule": "UseColor_Specified"
+    },
+    "font": {
+      "fontObject": {
+        "refPath": "/Engine/EngineFonts/Roboto.Roboto"
+      },
+      "fontMaterial": "None",
+      "outlineSettings": {
+        "outlineSize": 0,
+        "bMiteredCorners": false,
+        "bSeparateFillAlpha": false,
+        "bApplyOutlineToDropShadows": false,
+        "outlineMaterial": "None",
+        "outlineColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "typefaceFontName": "Bold",
+      "size": 24,
+      "letterSpacing": 0,
+      "skewAmount": 0,
+      "bForceMonospaced": false,
+      "bMaterialIsStencil": false,
+      "monospacedWidth": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Visible",
+    "slot": {
+      "size": {
+        "value": 1,
+        "sizeRule": "Automatic"
+      },
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "horizontalAlignment": "HAlign_Fill",
+      "verticalAlignment": "VAlign_Fill"
+    }
+  },
+  "CurrentHP": {
+    "text": "Text Block",
+    "colorAndOpacity": {
+      "specifiedColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      },
+      "colorUseRule": "UseColor_Specified"
+    },
+    "font": {
+      "fontObject": {
+        "refPath": "/Engine/EngineFonts/Roboto.Roboto"
+      },
+      "fontMaterial": "None",
+      "outlineSettings": {
+        "outlineSize": 0,
+        "bMiteredCorners": false,
+        "bSeparateFillAlpha": false,
+        "bApplyOutlineToDropShadows": false,
+        "outlineMaterial": "None",
+        "outlineColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "typefaceFontName": "Bold",
+      "size": 24,
+      "letterSpacing": 0,
+      "skewAmount": 0,
+      "bForceMonospaced": false,
+      "bMaterialIsStencil": false,
+      "monospacedWidth": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Visible",
+    "slot": {
+      "size": {
+        "value": 1,
+        "sizeRule": "Automatic"
+      },
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "horizontalAlignment": "HAlign_Fill",
+      "verticalAlignment": "VAlign_Fill"
+    }
+  },
+  "TextBlock_196": {
+    "text": "/",
+    "colorAndOpacity": {
+      "specifiedColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      },
+      "colorUseRule": "UseColor_Specified"
+    },
+    "font": {
+      "fontObject": {
+        "refPath": "/Engine/EngineFonts/Roboto.Roboto"
+      },
+      "fontMaterial": "None",
+      "outlineSettings": {
+        "outlineSize": 0,
+        "bMiteredCorners": false,
+        "bSeparateFillAlpha": false,
+        "bApplyOutlineToDropShadows": false,
+        "outlineMaterial": "None",
+        "outlineColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "typefaceFontName": "Bold",
+      "size": 24,
+      "letterSpacing": 0,
+      "skewAmount": 0,
+      "bForceMonospaced": false,
+      "bMaterialIsStencil": false,
+      "monospacedWidth": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Visible",
+    "slot": {
+      "size": {
+        "value": 1,
+        "sizeRule": "Automatic"
+      },
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "horizontalAlignment": "HAlign_Fill",
+      "verticalAlignment": "VAlign_Fill"
+    }
+  },
+  "MaxHP": {
+    "text": "Text Block",
+    "colorAndOpacity": {
+      "specifiedColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      },
+      "colorUseRule": "UseColor_Specified"
+    },
+    "font": {
+      "fontObject": {
+        "refPath": "/Engine/EngineFonts/Roboto.Roboto"
+      },
+      "fontMaterial": "None",
+      "outlineSettings": {
+        "outlineSize": 0,
+        "bMiteredCorners": false,
+        "bSeparateFillAlpha": false,
+        "bApplyOutlineToDropShadows": false,
+        "outlineMaterial": "None",
+        "outlineColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "typefaceFontName": "Bold",
+      "size": 24,
+      "letterSpacing": 0,
+      "skewAmount": 0,
+      "bForceMonospaced": false,
+      "bMaterialIsStencil": false,
+      "monospacedWidth": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Visible",
+    "slot": {
+      "size": {
+        "value": 1,
+        "sizeRule": "Automatic"
+      },
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "horizontalAlignment": "HAlign_Fill",
+      "verticalAlignment": "VAlign_Fill"
+    }
+  },
+  "CapturePanel": {
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "SelfHitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 1280.800048828125,
+          "top": 963.2000122070312,
+          "right": 637.5999755859375,
+          "bottom": 113.19999694824219
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 0
+    }
+  },
+  "HorizontalBox_55": {
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "SelfHitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 1.866668701171875,
+          "top": 0,
+          "right": 636.5333251953125,
+          "bottom": 114.26667022705078
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 0
+    }
+  },
+  "CaptureLabel": {
+    "text": "捕まえた数 : ",
+    "colorAndOpacity": {
+      "specifiedColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      },
+      "colorUseRule": "UseColor_Specified"
+    },
+    "font": {
+      "fontObject": {
+        "refPath": "/Engine/EngineFonts/Roboto.Roboto"
+      },
+      "fontMaterial": "None",
+      "outlineSettings": {
+        "outlineSize": 0,
+        "bMiteredCorners": false,
+        "bSeparateFillAlpha": false,
+        "bApplyOutlineToDropShadows": false,
+        "outlineMaterial": "None",
+        "outlineColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "typefaceFontName": "Bold",
+      "size": 24,
+      "letterSpacing": 0,
+      "skewAmount": 0,
+      "bForceMonospaced": false,
+      "bMaterialIsStencil": false,
+      "monospacedWidth": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Visible",
+    "slot": {
+      "size": {
+        "value": 1,
+        "sizeRule": "Automatic"
+      },
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "horizontalAlignment": "HAlign_Fill",
+      "verticalAlignment": "VAlign_Fill"
+    }
+  },
+  "CurrentCaptureCount": {
+    "text": "Text Block",
+    "colorAndOpacity": {
+      "specifiedColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      },
+      "colorUseRule": "UseColor_Specified"
+    },
+    "font": {
+      "fontObject": {
+        "refPath": "/Engine/EngineFonts/Roboto.Roboto"
+      },
+      "fontMaterial": "None",
+      "outlineSettings": {
+        "outlineSize": 0,
+        "bMiteredCorners": false,
+        "bSeparateFillAlpha": false,
+        "bApplyOutlineToDropShadows": false,
+        "outlineMaterial": "None",
+        "outlineColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "typefaceFontName": "Bold",
+      "size": 24,
+      "letterSpacing": 0,
+      "skewAmount": 0,
+      "bForceMonospaced": false,
+      "bMaterialIsStencil": false,
+      "monospacedWidth": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Visible",
+    "slot": {
+      "size": {
+        "value": 1,
+        "sizeRule": "Automatic"
+      },
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "horizontalAlignment": "HAlign_Fill",
+      "verticalAlignment": "VAlign_Fill"
+    }
+  },
+  "CaptureLabel_2": {
+    "text": "/",
+    "colorAndOpacity": {
+      "specifiedColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      },
+      "colorUseRule": "UseColor_Specified"
+    },
+    "font": {
+      "fontObject": {
+        "refPath": "/Engine/EngineFonts/Roboto.Roboto"
+      },
+      "fontMaterial": "None",
+      "outlineSettings": {
+        "outlineSize": 0,
+        "bMiteredCorners": false,
+        "bSeparateFillAlpha": false,
+        "bApplyOutlineToDropShadows": false,
+        "outlineMaterial": "None",
+        "outlineColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "typefaceFontName": "Bold",
+      "size": 24,
+      "letterSpacing": 0,
+      "skewAmount": 0,
+      "bForceMonospaced": false,
+      "bMaterialIsStencil": false,
+      "monospacedWidth": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Visible",
+    "slot": {
+      "size": {
+        "value": 1,
+        "sizeRule": "Automatic"
+      },
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "horizontalAlignment": "HAlign_Fill",
+      "verticalAlignment": "VAlign_Fill"
+    }
+  },
+  "TargetCaptureCount": {
+    "text": "Text Block",
+    "colorAndOpacity": {
+      "specifiedColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      },
+      "colorUseRule": "UseColor_Specified"
+    },
+    "font": {
+      "fontObject": {
+        "refPath": "/Engine/EngineFonts/Roboto.Roboto"
+      },
+      "fontMaterial": "None",
+      "outlineSettings": {
+        "outlineSize": 0,
+        "bMiteredCorners": false,
+        "bSeparateFillAlpha": false,
+        "bApplyOutlineToDropShadows": false,
+        "outlineMaterial": "None",
+        "outlineColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "typefaceFontName": "Bold",
+      "size": 24,
+      "letterSpacing": 0,
+      "skewAmount": 0,
+      "bForceMonospaced": false,
+      "bMaterialIsStencil": false,
+      "monospacedWidth": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Visible",
+    "slot": {
+      "size": {
+        "value": 1,
+        "sizeRule": "Automatic"
+      },
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "horizontalAlignment": "HAlign_Fill",
+      "verticalAlignment": "VAlign_Fill"
+    }
+  },
+  "GadgetPanel": {
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "HitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": -32,
+          "top": 32,
+          "right": 252,
+          "bottom": 252
+        },
+        "anchors": {
+          "minimum": {
+            "x": 1,
+            "y": 0
+          },
+          "maximum": {
+            "x": 1,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 1,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 1
+    }
+  },
+  "GadgetSlot1Background": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 0.02500000037252903,
+          "g": 0.03500000014901161,
+          "b": 0.054999999701976776,
+          "a": 0.8799999952316284
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "RoundedBox",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 12,
+          "y": 12,
+          "z": 12,
+          "w": 12
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 0.2800000011920929,
+            "g": 0.3400000035762787,
+            "b": 0.4300000071525574,
+            "a": 1
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 2,
+        "roundingType": "FixedRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "HitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 0,
+          "top": 86,
+          "right": 80,
+          "bottom": 80
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 0
+    }
+  },
+  "GadgetSlot1Icon": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "Image",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 0,
+        "roundingType": "HalfHeightRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Collapsed",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 8,
+          "top": 94,
+          "right": 64,
+          "bottom": 64
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 1
+    }
+  },
+  "GadgetSlot1Selection": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 0
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "RoundedBox",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 12,
+          "y": 12,
+          "z": 12,
+          "w": 12
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 1,
+            "g": 0.550000011920929,
+            "b": 0.02500000037252903,
+            "a": 1
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 4,
+        "roundingType": "FixedRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Hidden",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 0,
+          "top": 86,
+          "right": 80,
+          "bottom": 80
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 2
+    }
+  },
+  "GadgetSlot2Background": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 0.02500000037252903,
+          "g": 0.03500000014901161,
+          "b": 0.054999999701976776,
+          "a": 0.8799999952316284
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "RoundedBox",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 12,
+          "y": 12,
+          "z": 12,
+          "w": 12
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 0.2800000011920929,
+            "g": 0.3400000035762787,
+            "b": 0.4300000071525574,
+            "a": 1
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 2,
+        "roundingType": "FixedRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "HitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 86,
+          "top": 0,
+          "right": 80,
+          "bottom": 80
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 0
+    }
+  },
+  "GadgetSlot2Icon": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "Image",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 0,
+        "roundingType": "HalfHeightRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Collapsed",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 94,
+          "top": 8,
+          "right": 64,
+          "bottom": 64
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 1
+    }
+  },
+  "GadgetSlot2Selection": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 0
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "RoundedBox",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 12,
+          "y": 12,
+          "z": 12,
+          "w": 12
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 1,
+            "g": 0.550000011920929,
+            "b": 0.02500000037252903,
+            "a": 1
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 4,
+        "roundingType": "FixedRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Hidden",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 86,
+          "top": 0,
+          "right": 80,
+          "bottom": 80
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 2
+    }
+  },
+  "GadgetSlot3Background": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 0.02500000037252903,
+          "g": 0.03500000014901161,
+          "b": 0.054999999701976776,
+          "a": 0.8799999952316284
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "RoundedBox",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 12,
+          "y": 12,
+          "z": 12,
+          "w": 12
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 0.2800000011920929,
+            "g": 0.3400000035762787,
+            "b": 0.4300000071525574,
+            "a": 1
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 2,
+        "roundingType": "FixedRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "HitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 172,
+          "top": 86,
+          "right": 80,
+          "bottom": 80
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 0
+    }
+  },
+  "GadgetSlot3Icon": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "Image",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 0,
+        "roundingType": "HalfHeightRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Collapsed",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 180,
+          "top": 94,
+          "right": 64,
+          "bottom": 64
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 1
+    }
+  },
+  "GadgetSlot3Selection": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 0
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "RoundedBox",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 12,
+          "y": 12,
+          "z": 12,
+          "w": 12
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 1,
+            "g": 0.550000011920929,
+            "b": 0.02500000037252903,
+            "a": 1
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 4,
+        "roundingType": "FixedRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Hidden",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 172,
+          "top": 86,
+          "right": 80,
+          "bottom": 80
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 2
+    }
+  },
+  "GadgetSlot4Background": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 0.02500000037252903,
+          "g": 0.03500000014901161,
+          "b": 0.054999999701976776,
+          "a": 0.8799999952316284
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "RoundedBox",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 12,
+          "y": 12,
+          "z": 12,
+          "w": 12
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 0.2800000011920929,
+            "g": 0.3400000035762787,
+            "b": 0.4300000071525574,
+            "a": 1
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 2,
+        "roundingType": "FixedRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "HitTestInvisible",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 86,
+          "top": 172,
+          "right": 80,
+          "bottom": 80
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 0
+    }
+  },
+  "GadgetSlot4Icon": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "Image",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 0,
+        "roundingType": "HalfHeightRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Collapsed",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 94,
+          "top": 180,
+          "right": 64,
+          "bottom": 64
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 1
+    }
+  },
+  "GadgetSlot4Selection": {
+    "brush": {
+      "tintColor": {
+        "specifiedColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 0
+        },
+        "colorUseRule": "UseColor_Specified"
+      },
+      "drawAs": "RoundedBox",
+      "tiling": "NoTile",
+      "mirroring": "NoMirror",
+      "imageType": "NoImage",
+      "imageSize": {
+        "x": 32,
+        "y": 32
+      },
+      "margin": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "resourceObject": "None",
+      "outlineSettings": {
+        "cornerRadii": {
+          "x": 12,
+          "y": 12,
+          "z": 12,
+          "w": 12
+        },
+        "color": {
+          "specifiedColor": {
+            "r": 1,
+            "g": 0.550000011920929,
+            "b": 0.02500000037252903,
+            "a": 1
+          },
+          "colorUseRule": "UseColor_Specified"
+        },
+        "width": 4,
+        "roundingType": "FixedRadius",
+        "bUseBrushTransparency": false
+      },
+      "uVRegion": {
+        "min": {
+          "x": 0,
+          "y": 0
+        },
+        "max": {
+          "x": 0,
+          "y": 0
+        },
+        "bIsValid": false
+      },
+      "bIsDynamicallyLoaded": false,
+      "resourceName": "None"
+    },
+    "colorAndOpacity": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "renderTransform": {
+      "translation": {
+        "x": 0,
+        "y": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1
+      },
+      "shear": {
+        "x": 0,
+        "y": 0
+      },
+      "angle": 0
+    },
+    "visibility": "Hidden",
+    "slot": {
+      "layoutData": {
+        "offsets": {
+          "left": 86,
+          "top": 172,
+          "right": 80,
+          "bottom": 80
+        },
+        "anchors": {
+          "minimum": {
+            "x": 0,
+            "y": 0
+          },
+          "maximum": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "alignment": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "bAutoSize": false,
+      "zOrder": 2
+    }
+  },
+  "defaults": {
+    "capturedCountTextWidgetName": "CurrentCaptureCount",
+    "targetCountTextWidgetName": "TargetCaptureCount",
+    "currentHealthTextWidgetName": "CurrentHP",
+    "maxHealthTextWidgetName": "MaxHP",
+    "gadgetIconWidgetNames": [
+      "GadgetSlot1Icon",
+      "GadgetSlot2Icon",
+      "GadgetSlot3Icon",
+      "GadgetSlot4Icon"
+    ],
+    "gadgetSelectionWidgetNames": [
+      "GadgetSlot1Selection",
+      "GadgetSlot2Selection",
+      "GadgetSlot3Selection",
+      "GadgetSlot4Selection"
+    ],
+    "bIsFocusable": false
+  }
+}

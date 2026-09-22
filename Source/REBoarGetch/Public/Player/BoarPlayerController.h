@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
+#include "InputCoreTypes.h"
 #include "BoarPlayerController.generated.h"
 
 class UInputAction;
@@ -10,6 +11,7 @@ class UInputMappingContext;
 class UBoarHUDWidget;
 class UBoarResultWidget;
 class UBoarGameOverWidget;
+class UBoarPauseWidget;
 class UHealthComponent;
 class UGadgetComponent;
 class ABoarPlayerCharacter;
@@ -34,6 +36,11 @@ public:
 	void SetStageInputBlocked(bool bBlocked);
 	void HandleStageGameOver();
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage") void RetryStage();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenPauseMenu();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void ResumeFromPause();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void LeaveStageFromPause();
+	UFUNCTION(BlueprintPure, Category = "REBoarGetch|UI") bool IsPauseMenuOpen() const { return PauseWidget != nullptr; }
+	bool IsPauseMenuKey(FKey Key) const { return Key == PauseKeyboardKey || Key == PauseGamepadKey; }
 
 protected:
 	/** 入力Mapping Contextをローカルプレイヤーへ登録します。 */
@@ -47,12 +54,16 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
+	/** 未設定の画面ではポーズメニューを使用しません。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
+	TSubclassOf<UBoarPauseWidget> PauseWidgetClass;
+	UPROPERTY(Transient) TObjectPtr<UBoarPauseWidget> PauseWidget;
+	/** 初期キーボード割当。既存の入力アセットは変更せず、Editorで調整できます。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Input") FKey PauseKeyboardKey = EKeys::P;
+	UPROPERTY(EditDefaultsOnly, Category = "Input") FKey PauseGamepadKey = EKeys::Gamepad_Special_Right;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
 	TSubclassOf<UBoarGameOverWidget> GameOverWidgetClass;
 	UPROPERTY(Transient) TObjectPtr<UBoarGameOverWidget> GameOverWidget;
-	//-------------------------------------------------
-	// Gameplay HUD
-	//-------------------------------------------------
 
 	/** ゲームプレイ中に常時表示するHUD Widget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
@@ -94,10 +105,6 @@ private:
 	UFUNCTION()
 	void HandleHealthChanged(float CurrentHealth, float MaxHealth);
 
-	//-------------------------------------------------
-	// Result UI
-	//-------------------------------------------------
-
 	/** ステージクリア時に表示するWidget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
 	TSubclassOf<UBoarResultWidget> ResultWidgetClass;
@@ -119,17 +126,9 @@ private:
 	UFUNCTION()
 	void ReturnToLobby();
 
-	//-------------------------------------------------
-	// Input Mapping
-	//-------------------------------------------------
-
 	/** BeginPlay時にPriority 0で登録するMapping Contextです。Controller Blueprintで設定します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
-
-	//-------------------------------------------------
-	// Input Actions
-	//-------------------------------------------------
 	
 	/**
 	 * 移動入力（Axis2D）

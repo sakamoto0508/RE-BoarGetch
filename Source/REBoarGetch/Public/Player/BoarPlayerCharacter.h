@@ -35,7 +35,9 @@ enum class EPlayerActionState : uint8
 	/** ガジェットを使用している状態です。 */
 	UseGadget,
 	/** 捕獲処理を実行している状態です。 */
-	Capture
+	Capture,
+	/** ポーズ中の表示状態。中断前の実行状態は保持します。 */
+	Menu
 };
 
 /**
@@ -150,8 +152,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player")
 	EPlayerActionState GetPlayerActionState() const
 	{
-		return CurrentActionState;
+		return bMenuOpen ? EPlayerActionState::Menu : CurrentActionState;
 	}
+	void SetMenuOpen(bool bOpen) { bMenuOpen = bOpen; }
 
 	/** ガジェット使用中かを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Player|Gadget")
@@ -168,6 +171,7 @@ public:
 	}
 
 private:
+	bool bMenuOpen = false;
 	/** 被弾判定用。イノシシ接触時にダメージ/スタン/無敵を開始します。 */
 	UFUNCTION()
 	void OnCapsuleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,

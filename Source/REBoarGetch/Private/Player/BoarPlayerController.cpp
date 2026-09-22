@@ -13,6 +13,7 @@
 #include "UI/BoarHUDWidget.h"
 #include "UI/BoarResultWidget.h"
 #include "UI/BoarGameOverWidget.h"
+#include "UI/BoarPauseWidget.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -83,6 +84,7 @@ void ABoarPlayerController::OnPossess(APawn* InPawn)
 
 void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	ResumeFromPause();
 	// Controller破棄後にDynamic Delegateからコールバックされないよう、
 	// BeginPlay/CreatePlayerHUD/OnPossessで登録した購読をすべて解除する。
 	if (ABoarGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
@@ -114,6 +116,13 @@ void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ABoarPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+	// UIOnly中の閉じる操作はPause Widgetが受け持ちます。
+	if (InputComponent)
+	{
+		if (PauseKeyboardKey.IsValid()) InputComponent->BindKey(PauseKeyboardKey, IE_Pressed, this, &ABoarPlayerController::OpenPauseMenu);
+		if (PauseGamepadKey.IsValid() && PauseGamepadKey != PauseKeyboardKey)
+			InputComponent->BindKey(PauseGamepadKey, IE_Pressed, this, &ABoarPlayerController::OpenPauseMenu);
+	}
 
 	// Project側のInputComponent classがEnhanced Inputでない場合、ActionをBindできない。
 	// Cast失敗を許容しておくことで、設定ミスでもController生成自体は継続できる。
@@ -416,6 +425,7 @@ void ABoarPlayerController::ReturnToLobby()
 
 void ABoarPlayerController::SetStageInputBlocked(bool bBlocked)
 {
+	if (bBlocked) ResumeFromPause();
 	bResultScreenActive = bBlocked;
 	SetIgnoreMoveInput(bBlocked);
 	SetIgnoreLookInput(bBlocked);
@@ -453,14 +463,65 @@ void ABoarPlayerController::RetryStage()
 	UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this, true)));
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Input
-////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ABoarPlayerController::OpenPauseMenu()
+{
+	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
+	// Lobby/Title、終了演出、他のPauseとの競合、および多重生成を防ぎます。
+	if (!IsLocalController() || PauseWidget || !PauseWidgetClass || bResultScreenActive ||
+		bResultTransitionRequested || !Mode || !Mode->CanAdvanceStage() || UGameplayStatics::IsGamePaused(this)) return;
+	auto* Widget = CreateWidget<UBoarPauseWidget>(this, PauseWidgetClass);
+	if (!Widget) return;
+	if (!SetPause(true)) return;
+	PauseWidget = Widget;
+	// 押下状態を持ち越さず、既存のアクション終了経路を使用します。
+	bIsGadgetModifierHeld = false;
+	if (auto* PlayerCharacter = GetBoarCharacter())
+	{
+		PlayerCharacter->StopDash();
+		PlayerCharacter->StopJump();
+		PlayerCharacter->StopGadgetUse();
+		PlayerCharacter->SetMenuOpen(true);
+	}
+	FlushPressedKeys();
+	SetIgnoreMoveInput(true);
+	SetIgnoreLookInput(true);
+	Widget->AddToViewport(80);
+	FInputModeUIOnly ModeUI;
+	ModeUI.SetWidgetToFocus(Widget->TakeWidget());
+	ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(ModeUI);
+	SetShowMouseCursor(true);
+	Widget->FocusInitialChoice();
+}
+
+void ABoarPlayerController::ResumeFromPause()
+{
+	if (!PauseWidget) return;
+	SetPause(false);
+	PauseWidget->RemoveFromParent();
+	PauseWidget = nullptr;
+	if (auto* PlayerCharacter = GetBoarCharacter()) PlayerCharacter->SetMenuOpen(false);
+	SetIgnoreMoveInput(false);
+	SetIgnoreLookInput(false);
+	FlushPressedKeys();
+	FInputModeGameOnly ModeGame;
+	SetInputMode(ModeGame);
+	SetShowMouseCursor(false);
+}
+
+void ABoarPlayerController::LeaveStageFromPause()
+{
+	if (!PauseWidget || LobbyLevelName.IsNone() || bResultTransitionRequested) return;
+	ResumeFromPause();
+	// 途中退出は既存のLobby遷移だけを呼び、Clear結果を保存しません。
+	ReturnToLobby();
+}
 
 void ABoarPlayerController::Move(const FInputActionValue& Value)
 {
 	// Result表示中はInput Modeとは別に入口でも遮断し、入力状態変更の隙間を防ぐ。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	// Axis2DをCharacterへ渡す。移動方向のWorld変換やAction Lock判定はCharacter側の責務。
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
@@ -472,7 +533,7 @@ void ABoarPlayerController::Move(const FInputActionValue& Value)
 void ABoarPlayerController::Look(const FInputActionValue& Value)
 {
 	// Camera感度やYaw/Pitch反映はCharacter側へ委譲する。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -483,7 +544,7 @@ void ABoarPlayerController::Look(const FInputActionValue& Value)
 void ABoarPlayerController::JumpStarted()
 {
 	// Jump可能回数、Stun、Gadget使用中などの可否判定はCharacter側で行う。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -494,7 +555,7 @@ void ABoarPlayerController::JumpStarted()
 void ABoarPlayerController::JumpCompleted()
 {
 	// ボタンを離したことだけを通知し、CharacterMovementのJump保持を終了する。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -505,7 +566,7 @@ void ABoarPlayerController::JumpCompleted()
 void ABoarPlayerController::GadgetStarted()
 {
 	// Cooldownや装備有無、Action LockはGadget/Character側で検証する。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -517,7 +578,7 @@ void ABoarPlayerController::GadgetStarted()
 void ABoarPlayerController::GadgetCompleted()
 {
 	// Canceledもこの関数へBindされるため、フォーカス喪失時にも押下状態を終了できる。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -529,7 +590,7 @@ void ABoarPlayerController::GadgetCompleted()
 void ABoarPlayerController::DashStarted()
 {
 	// Controllerは入力開始だけを通知し、速度変更とAction StateはCharacterが管理する。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -540,7 +601,7 @@ void ABoarPlayerController::DashStarted()
 void ABoarPlayerController::DashCompleted()
 {
 	// Completed/Canceledの両方から呼ばれ、Dash速度が残らないよう必ず終了通知する。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
@@ -551,7 +612,7 @@ void ABoarPlayerController::DashCompleted()
 void ABoarPlayerController::GadgetModifierStarted()
 {
 	// Face Buttonを通常操作ではなくガジェット選択として解釈する期間を開始する。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	bIsGadgetModifierHeld = true;
 }
@@ -559,7 +620,7 @@ void ABoarPlayerController::GadgetModifierStarted()
 void ABoarPlayerController::GadgetModifierCompleted()
 {
 	// Canceled時にもfalseへ戻し、フォーカス復帰後に選択モードが残るのを防ぐ。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	bIsGadgetModifierHeld = false;
 }
@@ -587,7 +648,7 @@ void ABoarPlayerController::SwitchGadgetSlot4()
 void ABoarPlayerController::TrySwitchGadgetSlot(int32 SlotIndex)
 {
 	// Result中、またはModifierなしのFace Button入力ではガジェットを切り替えない。
-	if (bResultScreenActive) return;
+	if (bResultScreenActive || PauseWidget) return;
 
 	if (!bIsGadgetModifierHeld)
 	{
@@ -599,10 +660,6 @@ void ABoarPlayerController::TrySwitchGadgetSlot(int32 SlotIndex)
 		PlayerCharacter->SwitchGadgetSlot(SlotIndex);
 	}
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Utility
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ABoarPlayerCharacter* ABoarPlayerController::GetBoarCharacter() const
 {

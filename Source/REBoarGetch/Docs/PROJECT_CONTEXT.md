@@ -2,7 +2,7 @@
 
 ## 概要
 
-Unreal Engine 5.8製の3Dアクション。ガジェットでイノシシを捕獲し、檻を防衛する。タイトル→ロビー→ステージ→リザルト→ロビーを基本ループとする。
+Unreal Engine 5.8製の3Dアクション。ガジェットでイノシシを捕獲し、檻を防衛する。ClearはResult→Lobby、GameOverは専用UI→Retry／Lobbyへ進む仕様。
 プロジェクトは `REBoarGetch.uproject`、主なC++は `Source/REBoarGetch/`。本書は作業開始用の現状要約であり、実装・動作を保証するものではない。
 
 ## 仕様の正本
@@ -28,24 +28,29 @@ MarkdownとNotionが矛盾する場合はNotionを優先する。実装との差
 
 ## 主要システム
 
-以下は既存の現状要約に基づく。作業対象は開始時に再確認する。
+以下はC++と既存記録の要約。アセット接続・PIE済みという意味ではない。作業対象は開始時に再確認する。
 
 - プレイヤー：移動、ダッシュ、二段ジャンプ、HP・被弾・行動ロック、アミMontageと捕獲判定窓。基本動作のPIE確認記録あり。
 - イノシシ・檻：StateTreeの巡回・逃走・檻攻撃、捕獲・収容、檻破壊・解放・AI復帰・Respawn。PIE確認記録あり。
 - HUD：HP・捕獲数・ガジェット4枠をイベント更新。空枠・装備画像・初期選択枠の確認記録あり。
-- StageConfig／BoarSpawnPoint：ステージ情報・遷移先・出現構成とクリア目標を管理。出現数と目標捕獲数は独立。
-- StageEntrance／Lobby Widget：単一ステージの入口Overlap・表示・決定・キャンセルをC++実装。表示中はGame And UIで、移動停止は未対応。
-- リザルト：捕獲数・目標数を表示し、任意ボタン入力でロビーへ戻すC++あり。旧Retry／Titleボタン方式は使わない。
+- StageConfig／BoarSpawnPoint：固定個体ID・SpawnPoint IDによる新生成方式と旧Class/Count方式を併存。出現数と現在収容数のクリア目標は独立。コイン定義・解放条件も追加。
+- GameMode／StageRunData：最寄り正常Cageへの収容、全破壊時の即解放、現在収容数更新、フレーム終端のClear優先判定、終了時停止をC++実装。
+- GameInstance／SaveGame：今回の挑戦と永続進行を分離。NEWを保存前に固定し、Clear保存成功後だけResultへ進む。装備・最終Stageは個別保存。
+- StageEntrance／Lobby Widget：単一ステージの入口Overlap・表示・決定・キャンセル。GameInstance使用時は解放判定・最終Stage保存。表示中の移動停止は未対応。
+- Result／GameOver：Resultへ確定Runを渡し、任意入力でLobbyへ戻る。GameOver専用Widget基底とRetryのMap再読込を追加。Widget実体の接続は未完了。
 - Audio Manager：GameInstanceSubsystemでBGM・SE・音量を管理。
 
 ## 未完成・未確認
 
-- ロビー→ステージ→リザルト→ロビーの通しPIE、5体生成・3体捕獲クリア、現行全変更のビルド。
+- 最優先：GameInstanceClass登録（現行DefaultEngine.iniに指定なし）、GadgetCatalogと固定ID設定、GameOverWidgetClassとResult追加表示の接続。未設定ではClear保存→ResultやGameOver操作が完了しない。
+- ロビー→ステージ→Clear／GameOver→Retry／ロビーの通しPIE、5体生成・3体収容クリア、複数檻・破壊・再捕獲、実セーブ書込／再起動読込。
+- Development Editorビルドと自動テスト3件（終了優先順位、NEW／メモリ保存復元、出現定義）は成功。上記の統合PIEを保証しない。
 - 4スロットの実機入力・複数装備切替・空スロット入力。Cooldown表示は後回し。
 - Sound接続、音量変更、Level遷移中のBGM継続のPIE。
-- 複数ステージ切替・解放ロック・記録／ミッション表示、リザルトのタイム・報酬等の全項目、遷移共通化。
+- Pause／装備UI、複数ステージ切替・ロック表示・最終Stage初期選択・回転3Dミニチュア、図鑑、剣・スピードブーツは未実装。ミッション・解放演出は将来項目。
+- コインBPの取得判定、開始／終了演出、檻の自然回復値と既存BPとの重複確認。GameFeatureDataのAsset Manager設定エラーをテスト起動時に検出、未対応。
 - 新世界観に沿ったステージ・ロビーUI制作、ロビー全域の導線・外周確認。正式Stage 1やロビーの使用Mapは実参照で確認する。
-- Stun Montage、Capture/Menu状態の表示・通知、自動テスト。性能問題の原因は未確定で、再現計測が必要。
+- Stun Montage、Capture/Menu状態の表示・通知。性能問題の原因は未確定で、再現計測が必要。
 - 生成画像のメニュー・失敗条件・3Dプレビューは採用済み仕様や実装完了の根拠にしない。
 
 ## 世界観
