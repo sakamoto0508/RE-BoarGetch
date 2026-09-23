@@ -9,6 +9,7 @@
 #include "BoarGameInstance.h"
 #include "BoarSaveGame.h"
 #include "GadgetDataAsset.h"
+#include "Core/BoarGameMode.h"
 
 
 // Sets default values for this component's properties
@@ -27,7 +28,15 @@ void UGadgetComponent::BeginPlay()
 
 	OwningPawn = Cast<APawn>(GetOwner());
 	UE_LOG(LogTemp, Log, TEXT("[Gadget] Owner pawn: %s"), *GetNameSafe(OwningPawn.Get()));
+	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
+	if (!Cast<ABoarPlayerCharacter>(OwningPawn) || !Mode || Mode->GetStageState() != EBoarStageState::Preparing)
+		InitializeForStage();
+}
 
+void UGadgetComponent::InitializeForStage()
+{
+	if (bStageInitialized) return;
+	bStageInitialized = true;
 	InitializeDefaultSlots();
 	if (const UBoarGameInstance* Instance = GetWorld()->GetGameInstance<UBoarGameInstance>())
 	{

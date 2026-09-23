@@ -63,17 +63,23 @@ void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 
 void ABoarGameMode::StartPlay()
 {
-	Super::StartPlay();
 	StageRunData = FStageRunData();
 	StageRunData.StageId = StageConfig ? StageConfig->StageId : NAME_None;
-	// SuperはPlayerも含む既存ActorのBeginPlayを実行するため、Player開始順までは保証しません。
-	// 厳密なCage→Boar→Player順は、別途明示的な初期化処理が必要です。
+	Super::StartPlay();
+	// BeginPlayは通常のライフサイクルに任せ、Stage用の初期化順だけを明示します。
+	SetStageActorsStopped(true);
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It) It->InitializeForStage();
 	SpawnConfiguredBoars();
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] Boar spawning complete"));
 	SpawnConfiguredSpecialCoins();
+	for (TActorIterator<ABoarPlayerCharacter> It(GetWorld()); It; ++It) It->InitializeForStage();
+	// 今生成したBoarと装備も含め、演出完了まで進行を停止します。
+	SetStageActorsStopped(true);
+	bStageInitializationComplete = true;
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] Preparing: initialization complete"));
 	WorldTickEndHandle = FWorldDelegates::OnWorldTickEnd.AddUObject(this, &ABoarGameMode::HandleWorldTickEnd);
 	if (bWaitForStageIntroduction && StageConfig)
 	{
-		SetStageActorsStopped(true);
 		OnStageIntroductionRequested();
 	}
 	else CompleteStageIntroduction();
@@ -273,9 +279,10 @@ bool ABoarGameMode::RetryClearSave()
 
 void ABoarGameMode::CompleteStageIntroduction()
 {
-	if (StageState != EBoarStageState::Preparing) return;
+	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing) return;
 	StageState = EBoarStageState::Playing;
-	if (bWaitForStageIntroduction && StageConfig) SetStageActorsStopped(false);
+	SetStageActorsStopped(false);
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] Playing: stage progression enabled"));
 	RefreshHousedBoarCount();
 }
 

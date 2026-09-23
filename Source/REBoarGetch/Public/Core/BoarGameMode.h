@@ -86,6 +86,7 @@ protected:
 	void OnStageCleared();
 
 private:
+	bool bStageInitializationComplete = false;
 	void HandleWorldTickEnd(UWorld* World, ELevelTick TickType, float DeltaSeconds);
 	void ResolveStageEnd();
 	void SetStageActorsStopped(bool bStopped);

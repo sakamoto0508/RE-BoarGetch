@@ -31,6 +31,8 @@ void ABoarPlayerController::BeginPlay()
 	// RetryによるLevel再読み込みではControllerの入力状態が残る場合があるため、
 	// Mapping ContextやHUDを準備する前に、必ずゲーム操作可能な初期状態へ戻す。
 	RestoreGameplayInputState();
+	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+		SetStageInputBlocked(!Mode->CanAdvanceStage());
 
 	// Mapping Contextは画面と入力デバイスを持つローカルControllerにだけ登録する。
 	// Dedicated Serverや初期化途中ではLocalPlayerが存在しないため、先にnullを許容する。

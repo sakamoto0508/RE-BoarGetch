@@ -34,6 +34,13 @@ public:
 	// Sets default values for this component's properties
 	/** Tickを使用しないガジェット管理Componentの初期状態を構築します。 */
 	UGadgetComponent();
+	/** 保存済み装備の復元と初期装備を一度だけ実行します。 */
+	void InitializeForStage();
+
+private:
+	bool bStageInitialized = false;
+
+public:
 	/** スロット仕様値の唯一の取得元です。保存済み4枠の仕様は変更しません。 */
 	static constexpr int32 GetGadgetSlotCount() { return MaxGadgetSlots; }
 

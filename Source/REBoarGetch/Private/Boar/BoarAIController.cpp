@@ -3,6 +3,8 @@
 
 #include "BoarAIController.h"
 #include "Components/StateTreeAIComponent.h"
+#include "Core/BoarGameMode.h"
+#include "Engine/World.h"
 
 ABoarAIController::ABoarAIController()
 {
@@ -20,7 +22,9 @@ void ABoarAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	if (StateTreeAI)
+	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
+	// Preparing中はGameModeのPlaying遷移で開始します。
+	if (StateTreeAI && (!Mode || Mode->CanAdvanceStage()))
 	{
 		StateTreeAI->StartLogic();
 	}

@@ -39,6 +39,8 @@ protected:
 public:
 	/** 収容範囲など、檻を構成するComponentの初期状態を構築します。 */
 	ACage();
+	/** GameModeがBoar生成前に一度だけ実行するStage初期化です。 */
+	void InitializeForStage();
 	/** 無被弾時間と自然回復だけをゲーム時間で更新します。 */
 	virtual void Tick(float DeltaSeconds) override;
 	/** 終了演出中の復活Timerと自然回復を停止します。 */
@@ -88,6 +90,7 @@ public:
 	bool GetIsCageDestroyed() const { return bIsDestroyed; }
 
 private:
+	bool bStageInitialized = false;
 	void NotifyHousedCountChanged();
 	UFUNCTION() void HandleHousedBoarDestroyed(AActor* Actor);
 	bool CanAdvance() const;

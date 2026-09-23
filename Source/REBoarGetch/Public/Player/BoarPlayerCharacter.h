@@ -61,6 +61,11 @@ public:
 
 	/** Component、カメラ、移動設定を含むプレイヤーの初期状態を構築します。 */
 	ABoarPlayerCharacter();
+	/** GameModeがCage初期化とBoar生成の後に一度だけ呼びます。 */
+	void InitializeForStage();
+
+private:
+	bool bStageInitialized = false;
 
 protected:
 

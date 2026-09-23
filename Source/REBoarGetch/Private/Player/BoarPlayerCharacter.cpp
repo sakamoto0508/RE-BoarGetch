@@ -75,6 +75,15 @@ void ABoarPlayerCharacter::BeginPlay()
 	}
 }
 
+void ABoarPlayerCharacter::InitializeForStage()
+{
+	if (bStageInitialized) return;
+	bStageInitialized = true;
+	if (HealthComponent) HealthComponent->ResetHealth();
+	if (GadgetComponent) GadgetComponent->InitializeForStage();
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] Player ready: %s"), *GetName());
+}
+
 void ABoarPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
 {
 	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);

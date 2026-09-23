@@ -31,10 +31,20 @@ ACage::ACage()
 void ACage::BeginPlay()
 {
 	Super::BeginPlay();
+	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
+	if (!Mode || Mode->GetStageState() != EBoarStageState::Preparing) InitializeForStage();
+}
 
+
+void ACage::InitializeForStage()
+{
+	if (bStageInitialized) return;
+	bStageInitialized = true;
 	MaxHp = FMath::Max(MaxHp, 1.0f);
 	CurrentHp = MaxHp;
 	bIsDestroyed = false;
+	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] Cage ready: %s"), *GetName());
 }
 
 void ACage::EndPlay(const EEndPlayReason::Type EndPlayReason)
