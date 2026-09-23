@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
+#include "Components/SlateWrapperTypes.h"
 #include "BoarPlayerController.generated.h"
 
 class UInputAction;
@@ -11,6 +12,12 @@ class UBoarHUDWidget;
 class UBoarResultWidget;
 class UBoarGameOverWidget;
 class UBoarPauseWidget;
+class UBoarLoadoutWidget;
+class UBoarSettingsWidget;
+class UBoarConfirmationWidget;
+class UBoarEncyclopediaWidget;
+class UUserWidget;
+class UWidget;
 class UHealthComponent;
 class UGadgetComponent;
 class ABoarPlayerCharacter;
@@ -41,9 +48,17 @@ public:
 	/** ポーズ画面を開き、ゲーム入力を遮断します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenPauseMenu();
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void TogglePauseMenu();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenLoadoutMenu();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void CloseLoadoutMenu();
+	UFUNCTION() void HandleMenuBack();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenSettingsMenu(UUserWidget* ParentMenu, UWidget* ReturnFocus);
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void CloseSettingsMenu();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* ReturnFocus);
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void CloseEncyclopedia();
+	void CloseEncyclopediaFrom(UUserWidget* ParentMenu);
 	/** ポーズ画面を閉じてゲーム入力へ戻す。*/
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void ResumeFromPause();
-	/** ポーズ画面からステージを離脱します。 */
+	/** ポーズ画面からLobby退出確認を開きます。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void LeaveStageFromPause();
 	/** ポーズメニューが開いているかどうかを返します。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|UI") bool IsPauseMenuOpen() const { return PauseWidget != nullptr; }
@@ -59,6 +74,24 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
+	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarEncyclopediaWidget> EncyclopediaWidgetClass;
+	UPROPERTY(Transient) TObjectPtr<UBoarEncyclopediaWidget> EncyclopediaWidget;
+	UPROPERTY(Transient) TObjectPtr<UUserWidget> EncyclopediaParent;
+	UPROPERTY(Transient) TObjectPtr<UWidget> EncyclopediaReturnFocus;
+	ESlateVisibility EncyclopediaParentVisibility = ESlateVisibility::Visible;
+	bool bEncyclopediaGameAndUI = false;
+	bool bEncyclopediaAddedUIContext = false;
+	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarConfirmationWidget> LobbyExitConfirmationClass;
+	UPROPERTY(Transient) TObjectPtr<UBoarConfirmationWidget> LobbyExitConfirmation;
+	UFUNCTION() void ResolveLobbyExit(bool bConfirmed);
+	void RemoveLobbyExitConfirmation();
+	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarSettingsWidget> SettingsWidgetClass;
+	UPROPERTY(Transient) TObjectPtr<UBoarSettingsWidget> SettingsWidget;
+	UPROPERTY(Transient) TObjectPtr<UUserWidget> SettingsParent;
+	UPROPERTY(Transient) TObjectPtr<UWidget> SettingsReturnFocus;
+	ESlateVisibility SettingsParentVisibility = ESlateVisibility::SelfHitTestInvisible;
+	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarLoadoutWidget> LoadoutWidgetClass;
+	UPROPERTY(Transient) TObjectPtr<UBoarLoadoutWidget> LoadoutWidget;
 	/** ポーズメニューWidget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarPauseWidget> PauseWidgetClass;

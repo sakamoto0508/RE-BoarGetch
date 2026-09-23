@@ -8,6 +8,7 @@
 class UBoarSaveGame;
 class UStageConfig;
 class AGadgetBase;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGadgetsUnlocked);
 
 /** 永続進行の読み書きを集約します。失敗・中断した挑戦から進行を保存しません。 */
 UCLASS()
@@ -15,6 +16,7 @@ class REBOARGETCH_API UBoarGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 public:
+	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnGadgetsUnlocked;
 	virtual void Init() override;
 	/** 読み取り用の確定済み進行です。 */
 	UFUNCTION(BlueprintPure) const UBoarSaveGame* GetProgress() const { return Progress; }

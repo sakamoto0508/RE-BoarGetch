@@ -25,7 +25,9 @@ bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
 		UE_LOG(LogTemp, Error, TEXT("[Save] Progress could not be saved."));
 		return false;
 	}
+	const bool bNewUnlocks = !Progress || Candidate->UnlockedGadgetIds.Num() > Progress->UnlockedGadgetIds.Num();
 	Progress = Candidate;
+	if (bNewUnlocks) OnGadgetsUnlocked.Broadcast();
 	return true;
 }
 

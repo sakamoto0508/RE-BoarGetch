@@ -181,7 +181,12 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 		return false;
 	}
 
-	if (EquippedGadgetSlots[SlotIndex] == GadgetClass) return true;
+	if (EquippedGadgetSlots[SlotIndex] == GadgetClass)
+	{
+		// 保存失敗後も同じ候補の再選択で保存を再試行できます。
+		bLastLoadoutSaveSuccessful = SaveCurrentLoadout();
+		return true;
+	}
 	UBoarGameInstance* Instance = GetWorld() ? GetWorld()->GetGameInstance<UBoarGameInstance>() : nullptr;
 	const UGadgetDataAsset* Definition = GadgetClass ? GadgetClass.GetDefaultObject()->GetGadgetDefinition() : nullptr;
 	if (Instance && Definition && !Definition->GadgetId.IsNone() && !Instance->IsGadgetUnlocked(Definition->GadgetId)) return false;
@@ -205,21 +210,25 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 		}
 	}
 	EquippedGadgetSlots = NewSlots;
-	if (Instance)
-	{
-		TArray<FName> Ids;
-		bool bHasStableIds = true;
-		for (const TSubclassOf<AGadgetBase>& Class : EquippedGadgetSlots)
-		{
-			const UGadgetDataAsset* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
-			if (Class && (!Def || Def->GadgetId.IsNone())) bHasStableIds = false;
-			Ids.Add(Def ? Def->GadgetId : NAME_None);
-		}
-		if (!bHasStableIds || !Instance->SaveGadgetLoadout(Ids))
-			UE_LOG(LogTemp, Error, TEXT("[Gadget] Loadout changed but not saved; check GadgetId/catalog/save status."));
-	}
+	bLastLoadoutSaveSuccessful = SaveCurrentLoadout();
+	if (!bLastLoadoutSaveSuccessful)
+		UE_LOG(LogTemp, Error, TEXT("[Gadget] Loadout changed but not saved; check GadgetId/catalog/save status."));
 	OnGadgetLoadoutChanged.Broadcast();
 	return true;
+}
+
+bool UGadgetComponent::SaveCurrentLoadout()
+{
+	auto* Instance = GetWorld() ? GetWorld()->GetGameInstance<UBoarGameInstance>() : nullptr;
+	if (!Instance) return false;
+	TArray<FName> Ids;
+	for (const TSubclassOf<AGadgetBase>& Class : EquippedGadgetSlots)
+	{
+		const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
+		if (Class && (!Def || Def->GadgetId.IsNone())) return false;
+		Ids.Add(Def ? Def->GadgetId : NAME_None);
+	}
+	return Instance->SaveGadgetLoadout(Ids);
 }
 
 bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)

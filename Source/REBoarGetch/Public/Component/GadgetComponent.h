@@ -76,6 +76,8 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Gadget")
 	bool SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> GadgetClass);
+	/** UIが実行時の変更成功と永続保存成功を区別するための結果です。 */
+	bool WasLastLoadoutSaveSuccessful() const { return bLastLoadoutSaveSuccessful; }
 
 	/**
 	 * 指定スロット(0-3)のガジェットへ切り替えます。
@@ -115,6 +117,8 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	bool SaveCurrentLoadout();
+	bool bLastLoadoutSaveSuccessful = false;
 	/** プレイヤーが使用できるガジェットスロットの最大数です。 */
 	static constexpr int32 MaxGadgetSlots = 4;
 

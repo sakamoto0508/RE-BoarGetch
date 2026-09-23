@@ -13,6 +13,9 @@ class UGadgetDataAsset : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Display") FText DisplayName;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Display") FText RoleText;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Display", meta = (MultiLine = "true")) FText Description;
 	/** 保存に使用する固定IDです。表示名やActor名から生成しません。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Progress")
 	FName GadgetId;

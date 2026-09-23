@@ -79,7 +79,7 @@ void AStageEntrance::HandleTriggerEndOverlap(
 void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 {
 	// 必須設定不足や遷移開始後は、Widgetの生成・再表示を行わない。
-	if (!PlayerController || !StageConfig || !LobbyWidgetClass || bTravelRequested)
+	if (!PlayerController || (!StageConfig && StageCatalog.IsEmpty()) || !LobbyWidgetClass || bTravelRequested)
 	{
 		return;
 	}
@@ -100,7 +100,10 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 	}
 
 	// 表示内容を現在のStageConfigで更新してから、Game入力とUI入力を両立させる。
-	LobbyWidget->ShowStageSelection(StageConfig);
+	TArray<UStageConfig*> Stages;
+	if (StageCatalog.IsEmpty()) Stages.Add(StageConfig);
+	else for (UStageConfig* Stage : StageCatalog) Stages.Add(Stage);
+	LobbyWidget->ShowStageCatalog(Stages, StageConfig);
 	FInputModeGameAndUI InputMode;
 	InputMode.SetWidgetToFocus(LobbyWidget->TakeWidget());
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -131,8 +134,9 @@ void AStageEntrance::CloseStageSelection()
 
 void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfig)
 {
-	// 表示時に渡したものと同じStageConfigだけを受理し、Level未設定も拒否する。
-	if (bTravelRequested || !RequestedStageConfig || RequestedStageConfig != StageConfig || RequestedStageConfig->Level.IsNull())
+	// この入口の一覧に含まれるStageだけを受理し、直接呼び出しでもLockを検証する。
+	const bool bListed = StageCatalog.IsEmpty() ? RequestedStageConfig == StageConfig : StageCatalog.Contains(RequestedStageConfig);
+	if (bTravelRequested || !RequestedStageConfig || !bListed || RequestedStageConfig->Level.IsNull())
 	{
 		return;
 	}
@@ -143,9 +147,15 @@ void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfi
 		if (!Instance->IsStageUnlocked(RequestedStageConfig)) return;
 		if (!Instance->SaveLastAttemptedStage(RequestedStageConfig->StageId))
 		{
+			if (LobbyWidget) LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "SaveFailed", "保存に失敗しました。出発を選んで再試行してください。"));
 			UE_LOG(LogTemp, Error, TEXT("[StageEntrance] Last stage could not be saved; travel canceled."));
 			return;
 		}
+	}
+	else
+	{
+		if (LobbyWidget) LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "NoProgress", "進行データを取得できません。"));
+		return;
 	}
 	bTravelRequested = true;
 	if (LobbyWidget)

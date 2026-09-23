@@ -30,3 +30,18 @@ Notion: https://app.notion.com/p/3dfb6c88752581bf8e85e4c65fca9b37
 - 初回検証で入口内に直接PIEスポーンするとUIは出なかった。通常の入口外からの侵入と再侵入を検証済み。
 
 ![PIE](UI_StageSelect_Prototype_PIE.png)
+
+## ステージ一覧拡張 — 2026-09-23
+
+この節は上記の単一ステージ版を更新する。今回のUE実行テスト／PIEはユーザー担当のため実施していない。
+
+- 既存WBP_LobbyStageSelectを保持して34 Widgetsへ拡張。左側に340×760のホログラム一覧、右側に既存1000×760の詳細・出発・戻る・図鑑を配置。
+- 新規WBP_StageSelectEntryは既存BoarLoadoutEntryを継承。共通HoloActionFrame、既存Font／Materialを再利用し、選択アンバー枠、Focus拡大、ロック図形を追加。
+- StageEntranceのStageCatalogから一覧を生成。未解放は暗く表示し、選択・出発不可。CLEAR、特別コイン数、図鑑進捗は既存Saveデータから表示。
+- 初期選択は前回出発した解放済みStageを優先し、なければ既存StageConfig、次に最初の解放済みStageへフォールバック。
+- 左右キー／D-pad左右／LB・RBで解放済みStageを循環。B／Escapeで戻る。行の決定または出発ボタンで出発。IMCの追加設定は不要。
+- 出発時に解放状態を再確認し、LastAttemptedStageIdを保存。保存失敗時は遷移せずエラーを表示。
+- BP_StageEntrance_Stage01のStageCatalogには既存DA_TestStageConfigのみ登録。複数Stageの確認には固有StageId／遷移先を持つ実際のStageConfigを同配列へ追加する。架空のStageや個体データは作成していない。
+- 個体データ未登録時は図鑑に「個体データ未登録」と表示。3Dミニチュアは未実装、既存の任意サムネイル処理を保持。
+
+検証：Development Editor C++ビルド成功。WBP_StageSelectEntry、WBP_LobbyStageSelect、WBP_LoadoutEntry、WBP_GadgetLoadout、WBP_BoarEncyclopedia、BP_StageEntrance_Stage01を警告もエラー扱いでCompile成功。対象Assetを保存し、未保存フラグfalse、Widget構造、名前参照、入力キー、StageCatalogを再取得で確認。実行時の描画・操作・複数Stage切替は未検証。

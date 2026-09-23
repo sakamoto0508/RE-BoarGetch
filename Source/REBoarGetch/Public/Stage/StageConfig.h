@@ -16,6 +16,11 @@ struct FBoarSpawnDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName BoarUniqueId;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TSubclassOf<ABoarBase> BoarClass;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName SpawnPointId;
+	/** 図鑑表示用。未登録の素材・文面をUI側で推測しません。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia") FText EncyclopediaName;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia", meta = (MultiLine = "true")) FText EncyclopediaDescription;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia", meta = (MultiLine = "true")) FText EncyclopediaTraits;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia") TSoftObjectPtr<UTexture2D> EncyclopediaPhoto;
 };
 
 /** 特別コインの固定IDと配置地点です。 */

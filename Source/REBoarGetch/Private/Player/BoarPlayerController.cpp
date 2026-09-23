@@ -14,6 +14,11 @@
 #include "UI/BoarResultWidget.h"
 #include "UI/BoarGameOverWidget.h"
 #include "UI/BoarPauseWidget.h"
+#include "UI/BoarLoadoutWidget.h"
+#include "UI/BoarSettingsWidget.h"
+#include "UI/BoarConfirmationWidget.h"
+#include "UI/BoarEncyclopediaWidget.h"
+#include "UI/BoarLobbyWidget.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -85,6 +90,8 @@ void ABoarPlayerController::OnPossess(APawn* InPawn)
 
 void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	CloseEncyclopedia();
+	CloseSettingsMenu();
 	ResumeFromPause();
 	while (!OwnedMappingContexts.IsEmpty()) RemoveOwnedMappingContext(OwnedMappingContexts.Last());
 	// Controller破棄後にDynamic Delegateからコールバックされないよう、
@@ -198,7 +205,7 @@ void ABoarPlayerController::SetupInputComponent()
 	}
 	if (UIBackAction)
 	{
-		EnhancedInput->BindAction(UIBackAction, ETriggerEvent::Started, this, &ABoarPlayerController::ResumeFromPause);
+		EnhancedInput->BindAction(UIBackAction, ETriggerEvent::Started, this, &ABoarPlayerController::HandleMenuBack);
 	}
 }
 
@@ -467,8 +474,177 @@ void ABoarPlayerController::RetryStage()
 
 void ABoarPlayerController::TogglePauseMenu()
 {
-	if (PauseWidget) ResumeFromPause();
+	if (PauseWidget || SettingsWidget || EncyclopediaWidget) HandleMenuBack();
 	else OpenPauseMenu();
+}
+
+void ABoarPlayerController::HandleMenuBack()
+{
+	if (EncyclopediaWidget) CloseEncyclopedia();
+	else if (LobbyExitConfirmation) ResolveLobbyExit(false);
+	else if (SettingsWidget) CloseSettingsMenu();
+	else if (LoadoutWidget) CloseLoadoutMenu();
+	else ResumeFromPause();
+}
+
+void ABoarPlayerController::OpenLoadoutMenu()
+{
+	if (!PauseWidget || LoadoutWidget || SettingsWidget || LobbyExitConfirmation || !LoadoutWidgetClass || bLevelTransitionRequested) return;
+	LoadoutWidget = CreateWidget<UBoarLoadoutWidget>(this, LoadoutWidgetClass);
+	if (!LoadoutWidget) return;
+	LoadoutWidget->OnClosed.AddUniqueDynamic(this, &ABoarPlayerController::CloseLoadoutMenu);
+	PauseWidget->SetVisibility(ESlateVisibility::Collapsed);
+	LoadoutWidget->AddToViewport(90);
+	// 既存UI入力ContextとPauseを維持し、戻る操作で親画面へ戻します。
+	FInputModeGameAndUI ModeUI;
+	ModeUI.SetHideCursorDuringCapture(false);
+	ModeUI.SetWidgetToFocus(LoadoutWidget->TakeWidget());
+	ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(ModeUI);
+	LoadoutWidget->FocusInitialChoice();
+}
+
+void ABoarPlayerController::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* ReturnFocus)
+{
+	if (!IsLocalController() || !ParentMenu || EncyclopediaWidget || !EncyclopediaWidgetClass ||
+		LoadoutWidget || LobbyExitConfirmation || bLevelTransitionRequested) return;
+	if (ParentMenu != SettingsWidget && !Cast<UBoarLobbyWidget>(ParentMenu)) return;
+	EncyclopediaWidget = CreateWidget<UBoarEncyclopediaWidget>(this, EncyclopediaWidgetClass);
+	if (!EncyclopediaWidget) return;
+	EncyclopediaParent = ParentMenu;
+	EncyclopediaReturnFocus = ReturnFocus;
+	EncyclopediaParentVisibility = ParentMenu->GetVisibility();
+	bEncyclopediaGameAndUI = PauseWidget || Cast<UBoarLobbyWidget>(ParentMenu);
+	bEncyclopediaAddedUIContext = UIMappingContext && !OwnedMappingContexts.Contains(UIMappingContext);
+	if (bEncyclopediaAddedUIContext) AddOwnedMappingContext(UIMappingContext, 20);
+	SetIgnoreMoveInput(true); SetIgnoreLookInput(true);
+	if (auto* PlayerCharacter = GetBoarCharacter())
+	{
+		PlayerCharacter->StopDash(); PlayerCharacter->StopJump(); PlayerCharacter->StopGadgetUse();
+		PlayerCharacter->GetCharacterMovement()->StopMovementImmediately();
+		PlayerCharacter->SetMenuOpen(true);
+	}
+	EncyclopediaWidget->OnClosed.AddUniqueDynamic(this, &ABoarPlayerController::CloseEncyclopedia);
+	ParentMenu->SetVisibility(ESlateVisibility::Collapsed);
+	EncyclopediaWidget->AddToViewport(120);
+	FInputModeGameAndUI ModeUI;
+	ModeUI.SetWidgetToFocus(EncyclopediaWidget->TakeWidget());
+	ModeUI.SetHideCursorDuringCapture(false);
+	ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(ModeUI); SetShowMouseCursor(true);
+	EncyclopediaWidget->FocusInitialChoice();
+}
+
+void ABoarPlayerController::CloseEncyclopedia()
+{
+	if (!EncyclopediaWidget) return;
+	EncyclopediaWidget->OnClosed.RemoveDynamic(this, &ABoarPlayerController::CloseEncyclopedia);
+	EncyclopediaWidget->RemoveFromParent(); EncyclopediaWidget = nullptr;
+	if (bEncyclopediaAddedUIContext) RemoveOwnedMappingContext(UIMappingContext);
+	bEncyclopediaAddedUIContext = false;
+	SetIgnoreMoveInput(false); SetIgnoreLookInput(false);
+	if (!PauseWidget) if (auto* PlayerCharacter = GetBoarCharacter()) PlayerCharacter->SetMenuOpen(false);
+	FlushPressedKeys();
+	if (IsValid(EncyclopediaParent) && EncyclopediaParent->IsInViewport())
+	{
+		EncyclopediaParent->SetVisibility(EncyclopediaParentVisibility);
+		if (bEncyclopediaGameAndUI)
+		{
+			FInputModeGameAndUI ModeUI;
+			ModeUI.SetWidgetToFocus(EncyclopediaParent->TakeWidget());
+			ModeUI.SetHideCursorDuringCapture(false);
+			ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			SetInputMode(ModeUI);
+		}
+		else
+		{
+			FInputModeUIOnly ModeUI;
+			ModeUI.SetWidgetToFocus(EncyclopediaParent->TakeWidget());
+			ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			SetInputMode(ModeUI);
+		}
+		if (IsValid(EncyclopediaReturnFocus)) EncyclopediaReturnFocus->SetUserFocus(this);
+	}
+	EncyclopediaParent = nullptr; EncyclopediaReturnFocus = nullptr;
+}
+
+void ABoarPlayerController::CloseEncyclopediaFrom(UUserWidget* ParentMenu)
+{
+	if (EncyclopediaParent == ParentMenu) CloseEncyclopedia();
+}
+
+void ABoarPlayerController::OpenSettingsMenu(UUserWidget* ParentMenu, UWidget* ReturnFocus)
+{
+	if (!IsLocalController() || !ParentMenu || SettingsWidget || LoadoutWidget || LobbyExitConfirmation ||
+		!SettingsWidgetClass || bLevelTransitionRequested) return;
+	SettingsWidget = CreateWidget<UBoarSettingsWidget>(this, SettingsWidgetClass);
+	if (!SettingsWidget) return;
+	SettingsParent = ParentMenu;
+	SettingsReturnFocus = ReturnFocus;
+	SettingsParentVisibility = ParentMenu->GetVisibility();
+	SettingsWidget->OnClosed.AddUniqueDynamic(this, &ABoarPlayerController::CloseSettingsMenu);
+	ParentMenu->SetVisibility(ESlateVisibility::Collapsed);
+	SettingsWidget->AddToViewport(100);
+	if (PauseWidget)
+	{
+		FInputModeGameAndUI ModeUI;
+		ModeUI.SetWidgetToFocus(SettingsWidget->TakeWidget());
+		ModeUI.SetHideCursorDuringCapture(false);
+		ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(ModeUI);
+	}
+	else
+	{
+		FInputModeUIOnly ModeUI;
+		ModeUI.SetWidgetToFocus(SettingsWidget->TakeWidget());
+		ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(ModeUI);
+	}
+	SetShowMouseCursor(true);
+	SettingsWidget->FocusInitialChoice();
+}
+
+void ABoarPlayerController::CloseSettingsMenu()
+{
+	if (!SettingsWidget) return;
+	CloseEncyclopedia();
+	SettingsWidget->OnClosed.RemoveDynamic(this, &ABoarPlayerController::CloseSettingsMenu);
+	SettingsWidget->RemoveFromParent();
+	SettingsWidget = nullptr;
+	if (IsValid(SettingsParent))
+	{
+		SettingsParent->SetVisibility(SettingsParentVisibility);
+		if (PauseWidget)
+		{
+			FInputModeGameAndUI ModeUI;
+			ModeUI.SetWidgetToFocus(SettingsParent->TakeWidget());
+			ModeUI.SetHideCursorDuringCapture(false);
+			ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			SetInputMode(ModeUI);
+		}
+		else
+		{
+			FInputModeUIOnly ModeUI;
+			ModeUI.SetWidgetToFocus(SettingsParent->TakeWidget());
+			ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			SetInputMode(ModeUI);
+		}
+		if (IsValid(SettingsReturnFocus)) SettingsReturnFocus->SetUserFocus(this);
+	}
+	SettingsParent = nullptr;
+	SettingsReturnFocus = nullptr;
+}
+
+void ABoarPlayerController::CloseLoadoutMenu()
+{
+	if (!LoadoutWidget) return;
+	LoadoutWidget->OnClosed.RemoveDynamic(this, &ABoarPlayerController::CloseLoadoutMenu);
+	LoadoutWidget->RemoveFromParent(); LoadoutWidget = nullptr;
+	if (PauseWidget)
+	{
+		PauseWidget->SetVisibility(ESlateVisibility::Visible);
+		PauseWidget->FocusLoadoutChoice();
+	}
 }
 
 void ABoarPlayerController::OpenPauseMenu()
@@ -512,6 +688,10 @@ void ABoarPlayerController::OpenPauseMenu()
 void ABoarPlayerController::ResumeFromPause()
 {
 	if (!PauseWidget) return;
+	CloseEncyclopedia();
+	RemoveLobbyExitConfirmation();
+	CloseSettingsMenu();
+	CloseLoadoutMenu();
 	SetPause(false);
 	PauseWidget->RemoveFromParent();
 	PauseWidget = nullptr;
@@ -528,7 +708,44 @@ void ABoarPlayerController::ResumeFromPause()
 
 void ABoarPlayerController::LeaveStageFromPause()
 {
-	if (!PauseWidget || (LobbyLevel.IsNull() && LobbyLevelName.IsNone()) || bLevelTransitionRequested) return;
+	if (!PauseWidget || SettingsWidget || LoadoutWidget || LobbyExitConfirmation ||
+		!LobbyExitConfirmationClass || (LobbyLevel.IsNull() && LobbyLevelName.IsNone()) || bLevelTransitionRequested) return;
+	LobbyExitConfirmation = CreateWidget<UBoarConfirmationWidget>(this, LobbyExitConfirmationClass);
+	if (!LobbyExitConfirmation) return;
+	LobbyExitConfirmation->OnDecision.AddUniqueDynamic(this, &ABoarPlayerController::ResolveLobbyExit);
+	PauseWidget->SetVisibility(ESlateVisibility::Collapsed);
+	LobbyExitConfirmation->AddToViewport(110);
+	FInputModeGameAndUI ModeUI;
+	ModeUI.SetWidgetToFocus(LobbyExitConfirmation->TakeWidget());
+	ModeUI.SetHideCursorDuringCapture(false);
+	ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(ModeUI);
+	LobbyExitConfirmation->FocusInitialChoice();
+}
+
+void ABoarPlayerController::RemoveLobbyExitConfirmation()
+{
+	if (!LobbyExitConfirmation) return;
+	LobbyExitConfirmation->OnDecision.RemoveDynamic(this, &ABoarPlayerController::ResolveLobbyExit);
+	LobbyExitConfirmation->RemoveFromParent();
+	LobbyExitConfirmation = nullptr;
+}
+
+void ABoarPlayerController::ResolveLobbyExit(bool bConfirmed)
+{
+	if (!LobbyExitConfirmation || !PauseWidget || bLevelTransitionRequested) return;
+	RemoveLobbyExitConfirmation();
+	if (!bConfirmed || (LobbyLevel.IsNull() && LobbyLevelName.IsNone()))
+	{
+		PauseWidget->SetVisibility(ESlateVisibility::Visible);
+		FInputModeGameAndUI ModeUI;
+		ModeUI.SetWidgetToFocus(PauseWidget->TakeWidget());
+		ModeUI.SetHideCursorDuringCapture(false);
+		ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(ModeUI);
+		PauseWidget->FocusLobbyChoice();
+		return;
+	}
 	ResumeFromPause();
 	// 途中退出は既存のLobby遷移だけを呼び、Clear結果を保存しません。
 	ReturnToLobby();
@@ -686,7 +903,7 @@ ABoarPlayerCharacter* ABoarPlayerController::GetBoarCharacter() const
 
 bool ABoarPlayerController::CanProcessGameplayInput() const
 {
-	return !bGameplayInputBlocked && !PauseWidget && !bLevelTransitionRequested;
+	return !bGameplayInputBlocked && !PauseWidget && !SettingsWidget && !EncyclopediaWidget && !bLevelTransitionRequested;
 }
 
 void ABoarPlayerController::AddOwnedMappingContext(UInputMappingContext* Context, int32 Priority)

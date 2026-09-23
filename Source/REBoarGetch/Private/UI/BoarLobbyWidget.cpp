@@ -6,6 +6,11 @@
 #include "Components/TextBlock.h"
 #include "Engine/Texture2D.h"
 #include "Stage/StageConfig.h"
+#include "Player/BoarPlayerController.h"
+#include "UI/BoarLoadoutEntry.h"
+#include "Components/ScrollBox.h"
+#include "BoarGameInstance.h"
+#include "BoarSaveGame.h"
 
 namespace
 {
@@ -22,6 +27,19 @@ void UBoarLobbyWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	ResolveWidgetReferences();
+	StageList = ResolveLobbyWidget<UScrollBox>(WidgetTree, StageListWidgetName);
+	StageStatus = ResolveLobbyWidget<UTextBlock>(WidgetTree, StageStatusWidgetName);
+	StageProgress = ResolveLobbyWidget<UTextBlock>(WidgetTree, StageProgressWidgetName);
+	PreviousButton = ResolveLobbyWidget<UButton>(WidgetTree, PreviousButtonName);
+	NextButton = ResolveLobbyWidget<UButton>(WidgetTree, NextButtonName);
+	if (PreviousButton) PreviousButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::PreviousStage);
+	if (NextButton) NextButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::NextStage);
+	EncyclopediaButton = ResolveLobbyWidget<UButton>(WidgetTree, EncyclopediaButtonName);
+	if (EncyclopediaButton)
+	{
+		EncyclopediaButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::OpenEncyclopedia);
+		EncyclopediaButton->OnHovered.AddUniqueDynamic(this, &UBoarLobbyWidget::FocusEncyclopedia);
+	}
 
 	if (StartStageButton)
 	{
@@ -35,6 +53,19 @@ void UBoarLobbyWidget::NativeConstruct()
 
 void UBoarLobbyWidget::NativeDestruct()
 {
+	if (PreviousButton) PreviousButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::PreviousStage);
+	if (NextButton) NextButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::NextStage);
+	for (const auto& Entry : StageEntries) if (Entry)
+	{
+		Entry->OnFocused.RemoveDynamic(this, &UBoarLobbyWidget::SelectStage);
+		Entry->OnChosen.RemoveDynamic(this, &UBoarLobbyWidget::ChooseStage);
+	}
+	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->CloseEncyclopediaFrom(this);
+	if (EncyclopediaButton)
+	{
+		EncyclopediaButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::OpenEncyclopedia);
+		EncyclopediaButton->OnHovered.RemoveDynamic(this, &UBoarLobbyWidget::FocusEncyclopedia);
+	}
 	if (StartStageButton)
 	{
 		StartStageButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::HandleStartStageClicked);
@@ -49,8 +80,72 @@ void UBoarLobbyWidget::NativeDestruct()
 
 void UBoarLobbyWidget::ShowStageSelection(UStageConfig* StageConfig)
 {
-	SelectedStageConfig = StageConfig;
+	ShowStageCatalog({StageConfig}, StageConfig);
+}
+
+bool UBoarLobbyWidget::IsUnlocked(const UStageConfig* Stage) const
+{
+	const auto* GI = GetGameInstance<UBoarGameInstance>();
+	return Stage && (GI ? GI->IsStageUnlocked(Stage) : Stage->UnlockCondition.RequiredClearedStageId.IsNone());
+}
+
+void UBoarLobbyWidget::ShowStageCatalog(const TArray<UStageConfig*>& Stages, UStageConfig* FallbackStage)
+{
+	for (const auto& Entry : StageEntries) if (Entry)
+	{
+		Entry->OnFocused.RemoveDynamic(this, &UBoarLobbyWidget::SelectStage);
+		Entry->OnChosen.RemoveDynamic(this, &UBoarLobbyWidget::ChooseStage);
+	}
+	StageEntries.Reset(); AvailableStages.Reset();
+	if (StageList) StageList->ClearChildren();
+	TSet<FName> Seen;
+	for (UStageConfig* Stage : Stages)
+	{
+		if (!Stage || Stage->StageId.IsNone() || Seen.Contains(Stage->StageId)) continue;
+		Seen.Add(Stage->StageId); AvailableStages.Add(Stage);
+	}
+	const auto* GI = GetGameInstance<UBoarGameInstance>();
+	const auto* Save = GI ? GI->GetProgress() : nullptr;
+	SelectedStageIndex = INDEX_NONE;
+	for (int32 I = 0; I < AvailableStages.Num(); ++I)
+		if (Save && AvailableStages[I]->StageId == Save->LastAttemptedStageId && IsUnlocked(AvailableStages[I])) SelectedStageIndex = I;
+	if (SelectedStageIndex == INDEX_NONE && IsUnlocked(FallbackStage)) SelectedStageIndex = AvailableStages.IndexOfByKey(FallbackStage);
+	if (SelectedStageIndex == INDEX_NONE)
+		for (int32 I = 0; I < AvailableStages.Num(); ++I) if (IsUnlocked(AvailableStages[I])) { SelectedStageIndex = I; break; }
+	for (int32 I = 0; I < AvailableStages.Num(); ++I)
+	{
+		UBoarLoadoutEntry* Entry = StageList && StageEntryClass ? CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), StageEntryClass) : nullptr;
+		StageEntries.Add(Entry);
+		if (!Entry) continue;
+		Entry->OnFocused.AddUniqueDynamic(this, &UBoarLobbyWidget::SelectStage);
+		Entry->OnChosen.AddUniqueDynamic(this, &UBoarLobbyWidget::ChooseStage);
+		StageList->AddChild(Entry);
+	}
 	SetVisibility(ESlateVisibility::Visible);
+	RefreshSelectedStage();
+	bInitialFocusPending = true;
+}
+
+void UBoarLobbyWidget::RefreshSelectedStage()
+{
+	SelectedStageConfig = AvailableStages.IsValidIndex(SelectedStageIndex) ? AvailableStages[SelectedStageIndex] : nullptr;
+	UStageConfig* StageConfig = SelectedStageConfig;
+	const auto* GI = GetGameInstance<UBoarGameInstance>();
+	const auto* Save = GI ? GI->GetProgress() : nullptr;
+	int32 UnlockedCount = 0;
+	for (int32 I = 0; I < AvailableStages.Num(); ++I)
+	{
+		const UStageConfig* Stage = AvailableStages[I]; const bool bUnlocked = IsUnlocked(Stage);
+		UnlockedCount += bUnlocked ? 1 : 0;
+		if (!StageEntries.IsValidIndex(I) || !StageEntries[I]) continue;
+		const FString State = !bUnlocked ? TEXT("LOCKED") : Save && Save->ClearedStageIds.Contains(Stage->StageId) ? TEXT("CLEAR") : TEXT("未クリア");
+		const FText Label = FText::Format(NSLOCTEXT("StageSelect", "Entry", "{0}\n{1}"), Stage->DisplayName.IsEmpty() ? FText::FromName(Stage->StageId) : Stage->DisplayName, FText::FromString(State));
+		StageEntries[I]->Setup(I, Label, I == SelectedStageIndex);
+		StageEntries[I]->SetAvailable(bUnlocked);
+		StageEntries[I]->SetRenderOpacity(bUnlocked ? 1.0f : 0.45f);
+	}
+	if (PreviousButton) PreviousButton->SetIsEnabled(UnlockedCount > 1);
+	if (NextButton) NextButton->SetIsEnabled(UnlockedCount > 1);
 
 	if (StageNameText)
 	{
@@ -75,13 +170,31 @@ void UBoarLobbyWidget::ShowStageSelection(UStageConfig* StageConfig)
 	}
 	if (StartStageButton)
 	{
-		StartStageButton->SetIsEnabled(StageConfig && !StageConfig->Level.IsNull());
-		StartStageButton->SetKeyboardFocus();
+		StartStageButton->SetIsEnabled(IsUnlocked(StageConfig) && !StageConfig->Level.IsNull());
+	}
+	if (StageStatus) StageStatus->SetText(!StageConfig ? NSLOCTEXT("StageSelect", "NoStage", "選択できるステージがありません")
+		: StageConfig->Level.IsNull() ? NSLOCTEXT("StageSelect", "NoLevel", "出発先未登録")
+		: Save && Save->ClearedStageIds.Contains(StageConfig->StageId) ? FText::FromString(TEXT("CLEAR")) : NSLOCTEXT("StageSelect", "NotClear", "未クリア"));
+	if (StageProgress)
+	{
+		TSet<FName> Coins, Boars;
+		if (StageConfig)
+		{
+			for (const auto& Def : StageConfig->SpecialCoinDefinitions) if (!Def.SpecialCoinId.IsNone()) Coins.Add(Def.SpecialCoinId);
+			for (const auto& Def : StageConfig->BoarSpawnDefinitions) if (!Def.BoarUniqueId.IsNone()) Boars.Add(Def.BoarUniqueId);
+		}
+		int32 CoinsFound = 0, BoarsFound = 0;
+		for (FName Id : Coins) if (Save && Save->SpecialCoinIds.Contains(Id)) ++CoinsFound;
+		for (FName Id : Boars) if (Save && Save->CapturedBoarUniqueIds.Contains(Id)) ++BoarsFound;
+		const FText BoarProgress = Boars.IsEmpty() ? NSLOCTEXT("StageSelect", "NoIndividuals", "個体データ未登録")
+			: FText::Format(NSLOCTEXT("StageSelect", "Count", "{0} / {1}"), BoarsFound, Boars.Num());
+		StageProgress->SetText(StageConfig ? FText::Format(NSLOCTEXT("StageSelect", "Progress", "特別コイン：{0} / {1}\n図鑑：{2}"), CoinsFound, Coins.Num(), BoarProgress) : FText::GetEmpty());
 	}
 }
 
 void UBoarLobbyWidget::HideStageSelection()
 {
+	bInitialFocusPending = false;
 	SelectedStageConfig = nullptr;
 	SetVisibility(ESlateVisibility::Collapsed);
 }
@@ -98,7 +211,7 @@ void UBoarLobbyWidget::ResolveWidgetReferences()
 
 void UBoarLobbyWidget::HandleStartStageClicked()
 {
-	if (SelectedStageConfig && !SelectedStageConfig->Level.IsNull())
+	if (IsUnlocked(SelectedStageConfig) && !SelectedStageConfig->Level.IsNull())
 	{
 		OnStageStartRequested.Broadcast(SelectedStageConfig);
 	}
@@ -109,3 +222,47 @@ void UBoarLobbyWidget::HandleCancelClicked()
 	HideStageSelection();
 	OnStageSelectionClosed.Broadcast();
 }
+
+void UBoarLobbyWidget::OpenEncyclopedia()
+{
+	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->OpenEncyclopedia(this, EncyclopediaButton);
+}
+void UBoarLobbyWidget::FocusEncyclopedia() { if (EncyclopediaButton) EncyclopediaButton->SetKeyboardFocus(); }
+
+void UBoarLobbyWidget::SelectStage(int32 Index)
+{
+	if (!AvailableStages.IsValidIndex(Index) || !IsUnlocked(AvailableStages[Index])) return;
+	SelectedStageIndex = Index; RefreshSelectedStage();
+	if (StageList && StageEntries.IsValidIndex(Index) && StageEntries[Index]) StageList->ScrollWidgetIntoView(StageEntries[Index], true);
+}
+void UBoarLobbyWidget::ChooseStage(int32 Index) { SelectStage(Index); if (SelectedStageIndex == Index) HandleStartStageClicked(); }
+void UBoarLobbyWidget::StepStage(int32 Direction)
+{
+	const int32 Count = AvailableStages.Num();
+	for (int32 Step = 1; Step <= Count; ++Step)
+	{
+		const int32 Index = (FMath::Max(SelectedStageIndex, 0) + Direction * Step + Count) % Count;
+		if (IsUnlocked(AvailableStages[Index])) { SelectStage(Index); FocusSelection(); return; }
+	}
+}
+void UBoarLobbyWidget::PreviousStage() { StepStage(-1); }
+void UBoarLobbyWidget::NextStage() { StepStage(1); }
+void UBoarLobbyWidget::FocusSelection()
+{
+	if (StageEntries.IsValidIndex(SelectedStageIndex) && StageEntries[SelectedStageIndex]) StageEntries[SelectedStageIndex]->FocusEntry();
+	else if (StartStageButton && StartStageButton->GetIsEnabled()) StartStageButton->SetKeyboardFocus();
+	else if (CancelButton) CancelButton->SetKeyboardFocus();
+}
+void UBoarLobbyWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
+{
+	Super::NativeTick(Geometry, DeltaTime);
+	if (bInitialFocusPending && IsVisible()) { bInitialFocusPending = false; FocusSelection(); }
+}
+FReply UBoarLobbyWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
+{
+	if (PreviousStageKeys.Contains(Event.GetKey())) { if (!Event.IsRepeat()) PreviousStage(); return FReply::Handled(); }
+	if (NextStageKeys.Contains(Event.GetKey())) { if (!Event.IsRepeat()) NextStage(); return FReply::Handled(); }
+	if (CancelKeys.Contains(Event.GetKey())) { if (!Event.IsRepeat()) HandleCancelClicked(); return FReply::Handled(); }
+	return Super::NativeOnPreviewKeyDown(Geometry, Event);
+}
+void UBoarLobbyWidget::ShowTravelError(const FText& Message) { if (StageStatus) StageStatus->SetText(Message); }
