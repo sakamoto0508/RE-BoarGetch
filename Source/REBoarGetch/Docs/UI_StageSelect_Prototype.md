@@ -1,5 +1,7 @@
 # ステージ選択UI Prototype — 2026-09-22
 
+最新の2026-09-24カルーセル変更は [UI_FlowGlow_Carousel.md](UI_FlowGlow_Carousel.md) を参照。以下は過去の実装・検証記録。
+
 Notion: https://app.notion.com/p/3dfb6c88752581bf8e85e4c65fca9b37
 
 ## 実装範囲

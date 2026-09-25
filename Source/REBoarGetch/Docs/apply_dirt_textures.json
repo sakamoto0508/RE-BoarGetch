@@ -1,0 +1,236 @@
+{
+  "assets": [
+    "/Game/Stage01/Ground/GroundBaseColor.GroundBaseColor",
+    "/Game/Stage01/Ground/GroundNormalMap.GroundNormalMap",
+    "/Game/Stage01/Ground/GroundRoughnessMap.GroundRoughnessMap",
+    "/Game/Stage01/Ground/Materials/M_Ground_LowPoly_World.M_Ground_LowPoly_World",
+    "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry",
+    "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+  ],
+  "changed": [
+    {
+      "actor": "S01_BO_CagePlaza",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_NorthRamp",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_SouthRamp",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_00",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_01",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_02",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_03",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_04",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_05",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_06",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_07",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_08",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_09",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_10",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_11",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_12",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_13",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_14",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_15",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_16",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_17",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_18",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_Loop_19",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_CagePathWest",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_CagePathEast",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_CagePathNorth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_CagePathSouth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_StartPath",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_HighRouteNorth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_HighRouteSouth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_BO_MillPath",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathNW_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathNE_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathSW_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathSE_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_ShoreN_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_ShoreE_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_ShoreW_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_ShoreS_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_WallEast_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_RockFront_Earth",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_Bank_NE",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_Bank_EN",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_Bank_ES",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_Bank_S",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_Bank_WS",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_Bank_WN",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_1",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_3",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_6",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_11",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_13",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_17",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Dry.MI_Ground_Stage01_Dry"
+    },
+    {
+      "actor": "S01_Structure_PathCut",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    },
+    {
+      "actor": "S01_Structure_ShoreSoil",
+      "material": "/Game/Stage01/Ground/Materials/MI_Ground_Stage01_Damp.MI_Ground_Stage01_Damp"
+    }
+  ],
+  "transform_collision_changes": [],
+  "saved": true,
+  "dirty_maps": [],
+  "dirty_ground": []
+}

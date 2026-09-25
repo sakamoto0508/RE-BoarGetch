@@ -45,6 +45,8 @@ protected:
 	virtual void NativeTick(const FGeometry& Geometry, float DeltaTime) override;
 	virtual FReply NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TSubclassOf<UBoarLoadoutEntry> StageEntryClass;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") bool bUseCarousel = false;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta=(ClampMin="0.05", ClampMax="0.5")) float CarouselDuration = .18f;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> PreviousStageKeys = { EKeys::Left, EKeys::Gamepad_DPad_Left, EKeys::Gamepad_LeftShoulder };
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> NextStageKeys = { EKeys::Right, EKeys::Gamepad_DPad_Right, EKeys::Gamepad_RightShoulder };
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> CancelKeys = { EKeys::Escape, EKeys::Gamepad_FaceButton_Right };
@@ -83,6 +85,11 @@ private:
 	void RefreshSelectedStage();
 	void FocusSelection();
 	void StepStage(int32 Direction);
+	void RefreshCarousel();
+	void AnimateCarousel(float DeltaTime);
+	float CarouselElapsed = 0.f;
+	int32 PendingStageIndex = INDEX_NONE;
+	int32 SlideDirection = 0;
 	UFUNCTION() void SelectStage(int32 Index);
 	UFUNCTION() void ChooseStage(int32 Index);
 	UFUNCTION() void PreviousStage();

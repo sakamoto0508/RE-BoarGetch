@@ -1,0 +1,52 @@
+[
+  {
+    "name": "CageBase",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_CageBase",
+    "triangles": 80
+  },
+  {
+    "name": "CagePanels",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_CagePanels",
+    "triangles": 12
+  },
+  {
+    "name": "CagePanelsCool",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_CagePanelsCool",
+    "triangles": 28
+  },
+  {
+    "name": "WarningRing",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_WarningRing",
+    "triangles": 16
+  },
+  {
+    "name": "CyanGuides",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_CyanGuides",
+    "triangles": 8
+  },
+  {
+    "name": "PathCut",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_PathCut",
+    "triangles": 256
+  },
+  {
+    "name": "TurfTerrace",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_TurfTerrace",
+    "triangles": 316
+  },
+  {
+    "name": "TurfTerraceLight",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_TurfTerraceLight",
+    "triangles": 160
+  },
+  {
+    "name": "ShoreSoil",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_ShoreSoil",
+    "triangles": 36
+  },
+  {
+    "name": "PlateauApron",
+    "path": "/Game/Stage01/GroundStructure/Meshes/SM_S01_PlateauApron",
+    "triangles": 32
+  }
+]

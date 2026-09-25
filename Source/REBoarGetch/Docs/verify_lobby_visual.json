@@ -1,0 +1,29 @@
+{
+  "existing_actor_changes": [],
+  "new_collision_or_navigation": [],
+  "texture_settings": {
+    "GrassBaseColor": {
+      "srgb": true,
+      "compression": "<TextureCompressionSettings.TC_DEFAULT: 0>"
+    },
+    "GrassNormalMap": {
+      "srgb": false,
+      "compression": "<TextureCompressionSettings.TC_NORMALMAP: 1>"
+    },
+    "GrassRoughnessMap": {
+      "srgb": false,
+      "compression": "<TextureCompressionSettings.TC_GRAYSCALE: 3>"
+    }
+  },
+  "material_stats": {
+    "/Game/Stage01/Ground/Materials/M_Grass_LowPoly": {
+      "loaded": true
+    },
+    "/Game/Lobby/Materials/M_Lobby_ResearchHologram": {
+      "loaded": true
+    }
+  },
+  "new_actor_count": 109,
+  "dirty_packages": [],
+  "dirty_maps": []
+}

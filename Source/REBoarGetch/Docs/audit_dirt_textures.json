@@ -1,0 +1,366 @@
+{
+  "textures": [
+    {
+      "path": "/Game/Stage01/Ground/GrassBaseColor.GrassBaseColor",
+      "srgb": true,
+      "compression": "<TextureCompressionSettings.TC_DEFAULT: 0>"
+    },
+    {
+      "path": "/Game/Stage01/Ground/GrassNormalMap.GrassNormalMap",
+      "srgb": false,
+      "compression": "<TextureCompressionSettings.TC_NORMALMAP: 1>"
+    },
+    {
+      "path": "/Game/Stage01/Ground/GrassRoughnessMap.GrassRoughnessMap",
+      "srgb": false,
+      "compression": "<TextureCompressionSettings.TC_GRAYSCALE: 3>"
+    },
+    {
+      "path": "/Game/Stage01/Ground/GroundBaseColor.GroundBaseColor",
+      "srgb": true,
+      "compression": "<TextureCompressionSettings.TC_EDITOR_ICON: 7>"
+    },
+    {
+      "path": "/Game/Stage01/Ground/GroundNormalMap.GroundNormalMap",
+      "srgb": false,
+      "compression": "<TextureCompressionSettings.TC_NORMALMAP: 1>"
+    },
+    {
+      "path": "/Game/Stage01/Ground/GroundRoughnessMap.GroundRoughnessMap",
+      "srgb": true,
+      "compression": "<TextureCompressionSettings.TC_EDITOR_ICON: 7>"
+    }
+  ],
+  "surfaces": [
+    {
+      "actor": "S01_BO_CagePlaza",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_2.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_NorthRamp",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_10.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_SouthRamp",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_11.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_00",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_12.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_01",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_13.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_02",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_14.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_03",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_15.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_04",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_16.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_05",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_17.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_06",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_18.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_07",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_19.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_08",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_20.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_09",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_21.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_10",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_22.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_11",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_23.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_12",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_24.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_13",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_25.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_14",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_26.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_15",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_27.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_16",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_28.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_17",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_29.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_18",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_30.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_Loop_19",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_31.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_CagePathWest",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_32.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_CagePathEast",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_33.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_CagePathNorth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_34.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_CagePathSouth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_35.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_StartPath",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_36.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_HighRouteNorth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_37.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_HighRouteSouth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_38.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_BO_MillPath",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_39.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Blockout/Materials/MI_Stage01_Blockout_Path.MI_Stage01_Blockout_Path"
+    },
+    {
+      "actor": "S01_Ground_PathNW_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_198.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_PathNE_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_204.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_PathSW_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_210.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_PathSE_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_217.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_ShoreN_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_223.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_ShoreE_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_230.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_ShoreW_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_237.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_ShoreS_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_244.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_WallEast_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_250.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_RockFront_Earth",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_257.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_Bank_NE",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_264.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_Bank_EN",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_265.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_Bank_ES",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_266.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_Bank_S",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_267.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_Bank_WS",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_268.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_Bank_WN",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_269.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_1",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_270.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_3",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_271.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_6",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_272.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_11",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_273.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_13",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_274.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Ground_PathVerge_17",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_275.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DrySoil.MI_S01_Ground_DrySoil"
+    },
+    {
+      "actor": "S01_Structure_PathCut",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_281.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    },
+    {
+      "actor": "S01_Structure_ShoreSoil",
+      "component": "/Game/Level/Test.Test:PersistentLevel.StaticMeshActor_284.StaticMeshComponent0",
+      "slot": 0,
+      "material": "/Game/Stage01/Ground/Materials/MI_S01_Ground_DampSoil.MI_S01_Ground_DampSoil"
+    }
+  ]
+}

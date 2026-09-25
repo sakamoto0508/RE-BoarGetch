@@ -1,0 +1,2652 @@
+[
+  {
+    "label": "LobbyFloor",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_0",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      0.0,
+      -50.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      36.0,
+      30.0,
+      1.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_0.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "CentralPlaza",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_1",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      0.0,
+      2.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      10.0,
+      10.0,
+      0.04
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_1.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "StageApproach",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_2",
+    "class": "StaticMeshActor",
+    "p": [
+      1000.0,
+      0.0,
+      3.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      10.0,
+      4.0,
+      0.06
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_2.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "StageGate_Left",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_3",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      -270.0,
+      210.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.2,
+      1.2,
+      4.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_3.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Coral.MI_Lobby_Coral"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "StageGate_Right",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_4",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      270.0,
+      210.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.2,
+      1.2,
+      4.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_4.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Coral.MI_Lobby_Coral"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "StageGate_Lintel",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_5",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      0.0,
+      450.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.2,
+      6.6,
+      0.6
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_5.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Coral.MI_Lobby_Coral"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "StageGate_Beacon",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_6",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      0.0,
+      540.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_6.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "GadgetArea",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_7",
+    "class": "StaticMeshActor",
+    "p": [
+      -200.0,
+      -960.0,
+      4.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      9.0,
+      7.0,
+      0.08
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_7.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "GadgetBench",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_8",
+    "class": "StaticMeshActor",
+    "p": [
+      -50.0,
+      -1190.0,
+      50.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      4.0,
+      1.2,
+      1.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_8.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "GadgetTarget_A",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_9",
+    "class": "StaticMeshActor",
+    "p": [
+      250.0,
+      -1150.0,
+      100.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_9.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "GadgetTarget_B",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_10",
+    "class": "StaticMeshActor",
+    "p": [
+      410.0,
+      -1150.0,
+      75.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.5
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_10.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "PracticeStart",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_11",
+    "class": "StaticMeshActor",
+    "p": [
+      -750.0,
+      930.0,
+      3.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      4.0,
+      5.0,
+      0.06
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_11.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "JumpBlock_01",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_12",
+    "class": "StaticMeshActor",
+    "p": [
+      -350.0,
+      930.0,
+      40.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      2.0,
+      3.6,
+      0.8
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_12.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "JumpBlock_02",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_13",
+    "class": "StaticMeshActor",
+    "p": [
+      50.0,
+      930.0,
+      70.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      2.0,
+      3.6,
+      1.4
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_13.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "JumpBlock_03",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_14",
+    "class": "StaticMeshActor",
+    "p": [
+      480.0,
+      930.0,
+      100.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      2.6,
+      3.6,
+      2.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_14.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "PracticeLanding",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_15",
+    "class": "StaticMeshActor",
+    "p": [
+      940.0,
+      930.0,
+      80.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      4.0,
+      4.0,
+      1.6
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_15.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Parapet_North",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_16",
+    "class": "StaticMeshActor",
+    "p": [
+      1780.0,
+      0.0,
+      65.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.4,
+      30.0,
+      1.3
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_16.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Parapet_South",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_17",
+    "class": "StaticMeshActor",
+    "p": [
+      -1780.0,
+      0.0,
+      65.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.4,
+      30.0,
+      1.3
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_17.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Parapet_East",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_18",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      1480.0,
+      65.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      35.2,
+      0.4,
+      1.3
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_18.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Parapet_West",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_19",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      -1480.0,
+      65.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      35.2,
+      0.4,
+      1.3
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_19.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "FallGuard_North",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_20",
+    "class": "StaticMeshActor",
+    "p": [
+      1820.0,
+      0.0,
+      900.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.8,
+      31.0,
+      18.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_20.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "FallGuard_South",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_21",
+    "class": "StaticMeshActor",
+    "p": [
+      -1820.0,
+      0.0,
+      900.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.8,
+      31.0,
+      18.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_21.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "FallGuard_East",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_22",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      1520.0,
+      900.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      36.0,
+      0.8,
+      18.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_22.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "FallGuard_West",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_23",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      -1520.0,
+      900.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      36.0,
+      0.8,
+      18.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_23.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "LobbyPlayerStart",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.PlayerStart_0",
+    "class": "PlayerStart",
+    "p": [
+      -1120.0,
+      0.0,
+      110.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "LobbySun",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.DirectionalLight_0",
+    "class": "DirectionalLight",
+    "p": [
+      0.0,
+      0.0,
+      900.0
+    ],
+    "r": [
+      -44.99999999999999,
+      -35.0,
+      -2.248991783197472e-15
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "LobbySkyLight",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.SkyLight_0",
+    "class": "SkyLight",
+    "p": [
+      0.0,
+      0.0,
+      500.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "LobbySkyAtmosphere",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.SkyAtmosphere_0",
+    "class": "SkyAtmosphere",
+    "p": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "LobbyFog",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.ExponentialHeightFog_0",
+    "class": "ExponentialHeightFog",
+    "p": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "LobbyPostProcess",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.PostProcessVolume_0",
+    "class": "PostProcessVolume",
+    "p": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "Stage1Entrance_Trigger_Unconnected",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.TriggerBox_0",
+    "class": "TriggerBox",
+    "p": [
+      1210.0,
+      0.0,
+      130.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "PracticeRamp",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_24",
+    "class": "StaticMeshActor",
+    "p": [
+      1140.0,
+      1110.0,
+      0.0
+    ],
+    "r": [
+      0.0,
+      -90.00000000000001,
+      0.0
+    ],
+    "s": [
+      3.6,
+      3.2,
+      1.6
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_24.StaticMeshComponent0",
+        "mesh": "/Game/InportAssets/LevelPrototyping/Meshes/SM_Ramp.SM_Ramp",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Stage1Sign",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.TextRenderActor_0",
+    "class": "TextRenderActor",
+    "p": [
+      1225.0,
+      0.0,
+      470.0
+    ],
+    "r": [
+      0.0,
+      180.0,
+      -0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "GadgetSign",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.TextRenderActor_1",
+    "class": "TextRenderActor",
+    "p": [
+      -80.0,
+      -1280.0,
+      180.0
+    ],
+    "r": [
+      0.0,
+      89.99999999999999,
+      -0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "PracticeSign",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.TextRenderActor_2",
+    "class": "TextRenderActor",
+    "p": [
+      -660.0,
+      1290.0,
+      160.0
+    ],
+    "r": [
+      0.0,
+      -90.00000000000001,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "label": "Port_PlazaOuter",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_25",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      0.0,
+      12.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      13.0,
+      13.0,
+      0.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_25.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_PlazaInner",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_26",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      0.0,
+      25.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      11.6,
+      11.6,
+      0.12
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_26.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_CenterDisc",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_27",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      0.0,
+      33.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      3.4,
+      3.4,
+      0.06
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_27.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_CenterInset",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_28",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      0.0,
+      37.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      2.8,
+      2.8,
+      0.03
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_28.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnBase_EntryWest",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_29",
+    "class": "StaticMeshActor",
+    "p": [
+      -650.0,
+      -610.0,
+      35.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.9,
+      1.9,
+      0.7
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_29.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_Column_EntryWest",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_30",
+    "class": "StaticMeshActor",
+    "p": [
+      -650.0,
+      -610.0,
+      245.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      4.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_30.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnCollar_EntryWest",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_31",
+    "class": "StaticMeshActor",
+    "p": [
+      -650.0,
+      -610.0,
+      390.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.15,
+      1.15,
+      0.25
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_31.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnCap_EntryWest",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_32",
+    "class": "StaticMeshActor",
+    "p": [
+      -650.0,
+      -610.0,
+      465.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.8,
+      1.8,
+      0.35
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_32.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnBase_EntryEast",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_33",
+    "class": "StaticMeshActor",
+    "p": [
+      -650.0,
+      610.0,
+      35.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.9,
+      1.9,
+      0.7
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_33.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_Column_EntryEast",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_34",
+    "class": "StaticMeshActor",
+    "p": [
+      -650.0,
+      610.0,
+      245.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      4.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_34.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnCollar_EntryEast",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_35",
+    "class": "StaticMeshActor",
+    "p": [
+      -650.0,
+      610.0,
+      390.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.15,
+      1.15,
+      0.25
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_35.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnCap_EntryEast",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_36",
+    "class": "StaticMeshActor",
+    "p": [
+      -650.0,
+      610.0,
+      465.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.8,
+      1.8,
+      0.35
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_36.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnBase_GateWest",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_37",
+    "class": "StaticMeshActor",
+    "p": [
+      650.0,
+      -610.0,
+      35.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.9,
+      1.9,
+      0.7
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_37.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_Column_GateWest",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_38",
+    "class": "StaticMeshActor",
+    "p": [
+      650.0,
+      -610.0,
+      245.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      4.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_38.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnCollar_GateWest",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_39",
+    "class": "StaticMeshActor",
+    "p": [
+      650.0,
+      -610.0,
+      390.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.15,
+      1.15,
+      0.25
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_39.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnCap_GateWest",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_40",
+    "class": "StaticMeshActor",
+    "p": [
+      650.0,
+      -610.0,
+      465.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.8,
+      1.8,
+      0.35
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_40.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnBase_GateEast",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_41",
+    "class": "StaticMeshActor",
+    "p": [
+      650.0,
+      610.0,
+      35.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.9,
+      1.9,
+      0.7
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_41.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_Column_GateEast",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_42",
+    "class": "StaticMeshActor",
+    "p": [
+      650.0,
+      610.0,
+      245.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      4.0
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_42.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnCollar_GateEast",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_43",
+    "class": "StaticMeshActor",
+    "p": [
+      650.0,
+      610.0,
+      390.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.15,
+      1.15,
+      0.25
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_43.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_ColumnCap_GateEast",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_44",
+    "class": "StaticMeshActor",
+    "p": [
+      650.0,
+      610.0,
+      465.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.8,
+      1.8,
+      0.35
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_44.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_01",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_45",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      416.40684177700035,
+      464.8210007324217
+    ],
+    "r": [
+      0.0,
+      0.0,
+      97.50000000000004
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_45.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_02",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_46",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      388.0294036547404,
+      570.7270415933377
+    ],
+    "r": [
+      0.0,
+      0.0,
+      112.50000000000003
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_46.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_03",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_47",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      333.2084029223188,
+      665.6798001836627
+    ],
+    "r": [
+      0.0,
+      0.0,
+      127.49999999999999
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_47.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_04",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_48",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      255.67980018366268,
+      743.2084029223188
+    ],
+    "r": [
+      0.0,
+      0.0,
+      142.5
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_48.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_05",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_49",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      160.72704159333773,
+      798.0294036547405
+    ],
+    "r": [
+      0.0,
+      0.0,
+      157.5
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_49.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_06",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_50",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      54.821000732421716,
+      826.4068417770004
+    ],
+    "r": [
+      0.0,
+      0.0,
+      172.5
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_50.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_07",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_51",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      -54.82100073242167,
+      826.4068417770004
+    ],
+    "r": [
+      0.0,
+      0.0,
+      -172.50000000000003
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_51.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_08",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_52",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      -160.7270415933376,
+      798.0294036547405
+    ],
+    "r": [
+      0.0,
+      0.0,
+      -157.5
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_52.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_09",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_53",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      -255.67980018366268,
+      743.2084029223188
+    ],
+    "r": [
+      0.0,
+      0.0,
+      -142.50000000000003
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_53.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_10",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_54",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      -333.2084029223187,
+      665.6798001836628
+    ],
+    "r": [
+      0.0,
+      0.0,
+      -127.50000000000001
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_54.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_11",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_55",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      -388.0294036547404,
+      570.7270415933377
+    ],
+    "r": [
+      0.0,
+      0.0,
+      -112.50000000000001
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_55.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArch_12",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_56",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      -416.40684177700035,
+      464.82100073242185
+    ],
+    "r": [
+      0.0,
+      0.0,
+      -97.50000000000001
+    ],
+    "s": [
+      0.95,
+      1.16,
+      0.65
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_56.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArchSupport_West",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_57",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      -420.0,
+      205.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.9,
+      0.9,
+      4.1
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_57.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GateArchSupport_East",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_58",
+    "class": "StaticMeshActor",
+    "p": [
+      1300.0,
+      420.0,
+      205.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.9,
+      0.9,
+      4.1
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_58.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_DirectionTile_-1000",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_59",
+    "class": "StaticMeshActor",
+    "p": [
+      -1000.0,
+      0.0,
+      8.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.8,
+      0.55,
+      0.06
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_59.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_DirectionTile_-820",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_60",
+    "class": "StaticMeshActor",
+    "p": [
+      -820.0,
+      0.0,
+      8.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.8,
+      0.55,
+      0.06
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_60.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_DirectionTile_820",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_61",
+    "class": "StaticMeshActor",
+    "p": [
+      820.0,
+      0.0,
+      8.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.8,
+      0.55,
+      0.06
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_61.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_DirectionTile_1000",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_62",
+    "class": "StaticMeshActor",
+    "p": [
+      1000.0,
+      0.0,
+      8.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.8,
+      0.55,
+      0.06
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_62.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cube.Cube",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GadgetPod_0",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_63",
+    "class": "StaticMeshActor",
+    "p": [
+      -440.0,
+      -900.0,
+      42.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.7,
+      1.7,
+      0.7
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_63.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GadgetPodTop_0",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_64",
+    "class": "StaticMeshActor",
+    "p": [
+      -440.0,
+      -900.0,
+      81.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.9,
+      1.9,
+      0.1
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_64.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GadgetPod_1",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_65",
+    "class": "StaticMeshActor",
+    "p": [
+      -210.0,
+      -900.0,
+      42.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.7,
+      1.7,
+      0.7
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_65.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GadgetPodTop_1",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_66",
+    "class": "StaticMeshActor",
+    "p": [
+      -210.0,
+      -900.0,
+      81.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.9,
+      1.9,
+      0.1
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_66.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GadgetPod_2",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_67",
+    "class": "StaticMeshActor",
+    "p": [
+      20.0,
+      -900.0,
+      42.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.7,
+      1.7,
+      0.7
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_67.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_GadgetPodTop_2",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_68",
+    "class": "StaticMeshActor",
+    "p": [
+      20.0,
+      -900.0,
+      81.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.9,
+      1.9,
+      0.1
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_68.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryBollard_-1400_-1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_69",
+    "class": "StaticMeshActor",
+    "p": [
+      -1400.0,
+      -1360.0,
+      110.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.7,
+      0.7,
+      2.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_69.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryCap_-1400_-1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_70",
+    "class": "StaticMeshActor",
+    "p": [
+      -1400.0,
+      -1360.0,
+      225.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      0.15
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_70.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryBollard_0_-1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_71",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      -1360.0,
+      110.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.7,
+      0.7,
+      2.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_71.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryCap_0_-1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_72",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      -1360.0,
+      225.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      0.15
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_72.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryBollard_1400_-1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_73",
+    "class": "StaticMeshActor",
+    "p": [
+      1400.0,
+      -1360.0,
+      110.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.7,
+      0.7,
+      2.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_73.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryCap_1400_-1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_74",
+    "class": "StaticMeshActor",
+    "p": [
+      1400.0,
+      -1360.0,
+      225.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      0.15
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_74.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryBollard_-1400_1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_75",
+    "class": "StaticMeshActor",
+    "p": [
+      -1400.0,
+      1360.0,
+      110.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.7,
+      0.7,
+      2.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_75.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryCap_-1400_1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_76",
+    "class": "StaticMeshActor",
+    "p": [
+      -1400.0,
+      1360.0,
+      225.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      0.15
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_76.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryBollard_0_1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_77",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      1360.0,
+      110.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.7,
+      0.7,
+      2.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_77.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryCap_0_1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_78",
+    "class": "StaticMeshActor",
+    "p": [
+      0.0,
+      1360.0,
+      225.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      0.15
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_78.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryBollard_1400_1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_79",
+    "class": "StaticMeshActor",
+    "p": [
+      1400.0,
+      1360.0,
+      110.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.7,
+      0.7,
+      2.2
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_79.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Port_BoundaryCap_1400_1360",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_80",
+    "class": "StaticMeshActor",
+    "p": [
+      1400.0,
+      1360.0,
+      225.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      0.85,
+      0.85,
+      0.15
+    ],
+    "meshes": [
+      {
+        "component": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.StaticMeshActor_80.StaticMeshComponent0",
+        "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "materials": [
+          "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+        ],
+        "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+      }
+    ]
+  },
+  {
+    "label": "Stage01_UIEntrance",
+    "path": "/Game/Level/L_Lobby.L_Lobby:PersistentLevel.BP_StageEntrance_Stage01_C_0",
+    "class": "BP_StageEntrance_Stage01_C",
+    "p": [
+      1210.0,
+      0.0,
+      130.0
+    ],
+    "r": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "s": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  }
+]

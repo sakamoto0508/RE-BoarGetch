@@ -1,0 +1,27 @@
+{
+  "/Game/Level/L_Lobby": {
+    "existing_transform_changes": [],
+    "new_collision_nav_issues": []
+  },
+  "/Game/Level/Test": {
+    "existing_transform_changes": [],
+    "grass_material_actors": [
+      "S01_BO_Ground",
+      "S01_BO_PlateauTurf",
+      "S01_Ground_PathNW_Turf",
+      "S01_Ground_PathNE_Turf",
+      "S01_Ground_PathSW_Turf",
+      "S01_Ground_PathSE_Turf",
+      "S01_Ground_ShoreN_Turf",
+      "S01_Ground_ShoreE_Turf",
+      "S01_Ground_ShoreW_Turf",
+      "S01_Ground_ShoreS_Turf",
+      "S01_Ground_WallEast_Turf",
+      "S01_Ground_RockFront_Turf",
+      "S01_Structure_TurfTerrace",
+      "S01_Structure_TurfTerraceLight"
+    ]
+  },
+  "dirty_maps": [],
+  "dirty_art": []
+}

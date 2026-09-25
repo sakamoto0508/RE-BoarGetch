@@ -11,6 +11,7 @@
 #include "Components/ScrollBox.h"
 #include "BoarGameInstance.h"
 #include "BoarSaveGame.h"
+#include "Components/CanvasPanelSlot.h"
 
 namespace
 {
@@ -91,6 +92,7 @@ bool UBoarLobbyWidget::IsUnlocked(const UStageConfig* Stage) const
 
 void UBoarLobbyWidget::ShowStageCatalog(const TArray<UStageConfig*>& Stages, UStageConfig* FallbackStage)
 {
+	PendingStageIndex = INDEX_NONE;
 	for (const auto& Entry : StageEntries) if (Entry)
 	{
 		Entry->OnFocused.RemoveDynamic(this, &UBoarLobbyWidget::SelectStage);
@@ -114,7 +116,7 @@ void UBoarLobbyWidget::ShowStageCatalog(const TArray<UStageConfig*>& Stages, USt
 		for (int32 I = 0; I < AvailableStages.Num(); ++I) if (IsUnlocked(AvailableStages[I])) { SelectedStageIndex = I; break; }
 	for (int32 I = 0; I < AvailableStages.Num(); ++I)
 	{
-		UBoarLoadoutEntry* Entry = StageList && StageEntryClass ? CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), StageEntryClass) : nullptr;
+		UBoarLoadoutEntry* Entry = !bUseCarousel && StageList && StageEntryClass ? CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), StageEntryClass) : nullptr;
 		StageEntries.Add(Entry);
 		if (!Entry) continue;
 		Entry->OnFocused.AddUniqueDynamic(this, &UBoarLobbyWidget::SelectStage);
@@ -144,8 +146,8 @@ void UBoarLobbyWidget::RefreshSelectedStage()
 		StageEntries[I]->SetAvailable(bUnlocked);
 		StageEntries[I]->SetRenderOpacity(bUnlocked ? 1.0f : 0.45f);
 	}
-	if (PreviousButton) PreviousButton->SetIsEnabled(UnlockedCount > 1);
-	if (NextButton) NextButton->SetIsEnabled(UnlockedCount > 1);
+	if (PreviousButton) PreviousButton->SetIsEnabled(bUseCarousel ? SelectedStageIndex > 0 : UnlockedCount > 1);
+	if (NextButton) NextButton->SetIsEnabled(bUseCarousel ? SelectedStageIndex + 1 < AvailableStages.Num() : UnlockedCount > 1);
 
 	if (StageNameText)
 	{
@@ -190,10 +192,12 @@ void UBoarLobbyWidget::RefreshSelectedStage()
 			: FText::Format(NSLOCTEXT("StageSelect", "Count", "{0} / {1}"), BoarsFound, Boars.Num());
 		StageProgress->SetText(StageConfig ? FText::Format(NSLOCTEXT("StageSelect", "Progress", "特別コイン：{0} / {1}\n図鑑：{2}"), CoinsFound, Coins.Num(), BoarProgress) : FText::GetEmpty());
 	}
+	if (bUseCarousel) RefreshCarousel();
 }
 
 void UBoarLobbyWidget::HideStageSelection()
 {
+	PendingStageIndex = INDEX_NONE;
 	bInitialFocusPending = false;
 	SelectedStageConfig = nullptr;
 	SetVisibility(ESlateVisibility::Collapsed);
@@ -211,6 +215,7 @@ void UBoarLobbyWidget::ResolveWidgetReferences()
 
 void UBoarLobbyWidget::HandleStartStageClicked()
 {
+	if (PendingStageIndex != INDEX_NONE) return;
 	if (IsUnlocked(SelectedStageConfig) && !SelectedStageConfig->Level.IsNull())
 	{
 		OnStageStartRequested.Broadcast(SelectedStageConfig);
@@ -238,6 +243,19 @@ void UBoarLobbyWidget::SelectStage(int32 Index)
 void UBoarLobbyWidget::ChooseStage(int32 Index) { SelectStage(Index); if (SelectedStageIndex == Index) HandleStartStageClicked(); }
 void UBoarLobbyWidget::StepStage(int32 Direction)
 {
+	if (bUseCarousel)
+	{
+		// Finish the prior request before accepting another; details always match the committed center.
+		if (PendingStageIndex != INDEX_NONE)
+		{
+			SelectedStageIndex = PendingStageIndex; PendingStageIndex = INDEX_NONE; RefreshSelectedStage();
+		}
+		const int32 Next = SelectedStageIndex + Direction;
+		if (!AvailableStages.IsValidIndex(Next)) return;
+		PendingStageIndex = Next; SlideDirection = Direction; CarouselElapsed = 0;
+		if (StartStageButton) StartStageButton->SetIsEnabled(false);
+		return;
+	}
 	const int32 Count = AvailableStages.Num();
 	for (int32 Step = 1; Step <= Count; ++Step)
 	{
@@ -256,6 +274,7 @@ void UBoarLobbyWidget::FocusSelection()
 void UBoarLobbyWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
+	if (bUseCarousel && PendingStageIndex != INDEX_NONE) AnimateCarousel(DeltaTime);
 	if (bInitialFocusPending && IsVisible()) { bInitialFocusPending = false; FocusSelection(); }
 }
 FReply UBoarLobbyWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
@@ -266,3 +285,68 @@ FReply UBoarLobbyWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const
 	return Super::NativeOnPreviewKeyDown(Geometry, Event);
 }
 void UBoarLobbyWidget::ShowTravelError(const FText& Message) { if (StageStatus) StageStatus->SetText(Message); }
+
+void UBoarLobbyWidget::RefreshCarousel()
+{
+	const auto* GI = GetGameInstance<UBoarGameInstance>();
+	const auto* Save = GI ? GI->GetProgress() : nullptr;
+	const TCHAR* Names[] = {TEXT("Previous"), TEXT("Current"), TEXT("Next")};
+	for (int32 I = 0; I < 3; ++I)
+	{
+		const FString Prefix = FString(TEXT("Carousel")) + Names[I];
+		auto* Card = WidgetTree->FindWidget(FName(*Prefix));
+		const int32 Index = SelectedStageIndex + I - 1;
+		const UStageConfig* Stage = AvailableStages.IsValidIndex(Index) ? AvailableStages[Index].Get() : nullptr;
+		if (!Card) continue;
+		Card->SetVisibility(Stage ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+		Card->SetRenderTranslation(FVector2D::ZeroVector);
+		Card->SetRenderScale(FVector2D(I == 1 ? 1.f : .72f));
+		Card->SetRenderOpacity(I == 1 ? 1.f : I == 0 ? .58f : .38f);
+		const bool bUnlocked = IsUnlocked(Stage);
+		if (auto* Label = ResolveLobbyWidget<UTextBlock>(WidgetTree, FName(*(Prefix + TEXT("Label")))))
+			Label->SetText(!Stage ? FText::GetEmpty() : !bUnlocked ? FText::FromString(TEXT("???")) : I == 2 ? FText::FromName(Stage->StageId) : Stage->DisplayName);
+		if (auto* Badge = ResolveLobbyWidget<UTextBlock>(WidgetTree, FName(*(Prefix + TEXT("Badge")))))
+			Badge->SetText(!Stage ? FText::GetEmpty() : !bUnlocked ? FText::FromString(TEXT("LOCKED")) : Save && Save->ClearedStageIds.Contains(Stage->StageId) ? FText::FromString(TEXT("CLEAR")) : FText::GetEmpty());
+		if (auto* Lock = WidgetTree->FindWidget(FName(*(Prefix + TEXT("Lock"))))) Lock->SetVisibility(Stage && !bUnlocked ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		UTexture2D* Thumbnail = Stage ? Stage->Thumbnail.LoadSynchronous() : nullptr;
+		if (auto* Preview = ResolveLobbyWidget<UImage>(WidgetTree, FName(*(Prefix + TEXT("Image")))))
+		{
+			Preview->SetBrushFromTexture(Thumbnail, false);
+			Preview->SetVisibility(Thumbnail ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+			// Preserve recognizable outlines without exposing bright detail on the next/locked preview.
+			Preview->SetColorAndOpacity(!bUnlocked || I == 2 ? FLinearColor(.12f,.2f,.27f,1) : I == 0 ? FLinearColor(.45f,.55f,.6f,1) : FLinearColor::White);
+		}
+		if (auto* Empty = WidgetTree->FindWidget(FName(*(Prefix + TEXT("Empty"))))) Empty->SetVisibility(Stage && !Thumbnail ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
+	if (auto* Number = ResolveLobbyWidget<UTextBlock>(WidgetTree, TEXT("Text_StageNumber"))) Number->SetText(SelectedStageConfig ? FText::FromName(SelectedStageConfig->StageId) : FText::GetEmpty());
+	if (!IsUnlocked(SelectedStageConfig))
+	{
+		if (StageNameText) StageNameText->SetText(FText::FromString(TEXT("???")));
+		if (StageDescriptionText) StageDescriptionText->SetText(FText::GetEmpty());
+		if (TargetCaptureCountText) TargetCaptureCountText->SetText(FText::FromString(TEXT("—")));
+		if (StageProgress) StageProgress->SetText(FText::GetEmpty());
+		if (StageStatus) StageStatus->SetText(FText::FromString(TEXT("LOCKED")));
+	}
+}
+
+void UBoarLobbyWidget::AnimateCarousel(float DeltaTime)
+{
+	CarouselElapsed += DeltaTime;
+	const float T = FMath::Clamp(CarouselElapsed / FMath::Max(CarouselDuration, .05f), 0.f, 1.f);
+	const float A = T*T*(3.f-2.f*T);
+	const TCHAR* Names[] = {TEXT("CarouselPrevious"), TEXT("CarouselCurrent"), TEXT("CarouselNext")};
+	for (int32 I = 0; I < 3; ++I) if (auto* Card = WidgetTree->FindWidget(Names[I]))
+	{
+		Card->SetRenderTranslation(FVector2D(-SlideDirection * 470.f * A, 0));
+		const float From = I == 1 ? 1.f : .72f;
+		const float To = I - SlideDirection == 1 ? 1.f : .72f;
+		Card->SetRenderScale(FVector2D(FMath::Lerp(From, To, A)));
+		Card->SetRenderOpacity(FMath::Lerp(I == 1 ? 1.f : I == 0 ? .58f : .38f, I - SlideDirection == 1 ? 1.f : .38f, A));
+	}
+	if (T >= 1.f)
+	{
+		SelectedStageIndex = PendingStageIndex; PendingStageIndex = INDEX_NONE;
+		RefreshSelectedStage();
+		FocusSelection();
+	}
+}
