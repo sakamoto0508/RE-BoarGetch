@@ -1,0 +1,21 @@
+{
+  "assets": [
+    "/Game/UI/StagePreview/M_Preview_Grass.M_Preview_Grass",
+    "/Game/UI/StagePreview/M_Preview_Earth.M_Preview_Earth",
+    "/Game/UI/StagePreview/M_Preview_Dirt.M_Preview_Dirt",
+    "/Game/UI/StagePreview/M_Preview_Water.M_Preview_Water",
+    "/Game/UI/StagePreview/M_Preview_White.M_Preview_White",
+    "/Game/UI/StagePreview/M_Preview_Navy.M_Preview_Navy",
+    "/Game/UI/StagePreview/M_Preview_Cyan.M_Preview_Cyan",
+    "/Game/UI/StagePreview/M_Preview_Yellow.M_Preview_Yellow",
+    "/Game/UI/StagePreview/M_Preview_Leaf.M_Preview_Leaf",
+    "/Game/UI/StagePreview/RT_Diorama_Default.RT_Diorama_Default",
+    "/Game/UI/StagePreview/M_UI_Diorama.M_UI_Diorama",
+    "/Game/UI/StagePreview/M_UI_StageBackdrop.M_UI_StageBackdrop",
+    "/Game/UI/StagePreview/M_UI_DioramaRing.M_UI_DioramaRing",
+    "/Game/UI/StagePreview/BP_Stage01_Diorama.BP_Stage01_Diorama",
+    "/Game/DataAssets/StageConfig/DA_TestStageConfig.DA_TestStageConfig",
+    "/Game/BP/Widget/WBP_LobbyStageSelect.WBP_LobbyStageSelect"
+  ],
+  "parts": 53
+}

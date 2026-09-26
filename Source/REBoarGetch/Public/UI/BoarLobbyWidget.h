@@ -11,6 +11,9 @@ class UStageConfig;
 class UTextBlock;
 class UBoarLoadoutEntry;
 class UScrollBox;
+class ABoarStagePreviewActor;
+class UMaterialInterface;
+class UMaterialInstanceDynamic;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLobbyStageStartRequested, UStageConfig*, StageConfig);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbyStageSelectionClosed);
@@ -46,6 +49,7 @@ protected:
 	virtual FReply NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TSubclassOf<UBoarLoadoutEntry> StageEntryClass;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") bool bUseCarousel = false;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Preview") TObjectPtr<UMaterialInterface> PreviewMaterial;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta=(ClampMin="0.05", ClampMax="0.5")) float CarouselDuration = .18f;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> PreviousStageKeys = { EKeys::Left, EKeys::Gamepad_DPad_Left, EKeys::Gamepad_LeftShoulder };
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> NextStageKeys = { EKeys::Right, EKeys::Gamepad_DPad_Right, EKeys::Gamepad_RightShoulder };
@@ -81,6 +85,10 @@ protected:
 	FName CancelButtonWidgetName;
 
 private:
+	UMaterialInstanceDynamic* GetDioramaBrush(const UStageConfig* Stage);
+	void ReleasePreviews();
+	UPROPERTY(Transient) TMap<FName, TObjectPtr<ABoarStagePreviewActor>> PreviewActors;
+	UPROPERTY(Transient) TMap<FName, TObjectPtr<UMaterialInstanceDynamic>> PreviewBrushes;
 	bool IsUnlocked(const UStageConfig* Stage) const;
 	void RefreshSelectedStage();
 	void FocusSelection();

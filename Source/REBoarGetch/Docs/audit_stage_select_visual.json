@@ -1,0 +1,449 @@
+{
+  "assets": {
+    "/Game/UI": [],
+    "/Game/BP/Widget": [],
+    "/Game/Stage01": []
+  },
+  "entrances": [
+    {
+      "name": "Stage01_UIEntrance",
+      "stage": "<Object '/Game/DataAssets/StageConfig/DA_TestStageConfig.DA_TestStageConfig' (0x00000120B7432800) Class 'StageConfig'>",
+      "catalog": [
+        "<Object '/Game/DataAssets/StageConfig/DA_TestStageConfig.DA_TestStageConfig' (0x00000120B7432800) Class 'StageConfig'>"
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "name": "SafeArea",
+      "class": "SafeZone",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>"
+    },
+    {
+      "name": "ScreenCanvas",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>"
+    },
+    {
+      "name": "StagePanel",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263C340) {offsets: {left: 0.000000, top: 0.000000, right: 1600.000000, bottom: 940.000000}, anchors: {minimum: {x: 0.500000, y: 0.500000}, maximum: {x: 0.500000, y: 0.500000}}, alignment: {x: 0.500000, y: 0.500000}}>"
+    },
+    {
+      "name": "HoloPanel",
+      "class": "Image",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263C0C0) {offsets: {left: 40.000000, top: 608.000000, right: 740.000000, bottom: 278.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF670C0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: \"/Script/Engine.MaterialInstanceConstant'/Game/UI/Prototype/MI_UI_StageMission_Panel.MI_UI_StageMission_Panel'\", outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "ScreenCaption",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263BF80) {offsets: {left: 50.000000, top: 20.000000, right: 900.000000, bottom: 30.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "STAGE / DEPLOYMENT"
+    },
+    {
+      "name": "StageName",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263BD00) {offsets: {left: 50.000000, top: 87.000000, right: 1450.000000, bottom: 65.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "Stage"
+    },
+    {
+      "name": "StageDescription",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263BBC0) {offsets: {left: 50.000000, top: 550.000000, right: 1500.000000, bottom: 45.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "ObjectiveCaption",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263BA80) {offsets: {left: 70.000000, top: 630.000000, right: 220.000000, bottom: 36.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "\u76ee\u6a19\u6355\u7372\u6570"
+    },
+    {
+      "name": "TargetCount",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263B940) {offsets: {left: 320.000000, top: 625.000000, right: 130.000000, bottom: 46.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "\u2014"
+    },
+    {
+      "name": "TargetUnit",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263B800) {offsets: {left: 180.000000, top: 348.000000, right: 80.000000, bottom: 45.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "\u4f53"
+    },
+    {
+      "name": "PreviewCaption",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263B6C0) {offsets: {left: 460.000000, top: 267.000000, right: 440.000000, bottom: 30.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "STAGE PREVIEW"
+    },
+    {
+      "name": "StageThumbnail",
+      "class": "Image",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263B580) {offsets: {left: 460.000000, top: 305.000000, right: 492.000000, bottom: 130.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF666C0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: None, outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "InputGuide",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263B440) {offsets: {left: 850.000000, top: 853.000000, right: 700.000000, bottom: 72.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "\u5de6\u53f3 / LB\u30fbRB\uff1a\u30b9\u30c6\u30fc\u30b8\u5207\u66ff\n\u6c7a\u5b9a\uff1a\u51fa\u767a\u3000B / Esc\uff1a\u30ed\u30d3\u30fc\u3078\u623b\u308b"
+    },
+    {
+      "name": "StartStageButtonFrame",
+      "class": "WBP_HoloActionFrame_C",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263B300) {offsets: {left: 890.000000, top: 632.000000, right: 300.000000, bottom: 78.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "Button_Start",
+      "class": "Button",
+      "visibility": "<SlateVisibility.VISIBLE: 0>"
+    },
+    {
+      "name": "StartLabel",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "text": "\u51fa\u6483\u3059\u308b"
+    },
+    {
+      "name": "CancelActionFrame",
+      "class": "WBP_HoloActionFrame_C",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263B1C0) {offsets: {left: 1230.000000, top: 632.000000, right: 300.000000, bottom: 78.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "Button_Cancel",
+      "class": "Button",
+      "visibility": "<SlateVisibility.VISIBLE: 0>"
+    },
+    {
+      "name": "CancelLabel",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "text": "\u30ed\u30d3\u30fc\u3078\u623b\u308b"
+    },
+    {
+      "name": "EncyclopediaFrame",
+      "class": "WBP_HoloActionFrame_C",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263AF40) {offsets: {left: 890.000000, top: 738.000000, right: 300.000000, bottom: 78.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "Button_Encyclopedia",
+      "class": "Button",
+      "visibility": "<SlateVisibility.VISIBLE: 0>"
+    },
+    {
+      "name": "EncyclopediaLabel",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "text": "\u30a4\u30ce\u30b7\u30b7\u56f3\u9451"
+    },
+    {
+      "name": "CatalogPanel",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263C480) {offsets: {left: -360.000000, top: 0.000000, right: 340.000000, bottom: 760.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CatalogHoloPanel",
+      "class": "Image",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263C840) {offsets: {left: 0.000000, top: 0.000000, right: 340.000000, bottom: 760.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF661C0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: \"/Script/Engine.MaterialInstanceConstant'/Game/UI/Prototype/MI_UI_HoloStageCatalog_Prototype.MI_UI_HoloStageCatalog_Prototype'\", outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "CatalogCaption",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263C700) {offsets: {left: 20.000000, top: 36.000000, right: 300.000000, bottom: 40.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "STAGE SELECT"
+    },
+    {
+      "name": "Scroll_Stages",
+      "class": "ScrollBox",
+      "visibility": "<SlateVisibility.VISIBLE: 0>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263C5C0) {offsets: {left: 20.000000, top: 104.000000, right: 300.000000, bottom: 490.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "Text_StageProgress",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263AE00) {offsets: {left: 70.000000, top: 681.000000, right: 650.000000, bottom: 74.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "Text_StageStatus",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263ACC0) {offsets: {left: 70.000000, top: 791.000000, right: 650.000000, bottom: 50.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "Text_StageNumber",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263AB80) {offsets: {left: 50.000000, top: 57.000000, right: 500.000000, bottom: 28.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "Button_PreviousFrame",
+      "class": "WBP_HoloActionFrame_C",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263AA40) {offsets: {left: 0.000000, top: 335.000000, right: 120.000000, bottom: 80.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "Button_Previous",
+      "class": "Button",
+      "visibility": "<SlateVisibility.VISIBLE: 0>"
+    },
+    {
+      "name": "Button_PreviousLabel",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "text": "\u524d\u3078"
+    },
+    {
+      "name": "Button_NextFrame",
+      "class": "WBP_HoloActionFrame_C",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263A900) {offsets: {left: 1480.000000, top: 335.000000, right: 120.000000, bottom: 80.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "Button_Next",
+      "class": "Button",
+      "visibility": "<SlateVisibility.VISIBLE: 0>"
+    },
+    {
+      "name": "Button_NextLabel",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "text": "\u6b21\u3078"
+    },
+    {
+      "name": "CarouselPrevious",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263C980) {offsets: {left: 30.000000, top: 180.000000, right: 600.000000, bottom: 350.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselPreviousFrame",
+      "class": "Image",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263D100) {offsets: {left: 0.000000, top: 0.000000, right: 600.000000, bottom: 350.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF64DC0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: \"/Script/Engine.MaterialInstanceConstant'/Game/UI/Prototype/MI_UI_StageCarousel_Frame.MI_UI_StageCarousel_Frame'\", outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "CarouselPreviousImage",
+      "class": "Image",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263CFC0) {offsets: {left: 24.000000, top: 45.000000, right: 552.000000, bottom: 250.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF62FC0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: None, outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "CarouselPreviousEmpty",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263CE80) {offsets: {left: 140.000000, top: 140.000000, right: 320.000000, bottom: 88.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "PREVIEW\n\u7d20\u6750\u672a\u767b\u9332"
+    },
+    {
+      "name": "CarouselPreviousLabel",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263CD40) {offsets: {left: 30.000000, top: 298.000000, right: 540.000000, bottom: 36.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "CarouselPreviousBadge",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263CC00) {offsets: {left: 36.000000, top: 27.000000, right: 460.000000, bottom: 42.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "CarouselPreviousLock",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263CAC0) {offsets: {left: 525.000000, top: 25.000000, right: 42.000000, bottom: 45.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselPreviousLockBody",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263FB80) {offsets: {left: 6.000000, top: 18.000000, right: 26.000000, bottom: 22.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselPreviousLockLeft",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263FA40) {offsets: {left: 9.000000, top: 3.000000, right: 4.000000, bottom: 19.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselPreviousLockTop",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263F7C0) {offsets: {left: 9.000000, top: 3.000000, right: 20.000000, bottom: 4.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselPreviousLockRight",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263F900) {offsets: {left: 25.000000, top: 3.000000, right: 4.000000, bottom: 19.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselCurrent",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263DD80) {offsets: {left: 500.000000, top: 180.000000, right: 600.000000, bottom: 350.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselCurrentFrame",
+      "class": "Image",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263E500) {offsets: {left: 0.000000, top: 0.000000, right: 600.000000, bottom: 350.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF62AC0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: \"/Script/Engine.MaterialInstanceConstant'/Game/UI/Prototype/MI_UI_StageCarousel_Frame.MI_UI_StageCarousel_Frame'\", outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "CarouselCurrentImage",
+      "class": "Image",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263E3C0) {offsets: {left: 24.000000, top: 45.000000, right: 552.000000, bottom: 250.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF620C0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: None, outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "CarouselCurrentEmpty",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263E280) {offsets: {left: 140.000000, top: 140.000000, right: 320.000000, bottom: 88.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "PREVIEW\n\u7d20\u6750\u672a\u767b\u9332"
+    },
+    {
+      "name": "CarouselCurrentLabel",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263E140) {offsets: {left: 30.000000, top: 298.000000, right: 540.000000, bottom: 36.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "CarouselCurrentBadge",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263E000) {offsets: {left: 36.000000, top: 27.000000, right: 460.000000, bottom: 42.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "CarouselCurrentLock",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263DEC0) {offsets: {left: 525.000000, top: 25.000000, right: 42.000000, bottom: 45.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselCurrentLockBody",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120ECCE4C80) {offsets: {left: 6.000000, top: 18.000000, right: 26.000000, bottom: 22.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselCurrentLockLeft",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120ECCE9500) {offsets: {left: 9.000000, top: 3.000000, right: 4.000000, bottom: 19.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselCurrentLockTop",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120ECCE2480) {offsets: {left: 9.000000, top: 3.000000, right: 20.000000, bottom: 4.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselCurrentLockRight",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120ECCE25C0) {offsets: {left: 25.000000, top: 3.000000, right: 4.000000, bottom: 19.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselNext",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.SELF_HIT_TEST_INVISIBLE: 4>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263D240) {offsets: {left: 970.000000, top: 180.000000, right: 600.000000, bottom: 350.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselNextFrame",
+      "class": "Image",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263DC40) {offsets: {left: 0.000000, top: 0.000000, right: 600.000000, bottom: 350.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF634C0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: \"/Script/Engine.MaterialInstanceConstant'/Game/UI/Prototype/MI_UI_StageCarousel_Frame.MI_UI_StageCarousel_Frame'\", outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "CarouselNextImage",
+      "class": "Image",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263DB00) {offsets: {left: 24.000000, top: 45.000000, right: 552.000000, bottom: 250.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "brush": "<Struct 'SlateBrush' (0x000001214EF611C0) {tint_color: {specified_color: {r: 1.000000, g: 1.000000, b: 1.000000, a: 1.000000}, color_use_rule: UseColor_Specified}, draw_as: Image, tiling: NoTile, mirroring: NoMirror, image_size: {}, margin: {left: 0.000000, top: 0.000000, right: 0.000000, bottom: 0.000000}, resource_object: None, outline_settings: {corner_radii: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}, color: {specified_color: {r: 0.000000, g: 0.000000, b: 0.000000, a: 0.000000}, color_use_rule: UseColor_Specified}, width: 0.000000, rounding_type: HalfHeightRadius, use_brush_transparency: False}}>"
+    },
+    {
+      "name": "CarouselNextEmpty",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263D9C0) {offsets: {left: 140.000000, top: 140.000000, right: 320.000000, bottom: 88.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": "PREVIEW\n\u7d20\u6750\u672a\u767b\u9332"
+    },
+    {
+      "name": "CarouselNextLabel",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263D880) {offsets: {left: 30.000000, top: 298.000000, right: 540.000000, bottom: 36.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "CarouselNextBadge",
+      "class": "TextBlock",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263D740) {offsets: {left: 36.000000, top: 27.000000, right: 460.000000, bottom: 42.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>",
+      "text": ""
+    },
+    {
+      "name": "CarouselNextLock",
+      "class": "CanvasPanel",
+      "visibility": "<SlateVisibility.COLLAPSED: 1>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263D4C0) {offsets: {left: 525.000000, top: 25.000000, right: 42.000000, bottom: 45.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselNextLockBody",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120ECCEE500) {offsets: {left: 6.000000, top: 18.000000, right: 26.000000, bottom: 22.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselNextLockLeft",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120ECCEAA40) {offsets: {left: 9.000000, top: 3.000000, right: 4.000000, bottom: 19.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselNextLockTop",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263FCC0) {offsets: {left: 9.000000, top: 3.000000, right: 20.000000, bottom: 4.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    },
+    {
+      "name": "CarouselNextLockRight",
+      "class": "Border",
+      "visibility": "<SlateVisibility.HIT_TEST_INVISIBLE: 3>",
+      "layout": "<Struct 'AnchorData' (0x00000120F263FE00) {offsets: {left: 25.000000, top: 3.000000, right: 4.000000, bottom: 19.000000}, anchors: {minimum: {x: 0.000000, y: 0.000000}, maximum: {x: 0.000000, y: 0.000000}}, alignment: {x: 0.000000, y: 0.000000}}>"
+    }
+  ]
+}

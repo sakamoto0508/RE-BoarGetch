@@ -12,6 +12,10 @@
 #include "BoarGameInstance.h"
 #include "BoarSaveGame.h"
 #include "Components/CanvasPanelSlot.h"
+#include "UI/BoarStagePreviewActor.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Engine/World.h"
 
 namespace
 {
@@ -54,6 +58,7 @@ void UBoarLobbyWidget::NativeConstruct()
 
 void UBoarLobbyWidget::NativeDestruct()
 {
+	ReleasePreviews();
 	if (PreviousButton) PreviousButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::PreviousStage);
 	if (NextButton) NextButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::NextStage);
 	for (const auto& Entry : StageEntries) if (Entry)
@@ -197,6 +202,7 @@ void UBoarLobbyWidget::RefreshSelectedStage()
 
 void UBoarLobbyWidget::HideStageSelection()
 {
+	ReleasePreviews();
 	PendingStageIndex = INDEX_NONE;
 	bInitialFocusPending = false;
 	SelectedStageConfig = nullptr;
@@ -288,6 +294,16 @@ void UBoarLobbyWidget::ShowTravelError(const FText& Message) { if (StageStatus) 
 
 void UBoarLobbyWidget::RefreshCarousel()
 {
+	// Keep only currently visible miniatures; never retain the entire catalog in memory.
+	for (auto It = PreviewActors.CreateIterator(); It; ++It)
+	{
+		const int32 StageIndex = AvailableStages.IndexOfByPredicate([&](const auto& S) { return S && S->StageId == It.Key(); });
+		if (StageIndex == INDEX_NONE || FMath::Abs(StageIndex - SelectedStageIndex) > 1)
+		{
+			if (IsValid(It.Value())) It.Value()->Destroy();
+			PreviewBrushes.Remove(It.Key()); It.RemoveCurrent();
+		}
+	}
 	const auto* GI = GetGameInstance<UBoarGameInstance>();
 	const auto* Save = GI ? GI->GetProgress() : nullptr;
 	const TCHAR* Names[] = {TEXT("Previous"), TEXT("Current"), TEXT("Next")};
@@ -309,14 +325,17 @@ void UBoarLobbyWidget::RefreshCarousel()
 			Badge->SetText(!Stage ? FText::GetEmpty() : !bUnlocked ? FText::FromString(TEXT("LOCKED")) : Save && Save->ClearedStageIds.Contains(Stage->StageId) ? FText::FromString(TEXT("CLEAR")) : FText::GetEmpty());
 		if (auto* Lock = WidgetTree->FindWidget(FName(*(Prefix + TEXT("Lock"))))) Lock->SetVisibility(Stage && !bUnlocked ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		UTexture2D* Thumbnail = Stage ? Stage->Thumbnail.LoadSynchronous() : nullptr;
+		UMaterialInstanceDynamic* Diorama = Stage ? GetDioramaBrush(Stage) : nullptr;
+		if (Diorama) Diorama->SetScalarParameterValue(TEXT("Saturation"), !bUnlocked || I == 2 ? .18f : I == 0 ? .5f : 1.f);
 		if (auto* Preview = ResolveLobbyWidget<UImage>(WidgetTree, FName(*(Prefix + TEXT("Image")))))
 		{
-			Preview->SetBrushFromTexture(Thumbnail, false);
-			Preview->SetVisibility(Thumbnail ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+			if (Diorama) Preview->SetBrushFromMaterial(Diorama);
+			else Preview->SetBrushFromTexture(Thumbnail, false);
+			Preview->SetVisibility(Diorama || Thumbnail ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 			// Preserve recognizable outlines without exposing bright detail on the next/locked preview.
-			Preview->SetColorAndOpacity(!bUnlocked || I == 2 ? FLinearColor(.12f,.2f,.27f,1) : I == 0 ? FLinearColor(.45f,.55f,.6f,1) : FLinearColor::White);
+			Preview->SetColorAndOpacity(!bUnlocked || I == 2 ? FLinearColor(.5f,.62f,.78f,1) : I == 0 ? FLinearColor(.75f,.83f,.9f,1) : FLinearColor::White);
 		}
-		if (auto* Empty = WidgetTree->FindWidget(FName(*(Prefix + TEXT("Empty"))))) Empty->SetVisibility(Stage && !Thumbnail ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		if (auto* Empty = WidgetTree->FindWidget(FName(*(Prefix + TEXT("Empty"))))) Empty->SetVisibility(Stage && !Thumbnail && !Diorama ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
 	if (auto* Number = ResolveLobbyWidget<UTextBlock>(WidgetTree, TEXT("Text_StageNumber"))) Number->SetText(SelectedStageConfig ? FText::FromName(SelectedStageConfig->StageId) : FText::GetEmpty());
 	if (!IsUnlocked(SelectedStageConfig))
@@ -327,6 +346,31 @@ void UBoarLobbyWidget::RefreshCarousel()
 		if (StageProgress) StageProgress->SetText(FText::GetEmpty());
 		if (StageStatus) StageStatus->SetText(FText::FromString(TEXT("LOCKED")));
 	}
+}
+
+UMaterialInstanceDynamic* UBoarLobbyWidget::GetDioramaBrush(const UStageConfig* Stage)
+{
+	if (!Stage || Stage->PreviewActorClass.IsNull() || !PreviewMaterial || !GetWorld()) return nullptr;
+	if (auto* Existing = PreviewBrushes.Find(Stage->StageId)) return Existing->Get();
+	UClass* Class = Stage->PreviewActorClass.LoadSynchronous();
+	if (!Class) return nullptr;
+	FActorSpawnParameters Params;
+	Params.ObjectFlags |= RF_Transient;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	auto* Actor = GetWorld()->SpawnActor<ABoarStagePreviewActor>(Class, FVector(0,0,-100000), FRotator::ZeroRotator, Params);
+	if (!Actor) return nullptr;
+	UTextureRenderTarget2D* Target = Actor->CreatePreview();
+	if (!Target) { Actor->Destroy(); return nullptr; }
+	auto* Brush = UMaterialInstanceDynamic::Create(PreviewMaterial, this);
+	Brush->SetTextureParameterValue(TEXT("PreviewTexture"), Target);
+	PreviewActors.Add(Stage->StageId, Actor); PreviewBrushes.Add(Stage->StageId, Brush);
+	return Brush;
+}
+
+void UBoarLobbyWidget::ReleasePreviews()
+{
+	for (auto& Pair : PreviewActors) if (IsValid(Pair.Value)) Pair.Value->Destroy();
+	PreviewActors.Empty(); PreviewBrushes.Empty();
 }
 
 void UBoarLobbyWidget::AnimateCarousel(float DeltaTime)

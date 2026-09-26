@@ -7,6 +7,7 @@
 class UTexture2D;
 class UWorld;
 class ABoarBase;
+class ABoarStagePreviewActor;
 
 /** 永続個体IDと、Level上の固定SpawnPoint IDを結び付ける定義です。 */
 USTRUCT(BlueprintType)
@@ -81,6 +82,10 @@ public:
 	/** ロビーUIへ表示する任意のサムネイルです。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Display")
 	TSoftObjectPtr<UTexture2D> Thumbnail;
+
+	/** Optional lightweight UI-only miniature. Thumbnail remains the fallback. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Display")
+	TSoftClassPtr<ABoarStagePreviewActor> PreviewActorClass;
 
 	/** ステージクリアに必要な現在の檻収容数です。0以下の場合は判定を無効にします。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Clear", meta = (ClampMin = "0"))

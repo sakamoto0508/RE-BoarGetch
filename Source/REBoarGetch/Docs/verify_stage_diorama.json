@@ -1,0 +1,11 @@
+{
+  "carousel": true,
+  "preview_material": "<Object '/Game/UI/StagePreview/M_UI_Diorama.M_UI_Diorama' (0x0000029BA5FF6200) Class 'Material'>",
+  "preview_class": "<Object '/Game/UI/StagePreview/BP_Stage01_Diorama.BP_Stage01_Diorama_C' (0x0000029AE09CBD00) Class 'BlueprintGeneratedClass'>",
+  "parts": 53,
+  "catalog_visibility": "<SlateVisibility.COLLAPSED: 1>",
+  "input_previous": "[{}, {}, {}]",
+  "input_next": "[{}, {}, {}]",
+  "input_cancel": "[{}, {}]",
+  "dirty": []
+}

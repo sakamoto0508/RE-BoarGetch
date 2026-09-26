@@ -55,7 +55,19 @@ Tickは `ResizeFlowFrame` で寸法変化のみを確認し、値が変わった
 - 3枠のサムネイル表示を使用するため、旧StageThumbnailImageWidgetNameはNone。旧Image自体は削除していない。
 - 現在のStageCatalogはDA_TestStageConfigの1件のみ。新しいStageや個体データは作成していない。
 
-## 未実装・素材待ち
+## 2026-09-26 Diorama / Visual更新
+
+`WBP_LobbyStageSelect`を1800×1000の中央配置へ調整。半透明の濃紺Grid背景、上部Headerと矢印、700×525の中央Preview、下部Mission Data、右下Confirm／Back。CatalogPanelと旧ThumbnailはCollapsedを維持。図鑑ボタンは削除せずCollapsed（図鑑機能自体は維持）。数値更新は既存StageProgress／StageConfig／SaveDataを使用する。
+
+`/Game/UI/StagePreview/BP_Stage01_Diorama`は53個の表示専用Primitiveからなる小型模型。草地・土の周回路・Cage・水・風車・研究施設を表現。`ABoarStagePreviewActor`のSceneCapture2Dが表示時だけ1024×768の透過RenderTargetへ撮影する。実Levelはロードせず、Gameplay Actorを使用しない。CollisionとNav影響なし、通常のゲームカメラには描画しない。画面終了時にActor／RT参照を解放し、最大3Stageのみ保持する。
+
+StageConfigに任意の`PreviewActorClass`を追加。既存DA_TestStageConfigの表示用参照だけ設定し、StageCatalog、StageEntrance、Save、遷移条件は変更しない。Preview未登録・生成失敗時は従来Thumbnailへfallback。Stage 1以外の架空データは未追加。
+
+Currentは通常色、Previousは低彩度、Next／LOCKEDはさらに低彩度で輪郭と青みを残す。既存スライド時間・470px移動・端点処理・LastAttemptedStage・入力・CLEAR／LOCKED処理は維持。
+
+C++ Development Editorビルド成功。Widget／Preview Blueprint Compile・Save成功。保存後のPreview参照、53パーツ、bUseCarousel、CatalogPanel Collapsed、対象Assetの未保存なしを確認。PIE／Runtime未実施。実機での透過描画、文字配置、Gamepad、連続開閉、複数Stage切替、LOCKED表示はユーザー確認待ち。
+
+## 前回時点の未実装・素材待ち（上記更新前）
 
 既存Previewアセットは検索で見つからず、3Dジオラマ／SceneCapture／RenderTargetは今回追加していない。サムネイルがあれば暫定表示し、なければ「素材未登録」と表示する。Next／未解放は暫定的に減光したサムネイル表現で、最終仕様の3Dシルエット表現は未完成。実Stageの特徴を簡略化したジオラマ素材と、そのPreview Actor／撮影構成の制作が必要。
 
