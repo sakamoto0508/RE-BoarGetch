@@ -1,0 +1,75 @@
+{
+  "actors": [
+    {
+      "name": "BP_Cage",
+      "path": "/Game/Level/Test.Test:PersistentLevel.BP_Cage_C_1",
+      "class": "/Game/BP/Cage/BP_Cage.BP_Cage_C",
+      "transform": "<Struct 'Transform' (0x0000029B2EE95410) {rotation: {x: 0.000000, y: 0.000000, z: 0.000000, w: 1.000000}, translation: {x: 120.000000, y: -1510.000000, z: 0.000000}, scale3d: {x: 1.000000, y: 1.000000, z: 1.000000}}>",
+      "components": [
+        {
+          "name": "SceneRoot",
+          "class": "SceneComponent",
+          "location": "<Struct 'Vector' (0x0000029BD389EB80) {x: 120.000000, y: -1510.000000, z: 0.000000}>",
+          "scale": "<Struct 'Vector' (0x0000029BD389EBB0) {x: 1.000000, y: 1.000000, z: 1.000000}>"
+        },
+        {
+          "name": "CapturedBoarArea",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000029BE9560F80) {x: 0.000000, y: 0.000000, z: 120.000000}>",
+          "scale": "<Struct 'Vector' (0x0000029BE9560FB0) {x: 1.000000, y: 1.000000, z: 1.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+        },
+        {
+          "name": "cage",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000029BD4BBE780) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+          "scale": "<Struct 'Vector' (0x0000029BD4BBE7B0) {x: 0.500000, y: 0.500000, z: 0.500000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Game/InportAssets/\u6abb/cage.cage",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000029BD4A38180) {origin: {x: 0.000000, y: 0.000000, z: 532.821105}, box_extent: {x: 500.000000, y: 500.000000, z: 527.935975}, sphere_radius: 882.449089}>",
+          "materials": [
+            "/Game/InportAssets/\u6abb/cage_color.cage_color"
+          ]
+        },
+        {
+          "name": "WallCollisionFront",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000029BA48FB080) {x: 230.000000, y: 0.000000, z: 270.000000}>",
+          "scale": "<Struct 'Vector' (0x0000029BA48FB0B0) {x: 0.500000, y: 8.000000, z: 8.056641}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+        },
+        {
+          "name": "WallCollisionBack",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000029BA48F9B80) {x: -240.000000, y: 0.000000, z: 270.000000}>",
+          "scale": "<Struct 'Vector' (0x0000029BA48F9BB0) {x: 0.500000, y: 8.000000, z: 8.056641}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+        },
+        {
+          "name": "WallCollisionLeft",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000029BA48FA980) {x: 0.000000, y: -240.000000, z: 270.000000}>",
+          "scale": "<Struct 'Vector' (0x0000029BA48FA9B0) {x: 0.500000, y: 8.000000, z: 8.056641}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+        },
+        {
+          "name": "WallCollisionRight",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000029BA48FDA80) {x: -0.000000, y: 240.000000, z: 270.000000}>",
+          "scale": "<Struct 'Vector' (0x0000029BA48FDAB0) {x: 0.500000, y: 8.000000, z: 8.056641}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+        }
+      ],
+      "max_hp": 100.0,
+      "current_hp": 100.0,
+      "respawn_delay": 10.0,
+      "captured_boar_spacing": 140.0
+    }
+  ],
+  "assets": [
+    "/Game/BP/Cage/BP_Cage.BP_Cage",
+    "/Game/Stage01/GroundStructure/Meshes/SM_S01_CageBase.SM_S01_CageBase",
+    "/Game/Stage01/GroundStructure/Meshes/SM_S01_CagePanels.SM_S01_CagePanels",
+    "/Game/Stage01/GroundStructure/Meshes/SM_S01_CagePanelsCool.SM_S01_CagePanelsCool"
+  ]
+}

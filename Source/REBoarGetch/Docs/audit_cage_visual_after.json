@@ -1,0 +1,416 @@
+{
+  "actors": [
+    {
+      "name": "BP_Cage",
+      "path": "/Game/Level/Test.Test:PersistentLevel.BP_Cage_C_1",
+      "class": "/Game/BP/Cage/BP_Cage.BP_Cage_C",
+      "transform": "<Struct 'Transform' (0x0000022D2995FA50) {rotation: {x: 0.000000, y: 0.000000, z: 0.000000, w: 1.000000}, translation: {x: 120.000000, y: -1510.000000, z: 0.000000}, scale3d: {x: 1.000000, y: 1.000000, z: 1.000000}}>",
+      "components": [
+        {
+          "name": "SceneRoot",
+          "class": "SceneComponent",
+          "location": "<Struct 'Vector' (0x0000022D7B999D80) {x: 120.000000, y: -1510.000000, z: 0.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022D7B999DB0) {x: 1.000000, y: 1.000000, z: 1.000000}>"
+        },
+        {
+          "name": "CagePresentation",
+          "class": "CageVisualComponent",
+          "location": "<Struct 'Vector' (0x0000022D7B99AC80) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022D7B99ACB0) {x: 1.000000, y: 1.000000, z: 1.000000}>"
+        },
+        {
+          "name": "CapturedBoarArea",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000022D52FB9480) {x: 0.000000, y: 0.000000, z: 120.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022D52FB94B0) {x: 1.000000, y: 1.000000, z: 1.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+        },
+        {
+          "name": "Shell_00",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CE0AEDD80) {x: 0.000000, y: 0.000000, z: 14.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CE0AEDDB0) {x: 5.500000, y: 5.500000, z: 0.240000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551800) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Navy.M_Cage_Navy"
+          ]
+        },
+        {
+          "name": "Shell_01",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CE0AEAB80) {x: -238.000000, y: -238.000000, z: 273.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CE0AEABB0) {x: 0.480000, y: 0.480000, z: 5.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DCE7F8200) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_02",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CE0AE3D80) {x: -238.000000, y: -238.000000, z: 40.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CE0AE3DB0) {x: 0.660000, y: 0.660000, z: 0.420000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC95524C0) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_03",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CE0AED380) {x: -238.000000, y: -238.000000, z: 521.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CE0AED3B0) {x: 0.660000, y: 0.660000, z: 0.420000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551480) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_04",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CE0AE6580) {x: -264.000000, y: -238.000000, z: 280.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CE0AE65B0) {x: 0.070000, y: 0.200000, z: 2.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551800) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "Shell_05",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CE0AEC980) {x: -238.000000, y: 238.000000, z: 273.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CE0AEC9B0) {x: 0.480000, y: 0.480000, z: 5.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9552380) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_06",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDE0CE780) {x: -238.000000, y: 238.000000, z: 40.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDE0CE7B0) {x: 0.660000, y: 0.660000, z: 0.420000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551480) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_07",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDE0CF180) {x: -238.000000, y: 238.000000, z: 521.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDE0CF1B0) {x: 0.660000, y: 0.660000, z: 0.420000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551480) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_08",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA1E780) {x: -264.000000, y: 238.000000, z: 280.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA1E7B0) {x: 0.070000, y: 0.200000, z: 2.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9552380) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "Shell_09",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA1DD80) {x: 238.000000, y: -238.000000, z: 273.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA1DDB0) {x: 0.480000, y: 0.480000, z: 5.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551480) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_10",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA1D380) {x: 238.000000, y: -238.000000, z: 40.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA1D3B0) {x: 0.660000, y: 0.660000, z: 0.420000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551480) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_11",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA1C980) {x: 238.000000, y: -238.000000, z: 521.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA1C9B0) {x: 0.660000, y: 0.660000, z: 0.420000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC955FE40) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_12",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA1BF80) {x: 264.000000, y: -238.000000, z: 280.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA1BFB0) {x: 0.070000, y: 0.200000, z: 2.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC95524C0) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "Shell_13",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA1B580) {x: 238.000000, y: 238.000000, z: 273.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA1B5B0) {x: 0.480000, y: 0.480000, z: 5.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551800) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_14",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA1AB80) {x: 238.000000, y: 238.000000, z: 40.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA1ABB0) {x: 0.660000, y: 0.660000, z: 0.420000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551800) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_15",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA1A180) {x: 238.000000, y: 238.000000, z: 521.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA1A1B0) {x: 0.660000, y: 0.660000, z: 0.420000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC95524C0) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_16",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA19780) {x: 264.000000, y: 238.000000, z: 280.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA197B0) {x: 0.070000, y: 0.200000, z: 2.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC955FE40) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "Shell_17",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA18D80) {x: -239.000000, y: 0.000000, z: 46.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA18DB0) {x: 0.430000, y: 4.750000, z: 0.350000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC955FE40) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_18",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA18380) {x: 0.000000, y: -239.000000, z: 46.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA183B0) {x: 4.750000, y: 0.430000, z: 0.350000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551480) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_19",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA17980) {x: -239.000000, y: 0.000000, z: 514.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA179B0) {x: 0.430000, y: 4.750000, z: 0.350000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC955FE40) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_20",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA16F80) {x: 0.000000, y: -239.000000, z: 514.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA16FB0) {x: 4.750000, y: 0.430000, z: 0.350000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC95517C0) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_21",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA16580) {x: 239.000000, y: 0.000000, z: 46.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA165B0) {x: 0.430000, y: 4.750000, z: 0.350000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC95522C0) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_22",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA15B80) {x: 0.000000, y: 239.000000, z: 46.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA15BB0) {x: 4.750000, y: 0.430000, z: 0.350000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC95524C0) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_23",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA15180) {x: 239.000000, y: 0.000000, z: 514.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA151B0) {x: 0.430000, y: 4.750000, z: 0.350000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC95524C0) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_24",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA14780) {x: 0.000000, y: 239.000000, z: 514.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA147B0) {x: 4.750000, y: 0.430000, z: 0.350000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC955FE40) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_25",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA13D80) {x: 271.000000, y: 0.000000, z: 466.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA13DB0) {x: 0.160000, y: 1.800000, z: 0.560000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551480) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Navy.M_Cage_Navy"
+          ]
+        },
+        {
+          "name": "Shell_26",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA13380) {x: 282.000000, y: 0.000000, z: 466.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA133B0) {x: 0.070000, y: 1.450000, z: 0.260000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9552380) {origin: {x: 0.000000, y: 0.000000, z: 0.000000}, box_extent: {x: 50.000000, y: 50.000000, z: 50.000000}, sphere_radius: 86.602539}>",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "CageHPGauge",
+          "class": "WidgetComponent",
+          "location": "<Struct 'Vector' (0x0000022CDEA12980) {x: 0.000000, y: 0.000000, z: 650.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CDEA129B0) {x: 0.900000, y: 0.900000, z: 0.900000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+        },
+        {
+          "name": "cage",
+          "class": "StaticMeshComponent",
+          "location": "<Struct 'Vector' (0x0000022CC570D380) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022CC570D3B0) {x: 0.500000, y: 0.500000, z: 0.500000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "mesh": "/Game/InportAssets/\u6abb/cage.cage",
+          "bounds": "<Struct 'BoxSphereBounds' (0x0000022DC9551480) {origin: {x: 0.000000, y: 0.000000, z: 532.821105}, box_extent: {x: 500.000000, y: 500.000000, z: 527.935975}, sphere_radius: 882.449089}>",
+          "materials": [
+            "/Game/InportAssets/\u6abb/cage_color.cage_color"
+          ]
+        },
+        {
+          "name": "WallCollisionFront",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000022D43F4C580) {x: 230.000000, y: 0.000000, z: 270.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022D43F4C5B0) {x: 0.500000, y: 8.000000, z: 8.056641}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+        },
+        {
+          "name": "WallCollisionBack",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000022D43F44E80) {x: -240.000000, y: 0.000000, z: 270.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022D43F44EB0) {x: 0.500000, y: 8.000000, z: 8.056641}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+        },
+        {
+          "name": "WallCollisionLeft",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000022DCAA3DA80) {x: 0.000000, y: -240.000000, z: 270.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022DCAA3DAB0) {x: 0.500000, y: 8.000000, z: 8.056641}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+        },
+        {
+          "name": "WallCollisionRight",
+          "class": "BoxComponent",
+          "location": "<Struct 'Vector' (0x0000022DCAA3A280) {x: -0.000000, y: 240.000000, z: 270.000000}>",
+          "scale": "<Struct 'Vector' (0x0000022DCAA3A2B0) {x: 0.500000, y: 8.000000, z: 8.056641}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+        }
+      ],
+      "max_hp": 100.0,
+      "current_hp": 100.0,
+      "respawn_delay": 10.0,
+      "captured_boar_spacing": 140.0
+    }
+  ],
+  "assets": [
+    "/Game/BP/Cage/BP_Cage.BP_Cage",
+    "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow",
+    "/Game/BP/Cage/Materials/M_Cage_Navy.M_Cage_Navy",
+    "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White",
+    "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow",
+    "/Game/Stage01/GroundStructure/Meshes/SM_S01_CageBase.SM_S01_CageBase",
+    "/Game/Stage01/GroundStructure/Meshes/SM_S01_CagePanels.SM_S01_CagePanels",
+    "/Game/Stage01/GroundStructure/Meshes/SM_S01_CagePanelsCool.SM_S01_CagePanelsCool"
+  ]
+}

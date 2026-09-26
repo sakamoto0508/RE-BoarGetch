@@ -2,6 +2,7 @@
 
 
 #include "Cage/Cage.h"
+#include "Cage/CageVisualComponent.h"
 #include "Boar/BoarBase.h"
 #include "AIController.h"
 #include "Components/BoxComponent.h"
@@ -19,6 +20,8 @@ ACage::ACage()
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
+	Presentation = CreateDefaultSubobject<UCageVisualComponent>(TEXT("CagePresentation"));
+	Presentation->SetupAttachment(SceneRoot);
 
 	CapturedBoarArea = CreateDefaultSubobject<UBoxComponent>(TEXT("CapturedBoarArea"));
 	CapturedBoarArea->SetupAttachment(SceneRoot);

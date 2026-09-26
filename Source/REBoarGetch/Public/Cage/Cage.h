@@ -10,6 +10,7 @@
 class ABoarBase;
 class UBoxComponent;
 class USceneComponent;
+class UCageVisualComponent;
 
 /** 
  * * 捕獲したイノシシを収容する檻を管理するActorです。 
@@ -80,6 +81,7 @@ public:
 	/** 檻の現在HPを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Cage")
 	float GetHP() const { return CurrentHp; }
+	float GetMaxHP() const { return MaxHp; }
 
 	/** 檻へダメージを与えます。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
@@ -90,6 +92,7 @@ public:
 	bool GetIsCageDestroyed() const { return bIsDestroyed; }
 
 private:
+	UPROPERTY(VisibleAnywhere,Category="Cage|Visual") TObjectPtr<UCageVisualComponent> Presentation;
 	bool bStageInitialized = false;
 	void NotifyHousedCountChanged();
 	UFUNCTION() void HandleHousedBoarDestroyed(AActor* Actor);
