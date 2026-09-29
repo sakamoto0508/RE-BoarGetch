@@ -1,0 +1,132 @@
+{
+  "L_GadgetLab": [
+    {
+      "actor": "Architecture_LabFill_-780_-425",
+      "lumens": 500.0,
+      "temperature": 5800.0
+    },
+    {
+      "actor": "Architecture_LabFill_-780_425",
+      "lumens": 500.0,
+      "temperature": 5800.0
+    },
+    {
+      "actor": "Architecture_LabFill_780_-425",
+      "lumens": 500.0,
+      "temperature": 5800.0
+    },
+    {
+      "actor": "Architecture_LabFill_780_425",
+      "lumens": 500.0,
+      "temperature": 5800.0
+    },
+    {
+      "actor": "Architecture_Ice",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Ice.SM_L_GadgetLab_Architecture_Ice",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_Ivory",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Ivory.SM_L_GadgetLab_Architecture_Ivory",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_Navy",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Navy.SM_L_GadgetLab_Architecture_Navy",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_Cyan",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Cyan.SM_L_GadgetLab_Architecture_Cyan",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_Yellow",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Yellow.SM_L_GadgetLab_Architecture_Yellow",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_SoftWhite",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_SoftWhite.SM_L_GadgetLab_Architecture_SoftWhite",
+      "material": "/Game/Lobby/Materials/M_Architecture_SoftWhite.M_Architecture_SoftWhite",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_CeilingDiffuser",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_CeilingDiffuser.SM_L_GadgetLab_CeilingDiffuser",
+      "material": "/Game/Lobby/Materials/M_Architecture_CeilingWhite.M_Architecture_CeilingWhite",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    }
+  ],
+  "L_Lobby": [
+    {
+      "actor": "Architecture_AtriumFill_-900_-650",
+      "lumens": 1200.0,
+      "temperature": 5800.0
+    },
+    {
+      "actor": "Architecture_AtriumFill_-900_650",
+      "lumens": 1200.0,
+      "temperature": 5800.0
+    },
+    {
+      "actor": "Architecture_AtriumFill_900_-650",
+      "lumens": 1200.0,
+      "temperature": 5800.0
+    },
+    {
+      "actor": "Architecture_AtriumFill_900_650",
+      "lumens": 1200.0,
+      "temperature": 5800.0
+    },
+    {
+      "actor": "Architecture_Navy",
+      "mesh": "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Navy.SM_L_Lobby_Architecture_Navy",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_Ivory",
+      "mesh": "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Ivory.SM_L_Lobby_Architecture_Ivory",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_SoftWhite",
+      "mesh": "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_SoftWhite.SM_L_Lobby_Architecture_SoftWhite",
+      "material": "/Game/Lobby/Materials/M_Architecture_SoftWhite.M_Architecture_SoftWhite",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_Cyan",
+      "mesh": "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Cyan.SM_L_Lobby_Architecture_Cyan",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_Yellow",
+      "mesh": "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Yellow.SM_L_Lobby_Architecture_Yellow",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_Ice",
+      "mesh": "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Ice.SM_L_Lobby_Architecture_Ice",
+      "material": "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "actor": "Architecture_CeilingDiffuser",
+      "mesh": "/Game/Lobby/Meshes/SM_L_Lobby_CeilingDiffuser.SM_L_Lobby_CeilingDiffuser",
+      "material": "/Game/Lobby/Materials/M_Architecture_CeilingWhite.M_Architecture_CeilingWhite",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    }
+  ],
+  "dirty_maps": [],
+  "pie_running": false
+}

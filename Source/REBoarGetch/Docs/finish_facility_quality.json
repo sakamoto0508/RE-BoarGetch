@@ -1,0 +1,11 @@
+{
+  "L_GadgetLab": {
+    "saved": true,
+    "actors": 65
+  },
+  "L_Archive": {
+    "saved": true,
+    "actors": 71
+  },
+  "material": "/Game/Lobby/Materials/M_Facility_ExhibitHologram"
+}

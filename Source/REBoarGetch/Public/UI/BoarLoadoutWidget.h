@@ -21,6 +21,8 @@ class REBOARGETCH_API UBoarLoadoutWidget : public UUserWidget
 public:
 	UPROPERTY(BlueprintAssignable) FOnLoadoutClosed OnClosed;
 	void FocusInitialChoice();
+	/** Set before AddToViewport. Pause defaults to equipment-only. */
+	void SetLabContext(bool bEnabled) { bRequestedLabContext = bEnabled; }
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
@@ -39,6 +41,7 @@ private:
 	UFUNCTION() void RefreshSlots();
 	UFUNCTION() void ChooseSlot(int32 Index);
 	UFUNCTION() void ChooseCandidate(int32 Index);
+	UFUNCTION() void ChooseLabMode(int32 Index);
 	UFUNCTION() void PreviewSlot(int32 Index);
 	UFUNCTION() void PreviewCandidate(int32 Index);
 	UFUNCTION() void Close();
@@ -59,5 +62,9 @@ private:
 	UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> CandidateEntries;
 	UPROPERTY(Transient) TArray<TSubclassOf<AGadgetBase>> Candidates;
 	int32 SelectedSlot = 0;
+	int32 LabMode = 0; // Equip / manual unlock / test target, independent of SelectedSlot.
+	bool bLabContext = false;
+	bool bRequestedLabContext = false;
+	UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> LabModeEntries;
 	bool bInitialFocusPending = true;
 };

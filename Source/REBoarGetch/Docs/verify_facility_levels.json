@@ -1,0 +1,77 @@
+{
+  "/Game/Level/L_GadgetLab": {
+    "game_mode": "<Object '/Game/BP/Lobby/BP_GM_GadgetLab.BP_GM_GadgetLab_C' (0x000001CB5BA38500) Class 'BlueprintGeneratedClass'>",
+    "portals": [
+      {
+        "name": "ReturnToLobby",
+        "action": "<HubPortalAction.TRAVEL: 0>",
+        "destination": "<Object '/Game/Level/L_Lobby.L_Lobby' (0x000001CBA19F6200) Class 'World'>",
+        "location": "<Struct 'Vector' (0x000001CA24223EE0) {x: -1070.000000, y: 0.000000, z: 140.000000}>",
+        "extent": "<Struct 'Vector' (0x000001CA24223EE0) {x: 80.000000, y: 140.000000, z: 150.000000}>",
+        "collision": "<CollisionEnabled.QUERY_ONLY: 1>"
+      },
+      {
+        "name": "OpenFacilityUI",
+        "action": "<HubPortalAction.LOADOUT: 1>",
+        "destination": "None",
+        "location": "<Struct 'Vector' (0x000001CA24223FD0) {x: 0.000000, y: -510.000000, z: 130.000000}>",
+        "extent": "<Struct 'Vector' (0x000001CA24223FD0) {x: 145.000000, y: 85.000000, z: 140.000000}>",
+        "collision": "<CollisionEnabled.QUERY_ONLY: 1>"
+      }
+    ],
+    "targets": 2,
+    "spawn": "<Struct 'Vector' (0x000001CA24223E90) {x: -750.000000, y: 0.000000, z: 100.000000}>"
+  },
+  "/Game/Level/L_Archive": {
+    "game_mode": "<Object '/Game/BP/Lobby/BP_GM_Archive.BP_GM_Archive_C' (0x000001CA36AD3100) Class 'BlueprintGeneratedClass'>",
+    "portals": [
+      {
+        "name": "ReturnToLobby",
+        "action": "<HubPortalAction.TRAVEL: 0>",
+        "destination": "<Object '/Game/Level/L_Lobby.L_Lobby' (0x000001CBA19F6200) Class 'World'>",
+        "location": "<Struct 'Vector' (0x000001CA24220060) {x: -770.000000, y: 0.000000, z: 140.000000}>",
+        "extent": "<Struct 'Vector' (0x000001CA24220060) {x: 80.000000, y: 140.000000, z: 150.000000}>",
+        "collision": "<CollisionEnabled.QUERY_ONLY: 1>"
+      },
+      {
+        "name": "OpenFacilityUI",
+        "action": "<HubPortalAction.ARCHIVE: 2>",
+        "destination": "None",
+        "location": "<Struct 'Vector' (0x000001CA242200B0) {x: 0.000000, y: -310.000000, z: 130.000000}>",
+        "extent": "<Struct 'Vector' (0x000001CA242200B0) {x: 145.000000, y: 85.000000, z: 140.000000}>",
+        "collision": "<CollisionEnabled.QUERY_ONLY: 1>"
+      }
+    ],
+    "targets": 0,
+    "spawn": "<Struct 'Vector' (0x000001CA24223FD0) {x: -450.000000, y: 0.000000, z: 100.000000}>"
+  },
+  "/Game/Level/L_Lobby": {
+    "game_mode": "<Object '/Game/BP/Lobby/BP_GM_Lobby.BP_GM_Lobby_C' (0x000001CB52DE7E00) Class 'BlueprintGeneratedClass'>",
+    "portals": [
+      {
+        "name": "PortalGadgetTravel",
+        "action": "<HubPortalAction.TRAVEL: 0>",
+        "destination": "<Object '/Game/Level/L_GadgetLab.L_GadgetLab' (0x000001CBA19FC400) Class 'World'>",
+        "location": "<Struct 'Vector' (0x000001CA24220380) {x: 0.000000, y: -970.000000, z: 140.000000}>",
+        "extent": "<Struct 'Vector' (0x000001CA24220380) {x: 160.000000, y: 85.000000, z: 150.000000}>",
+        "collision": "<CollisionEnabled.QUERY_ONLY: 1>"
+      },
+      {
+        "name": "PortalArchiveTravel",
+        "action": "<HubPortalAction.TRAVEL: 0>",
+        "destination": "<Object '/Game/Level/L_Archive.L_Archive' (0x000001CBA19FEE00) Class 'World'>",
+        "location": "<Struct 'Vector' (0x000001CA242202E0) {x: 0.000000, y: 970.000000, z: 140.000000}>",
+        "extent": "<Struct 'Vector' (0x000001CA242202E0) {x: 160.000000, y: 85.000000, z: 150.000000}>",
+        "collision": "<CollisionEnabled.QUERY_ONLY: 1>"
+      }
+    ],
+    "targets": 0,
+    "spawn": "<Struct 'Vector' (0x000001CA242200B0) {x: -1120.000000, y: 0.000000, z: 110.000000}>",
+    "stage_entrance": {
+      "location": "<Struct 'Vector' (0x000001CA242200B0) {x: 1210.000000, y: 0.000000, z: 130.000000}>",
+      "catalog": "[\"/Script/REBoarGetch.StageConfig'/Game/DataAssets/StageConfig/DA_TestStageConfig.DA_TestStageConfig'\"]",
+      "widget": "<Object '/Game/BP/Widget/WBP_LobbyStageSelect.WBP_LobbyStageSelect_C' (0x000001CB4D5CC800) Class 'WidgetBlueprintGeneratedClass'>"
+    }
+  },
+  "dirty_maps": []
+}

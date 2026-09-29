@@ -1,0 +1,29 @@
+{
+  "display": [
+    {
+      "name": "DisplayNet_Station",
+      "mesh": "/Game/InportAssets/mushitoriami/mushitoriami.mushitoriami",
+      "materials": [
+        "/Game/InportAssets/mushitoriami/\u30de\u30c6\u30ea\u30a2\u30eb.\u30de\u30c6\u30ea\u30a2\u30eb"
+      ],
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+      "components": [
+        "SkeletalMeshComponent"
+      ]
+    },
+    {
+      "name": "DisplayNet_Collection",
+      "mesh": "/Game/InportAssets/mushitoriami/mushitoriami.mushitoriami",
+      "materials": [
+        "/Game/InportAssets/mushitoriami/\u30de\u30c6\u30ea\u30a2\u30eb.\u30de\u30c6\u30ea\u30a2\u30eb"
+      ],
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+      "components": [
+        "SkeletalMeshComponent"
+      ]
+    }
+  ],
+  "saved": true,
+  "dirty_maps": [],
+  "dirty_assets": []
+}

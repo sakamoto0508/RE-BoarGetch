@@ -1,0 +1,68 @@
+{
+  "saved": true,
+  "layout": [
+    {
+      "actor": "CollectionPod_Net",
+      "side": -1,
+      "center_y": 300,
+      "yaw": 90
+    },
+    {
+      "actor": "CollectionPod_Reserve_1",
+      "side": -1,
+      "center_y": 520,
+      "yaw": 90
+    },
+    {
+      "actor": "CollectionPod_Reserve_2",
+      "side": -1,
+      "center_y": 740,
+      "yaw": 90
+    },
+    {
+      "actor": "CollectionPod_Reserve_3",
+      "side": 1,
+      "center_y": 300,
+      "yaw": -90
+    },
+    {
+      "actor": "CollectionPod_Reserve_4",
+      "side": 1,
+      "center_y": 520,
+      "yaw": -90
+    },
+    {
+      "actor": "CollectionPod_Reserve_5",
+      "side": 1,
+      "center_y": 740,
+      "yaw": -90
+    }
+  ],
+  "protected_transforms_unchanged": true,
+  "hidden_old_architecture": [
+    "CleanLab_CollectionRail",
+    "CleanLab_CollectionHeader",
+    "CleanLab_Bay0",
+    "CleanLab_BayFoot0",
+    "CleanLab_BayLine0",
+    "CleanLab_BayIndex0",
+    "CleanLab_Bay1",
+    "CleanLab_BayFoot1",
+    "CleanLab_BayLine1",
+    "CleanLab_BayIndex1",
+    "CleanLab_Bay2",
+    "CleanLab_BayFoot2",
+    "CleanLab_BayLine2",
+    "CleanLab_BayIndex2",
+    "CleanLab_Bay3",
+    "CleanLab_BayFoot3",
+    "CleanLab_BayLine3",
+    "CleanLab_BayIndex3",
+    "CleanLab_Bay4",
+    "CleanLab_BayFoot4",
+    "CleanLab_BayLine4",
+    "CleanLab_BayIndex4",
+    "CleanLab_CollectionFloor"
+  ],
+  "PIE": false
+}

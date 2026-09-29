@@ -17,6 +17,7 @@ public:
 	void Setup(int32 InIndex, const FText& Text, bool bSelected = false);
 	void FocusEntry();
 	void SetAvailable(bool bAvailable);
+	void UseCompactLabRow();
 	FOnLoadoutEntry OnChosen;
 	FOnLoadoutEntry OnFocused;
 protected:

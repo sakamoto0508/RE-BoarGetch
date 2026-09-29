@@ -4,6 +4,8 @@
 #include "Gadget/GadgetBase.h"
 #include "GadgetDataAsset.h"
 #include "Kismet/GameplayStatics.h"
+#include "Core/BoarFacilityGameMode.h"
+#include "Engine/World.h"
 
 void UBoarGameInstance::Init()
 {
@@ -92,8 +94,45 @@ void UBoarGameInstance::UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const
 	for (const TSubclassOf<AGadgetBase>& Class : GadgetCatalog)
 	{
 		const UGadgetDataAsset* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
-		if (Def && !Def->GadgetId.IsNone() && (Def->RequiredClearedStageId.IsNone()
-			|| Candidate->ClearedStageIds.Contains(Def->RequiredClearedStageId)))
+		if (Def && !Def->GadgetId.IsNone() && Def->bInitiallyUnlocked)
 			Candidate->UnlockedGadgetIds.Add(Def->GadgetId);
 	}
+}
+
+bool UBoarGameInstance::IsInGadgetLab() const
+{
+	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>() : nullptr;
+	return Mode && !Mode->bArchive && !Mode->bGadgetTest;
+}
+int32 UBoarGameInstance::GetSpecialCoinCount() const { return Progress ? Progress->SpecialCoinIds.Num() : 0; }
+bool UBoarGameInstance::CanUnlockGadget(FName Id) const
+{
+	const auto Class = FindGadgetClass(Id);
+	const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
+	return Progress && Def && !IsGadgetUnlocked(Id) && GetSpecialCoinCount() >= FMath::Max(0,Def->RequiredSpecialCoinCount);
+}
+bool UBoarGameInstance::UnlockGadgetInLab(FName Id)
+{
+	if (!IsInGadgetLab() || !CanUnlockGadget(Id)) return false;
+	auto* Candidate = DuplicateObject<UBoarSaveGame>(Progress,this);
+	Candidate->UnlockedGadgetIds.Add(Id);
+	return SaveCandidate(Candidate); // Coin IDs are never removed; publish only after save succeeds.
+}
+bool UBoarGameInstance::SelectTestGadget(FName Id)
+{
+	if (!IsInGadgetLab() || (!Id.IsNone() && (!FindGadgetClass(Id) || !IsGadgetUnlocked(Id)))) return false;
+	SelectedTestGadget = Id; OnTestGadgetChanged.Broadcast(); return true;
+}
+TSoftObjectPtr<UWorld> UBoarGameInstance::GetSelectedTestLevel() const
+{
+	const auto Class = FindGadgetClass(SelectedTestGadget);
+	const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
+	return Def && IsGadgetUnlocked(SelectedTestGadget) ? Def->TestLevel : TSoftObjectPtr<UWorld>();
+}
+
+void UBoarGameInstance::ClearTestGadget()
+{
+	if (SelectedTestGadget.IsNone()) return;
+	SelectedTestGadget = NAME_None;
+	OnTestGadgetChanged.Broadcast();
 }

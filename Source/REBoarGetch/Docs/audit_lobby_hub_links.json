@@ -1,0 +1,16 @@
+{
+  "/Game/BP/Widget/WBP_BoarEncyclopedia.WBP_BoarEncyclopedia": "WidgetBlueprint",
+  "/Game/BP/Widget/WBP_GadgetLoadout.WBP_GadgetLoadout": "WidgetBlueprint",
+  "/Game/BP/Widget/WBP_LoadoutEntry.WBP_LoadoutEntry": "WidgetBlueprint",
+  "/Game/BP/Widget/WBP_LobbyHUD.WBP_LobbyHUD": "WidgetBlueprint",
+  "/Game/BP/Widget/WBP_LobbyStageSelect.WBP_LobbyStageSelect": "WidgetBlueprint",
+  "/Game/UI/Prototype/MI_UI_HoloEncyclopedia_Panel.MI_UI_HoloEncyclopedia_Panel": "MaterialInstanceConstant",
+  "/Game/UI/Prototype/MI_UI_HoloLoadout_Panel_Prototype.MI_UI_HoloLoadout_Panel_Prototype": "MaterialInstanceConstant",
+  "/Game/UI/Prototype/MI_UI_HoloPause_Loadout_Prototype.MI_UI_HoloPause_Loadout_Prototype": "MaterialInstanceConstant",
+  "/Game/UI/Prototype/MI_UI_HoloStage_Encyclopedia_Prototype.MI_UI_HoloStage_Encyclopedia_Prototype": "MaterialInstanceConstant",
+  "entrance": {
+    "class": "/Game/BP/Lobby/BP_StageEntrance_Stage01.BP_StageEntrance_Stage01_C",
+    "widget": "<Object '/Game/BP/Widget/WBP_LobbyStageSelect.WBP_LobbyStageSelect_C' (0x00000151D02C3800) Class 'WidgetBlueprintGeneratedClass'>",
+    "stage_catalog": "[\"/Script/REBoarGetch.StageConfig'/Game/DataAssets/StageConfig/DA_TestStageConfig.DA_TestStageConfig'\"]"
+  }
+}

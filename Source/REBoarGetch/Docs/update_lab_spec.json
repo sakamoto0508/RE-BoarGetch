@@ -1,0 +1,28 @@
+{
+  "assets": [
+    "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Navy",
+    "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Ivory",
+    "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Yellow",
+    "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Glow",
+    "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Ice",
+    "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Cyan"
+  ],
+  "hidden": [
+    "TerminalBase",
+    "TerminalBody",
+    "TerminalPad",
+    "HubCollectionFace",
+    "DisplayStructure_Navy",
+    "DisplayStructure_Ivory",
+    "DisplayStructure_Yellow",
+    "DisplayStructure_Glow",
+    "DisplayStructure_Ice",
+    "DisplayStructure_Cyan",
+    "DisplayStructure_Panel",
+    "DisplayStationBackdrop",
+    "DisplayCollectionBackdrop",
+    "DisplayNet_Station"
+  ],
+  "level_saved": true,
+  "error": "Traceback (most recent call last):\n  File \"C:/UnrealGames/REBoarGetch/Source/REBoarGetch/Docs/update_lab_spec.py\", line 71, in <module>\n    if not action:action=AT.create_asset('IA_FacilityInteract','/Game/Input/Actions',unreal.InputAction,unreal.InputActionFactory())\n                                                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'unreal' has no attribute 'InputActionFactory'\n"
+}

@@ -1,0 +1,1163 @@
+{
+  "world": "/Game/Level/L_Lobby.L_Lobby",
+  "game_mode": "/Game/BP/Lobby/BP_GM_Lobby.BP_GM_Lobby_C",
+  "pawn": "<Object '/Game/BP/Player/BP_PlayerCharacter.BP_PlayerCharacter_C' (0x0000012FBCB76200) Class 'BlueprintGeneratedClass'>",
+  "controller": "<Object '/Game/BP/Lobby/BP_PC_Lobby.BP_PC_Lobby_C' (0x0000012FBF8D6900) Class 'BlueprintGeneratedClass'>",
+  "levels": "[\"/Game/Level/L_Lobby.L_Lobby\", \"/Game/Level/Test.Test\", \"/Game/Level/Title.Title\"]",
+  "actors": [
+    {
+      "label": "GadgetArea",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -200.0,
+        -960.0,
+        4.0
+      ]
+    },
+    {
+      "label": "GadgetBench",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -50.0,
+        -1190.0,
+        50.0
+      ]
+    },
+    {
+      "label": "GadgetTarget_A",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        250.0,
+        -1150.0,
+        100.0
+      ]
+    },
+    {
+      "label": "GadgetTarget_B",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        410.0,
+        -1150.0,
+        75.0
+      ]
+    },
+    {
+      "label": "PracticeStart",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -750.0,
+        930.0,
+        3.0
+      ]
+    },
+    {
+      "label": "PracticeLanding",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        940.0,
+        930.0,
+        80.0
+      ]
+    },
+    {
+      "label": "LobbyPlayerStart",
+      "class": "/Script/Engine.PlayerStart",
+      "p": [
+        -1120.0,
+        0.0,
+        110.0
+      ]
+    },
+    {
+      "label": "PracticeRamp",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        1140.0,
+        1110.0,
+        0.0
+      ]
+    },
+    {
+      "label": "GadgetSign",
+      "class": "/Script/Engine.TextRenderActor",
+      "p": [
+        -80.0,
+        -1280.0,
+        180.0
+      ]
+    },
+    {
+      "label": "PracticeSign",
+      "class": "/Script/Engine.TextRenderActor",
+      "p": [
+        -660.0,
+        1290.0,
+        160.0
+      ]
+    },
+    {
+      "label": "Port_GadgetPod_0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -440.0,
+        -900.0,
+        42.0
+      ]
+    },
+    {
+      "label": "Port_GadgetPodTop_0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -440.0,
+        -900.0,
+        81.0
+      ]
+    },
+    {
+      "label": "Port_GadgetPod_1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -210.0,
+        -900.0,
+        42.0
+      ]
+    },
+    {
+      "label": "Port_GadgetPodTop_1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -210.0,
+        -900.0,
+        81.0
+      ]
+    },
+    {
+      "label": "Port_GadgetPod_2",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        20.0,
+        -900.0,
+        42.0
+      ]
+    },
+    {
+      "label": "Port_GadgetPodTop_2",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        20.0,
+        -900.0,
+        81.0
+      ]
+    },
+    {
+      "label": "Stage01_UIEntrance",
+      "class": "/Game/BP/Lobby/BP_StageEntrance_Stage01.BP_StageEntrance_Stage01_C",
+      "p": [
+        1210.0,
+        0.0,
+        130.0
+      ]
+    },
+    {
+      "label": "LobbyArt_GadgetBorder",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -200.0,
+        -1290.0,
+        12.0
+      ]
+    },
+    {
+      "label": "LobbyArt_GadgetSupport-610",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -610.0,
+        -1260.0,
+        195.0
+      ]
+    },
+    {
+      "label": "LobbyArt_GadgetSupport210",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        210.0,
+        -1260.0,
+        195.0
+      ]
+    },
+    {
+      "label": "LobbyArt_GadgetCanopy",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -200.0,
+        -1220.0,
+        390.0
+      ]
+    },
+    {
+      "label": "LobbyArt_GadgetCanopyLight",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -200.0,
+        -1128.0,
+        387.0
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeEdge01-1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -350.0,
+        775.0,
+        80.8
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeEdge011",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -350.0,
+        1085.0,
+        80.8
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeStripe01",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -350.0,
+        930.0,
+        81.0
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeEdge02-1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        50.0,
+        775.0,
+        140.8
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeEdge021",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        50.0,
+        1085.0,
+        140.8
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeStripe02",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        50.0,
+        930.0,
+        141.0
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeEdge03-1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        480.0,
+        775.0,
+        200.8
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeEdge031",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        480.0,
+        1085.0,
+        200.8
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeStripe03",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        480.0,
+        930.0,
+        201.0
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeEdgeLanding-1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        940.0,
+        775.0,
+        160.8
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeEdgeLanding1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        940.0,
+        1085.0,
+        160.8
+      ]
+    },
+    {
+      "label": "LobbyArt_PracticeStripeLanding",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        940.0,
+        930.0,
+        161.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetTower-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        -720.0,
+        135.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetBase-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        -720.0,
+        27.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetYellow-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        -720.0,
+        260.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetInset-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        -652.0,
+        146.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetLamp-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        -645.0,
+        146.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetTower248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        -720.0,
+        135.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetBase248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        -720.0,
+        27.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetYellow248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        -720.0,
+        260.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetInset248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        -652.0,
+        146.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetLamp248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        -645.0,
+        146.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetSign",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        -720.0,
+        589.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetFrame544",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        -714.0,
+        544.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetFrame634",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        -714.0,
+        634.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetFrameX-325",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -325.0,
+        -714.0,
+        589.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetFrameX325",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        325.0,
+        -714.0,
+        589.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetTitle",
+      "class": "/Script/Engine.TextRenderActor",
+      "p": [
+        0.0,
+        -708.0,
+        569.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetPath-170",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -170.0,
+        -624.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetPath170",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        170.0,
+        -624.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetThreshold-160",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -160.0,
+        -720.0,
+        8.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetThreshold0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        -720.0,
+        8.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_GadgetThreshold160",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        160.0,
+        -720.0,
+        8.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveTower-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        720.0,
+        135.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveBase-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        720.0,
+        27.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveYellow-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        720.0,
+        260.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveInset-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        652.0,
+        146.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveLamp-248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -248.0,
+        645.0,
+        146.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveTower248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        720.0,
+        135.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveBase248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        720.0,
+        27.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveYellow248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        720.0,
+        260.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveInset248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        652.0,
+        146.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveLamp248",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        248.0,
+        645.0,
+        146.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveSign",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        720.0,
+        589.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveFrame544",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        714.0,
+        544.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveFrame634",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        714.0,
+        634.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveFrameX-325",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -325.0,
+        714.0,
+        589.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveFrameX325",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        325.0,
+        714.0,
+        589.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveTitle",
+      "class": "/Script/Engine.TextRenderActor",
+      "p": [
+        0.0,
+        708.0,
+        569.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchivePath-170",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -170.0,
+        624.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchivePath170",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        170.0,
+        624.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveThreshold-160",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -160.0,
+        720.0,
+        8.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveThreshold0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        720.0,
+        8.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveThreshold160",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        160.0,
+        720.0,
+        8.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_WorkbenchBack",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -200.0,
+        -1350.0,
+        155.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_BlueprintScreen",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -200.0,
+        -1328.0,
+        181.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ScreenEdge-360",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -360.0,
+        -1320.0,
+        181.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ScreenEdge-40",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -40.0,
+        -1320.0,
+        181.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_BlueprintLine230",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -200.0,
+        -1317.0,
+        230.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_BlueprintLine187",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -240.0,
+        -1317.0,
+        187.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_BlueprintLine140",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -200.0,
+        -1317.0,
+        140.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ToolDiagram",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -110.0,
+        -1312.0,
+        182.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_WorkshopSubtitle",
+      "class": "/Script/Engine.TextRenderActor",
+      "p": [
+        -200.0,
+        -1310.0,
+        330.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_TestLane250-62",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        188.0,
+        -1090.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_TestLane25062",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        312.0,
+        -1090.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_TestLane410-62",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        348.0,
+        -1090.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_TestLane41062",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        472.0,
+        -1090.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveBase0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -690.0,
+        1260.0,
+        35.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveDesk0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -690.0,
+        1260.0,
+        104.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveTop0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -690.0,
+        1260.0,
+        148.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveScreen0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -690.0,
+        1315.0,
+        235.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveEdge0-824",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -824.0,
+        1308.0,
+        235.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveEdge0-556",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -556.0,
+        1308.0,
+        235.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveFrame0150",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -690.0,
+        1308.0,
+        150.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveFrame0320",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -690.0,
+        1308.0,
+        320.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveCaption0",
+      "class": "/Script/Engine.TextRenderActor",
+      "p": [
+        -690.0,
+        1300.0,
+        345.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchivePage0-1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -737.0,
+        1245.0,
+        173.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchivePage01",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -643.0,
+        1245.0,
+        173.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveSpine0",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -690.0,
+        1245.0,
+        174.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveBase1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        430.0,
+        1260.0,
+        35.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveDesk1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        430.0,
+        1260.0,
+        104.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveTop1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        430.0,
+        1260.0,
+        148.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveScreen1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        430.0,
+        1315.0,
+        235.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveEdge1296",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        296.0,
+        1308.0,
+        235.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveEdge1564",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        564.0,
+        1308.0,
+        235.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveFrame1150",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        430.0,
+        1308.0,
+        150.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveFrame1320",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        430.0,
+        1308.0,
+        320.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveCaption1",
+      "class": "/Script/Engine.TextRenderActor",
+      "p": [
+        430.0,
+        1300.0,
+        345.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchivePage1-1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        383.0,
+        1245.0,
+        173.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchivePage11",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        477.0,
+        1245.0,
+        173.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveSpine1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        430.0,
+        1245.0,
+        174.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveGuide-760",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -760.0,
+        1160.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveGuide-540",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        -540.0,
+        1160.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveGuide320",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        320.0,
+        1160.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_ArchiveGuide540",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        540.0,
+        1160.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_MainGuide-1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        810.0,
+        -150.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_MainGuideAccent-1700",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        700.0,
+        -170.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_MainGuideAccent-1820",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        820.0,
+        -170.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_MainGuideAccent-1940",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        940.0,
+        -170.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_MainGuide1",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        810.0,
+        150.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_MainGuideAccent1700",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        700.0,
+        170.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_MainGuideAccent1820",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        820.0,
+        170.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_MainGuideAccent1940",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        940.0,
+        170.0,
+        7.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_Arch_Ivory",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_Arch_Navy",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "LobbyArt_Hub3_Arch_Glow",
+      "class": "/Script/Engine.StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "/Game/BP/Widget/WBP_GadgetLoadout": "<Object '/Game/BP/Widget/WBP_GadgetLoadout.WBP_GadgetLoadout_C' (0x0000012FBC894800) Class 'WidgetBlueprintGeneratedClass'>",
+  "/Game/BP/Widget/WBP_BoarEncyclopedia": "<Object '/Game/BP/Widget/WBP_BoarEncyclopedia.WBP_BoarEncyclopedia_C' (0x0000012FBCB16000) Class 'WidgetBlueprintGeneratedClass'>"
+}

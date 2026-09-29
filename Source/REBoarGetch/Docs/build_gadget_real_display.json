@@ -1,0 +1,32 @@
+{
+  "assets": [
+    "/Game/BP/Lobby/BP_Display_Net",
+    "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Navy",
+    "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Ivory",
+    "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Yellow",
+    "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Glow",
+    "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Ice",
+    "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Cyan",
+    "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Panel"
+  ],
+  "hidden": [
+    "TerminalMonitor",
+    "MonitorEdge-175",
+    "MonitorEdge175",
+    "TerminalTitle",
+    "TerminalInstruction",
+    "Equipment_Glow",
+    "Equipment_Ice",
+    "Equipment_Holo",
+    "Equipment_Panel",
+    "HubStructure_Navy",
+    "HubStructure_Ivory",
+    "HubStructure_Yellow",
+    "HubStructure_Cyan"
+  ],
+  "displays": [
+    "DisplayNet_Station",
+    "DisplayNet_Collection"
+  ],
+  "error": "Traceback (most recent call last):\n  File \"C:/UnrealGames/REBoarGetch/Source/REBoarGetch/Docs/build_gadget_real_display.py\", line 75, in <module>\n    assert before==protected(),'Gameplay portal modified'\n           ^^^^^^^^^^^^^^^^^^^\nAssertionError: Gameplay portal modified\n"
+}

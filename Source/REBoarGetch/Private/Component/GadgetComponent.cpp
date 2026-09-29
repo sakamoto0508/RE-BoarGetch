@@ -10,6 +10,7 @@
 #include "BoarSaveGame.h"
 #include "GadgetDataAsset.h"
 #include "Core/BoarGameMode.h"
+#include "Core/BoarFacilityGameMode.h"
 
 
 // Sets default values for this component's properties
@@ -56,6 +57,12 @@ void UGadgetComponent::InitializeForStage()
 		}
 	}
 
+	// Test worlds grant a temporary trial loadout, without committing to SaveData.
+	if (const auto* Facility = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>(); Facility && Facility->bGadgetTest && Facility->TestGadgetClass)
+	{
+		EquippedGadgetSlots.Init(nullptr,MaxGadgetSlots);
+		EquippedGadgetSlots[0] = Facility->TestGadgetClass;
+	}
 	// スロット0から順番に確認し最初にガジェットが登録されているスロットを初期装備にする。
 	const int32 FirstSlot = FindFirstValidSlot();
 	if (FirstSlot != INDEX_NONE)
@@ -228,6 +235,7 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 
 bool UGadgetComponent::SaveCurrentLoadout()
 {
+	if (const auto* Facility=GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>(); Facility && Facility->bGadgetTest) return true;
 	auto* Instance = GetWorld() ? GetWorld()->GetGameInstance<UBoarGameInstance>() : nullptr;
 	if (!Instance) return false;
 	TArray<FName> Ids;

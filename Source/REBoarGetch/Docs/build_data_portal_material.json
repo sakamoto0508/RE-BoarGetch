@@ -1,0 +1,18 @@
+{
+  "assets": [
+    "/Game/Lobby/Materials/M_DataPortal_Tunnel.M_DataPortal_Tunnel",
+    "/Game/Lobby/Materials/MI_DataPortal_Default.MI_DataPortal_Default",
+    "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface"
+  ],
+  "parameters": {
+    "EmissiveStrength": 2.0,
+    "GridDensity": 7.0,
+    "GridBrightness": 0.2,
+    "ScrollSpeed": 0.18,
+    "NoiseStrength": 0.16,
+    "DistortionStrength": 0.006,
+    "CenterBlackness": 0.96,
+    "DataBrightness": 0.5,
+    "RimBrightness": 0.7
+  }
+}

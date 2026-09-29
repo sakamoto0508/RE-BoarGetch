@@ -1,0 +1,911 @@
+{
+  "world": "/Game/Level/L_GadgetLab.L_GadgetLab",
+  "actors": [
+    {
+      "name": "FacilityFloor",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BB58EDC80) {x: 0.000000, y: 0.000000, z: -40.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallX-1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BA05F26D0) {x: -1200.000000, y: 0.000000, z: 110.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallY-1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BB589A9A0) {x: 0.000000, y: -900.000000, z: 110.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallCapY-1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BB5899870) {x: 0.000000, y: -900.000000, z: 240.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallLightY-1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BB589A540) {x: 0.000000, y: -872.000000, z: 90.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallX1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BB5899320) {x: 1200.000000, y: 0.000000, z: 110.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallY1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BB589A770) {x: 0.000000, y: 900.000000, z: 110.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallCapY1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BB5899460) {x: 0.000000, y: 900.000000, z: 240.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallLightY1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026BB5898420) {x: 0.000000, y: 872.000000, z: 90.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "FacilitySun",
+      "class": "DirectionalLight",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3080) {x: 0.000000, y: 0.000000, z: 800.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "SkyAtmosphere",
+      "class": "SkyAtmosphere",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3080) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "SkyLight",
+      "class": "SkyLight",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3080) {x: 0.000000, y: 0.000000, z: 600.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "FacilityPlayerStart",
+      "class": "PlayerStart",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3170) {x: -750.000000, y: 0.000000, z: 100.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "ReturnPillar-185",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3210) {x: -1070.000000, y: -185.000000, z: 210.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnBase-185",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE31C0) {x: -1070.000000, y: -185.000000, z: 30.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnAccent-185",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3300) {x: -1070.000000, y: -185.000000, z: 430.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnGlow-185",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE33F0) {x: -1019.000000, y: -185.000000, z: 210.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnPillar185",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2C20) {x: -1070.000000, y: 185.000000, z: 210.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnBase185",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3440) {x: -1070.000000, y: 185.000000, z: 30.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnAccent185",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3350) {x: -1070.000000, y: 185.000000, z: 430.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnGlow185",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3260) {x: -1019.000000, y: 185.000000, z: 210.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnTop",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE33A0) {x: -1070.000000, y: 0.000000, z: 465.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnField",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1FF0) {x: -1070.000000, y: 0.000000, z: 235.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "ReturnSign",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3490) {x: -1010.000000, y: 0.000000, z: 500.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "ReturnToLobby",
+      "class": "HubPortal",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3490) {x: -1070.000000, y: 0.000000, z: 140.000000}>",
+      "hidden": false,
+      "action": "<HubPortalAction.TRAVEL: 0>",
+      "destination": "<Object '/Game/Level/L_Lobby.L_Lobby' (0x0000026BE8215400) Class 'World'>"
+    },
+    {
+      "name": "TerminalBase",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2310) {x: 0.000000, y: -80.000000, z: 35.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TerminalBody",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3A30) {x: 0.000000, y: -80.000000, z: 100.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TerminalMonitor",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE34E0) {x: 0.000000, y: -125.000000, z: 235.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "MonitorEdge-175",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2630) {x: -175.000000, y: -120.000000, z: 235.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "MonitorEdge175",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3B70) {x: 175.000000, y: -120.000000, z: 235.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TerminalTitle",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE39E0) {x: 0.000000, y: -114.000000, z: 315.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "TerminalPad",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE39E0) {x: 0.000000, y: 80.000000, z: 2.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "OpenFacilityUI",
+      "class": "HubPortal",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3D00) {x: 0.000000, y: 80.000000, z: 130.000000}>",
+      "hidden": false,
+      "action": "<HubPortalAction.LOADOUT: 1>",
+      "destination": "None"
+    },
+    {
+      "name": "TerminalInstruction",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3CB0) {x: 0.000000, y: -35.000000, z: 175.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "TestPlatform0",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3CB0) {x: -200.000000, y: 480.000000, z: 35.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TestEdge0",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3C60) {x: -200.000000, y: 350.000000, z: 72.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TestPlatform1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3DA0) {x: 170.000000, y: 480.000000, z: 60.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TestEdge1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3E40) {x: 170.000000, y: 350.000000, z: 122.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TestPlatform2",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3DF0) {x: 520.000000, y: 480.000000, z: 85.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TestEdge2",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3EE0) {x: 520.000000, y: 350.000000, z: 172.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TestRamp",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3E90) {x: -460.000000, y: 480.000000, z: 32.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "AttackTestTarget0",
+      "class": "GadgetTestTarget",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1D70) {x: 700.000000, y: -220.000000, z: 140.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "TargetBase0",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1D70) {x: 700.000000, y: -220.000000, z: 25.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "AttackTestTarget1",
+      "class": "GadgetTestTarget",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE25E0) {x: 700.000000, y: 130.000000, z: 140.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "TargetBase1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE25E0) {x: 700.000000, y: 130.000000, z: 25.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "TestTitle",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2FE0) {x: 1160.000000, y: 0.000000, z: 470.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "Planter-1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2FE0) {x: 1020.000000, y: -750.000000, z: 30.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "Plant-1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2F90) {x: 1020.000000, y: -750.000000, z: 65.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01.SM_LPBush01"
+    },
+    {
+      "name": "Planter1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2F90) {x: 1020.000000, y: 750.000000, z: 30.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "Plant1",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3030) {x: 1020.000000, y: 750.000000, z: 65.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01.SM_LPBush01"
+    },
+    {
+      "name": "FacilitySkyDome",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3030) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Sphere.Sphere"
+    },
+    {
+      "name": "Quality_LoadoutTitle",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E50) {x: 0.000000, y: -123.000000, z: 385.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "Quality_Movement",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2EA0) {x: 30.000000, y: 753.000000, z: 262.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "Quality_Capture",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2EA0) {x: -730.000000, y: -723.000000, z: 242.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "Quality_Obstacle",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 320.000000, y: -803.000000, z: 242.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "Quality_Navy",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Navy.SM_GadgetLab_Quality_Navy"
+    },
+    {
+      "name": "Quality_Ivory",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ivory.SM_GadgetLab_Quality_Ivory"
+    },
+    {
+      "name": "Quality_Yellow",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Yellow.SM_GadgetLab_Quality_Yellow"
+    },
+    {
+      "name": "Quality_Glow",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Glow.SM_GadgetLab_Quality_Glow"
+    },
+    {
+      "name": "Quality_Ice",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ice.SM_GadgetLab_Quality_Ice"
+    },
+    {
+      "name": "Quality_Cyan",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Cyan.SM_GadgetLab_Quality_Cyan"
+    },
+    {
+      "name": "Quality_Holo",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Holo.SM_GadgetLab_Quality_Holo"
+    },
+    {
+      "name": "Quality_Panel",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2E00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Panel.SM_GadgetLab_Quality_Panel"
+    },
+    {
+      "name": "Quality_SoftFill0",
+      "class": "DirectionalLight",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2BD0) {x: 0.000000, y: 0.000000, z: 650.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "Quality_SoftFill1",
+      "class": "DirectionalLight",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2CC0) {x: 0.000000, y: 0.000000, z: 650.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "Quality_MovementScreenFace",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2C70) {x: 30.000000, y: 756.000000, z: 280.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "Quality_LoadoutReverse",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2D10) {x: 0.000000, y: -153.000000, z: 385.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "Quality_LoadoutReversePanel",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2DB0) {x: 0.000000, y: -150.000000, z: 410.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "Equipment_Ivory",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2AE0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Ivory.SM_GadgetLab_Equipment_Ivory"
+    },
+    {
+      "name": "Equipment_Navy",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2AE0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Navy.SM_GadgetLab_Equipment_Navy"
+    },
+    {
+      "name": "Equipment_Cyan",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2AE0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Cyan.SM_GadgetLab_Equipment_Cyan"
+    },
+    {
+      "name": "Equipment_Yellow",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2A90) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Yellow.SM_GadgetLab_Equipment_Yellow"
+    },
+    {
+      "name": "Equipment_Glow",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2A90) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Glow.SM_GadgetHub_Equipment_Glow"
+    },
+    {
+      "name": "Equipment_Ice",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2A90) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Ice.SM_GadgetHub_Equipment_Ice"
+    },
+    {
+      "name": "Equipment_Holo",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2A90) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Holo.SM_GadgetHub_Equipment_Holo"
+    },
+    {
+      "name": "Equipment_Panel",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2A90) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Panel.SM_GadgetHub_Equipment_Panel"
+    },
+    {
+      "name": "HubStationTitle",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2A90) {x: 0.000000, y: -121.000000, z: 380.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "HubStationReverse",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE26D0) {x: 0.000000, y: -160.000000, z: 380.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "HubCollectionTitle",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2D60) {x: 0.000000, y: 740.000000, z: 489.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "HubCollectionNet",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1C80) {x: 0.000000, y: 526.000000, z: 115.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "HubCollectionFace",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2B30) {x: 0.000000, y: 744.000000, z: 345.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestBase-195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE18C0) {x: 1010.000000, y: -195.000000, z: 36.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestPillar-195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1B90) {x: 1010.000000, y: -195.000000, z: 237.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestJoint-195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1AA0) {x: 1010.000000, y: -195.000000, z: 418.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestInset-195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1A00) {x: 952.000000, y: -195.000000, z: 245.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestLight-195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1960) {x: 946.000000, y: -195.000000, z: 245.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestBase195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1A50) {x: 1010.000000, y: 195.000000, z: 36.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestPillar195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE19B0) {x: 1010.000000, y: 195.000000, z: 237.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestJoint195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1820) {x: 1010.000000, y: 195.000000, z: 418.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestInset195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1910) {x: 952.000000, y: 195.000000, z: 245.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestLight195",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1780) {x: 946.000000, y: 195.000000, z: 245.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestTop",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE17D0) {x: 1010.000000, y: 0.000000, z: 457.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestField",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1730) {x: 1010.000000, y: 0.000000, z: 235.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestPad",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE16E0) {x: 940.000000, y: 0.000000, z: 2.000000}>",
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "HubTestTitle",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1690) {x: 932.000000, y: 0.000000, z: 510.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "HubTestTrigger",
+      "class": "HubPortal",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1690) {x: 1010.000000, y: 0.000000, z: 140.000000}>",
+      "hidden": true,
+      "action": "<HubPortalAction.GADGET_TEST: 3>",
+      "destination": "None"
+    },
+    {
+      "name": "HubStructure_Navy",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1640) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Navy.SM_GadgetHub_Equipment_Navy"
+    },
+    {
+      "name": "HubStructure_Ivory",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE15F0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Ivory.SM_GadgetHub_Equipment_Ivory"
+    },
+    {
+      "name": "HubStructure_Yellow",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE15A0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Yellow.SM_GadgetHub_Equipment_Yellow"
+    },
+    {
+      "name": "HubStructure_Cyan",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE14B0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Cyan.SM_GadgetHub_Equipment_Cyan"
+    },
+    {
+      "name": "DisplayStructure_Navy",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3710) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Navy.SM_GadgetLabDisplay_Navy"
+    },
+    {
+      "name": "DisplayStructure_Ivory",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE35D0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Ivory.SM_GadgetLabDisplay_Ivory"
+    },
+    {
+      "name": "DisplayStructure_Yellow",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1550) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Yellow.SM_GadgetLabDisplay_Yellow"
+    },
+    {
+      "name": "DisplayStructure_Glow",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE37B0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Glow.SM_GadgetLabDisplay_Glow"
+    },
+    {
+      "name": "DisplayStructure_Ice",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3FD0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Ice.SM_GadgetLabDisplay_Ice"
+    },
+    {
+      "name": "DisplayStructure_Cyan",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3A80) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Cyan.SM_GadgetLabDisplay_Cyan"
+    },
+    {
+      "name": "DisplayStructure_Panel",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3760) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Panel.SM_GadgetLabDisplay_Panel"
+    },
+    {
+      "name": "ReturnTitle",
+      "class": "TextRenderActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3760) {x: -1000.000000, y: 0.000000, z: 500.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "DisplayStationBackdrop",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2450) {x: 0.000000, y: -150.000000, z: 240.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "DisplayCollectionBackdrop",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE0A60) {x: 0.000000, y: 684.000000, z: 273.000000}>",
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "DisplayNet_Station",
+      "class": "BP_Display_Net_C",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE30D0) {x: 0.000000, y: -55.000000, z: 145.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "DisplayNet_Collection",
+      "class": "BP_Display_Net_C",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2360) {x: 0.000000, y: 650.000000, z: 158.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "RoomWorkTable_Cylinder",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE21D0) {x: 637.256836, y: -57.743652, z: 131.747314}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/SM_RoomWorkTable_Cylinder.SM_RoomWorkTable_Cylinder"
+    },
+    {
+      "name": "SM_RoomMapMachine_Control",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2090) {x: 632.546143, y: 69.618286, z: 35.749908}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Props/SM_RoomMapMachine_Control.SM_RoomMapMachine_Control"
+    },
+    {
+      "name": "SM_RoomMapMachine_Machine2",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2270) {x: 639.507324, y: -59.002991, z: 36.097954}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Props/SM_RoomMapMachine_Machine.SM_RoomMapMachine_Machine"
+    },
+    {
+      "name": "SM_RoomMapMachine_Control2",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE22C0) {x: 772.546143, y: -50.381714, z: 35.749908}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Props/SM_RoomMapMachine_Control.SM_RoomMapMachine_Control"
+    },
+    {
+      "name": "SM_RoomMapMachine_Control3",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2220) {x: 652.546143, y: -190.381714, z: 35.749908}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Props/SM_RoomMapMachine_Control.SM_RoomMapMachine_Control"
+    },
+    {
+      "name": "SM_RoomMapMachine_Control4",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE0C90) {x: 512.546143, y: -60.381714, z: 35.749908}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Props/SM_RoomMapMachine_Control.SM_RoomMapMachine_Control"
+    },
+    {
+      "name": "GroupActor0",
+      "class": "GroupActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE0C90) {x: 642.546143, y: -60.381714, z: 183.748630}>",
+      "hidden": false
+    },
+    {
+      "name": "Meshy_AI_Cyber_Dock_0928074801_texture",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE0C90) {x: 770.000000, y: 720.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": null
+    },
+    {
+      "name": "Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE0C90) {x: -1070.000000, y: 20.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+    },
+    {
+      "name": "DataPortal_Return_Frame",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1410) {x: -1070.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+    },
+    {
+      "name": "DataPortal_Return_Surface",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3580) {x: -1070.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface"
+    },
+    {
+      "name": "DataPortal_Test_Frame",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3530) {x: 1010.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+    },
+    {
+      "name": "DataPortal_Test_Surface",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1500) {x: 1010.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface"
+    },
+    {
+      "name": "SM_OfficeGroundMiddleDecor",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2680) {x: -591.273193, y: 550.827148, z: 71.747070}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Props/SM_OfficeGroundMiddleDecor.SM_OfficeGroundMiddleDecor"
+    },
+    {
+      "name": "Meshy_AI_Neon_Nexus_Platform_0928085323_texture__1_",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2680) {x: -590.000000, y: 550.000000, z: 0.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Nexus_Platform_0928085323_texture__1_/StaticMeshes/Meshy_AI_Neon_Nexus_Platform_0928085323_texture__1_.Meshy_AI_Neon_Nexus_Platform_0928085323_texture__1_"
+    },
+    {
+      "name": "SM_Entrance_BigGlassDoor",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1460) {x: -490.000000, y: 460.000000, z: 70.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Glass/SM_Entrance_BigGlassDoor.SM_Entrance_BigGlassDoor"
+    },
+    {
+      "name": "SM_Entrance_BigGlassDoor2",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE27C0) {x: -490.000000, y: 680.000000, z: 70.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Glass/SM_Entrance_BigGlassDoor.SM_Entrance_BigGlassDoor"
+    },
+    {
+      "name": "SM_Entrance_BigGlassDoor3",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2900) {x: -490.000000, y: 460.000000, z: 70.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Glass/SM_Entrance_BigGlassDoor.SM_Entrance_BigGlassDoor"
+    },
+    {
+      "name": "SM_Entrance_BigGlassDoor4",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE28B0) {x: -690.000000, y: 460.000000, z: 70.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Glass/SM_Entrance_BigGlassDoor.SM_Entrance_BigGlassDoor"
+    },
+    {
+      "name": "SM_Entrance_SmallLight",
+      "class": "StaticMeshActor",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2950) {x: -590.000000, y: 570.000000, z: 381.000000}>",
+      "hidden": false,
+      "mesh": "/Game/InportAssets/Clinic/Meshes/Props/SM_Entrance_SmallLight.SM_Entrance_SmallLight"
+    }
+  ],
+  "imports": [
+    "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Nexus_Platform_0928085323_texture__1_/StaticMeshes/Meshy_AI_Neon_Nexus_Platform_0928085323_texture__1_.Meshy_AI_Neon_Nexus_Platform_0928085323_texture__1_",
+    "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+  ],
+  "gadget_assets": []
+}

@@ -22,6 +22,10 @@ public:
 	/** Noneなら初期解放。解放済みIDは条件変更後も再ロックしません。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Progress")
 	FName RequiredClearedStageId;
+	/** 初期装備（アミ・剣）だけ有効。旧Stage条件は互換用に保持。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Gadget|Progress") bool bInitiallyUnlocked = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Gadget|Progress", meta=(ClampMin="0")) int32 RequiredSpecialCoinCount = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Gadget|Test") TSoftObjectPtr<UWorld> TestLevel;
 	/** HUDなどで使用するガジェットの表示アイコンです。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Display")
 	TObjectPtr<UTexture2D> DisplayIcon;

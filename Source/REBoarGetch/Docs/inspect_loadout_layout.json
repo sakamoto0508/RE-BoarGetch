@@ -1,0 +1,32 @@
+[
+  {
+    "name": "SlotsList",
+    "class": "VerticalBox",
+    "parent": "LoadoutPanel",
+    "slot": "<Object '/Game/BP/Widget/WBP_GadgetLoadout.WBP_GadgetLoadout:WidgetTree.LoadoutPanel.CanvasPanelSlot_5' (0x000001FF2AB412C0) Class 'CanvasPanelSlot'>",
+    "position": "<Struct 'Vector2D' (0x000001FF1B898BE0) {x: 48.000000, y: 188.000000}>",
+    "size": "<Struct 'Vector2D' (0x000001FF1B898BE0) {x: 420.000000, y: 384.000000}>"
+  },
+  {
+    "name": "CandidatesList",
+    "class": "ScrollBox",
+    "parent": "LoadoutPanel",
+    "slot": "<Object '/Game/BP/Widget/WBP_GadgetLoadout.WBP_GadgetLoadout:WidgetTree.LoadoutPanel.CanvasPanelSlot_6' (0x000001FF2AB41400) Class 'CanvasPanelSlot'>",
+    "position": "<Struct 'Vector2D' (0x000001FF1365C4A0) {x: 620.000000, y: 188.000000}>",
+    "size": "<Struct 'Vector2D' (0x000001FF1365C4A0) {x: 440.000000, y: 384.000000}>"
+  },
+  {
+    "name": "Text_Status",
+    "class": "TextBlock",
+    "parent": "LoadoutPanel",
+    "slot": "<Object '/Game/BP/Widget/WBP_GadgetLoadout.WBP_GadgetLoadout:WidgetTree.LoadoutPanel.CanvasPanelSlot_11' (0x000001FF2AB41A40) Class 'CanvasPanelSlot'>",
+    "position": "<Struct 'Vector2D' (0x000001FF1B898C20) {x: 48.000000, y: 711.000000}>",
+    "size": "<Struct 'Vector2D' (0x000001FF1B898C20) {x: 540.000000, y: 68.000000}>"
+  },
+  {
+    "name": "Button_Back",
+    "class": "Button",
+    "parent": null,
+    "slot": "None"
+  }
+]

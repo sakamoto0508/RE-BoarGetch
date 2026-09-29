@@ -1,0 +1,187 @@
+{
+  "reused_existing_imported_frame_for_lab_return": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_87",
+  "L_Lobby": [
+    {
+      "name": "DataPortal_Stage_Frame",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        -90.00000000000001,
+        0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Stage_Surface",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        -90.00000000000001,
+        0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Gadget_Frame",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        180.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Gadget_Surface",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        180.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Archive_Frame",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Archive_Surface",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "test_visual_references": [
+    "HubTestPad",
+    "HubTestTitle",
+    "DataPortal_Test_Frame",
+    "DataPortal_Test_Surface"
+  ],
+  "L_GadgetLab": [
+    {
+      "name": "DataPortal_Return_Frame",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "visible": false,
+      "hidden_in_game": true,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Return_Surface",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Test_Frame",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "visible": true,
+      "hidden_in_game": true,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        -90.00000000000001,
+        0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Test_Surface",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "visible": true,
+      "hidden_in_game": true,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        -90.00000000000001,
+        0.0
+      ]
+    }
+  ],
+  "L_Archive": [
+    {
+      "name": "DataPortal_Return_Frame",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Return_Surface",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ]
+    }
+  ],
+  "L_GadgetTest_Net": [
+    {
+      "name": "DataPortal_Return_Frame",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ]
+    },
+    {
+      "name": "DataPortal_Return_Surface",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "visible": true,
+      "hidden_in_game": false,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "rotation": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ]
+    }
+  ],
+  "material_parent": "/Game/Lobby/Materials/M_DataPortal_Tunnel.M_DataPortal_Tunnel",
+  "grid_brightness": 0.10000000149011612
+}

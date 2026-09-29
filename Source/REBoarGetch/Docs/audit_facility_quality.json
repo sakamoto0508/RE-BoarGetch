@@ -1,0 +1,4215 @@
+{
+  "L_GadgetLab": [
+    {
+      "label": "FacilityFloor",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        -40.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        24.0,
+        18.0,
+        0.8
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallX-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -1200.0,
+        0.0,
+        110.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.5,
+        18.0,
+        2.4
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -900.0,
+        110.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        24.0,
+        0.5,
+        2.4
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallCapY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -900.0,
+        240.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        24.0,
+        0.65,
+        0.24
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallLightY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -872.0,
+        90.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        22.5,
+        0.07,
+        0.12
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallX1",
+      "class": "StaticMeshActor",
+      "p": [
+        1200.0,
+        0.0,
+        110.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.5,
+        18.0,
+        2.4
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        900.0,
+        110.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        24.0,
+        0.5,
+        2.4
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallCapY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        900.0,
+        240.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        24.0,
+        0.65,
+        0.24
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallLightY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        872.0,
+        90.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        22.5,
+        0.07,
+        0.12
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "FacilitySun",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        800.0
+      ],
+      "r": [
+        -44.99999999999999,
+        -35.0,
+        -2.248991783197472e-15
+      ],
+      "s": [
+        2.5,
+        2.5,
+        2.5
+      ],
+      "components": [
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "SkyAtmosphere",
+      "class": "SkyAtmosphere",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "SkyLight",
+      "class": "SkyLight",
+      "p": [
+        0.0,
+        0.0,
+        600.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "FacilityPlayerStart",
+      "class": "PlayerStart",
+      "p": [
+        -750.0,
+        0.0,
+        100.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "CapsuleComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "ReturnPillar-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        -185.0,
+        210.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.95,
+        0.95,
+        4.2
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnBase-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        -185.0,
+        30.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.3,
+        1.3,
+        0.6
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnAccent-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        -185.0,
+        430.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.15,
+        1.15,
+        0.3
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnGlow-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1019.0,
+        -185.0,
+        210.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.07,
+        0.2,
+        2.8
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnPillar185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        185.0,
+        210.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.95,
+        0.95,
+        4.2
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnBase185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        185.0,
+        30.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.3,
+        1.3,
+        0.6
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnAccent185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        185.0,
+        430.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.15,
+        1.15,
+        0.3
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnGlow185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1019.0,
+        185.0,
+        210.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.07,
+        0.2,
+        2.8
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnTop",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        0.0,
+        465.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.95,
+        4.65,
+        0.7
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnField",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        0.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.04,
+        2.7,
+        4.2
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnSign",
+      "class": "TextRenderActor",
+      "p": [
+        -1010.0,
+        0.0,
+        500.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "ReturnToLobby",
+      "class": "HubPortal",
+      "p": [
+        -1070.0,
+        0.0,
+        140.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "BoxComponent",
+          "collision": "<CollisionEnabled.QUERY_ONLY: 1>",
+          "profile": "Custom"
+        }
+      ],
+      "action": "<HubPortalAction.TRAVEL: 0>",
+      "destination": "<Object '/Game/Level/L_Lobby.L_Lobby' (0x00000254AB149A00) Class 'World'>"
+    },
+    {
+      "label": "TerminalBase",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -80.0,
+        35.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        3.0,
+        1.6,
+        0.7
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TerminalBody",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -80.0,
+        100.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.8,
+        1.45,
+        0.7
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TerminalMonitor",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -125.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        3.4,
+        0.06,
+        1.9
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "MonitorEdge-175",
+      "class": "StaticMeshActor",
+      "p": [
+        -175.0,
+        -120.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.06,
+        0.06,
+        2.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "MonitorEdge175",
+      "class": "StaticMeshActor",
+      "p": [
+        175.0,
+        -120.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.06,
+        0.06,
+        2.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TerminalTitle",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -114.0,
+        315.0
+      ],
+      "r": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "TerminalPad",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        80.0,
+        2.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        3.0,
+        1.9,
+        0.04
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "OpenFacilityUI",
+      "class": "HubPortal",
+      "p": [
+        0.0,
+        80.0,
+        130.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "BoxComponent",
+          "collision": "<CollisionEnabled.QUERY_ONLY: 1>",
+          "profile": "Custom"
+        }
+      ],
+      "action": "<HubPortalAction.LOADOUT: 1>",
+      "destination": "None"
+    },
+    {
+      "label": "TerminalInstruction",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -35.0,
+        175.0
+      ],
+      "r": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "TestPlatform0",
+      "class": "StaticMeshActor",
+      "p": [
+        -200.0,
+        480.0,
+        35.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.4,
+        2.7,
+        0.7
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TestEdge0",
+      "class": "StaticMeshActor",
+      "p": [
+        -200.0,
+        350.0,
+        72.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.4,
+        0.07,
+        0.04
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TestPlatform1",
+      "class": "StaticMeshActor",
+      "p": [
+        170.0,
+        480.0,
+        60.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.4,
+        2.7,
+        1.2
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TestEdge1",
+      "class": "StaticMeshActor",
+      "p": [
+        170.0,
+        350.0,
+        122.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.4,
+        0.07,
+        0.04
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TestPlatform2",
+      "class": "StaticMeshActor",
+      "p": [
+        520.0,
+        480.0,
+        85.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.4,
+        2.7,
+        1.7
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TestEdge2",
+      "class": "StaticMeshActor",
+      "p": [
+        520.0,
+        350.0,
+        172.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.4,
+        0.07,
+        0.04
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TestRamp",
+      "class": "StaticMeshActor",
+      "p": [
+        -460.0,
+        480.0,
+        32.0
+      ],
+      "r": [
+        11.000000000000002,
+        0.0,
+        -0.0
+      ],
+      "s": [
+        3.3,
+        2.5,
+        0.22
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "AttackTestTarget0",
+      "class": "GadgetTestTarget",
+      "p": [
+        700.0,
+        -220.0,
+        140.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.8,
+        0.8,
+        1.5
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAllDynamic",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TargetBase0",
+      "class": "StaticMeshActor",
+      "p": [
+        700.0,
+        -220.0,
+        25.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.3,
+        1.3,
+        0.5
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "AttackTestTarget1",
+      "class": "GadgetTestTarget",
+      "p": [
+        700.0,
+        130.0,
+        140.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.8,
+        0.8,
+        1.5
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAllDynamic",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TargetBase1",
+      "class": "StaticMeshActor",
+      "p": [
+        700.0,
+        130.0,
+        25.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.3,
+        1.3,
+        0.5
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TestTitle",
+      "class": "TextRenderActor",
+      "p": [
+        1160.0,
+        0.0,
+        470.0
+      ],
+      "r": [
+        0.0,
+        180.0,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Planter-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1020.0,
+        -750.0,
+        30.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.6,
+        1.6,
+        0.6
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Plant-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1020.0,
+        -750.0,
+        65.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.55,
+        0.55,
+        0.55
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01.SM_LPBush01",
+          "materials": [
+            "/Game/InportAssets/LPRiverForest/Materials/Plants/MI_Bushes.MI_Bushes"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Planter1",
+      "class": "StaticMeshActor",
+      "p": [
+        1020.0,
+        750.0,
+        30.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.6,
+        1.6,
+        0.6
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Plant1",
+      "class": "StaticMeshActor",
+      "p": [
+        1020.0,
+        750.0,
+        65.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.55,
+        0.55,
+        0.55
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01.SM_LPBush01",
+          "materials": [
+            "/Game/InportAssets/LPRiverForest/Materials/Plants/MI_Bushes.MI_Bushes"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "FacilitySkyDome",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        300.0,
+        300.0,
+        300.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Sphere.Sphere",
+          "materials": [
+            "/Game/Lobby/Materials/M_Facility_Sky.M_Facility_Sky"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_LoadoutTitle",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -123.0,
+        385.0
+      ],
+      "r": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_Movement",
+      "class": "TextRenderActor",
+      "p": [
+        30.0,
+        753.0,
+        262.0
+      ],
+      "r": [
+        0.0,
+        -90.00000000000001,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_Capture",
+      "class": "TextRenderActor",
+      "p": [
+        -730.0,
+        -723.0,
+        242.0
+      ],
+      "r": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_Obstacle",
+      "class": "TextRenderActor",
+      "p": [
+        320.0,
+        -803.0,
+        242.0
+      ],
+      "r": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_Navy",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Navy.SM_GadgetLab_Quality_Navy",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Ivory",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ivory.SM_GadgetLab_Quality_Ivory",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Yellow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Yellow.SM_GadgetLab_Quality_Yellow",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Glow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Glow.SM_GadgetLab_Quality_Glow",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Ice",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ice.SM_GadgetLab_Quality_Ice",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Cyan",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Cyan.SM_GadgetLab_Quality_Cyan",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Holo",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Holo.SM_GadgetLab_Quality_Holo",
+          "materials": [
+            "/Game/Lobby/Materials/M_Facility_ExhibitHologram.M_Facility_ExhibitHologram"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Panel",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Panel.SM_GadgetLab_Quality_Panel",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_SoftFill0",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        650.0
+      ],
+      "r": [
+        -47.99999999999999,
+        139.99999999999997,
+        -2.3766321935046634e-15
+      ],
+      "s": [
+        2.5,
+        2.5,
+        2.5
+      ],
+      "components": [
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_SoftFill1",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        650.0
+      ],
+      "r": [
+        -48.00000000000001,
+        -79.99999999999996,
+        -4.7532643870093276e-15
+      ],
+      "s": [
+        2.5,
+        2.5,
+        2.5
+      ],
+      "components": [
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_MovementScreenFace",
+      "class": "StaticMeshActor",
+      "p": [
+        30.0,
+        756.0,
+        280.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        3.8,
+        0.04,
+        0.72
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_LoadoutReverse",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -153.0,
+        385.0
+      ],
+      "r": [
+        0.0,
+        -90.00000000000001,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_LoadoutReversePanel",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -150.0,
+        410.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        5.12,
+        0.04,
+        0.68
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    }
+  ],
+  "L_Archive": [
+    {
+      "label": "FacilityFloor",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        -40.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        18.0,
+        14.0,
+        0.8
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallX-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -900.0,
+        0.0,
+        110.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.5,
+        14.0,
+        2.4
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -700.0,
+        110.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        18.0,
+        0.5,
+        2.4
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallCapY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -700.0,
+        240.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        18.0,
+        0.65,
+        0.24
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallLightY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -672.0,
+        90.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        16.5,
+        0.07,
+        0.12
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallX1",
+      "class": "StaticMeshActor",
+      "p": [
+        900.0,
+        0.0,
+        110.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.5,
+        14.0,
+        2.4
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        700.0,
+        110.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        18.0,
+        0.5,
+        2.4
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallCapY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        700.0,
+        240.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        18.0,
+        0.65,
+        0.24
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "WallLightY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        672.0,
+        90.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        16.5,
+        0.07,
+        0.12
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "FacilitySun",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        800.0
+      ],
+      "r": [
+        -44.99999999999999,
+        -35.0,
+        -2.248991783197472e-15
+      ],
+      "s": [
+        2.5,
+        2.5,
+        2.5
+      ],
+      "components": [
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "SkyAtmosphere",
+      "class": "SkyAtmosphere",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "SkyLight",
+      "class": "SkyLight",
+      "p": [
+        0.0,
+        0.0,
+        600.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "FacilityPlayerStart",
+      "class": "PlayerStart",
+      "p": [
+        -450.0,
+        0.0,
+        100.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "CapsuleComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "ReturnPillar-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        -185.0,
+        210.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.95,
+        0.95,
+        4.2
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnBase-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        -185.0,
+        30.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.3,
+        1.3,
+        0.6
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnAccent-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        -185.0,
+        430.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.15,
+        1.15,
+        0.3
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnGlow-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -719.0,
+        -185.0,
+        210.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.07,
+        0.2,
+        2.8
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnPillar185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        185.0,
+        210.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.95,
+        0.95,
+        4.2
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnBase185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        185.0,
+        30.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.3,
+        1.3,
+        0.6
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnAccent185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        185.0,
+        430.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.15,
+        1.15,
+        0.3
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnGlow185",
+      "class": "StaticMeshActor",
+      "p": [
+        -719.0,
+        185.0,
+        210.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.07,
+        0.2,
+        2.8
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnTop",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        0.0,
+        465.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.95,
+        4.65,
+        0.7
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnField",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        0.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.04,
+        2.7,
+        4.2
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ReturnSign",
+      "class": "TextRenderActor",
+      "p": [
+        -710.0,
+        0.0,
+        500.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "ReturnToLobby",
+      "class": "HubPortal",
+      "p": [
+        -770.0,
+        0.0,
+        140.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "BoxComponent",
+          "collision": "<CollisionEnabled.QUERY_ONLY: 1>",
+          "profile": "Custom"
+        }
+      ],
+      "action": "<HubPortalAction.TRAVEL: 0>",
+      "destination": "<Object '/Game/Level/L_Lobby.L_Lobby' (0x00000254AB141C00) Class 'World'>"
+    },
+    {
+      "label": "TerminalBase",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -470.0,
+        35.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        3.0,
+        1.6,
+        0.7
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TerminalBody",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -470.0,
+        100.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.8,
+        1.45,
+        0.7
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TerminalMonitor",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -515.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        3.4,
+        0.06,
+        1.9
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "MonitorEdge-175",
+      "class": "StaticMeshActor",
+      "p": [
+        -175.0,
+        -510.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.06,
+        0.06,
+        2.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "MonitorEdge175",
+      "class": "StaticMeshActor",
+      "p": [
+        175.0,
+        -510.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.06,
+        0.06,
+        2.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "TerminalTitle",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -504.0,
+        315.0
+      ],
+      "r": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "TerminalPad",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -310.0,
+        2.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        3.0,
+        1.9,
+        0.04
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "OpenFacilityUI",
+      "class": "HubPortal",
+      "p": [
+        0.0,
+        -310.0,
+        130.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "BoxComponent",
+          "collision": "<CollisionEnabled.QUERY_ONLY: 1>",
+          "profile": "Custom"
+        }
+      ],
+      "action": "<HubPortalAction.ARCHIVE: 2>",
+      "destination": "None"
+    },
+    {
+      "label": "TerminalInstruction",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -425.0,
+        175.0
+      ],
+      "r": [
+        0.0,
+        89.99999999999999,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "DisplayBase0",
+      "class": "StaticMeshActor",
+      "p": [
+        480.0,
+        -350.0,
+        45.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.3,
+        1.8,
+        0.9
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayTop0",
+      "class": "StaticMeshActor",
+      "p": [
+        480.0,
+        -350.0,
+        100.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.5,
+        2.0,
+        0.25
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayPage0-1",
+      "class": "StaticMeshActor",
+      "p": [
+        434.0,
+        -350.0,
+        130.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.85,
+        0.95,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayPage01",
+      "class": "StaticMeshActor",
+      "p": [
+        526.0,
+        -350.0,
+        130.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.85,
+        0.95,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplaySpine0",
+      "class": "StaticMeshActor",
+      "p": [
+        480.0,
+        -350.0,
+        135.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.09,
+        1.1,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ArchivePanel0",
+      "class": "StaticMeshActor",
+      "p": [
+        545.0,
+        -350.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.04,
+        2.5,
+        1.65
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayBase1",
+      "class": "StaticMeshActor",
+      "p": [
+        500.0,
+        300.0,
+        45.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.3,
+        1.8,
+        0.9
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayTop1",
+      "class": "StaticMeshActor",
+      "p": [
+        500.0,
+        300.0,
+        100.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.5,
+        2.0,
+        0.25
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayPage1-1",
+      "class": "StaticMeshActor",
+      "p": [
+        454.0,
+        300.0,
+        130.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.85,
+        0.95,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayPage11",
+      "class": "StaticMeshActor",
+      "p": [
+        546.0,
+        300.0,
+        130.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.85,
+        0.95,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplaySpine1",
+      "class": "StaticMeshActor",
+      "p": [
+        500.0,
+        300.0,
+        135.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.09,
+        1.1,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ArchivePanel1",
+      "class": "StaticMeshActor",
+      "p": [
+        565.0,
+        300.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.04,
+        2.5,
+        1.65
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayBase2",
+      "class": "StaticMeshActor",
+      "p": [
+        -180.0,
+        410.0,
+        45.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.3,
+        1.8,
+        0.9
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayTop2",
+      "class": "StaticMeshActor",
+      "p": [
+        -180.0,
+        410.0,
+        100.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        2.5,
+        2.0,
+        0.25
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayPage2-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -226.0,
+        410.0,
+        130.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.85,
+        0.95,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplayPage21",
+      "class": "StaticMeshActor",
+      "p": [
+        -134.0,
+        410.0,
+        130.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.85,
+        0.95,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "DisplaySpine2",
+      "class": "StaticMeshActor",
+      "p": [
+        -180.0,
+        410.0,
+        135.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.09,
+        1.1,
+        0.1
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ArchivePanel2",
+      "class": "StaticMeshActor",
+      "p": [
+        -115.0,
+        410.0,
+        235.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.04,
+        2.5,
+        1.65
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ArchiveWallTitle",
+      "class": "TextRenderActor",
+      "p": [
+        860.0,
+        0.0,
+        400.0
+      ],
+      "r": [
+        0.0,
+        180.0,
+        -0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Planter-1",
+      "class": "StaticMeshActor",
+      "p": [
+        720.0,
+        -550.0,
+        30.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.6,
+        1.6,
+        0.6
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Plant-1",
+      "class": "StaticMeshActor",
+      "p": [
+        720.0,
+        -550.0,
+        65.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.55,
+        0.55,
+        0.55
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01.SM_LPBush01",
+          "materials": [
+            "/Game/InportAssets/LPRiverForest/Materials/Plants/MI_Bushes.MI_Bushes"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Planter1",
+      "class": "StaticMeshActor",
+      "p": [
+        720.0,
+        550.0,
+        30.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.6,
+        1.6,
+        0.6
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Plant1",
+      "class": "StaticMeshActor",
+      "p": [
+        720.0,
+        550.0,
+        65.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        0.55,
+        0.55,
+        0.55
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01.SM_LPBush01",
+          "materials": [
+            "/Game/InportAssets/LPRiverForest/Materials/Plants/MI_Bushes.MI_Bushes"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "FacilitySkyDome",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        300.0,
+        300.0,
+        300.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Sphere.Sphere",
+          "materials": [
+            "/Game/Lobby/Materials/M_Facility_Sky.M_Facility_Sky"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_CentralBaseCollision",
+      "class": "StaticMeshActor",
+      "p": [
+        20.0,
+        20.0,
+        31.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        3.0,
+        3.0,
+        0.62
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "profile": "BlockAll",
+          "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_ResearchTitle",
+      "class": "TextRenderActor",
+      "p": [
+        225.0,
+        636.0,
+        440.0
+      ],
+      "r": [
+        0.0,
+        -90.00000000000001,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "TextRenderComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_Navy",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_Archive_Quality_Navy.SM_Archive_Quality_Navy",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Ivory",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_Archive_Quality_Ivory.SM_Archive_Quality_Ivory",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Yellow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_Archive_Quality_Yellow.SM_Archive_Quality_Yellow",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Glow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_Archive_Quality_Glow.SM_Archive_Quality_Glow",
+          "materials": [
+            "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Ice",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_Archive_Quality_Ice.SM_Archive_Quality_Ice",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Cyan",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_Archive_Quality_Cyan.SM_Archive_Quality_Cyan",
+          "materials": [
+            "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Holo",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_Archive_Quality_Holo.SM_Archive_Quality_Holo",
+          "materials": [
+            "/Game/Lobby/Materials/M_Facility_ExhibitHologram.M_Facility_ExhibitHologram"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_Panel",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Game/Lobby/Meshes/SM_Archive_Quality_Panel.SM_Archive_Quality_Panel",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Quality_SoftFill0",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        650.0
+      ],
+      "r": [
+        -47.99999999999999,
+        139.99999999999997,
+        -2.3766321935046634e-15
+      ],
+      "s": [
+        2.5,
+        2.5,
+        2.5
+      ],
+      "components": [
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_SoftFill1",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        650.0
+      ],
+      "r": [
+        -48.00000000000001,
+        -79.99999999999996,
+        -4.7532643870093276e-15
+      ],
+      "s": [
+        2.5,
+        2.5,
+        2.5
+      ],
+      "components": [
+        {
+          "class": "ArrowComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        },
+        {
+          "class": "BillboardComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision"
+        }
+      ]
+    },
+    {
+      "label": "Quality_ResearchScreenFace",
+      "class": "StaticMeshActor",
+      "p": [
+        225.0,
+        635.0,
+        345.0
+      ],
+      "r": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        7.9,
+        0.03,
+        1.8
+      ],
+      "components": [
+        {
+          "class": "StaticMeshComponent",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "profile": "NoCollision",
+          "mesh": "/Engine/BasicShapes/Cube.Cube",
+          "materials": [
+            "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel"
+          ]
+        }
+      ]
+    }
+  ],
+  "reusable": "[\"/Game/Lobby/Meshes/SM_Archive_Quality_Cyan.SM_Archive_Quality_Cyan\", \"/Game/Lobby/Meshes/SM_Archive_Quality_Glow.SM_Archive_Quality_Glow\", \"/Game/Lobby/Meshes/SM_Archive_Quality_Holo.SM_Archive_Quality_Holo\", \"/Game/Lobby/Meshes/SM_Archive_Quality_Ice.SM_Archive_Quality_Ice\", \"/Game/Lobby/Meshes/SM_Archive_Quality_Ivory.SM_Archive_Quality_Ivory\", \"/Game/Lobby/Meshes/SM_Archive_Quality_Navy.SM_Archive_Quality_Navy\", \"/Game/Lobby/Meshes/SM_Archive_Quality_Panel.SM_Archive_Quality_Panel\", \"/Game/Lobby/Meshes/SM_Archive_Quality_Yellow.SM_Archive_Quality_Yellow\", \"/Game/Lobby/Meshes/SM_GadgetLab_Quality_Cyan.SM_GadgetLab_Quality_Cyan\", \"/Game/Lobby/Meshes/SM_GadgetLab_Quality_Glow.SM_GadgetLab_Quality_Glow\", \"/Game/Lobby/Meshes/SM_GadgetLab_Quality_Holo.SM_GadgetLab_Quality_Holo\", \"/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ice.SM_GadgetLab_Quality_Ice\", \"/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ivory.SM_GadgetLab_Quality_Ivory\", \"/Game/Lobby/Meshes/SM_GadgetLab_Quality_Navy.SM_GadgetLab_Quality_Navy\", \"/Game/Lobby/Meshes/SM_GadgetLab_Quality_Panel.SM_GadgetLab_Quality_Panel\", \"/Game/Lobby/Meshes/SM_GadgetLab_Quality_Yellow.SM_GadgetLab_Quality_Yellow\", \"/Game/Lobby/Meshes/SM_GateEnergy_Glow.SM_GateEnergy_Glow\", \"/Game/Lobby/Meshes/SM_GateEnergy_Ivory.SM_GateEnergy_Ivory\", \"/Game/Lobby/Meshes/SM_GateEnergy_Navy.SM_GateEnergy_Navy\", \"/Game/Lobby/Meshes/SM_Hub3_Portal_Glow.SM_Hub3_Portal_Glow\", \"/Game/Lobby/Meshes/SM_Hub3_Portal_Ivory.SM_Hub3_Portal_Ivory\", \"/Game/Lobby/Meshes/SM_Hub3_Portal_Navy.SM_Hub3_Portal_Navy\", \"/Game/Lobby/Meshes/SM_LobbyArt_Cyan.SM_LobbyArt_Cyan\", \"/Game/Lobby/Meshes/SM_LobbyArt_Grass.SM_LobbyArt_Grass\", \"/Game/Lobby/Meshes/SM_LobbyArt_Holo.SM_LobbyArt_Holo\", \"/Game/Lobby/Meshes/SM_LobbyArt_Ice.SM_LobbyArt_Ice\", \"/Game/Lobby/Meshes/SM_LobbyArt_Ivory.SM_LobbyArt_Ivory\", \"/Game/Lobby/Meshes/SM_LobbyArt_Navy.SM_LobbyArt_Navy\", \"/Game/Lobby/Meshes/SM_LobbyArt_Yellow.SM_LobbyArt_Yellow\", \"/Game/Lobby/Meshes/SM_LobbyRef_Cyan.SM_LobbyRef_Cyan\", \"/Game/Lobby/Meshes/SM_LobbyRef_Glow.SM_LobbyRef_Glow\", \"/Game/Lobby/Meshes/SM_LobbyRef_Ivory.SM_LobbyRef_Ivory\"]"
+}

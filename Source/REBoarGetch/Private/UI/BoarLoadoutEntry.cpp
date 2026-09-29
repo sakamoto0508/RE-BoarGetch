@@ -3,6 +3,13 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
+#include "Components/SizeBox.h"
+
+void UBoarLoadoutEntry::UseCompactLabRow()
+{
+	if (auto* Row = WidgetTree ? Cast<USizeBox>(WidgetTree->RootWidget) : nullptr)
+		Row->SetHeightOverride(52.f);
+}
 
 void UBoarLoadoutEntry::NativeConstruct()
 {

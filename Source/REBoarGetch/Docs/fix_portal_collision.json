@@ -1,0 +1,721 @@
+{
+  "L_GadgetLab": [
+    {
+      "actor": "ReturnPillar-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnBase-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnAccent-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnGlow-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnPillar185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnBase185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnAccent185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnGlow185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnTop",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnField",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestBase-195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestPillar-195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestJoint-195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestInset-195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestLight-195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestBase195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestPillar195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestJoint195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestInset195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestLight195",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestTop",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "HubTestField",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Return_Frame",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Return_Surface",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Test_Frame",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Test_Surface",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    }
+  ],
+  "L_Lobby": [
+    {
+      "actor": "StageGate_Left",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "StageGate_Right",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "StageGate_Lintel",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "StageGate_Beacon",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_01",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_02",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_03",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_04",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_05",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_06",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_07",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_08",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_09",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_10",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_11",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArch_12",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArchSupport_West",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "Port_GateArchSupport_East",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "LobbyArt_GateFoot-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_GateCrown-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_GateFoot1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_GateCrown1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_GateCrest",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateJamb-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateJambInset-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateJambLight-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateYellowBase-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateYellowCap-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateJamb1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateJambInset1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateJambLight1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateYellowBase1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Ref_GateYellowCap1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerBody-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerBase-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerFoot-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerInset-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerLight-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerCap-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerAccent-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerBody1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerBase1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerFoot1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerInset1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerLight1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerCap1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_TowerAccent1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_Arch_Ivory",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_Arch_Navy",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "LobbyArt_Energy_Arch_Glow",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetArchIvory",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetArchNavy",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetArchGlow",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerBody-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerBase-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerFoot-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerInset-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerLight-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerCap-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerAccent-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerBody1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerBase1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerFoot1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerInset1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerLight1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerCap1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetLobbyArt_Energy_TowerAccent1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalGadgetField",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveArchIvory",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveArchNavy",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveArchGlow",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerBody-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerBase-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerFoot-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerInset-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerLight-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerCap-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerAccent-1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerBody1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerBase1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerFoot1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerInset1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerLight1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerCap1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveLobbyArt_Energy_TowerAccent1",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "PortalArchiveField",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "DataPortal_Stage_Frame",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Stage_Surface",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Gadget_Frame",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Gadget_Surface",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Archive_Frame",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Archive_Surface",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    }
+  ],
+  "L_Archive": [
+    {
+      "actor": "ReturnPillar-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnBase-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnAccent-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnGlow-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnPillar185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnBase185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnAccent185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnGlow185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnTop",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnField",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "DataPortal_Return_Frame",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Return_Surface",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    }
+  ],
+  "L_GadgetTest_Net": [
+    {
+      "actor": "ReturnFrame-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnBase-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnJoint-185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnFrame185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnBase185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnJoint185",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnTop",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "ReturnField",
+      "before": "<CollisionEnabled.NO_COLLISION: 0>",
+      "profile_before": "NoCollision"
+    },
+    {
+      "actor": "DataPortal_Return_Frame",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    },
+    {
+      "actor": "DataPortal_Return_Surface",
+      "before": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+      "profile_before": "BlockAll"
+    }
+  ],
+  "verified": {
+    "L_Lobby": 92,
+    "L_GadgetLab": 27,
+    "L_Archive": 12,
+    "L_GadgetTest_Net": 10
+  }
+}

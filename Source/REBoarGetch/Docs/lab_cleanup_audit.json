@@ -1,0 +1,2303 @@
+{
+  "actors": [
+    {
+      "label": "FacilityFloor",
+      "name": "StaticMeshActor_0",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_0",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D60EFE0) {x: 0.000000, y: 0.000000, z: -40.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "WallX-1",
+      "name": "StaticMeshActor_1",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_1",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D60C970) {x: -1200.000000, y: 0.000000, z: 110.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "WallY-1",
+      "name": "StaticMeshActor_2",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_2",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D60CF60) {x: 0.000000, y: -900.000000, z: 110.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "WallCapY-1",
+      "name": "StaticMeshActor_3",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_3",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D60D550) {x: 0.000000, y: -900.000000, z: 240.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "WallLightY-1",
+      "name": "StaticMeshActor_4",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_4",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D60E590) {x: 0.000000, y: -872.000000, z: 90.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "WallX1",
+      "name": "StaticMeshActor_5",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_5",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D60E040) {x: 1200.000000, y: 0.000000, z: 110.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "WallY1",
+      "name": "StaticMeshActor_6",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_6",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D60E5E0) {x: 0.000000, y: 900.000000, z: 110.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "WallCapY1",
+      "name": "StaticMeshActor_7",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_7",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EAA90) {x: 0.000000, y: 900.000000, z: 240.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "WallLightY1",
+      "name": "StaticMeshActor_8",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_8",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9B90) {x: 0.000000, y: 872.000000, z: 90.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "FacilitySun",
+      "name": "DirectionalLight_0",
+      "class": "DirectionalLight",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.DirectionalLight_0",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9910) {x: 0.000000, y: 0.000000, z: 800.000000}>"
+    },
+    {
+      "label": "SkyAtmosphere",
+      "name": "SkyAtmosphere_0",
+      "class": "SkyAtmosphere",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.SkyAtmosphere_0",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9910) {x: 0.000000, y: 0.000000, z: 0.000000}>"
+    },
+    {
+      "label": "SkyLight",
+      "name": "SkyLight_0",
+      "class": "SkyLight",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.SkyLight_0",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9910) {x: 0.000000, y: 0.000000, z: 600.000000}>"
+    },
+    {
+      "label": "FacilityPlayerStart",
+      "name": "PlayerStart_0",
+      "class": "PlayerStart",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.PlayerStart_0",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9820) {x: -750.000000, y: 0.000000, z: 100.000000}>"
+    },
+    {
+      "label": "ReturnPillar-185",
+      "name": "StaticMeshActor_9",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_9",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E95A0) {x: -1070.000000, y: -185.000000, z: 210.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnBase-185",
+      "name": "StaticMeshActor_10",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_10",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EACC0) {x: -1070.000000, y: -185.000000, z: 30.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnAccent-185",
+      "name": "StaticMeshActor_11",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_11",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9C80) {x: -1070.000000, y: -185.000000, z: 430.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnGlow-185",
+      "name": "StaticMeshActor_12",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_12",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EABD0) {x: -1019.000000, y: -185.000000, z: 210.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnPillar185",
+      "name": "StaticMeshActor_13",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_13",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EAB80) {x: -1070.000000, y: 185.000000, z: 210.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnBase185",
+      "name": "StaticMeshActor_14",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_14",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EAD10) {x: -1070.000000, y: 185.000000, z: 30.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnAccent185",
+      "name": "StaticMeshActor_15",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_15",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA3B0) {x: -1070.000000, y: 185.000000, z: 430.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnGlow185",
+      "name": "StaticMeshActor_16",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_16",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA040) {x: -1019.000000, y: 185.000000, z: 210.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnTop",
+      "name": "StaticMeshActor_17",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_17",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9550) {x: -1070.000000, y: 0.000000, z: 465.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnField",
+      "name": "StaticMeshActor_18",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_18",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9460) {x: -1070.000000, y: 0.000000, z: 235.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnSign",
+      "name": "TextRenderActor_0",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_0",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E96E0) {x: -1010.000000, y: 0.000000, z: 500.000000}>"
+    },
+    {
+      "label": "ReturnToLobby",
+      "name": "HubPortal_0",
+      "class": "HubPortal",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.HubPortal_0",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D5E96E0) {x: -1070.000000, y: 0.000000, z: 140.000000}>"
+    },
+    {
+      "label": "TerminalBase",
+      "name": "StaticMeshActor_19",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_19",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA450) {x: 0.000000, y: -80.000000, z: 35.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TerminalBody",
+      "name": "StaticMeshActor_20",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_20",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E93C0) {x: 0.000000, y: -80.000000, z: 100.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TerminalMonitor",
+      "name": "StaticMeshActor_21",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_21",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA400) {x: 0.000000, y: -125.000000, z: 235.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "MonitorEdge-175",
+      "name": "StaticMeshActor_22",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_22",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA6D0) {x: -175.000000, y: -120.000000, z: 235.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "MonitorEdge175",
+      "name": "StaticMeshActor_23",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_23",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA860) {x: 175.000000, y: -120.000000, z: 235.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TerminalTitle",
+      "name": "TextRenderActor_1",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_1",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA680) {x: 0.000000, y: -114.000000, z: 315.000000}>"
+    },
+    {
+      "label": "TerminalPad",
+      "name": "StaticMeshActor_24",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_24",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA630) {x: 0.000000, y: 80.000000, z: 2.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "OpenFacilityUI",
+      "name": "HubPortal_1",
+      "class": "HubPortal",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.HubPortal_1",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D5EAA40) {x: 0.000000, y: -80.000000, z: 150.000000}>"
+    },
+    {
+      "label": "TerminalInstruction",
+      "name": "TextRenderActor_2",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_2",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EBCB0) {x: 0.000000, y: -35.000000, z: 175.000000}>"
+    },
+    {
+      "label": "TestPlatform0",
+      "name": "StaticMeshActor_25",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_25",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EBC60) {x: -200.000000, y: 480.000000, z: 35.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TestEdge0",
+      "name": "StaticMeshActor_26",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_26",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9F00) {x: -200.000000, y: 350.000000, z: 72.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TestPlatform1",
+      "name": "StaticMeshActor_27",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_27",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EB0D0) {x: 170.000000, y: 480.000000, z: 60.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TestEdge1",
+      "name": "StaticMeshActor_28",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_28",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EB440) {x: 170.000000, y: 350.000000, z: 122.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TestPlatform2",
+      "name": "StaticMeshActor_29",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_29",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA220) {x: 520.000000, y: 480.000000, z: 85.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TestEdge2",
+      "name": "StaticMeshActor_30",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_30",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5E9EB0) {x: 520.000000, y: 350.000000, z: 172.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TestRamp",
+      "name": "StaticMeshActor_31",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_31",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EAE50) {x: -460.000000, y: 480.000000, z: 32.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "AttackTestTarget0",
+      "name": "GadgetTestTarget_0",
+      "class": "GadgetTestTarget",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.GadgetTestTarget_0",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EAF90) {x: 700.000000, y: -220.000000, z: 140.000000}>"
+    },
+    {
+      "label": "TargetBase0",
+      "name": "StaticMeshActor_32",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_32",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EAEF0) {x: 700.000000, y: -220.000000, z: 25.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "AttackTestTarget1",
+      "name": "GadgetTestTarget_1",
+      "class": "GadgetTestTarget",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.GadgetTestTarget_1",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D5EA5E0) {x: 700.000000, y: 130.000000, z: 140.000000}>"
+    },
+    {
+      "label": "TargetBase1",
+      "name": "StaticMeshActor_33",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_33",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D5E5832630) {x: 700.000000, y: 130.000000, z: 25.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "TestTitle",
+      "name": "TextRenderActor_3",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_3",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6900) {x: 1160.000000, y: 0.000000, z: 470.000000}>"
+    },
+    {
+      "label": "Planter-1",
+      "name": "StaticMeshActor_34",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_34",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6810) {x: 1020.000000, y: -750.000000, z: 30.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "Plant-1",
+      "name": "StaticMeshActor_35",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_35",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6720) {x: 1020.000000, y: -750.000000, z: 65.000000}>",
+      "mesh": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01.SM_LPBush01",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Planter1",
+      "name": "StaticMeshActor_36",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_36",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6770) {x: 1020.000000, y: 750.000000, z: 30.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "Plant1",
+      "name": "StaticMeshActor_37",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_37",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6680) {x: 1020.000000, y: 750.000000, z: 65.000000}>",
+      "mesh": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01.SM_LPBush01",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "FacilitySkyDome",
+      "name": "StaticMeshActor_38",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_38",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6540) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Engine/BasicShapes/Sphere.Sphere",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_LoadoutTitle",
+      "name": "TextRenderActor_4",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_4",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C65E0) {x: 0.000000, y: -123.000000, z: 385.000000}>"
+    },
+    {
+      "label": "Quality_Movement",
+      "name": "TextRenderActor_5",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_5",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C64A0) {x: 30.000000, y: 753.000000, z: 262.000000}>"
+    },
+    {
+      "label": "Quality_Capture",
+      "name": "TextRenderActor_6",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_6",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C64F0) {x: -730.000000, y: -723.000000, z: 242.000000}>"
+    },
+    {
+      "label": "Quality_Obstacle",
+      "name": "TextRenderActor_7",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_7",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C63B0) {x: 320.000000, y: -803.000000, z: 242.000000}>"
+    },
+    {
+      "label": "Quality_Navy",
+      "name": "StaticMeshActor_39",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_39",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6400) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Navy.SM_GadgetLab_Quality_Navy",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_Ivory",
+      "name": "StaticMeshActor_40",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_40",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C62C0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ivory.SM_GadgetLab_Quality_Ivory",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_Yellow",
+      "name": "StaticMeshActor_41",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_41",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6310) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Yellow.SM_GadgetLab_Quality_Yellow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_Glow",
+      "name": "StaticMeshActor_42",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_42",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C61D0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Glow.SM_GadgetLab_Quality_Glow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_Ice",
+      "name": "StaticMeshActor_43",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_43",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6220) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ice.SM_GadgetLab_Quality_Ice",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_Cyan",
+      "name": "StaticMeshActor_44",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_44",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6270) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Cyan.SM_GadgetLab_Quality_Cyan",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_Holo",
+      "name": "StaticMeshActor_45",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_45",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C60E0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Holo.SM_GadgetLab_Quality_Holo",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_Panel",
+      "name": "StaticMeshActor_46",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_46",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6130) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Panel.SM_GadgetLab_Quality_Panel",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_SoftFill0",
+      "name": "DirectionalLight_1",
+      "class": "DirectionalLight",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.DirectionalLight_1",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6040) {x: 0.000000, y: 0.000000, z: 650.000000}>"
+    },
+    {
+      "label": "Quality_SoftFill1",
+      "name": "DirectionalLight_2",
+      "class": "DirectionalLight",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.DirectionalLight_2",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5FA0) {x: 0.000000, y: 0.000000, z: 650.000000}>"
+    },
+    {
+      "label": "Quality_MovementScreenFace",
+      "name": "StaticMeshActor_47",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_47",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5EB0) {x: 30.000000, y: 756.000000, z: 280.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Quality_LoadoutReverse",
+      "name": "TextRenderActor_8",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_8",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5DC0) {x: 0.000000, y: -153.000000, z: 385.000000}>"
+    },
+    {
+      "label": "Quality_LoadoutReversePanel",
+      "name": "StaticMeshActor_48",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_48",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5C80) {x: 0.000000, y: -150.000000, z: 410.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Equipment_Ivory",
+      "name": "StaticMeshActor_49",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_49",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5D20) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Ivory.SM_GadgetLab_Equipment_Ivory",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Equipment_Navy",
+      "name": "StaticMeshActor_50",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_50",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5BE0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Navy.SM_GadgetLab_Equipment_Navy",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Equipment_Cyan",
+      "name": "StaticMeshActor_51",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_51",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5C30) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Cyan.SM_GadgetLab_Equipment_Cyan",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Equipment_Yellow",
+      "name": "StaticMeshActor_52",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_52",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5B40) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Yellow.SM_GadgetLab_Equipment_Yellow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Equipment_Glow",
+      "name": "StaticMeshActor_53",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_53",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5B90) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Glow.SM_GadgetHub_Equipment_Glow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Equipment_Ice",
+      "name": "StaticMeshActor_54",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_54",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5A00) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Ice.SM_GadgetHub_Equipment_Ice",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Equipment_Holo",
+      "name": "StaticMeshActor_55",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_55",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5A50) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Holo.SM_GadgetHub_Equipment_Holo",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Equipment_Panel",
+      "name": "StaticMeshActor_56",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_56",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5AA0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Panel.SM_GadgetHub_Equipment_Panel",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubStationTitle",
+      "name": "TextRenderActor_9",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_9",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5910) {x: 0.000000, y: -295.000000, z: 320.000000}>"
+    },
+    {
+      "label": "HubStationReverse",
+      "name": "TextRenderActor_10",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_10",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C59B0) {x: 0.000000, y: 135.000000, z: 350.000000}>"
+    },
+    {
+      "label": "HubCollectionTitle",
+      "name": "TextRenderActor_11",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_11",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5870) {x: 0.000000, y: 790.000000, z: 490.000000}>"
+    },
+    {
+      "label": "HubCollectionNet",
+      "name": "TextRenderActor_12",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_12",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5730) {x: -850.000000, y: 300.000000, z: 62.000000}>"
+    },
+    {
+      "label": "HubCollectionFace",
+      "name": "StaticMeshActor_57",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_57",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C57D0) {x: 0.000000, y: 744.000000, z: 345.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestBase-195",
+      "name": "StaticMeshActor_58",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_58",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5690) {x: 1010.000000, y: -195.000000, z: 36.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestPillar-195",
+      "name": "StaticMeshActor_59",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_59",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7800) {x: 1010.000000, y: -195.000000, z: 237.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestJoint-195",
+      "name": "StaticMeshActor_60",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_60",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C67C0) {x: 1010.000000, y: -195.000000, z: 418.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestInset-195",
+      "name": "StaticMeshActor_61",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_61",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4A10) {x: 952.000000, y: -195.000000, z: 245.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestLight-195",
+      "name": "StaticMeshActor_62",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_62",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C47E0) {x: 946.000000, y: -195.000000, z: 245.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestBase195",
+      "name": "StaticMeshActor_63",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_63",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4DD0) {x: 1010.000000, y: 195.000000, z: 36.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestPillar195",
+      "name": "StaticMeshActor_64",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_64",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4EC0) {x: 1010.000000, y: 195.000000, z: 237.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestJoint195",
+      "name": "StaticMeshActor_65",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_65",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4E20) {x: 1010.000000, y: 195.000000, z: 418.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestInset195",
+      "name": "StaticMeshActor_66",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_66",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4F60) {x: 952.000000, y: 195.000000, z: 245.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestLight195",
+      "name": "StaticMeshActor_67",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_67",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C50A0) {x: 946.000000, y: 195.000000, z: 245.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestTop",
+      "name": "StaticMeshActor_68",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_68",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5000) {x: 1010.000000, y: 0.000000, z: 457.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestField",
+      "name": "StaticMeshActor_69",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_69",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5140) {x: 1010.000000, y: 0.000000, z: 235.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestPad",
+      "name": "StaticMeshActor_70",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_70",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5280) {x: 940.000000, y: 0.000000, z: 2.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubTestTitle",
+      "name": "TextRenderActor_13",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_13",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C51E0) {x: 900.000000, y: 0.000000, z: 510.000000}>"
+    },
+    {
+      "label": "HubTestTrigger",
+      "name": "HubPortal_2",
+      "class": "HubPortal",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.HubPortal_2",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C51E0) {x: 1010.000000, y: 0.000000, z: 140.000000}>"
+    },
+    {
+      "label": "HubStructure_Navy",
+      "name": "StaticMeshActor_71",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_71",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5320) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Navy.SM_GadgetHub_Equipment_Navy",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubStructure_Ivory",
+      "name": "StaticMeshActor_72",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_72",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5460) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Ivory.SM_GadgetHub_Equipment_Ivory",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubStructure_Yellow",
+      "name": "StaticMeshActor_73",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_73",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C53C0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Yellow.SM_GadgetHub_Equipment_Yellow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "HubStructure_Cyan",
+      "name": "StaticMeshActor_74",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_74",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C5500) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetHub_Equipment_Cyan.SM_GadgetHub_Equipment_Cyan",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayStructure_Navy",
+      "name": "StaticMeshActor_75",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_75",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4790) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Navy.SM_GadgetLabDisplay_Navy",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayStructure_Ivory",
+      "name": "StaticMeshActor_76",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_76",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C55A0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Ivory.SM_GadgetLabDisplay_Ivory",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayStructure_Yellow",
+      "name": "StaticMeshActor_77",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_77",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C46A0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Yellow.SM_GadgetLabDisplay_Yellow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayStructure_Glow",
+      "name": "StaticMeshActor_78",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_78",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C44C0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Glow.SM_GadgetLabDisplay_Glow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayStructure_Ice",
+      "name": "StaticMeshActor_79",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_79",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4600) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Ice.SM_GadgetLabDisplay_Ice",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayStructure_Cyan",
+      "name": "StaticMeshActor_80",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_80",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4290) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Cyan.SM_GadgetLabDisplay_Cyan",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayStructure_Panel",
+      "name": "StaticMeshActor_81",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_81",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4060) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabDisplay_Panel.SM_GadgetLabDisplay_Panel",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "ReturnTitle",
+      "name": "TextRenderActor_14",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_14",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4150) {x: -1000.000000, y: 0.000000, z: 500.000000}>"
+    },
+    {
+      "label": "DisplayStationBackdrop",
+      "name": "StaticMeshActor_82",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_82",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C41F0) {x: 0.000000, y: -150.000000, z: 240.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayCollectionBackdrop",
+      "name": "StaticMeshActor_83",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_83",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4380) {x: 0.000000, y: 684.000000, z: 273.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DisplayNet_Station",
+      "name": "BP_Display_Net_C_0",
+      "class": "BP_Display_Net_C",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.BP_Display_Net_C_0",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4470) {x: 0.000000, y: -55.000000, z: 145.000000}>"
+    },
+    {
+      "label": "DisplayNet_Collection",
+      "name": "BP_Display_Net_C_1",
+      "class": "BP_Display_Net_C",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.BP_Display_Net_C_1",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C46F0) {x: -1010.000000, y: 300.800000, z: 80.000000}>"
+    },
+    {
+      "label": "Meshy_AI_Cyber_Dock_0928074801_texture",
+      "name": "StaticMeshActor_85",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_85",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C45B0) {x: 770.000000, y: 720.000000, z: 0.000000}>",
+      "mesh": null,
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "name": "StaticMeshActor_87",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_87",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4920) {x: -1070.000000, y: 20.000000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DataPortal_Return_Frame",
+      "name": "StaticMeshActor_84",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_84",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4830) {x: -1070.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DataPortal_Return_Surface",
+      "name": "StaticMeshActor_86",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_86",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4A60) {x: -1070.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DataPortal_Test_Frame",
+      "name": "StaticMeshActor_88",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_88",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4D30) {x: 1010.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "DataPortal_Test_Surface",
+      "name": "StaticMeshActor_89",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_89",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C4B00) {x: 1010.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "LabHubShell_Navy",
+      "name": "StaticMeshActor_90",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_90",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C69F0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Navy.SM_GadgetLabHubShell_Navy",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "LabHubShell_Ivory",
+      "name": "StaticMeshActor_92",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_92",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6B30) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Ivory.SM_GadgetLabHubShell_Ivory",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "LabHubShell_Yellow",
+      "name": "StaticMeshActor_97",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_97",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6A90) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Yellow.SM_GadgetLabHubShell_Yellow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "LabHubShell_Glow",
+      "name": "StaticMeshActor_99",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_99",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6BD0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Glow.SM_GadgetLabHubShell_Glow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "LabHubShell_Ice",
+      "name": "StaticMeshActor_100",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_100",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6B80) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Ice.SM_GadgetLabHubShell_Ice",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "LabHubShell_Cyan",
+      "name": "StaticMeshActor_101",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_101",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6CC0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_GadgetLabHubShell_Cyan.SM_GadgetLabHubShell_Cyan",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "LabResearchStation",
+      "name": "StaticMeshActor_102",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_102",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6E00) {x: 0.000000, y: -80.000000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/GadgetResearchStation.GadgetResearchStation",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "LabStationInteraction",
+      "name": "TextRenderActor_15",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_15",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6D60) {x: 0.000000, y: -295.000000, z: 287.000000}>"
+    },
+    {
+      "label": "CollectionPod_Net",
+      "name": "GadgetCollectionPod_0",
+      "class": "GadgetCollectionPod",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.GadgetCollectionPod_0",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6E50) {x: -990.000000, y: 326.800000, z: 0.000000}>"
+    },
+    {
+      "label": "GadgetTestClosedBarrier",
+      "name": "StaticMeshActor_103",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_103",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C6F90) {x: 1010.000000, y: 0.000000, z: 220.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>"
+    },
+    {
+      "label": "Architecture_LabFill_-780_-425",
+      "name": "RectLight_0",
+      "class": "RectLight",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.RectLight_0",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C70D0) {x: -780.000000, y: -425.000000, z: 706.000000}>"
+    },
+    {
+      "label": "Architecture_LabFill_-780_425",
+      "name": "RectLight_1",
+      "class": "RectLight",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.RectLight_1",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7080) {x: -780.000000, y: 425.000000, z: 706.000000}>"
+    },
+    {
+      "label": "Architecture_LabFill_780_-425",
+      "name": "RectLight_2",
+      "class": "RectLight",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.RectLight_2",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7030) {x: 780.000000, y: -425.000000, z: 706.000000}>"
+    },
+    {
+      "label": "Architecture_LabFill_780_425",
+      "name": "RectLight_3",
+      "class": "RectLight",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.RectLight_3",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C71C0) {x: 780.000000, y: 425.000000, z: 706.000000}>"
+    },
+    {
+      "label": "Architecture_Ice",
+      "name": "StaticMeshActor_91",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_91",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7120) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Ice.SM_L_GadgetLab_Architecture_Ice",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Architecture_Ivory",
+      "name": "StaticMeshActor_93",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_93",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7260) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Ivory.SM_L_GadgetLab_Architecture_Ivory",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Architecture_Navy",
+      "name": "StaticMeshActor_94",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_94",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7350) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Navy.SM_L_GadgetLab_Architecture_Navy",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Architecture_Cyan",
+      "name": "StaticMeshActor_95",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_95",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C73F0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Cyan.SM_L_GadgetLab_Architecture_Cyan",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Architecture_Yellow",
+      "name": "StaticMeshActor_96",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_96",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C74E0) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Yellow.SM_L_GadgetLab_Architecture_Yellow",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Architecture_SoftWhite",
+      "name": "StaticMeshActor_98",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_98",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7440) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_SoftWhite.SM_L_GadgetLab_Architecture_SoftWhite",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Architecture_CeilingDiffuser",
+      "name": "StaticMeshActor_104",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_104",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7580) {x: 0.000000, y: 0.000000, z: 0.000000}>",
+      "mesh": "/Game/Lobby/Meshes/SM_L_GadgetLab_CeilingDiffuser.SM_L_GadgetLab_CeilingDiffuser",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_WallX-1",
+      "name": "StaticMeshActor_105",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_105",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7670) {x: -1204.000000, y: 0.000000, z: 490.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_WallY-1",
+      "name": "StaticMeshActor_106",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_106",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C76C0) {x: 0.000000, y: -904.000000, z: 490.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_SkirtX-1",
+      "name": "StaticMeshActor_107",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_107",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7A30) {x: -1180.000000, y: 0.000000, z: 24.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_SkirtY-1",
+      "name": "StaticMeshActor_108",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_108",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7AD0) {x: 0.000000, y: -880.000000, z: 24.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_CorniceX-1",
+      "name": "StaticMeshActor_109",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_109",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7BC0) {x: -1180.000000, y: 0.000000, z: 725.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_CorniceY-1",
+      "name": "StaticMeshActor_110",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_110",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7CB0) {x: 0.000000, y: -880.000000, z: 725.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_WallX1",
+      "name": "StaticMeshActor_111",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_111",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7D50) {x: 1204.000000, y: 0.000000, z: 490.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_WallY1",
+      "name": "StaticMeshActor_112",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_112",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7DF0) {x: 0.000000, y: 904.000000, z: 490.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_SkirtX1",
+      "name": "StaticMeshActor_113",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_113",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7EE0) {x: 1180.000000, y: 0.000000, z: 24.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_SkirtY1",
+      "name": "StaticMeshActor_114",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_114",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6C7FD0) {x: 0.000000, y: 880.000000, z: 24.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_CorniceX1",
+      "name": "StaticMeshActor_115",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_115",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D660060) {x: 1180.000000, y: 0.000000, z: 725.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_CorniceY1",
+      "name": "StaticMeshActor_116",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_116",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D660150) {x: 0.000000, y: 880.000000, z: 725.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_CollectionRail",
+      "name": "StaticMeshActor_117",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_117",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660240) {x: 0.000000, y: 873.000000, z: 225.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_CollectionHeader",
+      "name": "StaticMeshActor_118",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_118",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660330) {x: 0.000000, y: 858.000000, z: 454.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Bay0",
+      "name": "StaticMeshActor_119",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_119",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6603D0) {x: -720.000000, y: 858.000000, z: 219.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayFoot0",
+      "name": "StaticMeshActor_120",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_120",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6604C0) {x: -720.000000, y: 835.000000, z: 10.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayLine0",
+      "name": "StaticMeshActor_121",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_121",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6605B0) {x: -720.000000, y: 849.000000, z: 394.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayIndex0",
+      "name": "StaticMeshActor_122",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_122",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6606A0) {x: -850.000000, y: 846.000000, z: 370.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Bay1",
+      "name": "StaticMeshActor_123",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_123",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660740) {x: -360.000000, y: 858.000000, z: 219.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayFoot1",
+      "name": "StaticMeshActor_124",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_124",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660830) {x: -360.000000, y: 835.000000, z: 10.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayLine1",
+      "name": "StaticMeshActor_125",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_125",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660920) {x: -360.000000, y: 849.000000, z: 394.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayIndex1",
+      "name": "StaticMeshActor_126",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_126",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660A10) {x: -490.000000, y: 846.000000, z: 370.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Bay2",
+      "name": "StaticMeshActor_127",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_127",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660AB0) {x: 0.000000, y: 858.000000, z: 219.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayFoot2",
+      "name": "StaticMeshActor_128",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_128",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660BA0) {x: 0.000000, y: 835.000000, z: 10.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayLine2",
+      "name": "StaticMeshActor_129",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_129",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660C90) {x: 0.000000, y: 849.000000, z: 394.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayIndex2",
+      "name": "StaticMeshActor_130",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_130",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660D80) {x: -130.000000, y: 846.000000, z: 370.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Bay3",
+      "name": "StaticMeshActor_131",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_131",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660E20) {x: 360.000000, y: 858.000000, z: 219.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayFoot3",
+      "name": "StaticMeshActor_132",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_132",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D660F10) {x: 360.000000, y: 835.000000, z: 10.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayLine3",
+      "name": "StaticMeshActor_133",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_133",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D661000) {x: 360.000000, y: 849.000000, z: 394.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayIndex3",
+      "name": "StaticMeshActor_134",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_134",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D6610F0) {x: 230.000000, y: 846.000000, z: 370.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Bay4",
+      "name": "StaticMeshActor_135",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_135",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D661190) {x: 720.000000, y: 858.000000, z: 219.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayFoot4",
+      "name": "StaticMeshActor_136",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_136",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D661280) {x: 720.000000, y: 835.000000, z: 10.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayLine4",
+      "name": "StaticMeshActor_137",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_137",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D661370) {x: 720.000000, y: 849.000000, z: 394.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_BayIndex4",
+      "name": "StaticMeshActor_138",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_138",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D661460) {x: 590.000000, y: 846.000000, z: 370.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_StationInset",
+      "name": "StaticMeshActor_139",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_139",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661550) {x: 0.000000, y: -80.000000, z: 1.200000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_StationFloor",
+      "name": "StaticMeshActor_140",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_140",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661640) {x: 0.000000, y: -80.000000, z: 1.800000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_CollectionFloor",
+      "name": "StaticMeshActor_141",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_141",
+      "hidden": true,
+      "pos": "<Struct 'Vector' (0x000001D44D661730) {x: 0.000000, y: 650.000000, z: 1.200000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Floor-760_-520",
+      "name": "StaticMeshActor_142",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_142",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661820) {x: -760.000000, y: -520.000000, z: 1.100000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Floor-760_340",
+      "name": "StaticMeshActor_143",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_143",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661910) {x: -760.000000, y: 340.000000, z: 1.100000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Floor760_-520",
+      "name": "StaticMeshActor_144",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_144",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661A00) {x: 760.000000, y: -520.000000, z: 1.100000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Floor760_340",
+      "name": "StaticMeshActor_145",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_145",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661AF0) {x: 760.000000, y: 340.000000, z: 1.100000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Guide-1_-138",
+      "name": "StaticMeshActor_146",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_146",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661BE0) {x: -655.000000, y: -138.000000, z: 2.100000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Guide-1_138",
+      "name": "StaticMeshActor_147",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_147",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661CD0) {x: -655.000000, y: 138.000000, z: 2.100000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Junction-1",
+      "name": "StaticMeshActor_148",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_148",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661DC0) {x: -365.000000, y: 0.000000, z: 2.200000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Guide1_-138",
+      "name": "StaticMeshActor_149",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_149",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661EB0) {x: 655.000000, y: -138.000000, z: 2.100000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Guide1_138",
+      "name": "StaticMeshActor_150",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_150",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D661FA0) {x: 655.000000, y: 138.000000, z: 2.100000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Junction1",
+      "name": "StaticMeshActor_151",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_151",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662090) {x: 365.000000, y: 0.000000, z: 2.200000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Ceiling-800_-450",
+      "name": "StaticMeshActor_152",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_152",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662180) {x: -800.000000, y: -450.000000, z: 760.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_LightFrame-800_-450",
+      "name": "StaticMeshActor_153",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_153",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662270) {x: -800.000000, y: -450.000000, z: 736.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Light-800_-450",
+      "name": "StaticMeshActor_154",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_154",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662360) {x: -800.000000, y: -450.000000, z: 726.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Ceiling-800_450",
+      "name": "StaticMeshActor_155",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_155",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662450) {x: -800.000000, y: 450.000000, z: 760.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_LightFrame-800_450",
+      "name": "StaticMeshActor_156",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_156",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662540) {x: -800.000000, y: 450.000000, z: 736.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Light-800_450",
+      "name": "StaticMeshActor_157",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_157",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662630) {x: -800.000000, y: 450.000000, z: 726.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Ceiling0_-450",
+      "name": "StaticMeshActor_158",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_158",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662720) {x: 0.000000, y: -450.000000, z: 760.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Ceiling0_450",
+      "name": "StaticMeshActor_159",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_159",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662810) {x: 0.000000, y: 450.000000, z: 760.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Ceiling800_-450",
+      "name": "StaticMeshActor_160",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_160",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662900) {x: 800.000000, y: -450.000000, z: 760.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_LightFrame800_-450",
+      "name": "StaticMeshActor_161",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_161",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6629F0) {x: 800.000000, y: -450.000000, z: 736.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Light800_-450",
+      "name": "StaticMeshActor_162",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_162",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662AE0) {x: 800.000000, y: -450.000000, z: 726.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Ceiling800_450",
+      "name": "StaticMeshActor_163",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_163",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662BD0) {x: 800.000000, y: 450.000000, z: 760.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_LightFrame800_450",
+      "name": "StaticMeshActor_164",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_164",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662CC0) {x: 800.000000, y: 450.000000, z: 736.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Light800_450",
+      "name": "StaticMeshActor_165",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_165",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662DB0) {x: 800.000000, y: 450.000000, z: 726.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Beam-400",
+      "name": "StaticMeshActor_166",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_166",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662EA0) {x: -400.000000, y: 0.000000, z: 728.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_Beam400",
+      "name": "StaticMeshActor_167",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_167",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D662F90) {x: 400.000000, y: 0.000000, z: 728.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_StationCeilingFrame-385",
+      "name": "StaticMeshActor_168",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_168",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663030) {x: 0.000000, y: -385.000000, z: 721.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_StationCeilingLight-385",
+      "name": "StaticMeshActor_169",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_169",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6630D0) {x: 0.000000, y: -385.000000, z: 708.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_StationCeilingFrame225",
+      "name": "StaticMeshActor_170",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_170",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6631C0) {x: 0.000000, y: 225.000000, z: 721.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CleanLab_StationCeilingLight225",
+      "name": "StaticMeshActor_171",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_171",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6632B0) {x: 0.000000, y: 225.000000, z: 708.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CollectionPod_Reserve_1",
+      "name": "StaticMeshActor_172",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_172",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6633A0) {x: -990.000000, y: 546.800000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/GadgetPod.GadgetPod",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CollectionPod_Reserve_2",
+      "name": "StaticMeshActor_173",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_173",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663440) {x: -990.000000, y: 766.800000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/GadgetPod.GadgetPod",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CollectionPod_Reserve_3",
+      "name": "StaticMeshActor_174",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_174",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6634E0) {x: 990.000000, y: 273.200000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/GadgetPod.GadgetPod",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CollectionPod_Reserve_4",
+      "name": "StaticMeshActor_175",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_175",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663580) {x: 990.000000, y: 493.200000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/GadgetPod.GadgetPod",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "CollectionPod_Reserve_5",
+      "name": "StaticMeshActor_176",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_176",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663620) {x: 990.000000, y: 713.200000, z: 0.000000}>",
+      "mesh": "/Game/InportAssets/GadgetPod.GadgetPod",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Floor-1",
+      "name": "StaticMeshActor_177",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_177",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663670) {x: -1000.000000, y: 520.000000, z: 2.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Guide-1",
+      "name": "StaticMeshActor_178",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_178",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663710) {x: -833.000000, y: 520.000000, z: 2.600000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Header-1",
+      "name": "StaticMeshActor_179",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_179",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663800) {x: -1170.000000, y: 520.000000, z: 426.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Bay-1_0",
+      "name": "StaticMeshActor_180",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_180",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6638A0) {x: -1178.000000, y: 300.000000, z: 205.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Line-1_0",
+      "name": "StaticMeshActor_181",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_181",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663990) {x: -1170.000000, y: 300.000000, z: 388.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Accent-1_0",
+      "name": "StaticMeshActor_182",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_182",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663A80) {x: -1168.000000, y: 212.000000, z: 365.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Bay-1_1",
+      "name": "StaticMeshActor_183",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_183",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663B20) {x: -1178.000000, y: 520.000000, z: 205.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Line-1_1",
+      "name": "StaticMeshActor_184",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_184",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663C10) {x: -1170.000000, y: 520.000000, z: 388.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Accent-1_1",
+      "name": "StaticMeshActor_185",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_185",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663D00) {x: -1168.000000, y: 432.000000, z: 365.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Bay-1_2",
+      "name": "StaticMeshActor_186",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_186",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663DA0) {x: -1178.000000, y: 740.000000, z: 205.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Line-1_2",
+      "name": "StaticMeshActor_187",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_187",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663E90) {x: -1170.000000, y: 740.000000, z: 388.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Accent-1_2",
+      "name": "StaticMeshActor_188",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_188",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D663F80) {x: -1168.000000, y: 652.000000, z: 365.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "GalleryTitle-1",
+      "name": "TextRenderActor_16",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_16",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610060) {x: -1150.000000, y: 520.000000, z: 475.000000}>"
+    },
+    {
+      "label": "Gallery_Floor1",
+      "name": "StaticMeshActor_189",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_189",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6100B0) {x: 1000.000000, y: 520.000000, z: 2.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Guide1",
+      "name": "StaticMeshActor_190",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_190",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610150) {x: 833.000000, y: 520.000000, z: 2.600000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Header1",
+      "name": "StaticMeshActor_191",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_191",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6101F0) {x: 1170.000000, y: 520.000000, z: 426.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Bay1_0",
+      "name": "StaticMeshActor_192",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_192",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610290) {x: 1178.000000, y: 300.000000, z: 205.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Line1_0",
+      "name": "StaticMeshActor_193",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_193",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610330) {x: 1170.000000, y: 300.000000, z: 388.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Accent1_0",
+      "name": "StaticMeshActor_194",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_194",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610420) {x: 1168.000000, y: 212.000000, z: 365.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Bay1_1",
+      "name": "StaticMeshActor_195",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_195",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6104C0) {x: 1178.000000, y: 520.000000, z: 205.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Line1_1",
+      "name": "StaticMeshActor_196",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_196",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610560) {x: 1170.000000, y: 520.000000, z: 388.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Accent1_1",
+      "name": "StaticMeshActor_197",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_197",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610650) {x: 1168.000000, y: 432.000000, z: 365.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Bay1_2",
+      "name": "StaticMeshActor_198",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_198",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D6106F0) {x: 1178.000000, y: 740.000000, z: 205.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Line1_2",
+      "name": "StaticMeshActor_199",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_199",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610790) {x: 1170.000000, y: 740.000000, z: 388.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "Gallery_Accent1_2",
+      "name": "StaticMeshActor_200",
+      "class": "StaticMeshActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_200",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610880) {x: 1168.000000, y: 652.000000, z: 365.000000}>",
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "collision": "<CollisionEnabled.NO_COLLISION: 0>"
+    },
+    {
+      "label": "GalleryTitle1",
+      "name": "TextRenderActor_17",
+      "class": "TextRenderActor",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_17",
+      "hidden": false,
+      "pos": "<Struct 'Vector' (0x000001D44D610920) {x: 1150.000000, y: 520.000000, z: 475.000000}>"
+    }
+  ],
+  "export": true
+}

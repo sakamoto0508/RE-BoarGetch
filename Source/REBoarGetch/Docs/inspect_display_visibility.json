@@ -1,0 +1,18 @@
+[
+  {
+    "name": "DisplayNet_Collection",
+    "hidden": false,
+    "editor_hidden": false,
+    "visible": true,
+    "transform": "<Struct 'Transform' (0x0000012A244C2970) {rotation: {x: 0.000000, y: 0.000000, z: 0.000000, w: 1.000000}, translation: {x: 0.000000, y: 650.000000, z: 158.000000}, scale3d: {x: 0.640000, y: 0.640000, z: 0.640000}}>",
+    "bounds": "(<Struct 'Vector' (0x0000012A244B02E0) {x: -0.000395, y: 649.115268, z: 158.002573}>, <Struct 'Vector' (0x0000012A244B0330) {x: 0.340150, y: 1.051408, z: 0.492920}>)"
+  },
+  {
+    "name": "DisplayNet_Station",
+    "hidden": false,
+    "editor_hidden": false,
+    "visible": true,
+    "transform": "<Struct 'Transform' (0x0000012A244C2970) {rotation: {x: 0.000000, y: 0.000000, z: 0.000000, w: 1.000000}, translation: {x: 0.000000, y: -55.000000, z: 145.000000}, scale3d: {x: 0.490000, y: 0.490000, z: 0.490000}}>",
+    "bounds": "(<Struct 'Vector' (0x0000012A244B0330) {x: -0.000303, y: -55.677373, z: 145.001970}>, <Struct 'Vector' (0x0000012A24512360) {x: 0.260427, y: 0.804984, z: 0.377392}>)"
+  }
+]

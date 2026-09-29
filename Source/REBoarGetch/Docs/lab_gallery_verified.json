@@ -1,0 +1,41 @@
+{
+  "pods": [
+    {
+      "name": "CollectionPod_Net",
+      "location": "<Struct 'Vector' (0x000001D5E57D43D0) {x: -990.000000, y: 326.800000, z: 0.000000}>",
+      "rotation": "<Struct 'Rotator' (0x000001D5E57D43D0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "scale": "<Struct 'Vector' (0x000001D5E57D43D0) {x: 0.800000, y: 0.800000, z: 0.800000}>"
+    },
+    {
+      "name": "CollectionPod_Reserve_1",
+      "location": "<Struct 'Vector' (0x000001D44D60D3C0) {x: -990.000000, y: 546.800000, z: 0.000000}>",
+      "rotation": "<Struct 'Rotator' (0x000001D44D60D3C0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "scale": "<Struct 'Vector' (0x000001D44D60D3C0) {x: 0.800000, y: 0.800000, z: 0.800000}>"
+    },
+    {
+      "name": "CollectionPod_Reserve_2",
+      "location": "<Struct 'Vector' (0x000001D44D60F9E0) {x: -990.000000, y: 766.800000, z: 0.000000}>",
+      "rotation": "<Struct 'Rotator' (0x000001D44D60F9E0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "scale": "<Struct 'Vector' (0x000001D44D60F9E0) {x: 0.800000, y: 0.800000, z: 0.800000}>"
+    },
+    {
+      "name": "CollectionPod_Reserve_3",
+      "location": "<Struct 'Vector' (0x000001D44D60D410) {x: 990.000000, y: 273.200000, z: 0.000000}>",
+      "rotation": "<Struct 'Rotator' (0x000001D44D60D410) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x000001D44D60D410) {x: 0.800000, y: 0.800000, z: 0.800000}>"
+    },
+    {
+      "name": "CollectionPod_Reserve_4",
+      "location": "<Struct 'Vector' (0x000001D44D60D960) {x: 990.000000, y: 493.200000, z: 0.000000}>",
+      "rotation": "<Struct 'Rotator' (0x000001D44D60D960) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x000001D44D60D960) {x: 0.800000, y: 0.800000, z: 0.800000}>"
+    },
+    {
+      "name": "CollectionPod_Reserve_5",
+      "location": "<Struct 'Vector' (0x000001D44D60E680) {x: 990.000000, y: 713.200000, z: 0.000000}>",
+      "rotation": "<Struct 'Rotator' (0x000001D44D60E680) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x000001D44D60E680) {x: 0.800000, y: 0.800000, z: 0.800000}>"
+    }
+  ],
+  "dirty_maps": 0
+}

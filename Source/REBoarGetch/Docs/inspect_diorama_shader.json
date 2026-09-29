@@ -1,0 +1,55 @@
+{
+  "M_Preview_Grass": [
+    {
+      "type": "MaterialExpressionMultiply",
+      "const_a": "0.0",
+      "const_b": "1.0"
+    },
+    {
+      "type": "MaterialExpressionConstant3Vector",
+      "constant": "<Struct 'LinearColor' (0x000002526A1C45E8) {r: 0.270000, g: 0.560000, b: 0.065000, a: 1.000000}>"
+    },
+    {
+      "type": "MaterialExpressionAdd",
+      "const_a": "0.0",
+      "const_b": "0.699999988079071"
+    },
+    {
+      "type": "MaterialExpressionMultiply",
+      "const_a": "0.0",
+      "const_b": "0.30000001192092896"
+    },
+    {
+      "type": "MaterialExpressionDotProduct"
+    },
+    {
+      "type": "MaterialExpressionVertexNormalWS"
+    },
+    {
+      "type": "MaterialExpressionConstant3Vector",
+      "constant": "<Struct 'LinearColor' (0x000002526A1C37E8) {r: -0.350000, g: -0.450000, b: 0.820000, a: 1.000000}>"
+    }
+  ],
+  "M_UI_Diorama": [
+    {
+      "type": "MaterialExpressionLinearInterpolate",
+      "const_a": "0.0",
+      "const_b": "1.0"
+    },
+    {
+      "type": "MaterialExpressionDesaturation"
+    },
+    {
+      "type": "MaterialExpressionTextureSampleParameter2D",
+      "parameter_name": "PreviewTexture"
+    },
+    {
+      "type": "MaterialExpressionConstant"
+    },
+    {
+      "type": "MaterialExpressionScalarParameter",
+      "default_value": "1.0",
+      "parameter_name": "Saturation"
+    }
+  ]
+}

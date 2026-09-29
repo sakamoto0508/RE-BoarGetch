@@ -1,0 +1,17 @@
+{
+  "default_mapping_context": "<Object '/Game/Input/IMC_Default.IMC_Default' (0x000001C9B7151A40) Class 'InputMappingContext'>",
+  "global_mapping_context": "<Object '/Game/Input/IMC_Global.IMC_Global' (0x000001CB4D180000) Class 'InputMappingContext'>",
+  "ui_mapping_context": "<Object '/Game/Input/IMC_UI.IMC_UI' (0x000001CB4D180140) Class 'InputMappingContext'>",
+  "move_action": "<Object '/Game/Input/Actions/IA_Move.IA_Move' (0x000001CB4531DAC0) Class 'InputAction'>",
+  "look_action": "<Object '/Game/Input/Actions/IA_Look.IA_Look' (0x000001CB3E2A01C0) Class 'InputAction'>",
+  "jump_action": "<Object '/Game/Input/Actions/IA_Jump.IA_Jump' (0x000001CB3E2A2760) Class 'InputAction'>",
+  "gadget_action": "<Object '/Game/Input/Actions/IA_Gadget.IA_Gadget' (0x000001CB3E2A5860) Class 'InputAction'>",
+  "dash_action": "<Object '/Game/Variant_Platforming/Input/Actions/IA_Dash.IA_Dash' (0x000001CB4531D660) Class 'InputAction'>",
+  "gadget_modifier_action": "<Object '/Game/Input/Actions/IA_GadgetModifier.IA_GadgetModifier' (0x000001CB3E2A5B00) Class 'InputAction'>",
+  "gadget_slot1_action": "<Object '/Game/Input/Actions/GamePad/IA_North.IA_North' (0x000001CAA457BB80) Class 'InputAction'>",
+  "gadget_slot2_action": "<Object '/Game/Input/Actions/GamePad/IA_West.IA_West' (0x000001CAF7BF7A80) Class 'InputAction'>",
+  "gadget_slot3_action": "<Object '/Game/Input/Actions/GamePad/IA_East.IA_East' (0x000001CAA457BAC0) Class 'InputAction'>",
+  "gadget_slot4_action": "<Object '/Game/Input/Actions/GamePad/IA_South.IA_South' (0x000001CAA457BC40) Class 'InputAction'>",
+  "ui_back_action": "<Object '/Game/Input/Actions/IA_UI_Back.IA_UI_Back' (0x000001CB4531D740) Class 'InputAction'>",
+  "player_hud_widget_class": "<Object '/Game/BP/Widget/WBP_LobbyHUD.WBP_LobbyHUD_C' (0x000001CAA6ECA000) Class 'WidgetBlueprintGeneratedClass'>"
+}

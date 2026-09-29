@@ -1,0 +1,328 @@
+{
+  "world": "/Game/Level/L_GadgetLab.L_GadgetLab",
+  "dirty_maps": [
+    "<Object '/Game/Level/L_GadgetLab' (0x0000026C54DA6A80) Class 'Package'>"
+  ],
+  "imported": [
+    {
+      "path": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "bounds": "<Struct 'Box' (0x0000026BF4AA3B00) {min: {x: -15.000001, y: -6.181650, z: 0.000000}, max: {x: 15.000001, y: 6.123060, z: 30.000002}, is_valid: True}>",
+      "materials": [
+        "<Object '/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/Materials/Material_0_001.Material_0_001' (0x0000026D13685800) Class 'MaterialInstanceConstant'>"
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "name": "ReturnPillar-185",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_9",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB589A9A0) {x: -1070.000000, y: -185.000000, z: 210.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB589A9A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB589A9A0) {x: 0.950000, y: 0.950000, z: 4.200000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnBase-185",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_10",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB589A9A0) {x: -1070.000000, y: -185.000000, z: 30.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB589A9A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB589A9A0) {x: 1.300000, y: 1.300000, z: 0.600000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnAccent-185",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_11",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1070.000000, y: -185.000000, z: 430.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 1.150000, y: 1.150000, z: 0.300000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnGlow-185",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_12",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1019.000000, y: -185.000000, z: 210.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 0.070000, y: 0.200000, z: 2.800000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnPillar185",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_13",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1070.000000, y: 185.000000, z: 210.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 0.950000, y: 0.950000, z: 4.200000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnBase185",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_14",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1070.000000, y: 185.000000, z: 30.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 1.300000, y: 1.300000, z: 0.600000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnAccent185",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_15",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1070.000000, y: 185.000000, z: 430.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 1.150000, y: 1.150000, z: 0.300000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnGlow185",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_16",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1019.000000, y: 185.000000, z: 210.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 0.070000, y: 0.200000, z: 2.800000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnTop",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_17",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1070.000000, y: 0.000000, z: 465.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 0.950000, y: 4.650000, z: 0.700000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnField",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_18",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1070.000000, y: 0.000000, z: 235.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 0.040000, y: 2.700000, z: 4.200000}>",
+      "hidden": false,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "ReturnSign",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_0",
+      "class": "TextRenderActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1010.000000, y: 0.000000, z: 500.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 1.000000, y: 1.000000, z: 1.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "ReturnToLobby",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.HubPortal_0",
+      "class": "HubPortal",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: -1070.000000, y: 0.000000, z: 140.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 1.000000, y: 1.000000, z: 1.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "HubTestBase-195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_58",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899870) {x: 1010.000000, y: -195.000000, z: 36.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899870) {x: 1.450000, y: 1.450000, z: 0.720000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestPillar-195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_59",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5898420) {x: 1010.000000, y: -195.000000, z: 237.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5898420) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5898420) {x: 1.100000, y: 1.000000, z: 3.600000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestJoint-195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_60",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB589A540) {x: 1010.000000, y: -195.000000, z: 418.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB589A540) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB589A540) {x: 1.350000, y: 1.250000, z: 0.420000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestInset-195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_61",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB5899370) {x: 952.000000, y: -195.000000, z: 245.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB5899370) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB5899370) {x: 0.080000, y: 0.480000, z: 2.300000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestLight-195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_62",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB28BA720) {x: 946.000000, y: -195.000000, z: 245.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB28BA720) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB28BA720) {x: 0.050000, y: 0.180000, z: 2.150000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestBase195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_63",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB28BA720) {x: 1010.000000, y: 195.000000, z: 36.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB28BA720) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB28BA720) {x: 1.450000, y: 1.450000, z: 0.720000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestPillar195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_64",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1010.000000, y: 195.000000, z: 237.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1.100000, y: 1.000000, z: 3.600000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestJoint195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_65",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1010.000000, y: 195.000000, z: 418.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1.350000, y: 1.250000, z: 0.420000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestInset195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_66",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 952.000000, y: 195.000000, z: 245.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 0.080000, y: 0.480000, z: 2.300000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestLight195",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_67",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 946.000000, y: 195.000000, z: 245.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 0.050000, y: 0.180000, z: 2.150000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestTop",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_68",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1010.000000, y: 0.000000, z: 457.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1.250000, y: 4.900000, z: 0.540000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestField",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_69",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1010.000000, y: 0.000000, z: 235.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 0.040000, y: 2.780000, z: 4.000000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestPad",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_70",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 940.000000, y: 0.000000, z: 2.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 2.600000, y: 3.200000, z: 0.040000}>",
+      "hidden": true,
+      "mesh": "<Object '/Engine/BasicShapes/Cube.Cube' (0x0000026B1933D800) Class 'StaticMesh'>"
+    },
+    {
+      "name": "HubTestTitle",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_13",
+      "class": "TextRenderActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 932.000000, y: 0.000000, z: 510.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 180.000000, roll: -0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1.000000, y: 1.000000, z: 1.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "HubTestTrigger",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.HubPortal_2",
+      "class": "HubPortal",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1010.000000, y: 0.000000, z: 140.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1.000000, y: 1.000000, z: 1.000000}>",
+      "hidden": true
+    },
+    {
+      "name": "ReturnTitle",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.TextRenderActor_14",
+      "class": "TextRenderActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B61D0) {x: -1000.000000, y: 0.000000, z: 500.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B61D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B61D0) {x: 1.000000, y: 1.000000, z: 1.000000}>",
+      "hidden": false
+    },
+    {
+      "name": "Meshy_AI_Cyber_Dock_0928074801_texture",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_85",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B4470) {x: 770.000000, y: 720.000000, z: 0.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B4470) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B4470) {x: 10.000000, y: 10.000000, z: 10.000000}>",
+      "hidden": false,
+      "mesh": "None"
+    },
+    {
+      "name": "Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "path": "/Game/Level/L_GadgetLab.L_GadgetLab:PersistentLevel.StaticMeshActor_87",
+      "class": "StaticMeshActor",
+      "p": "<Struct 'Vector' (0x0000026BB58B4470) {x: -900.000000, y: 250.000000, z: 0.000000}>",
+      "rot": "<Struct 'Rotator' (0x0000026BB58B4470) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "scale": "<Struct 'Vector' (0x0000026BB58B4470) {x: 15.000000, y: 15.000000, z: 15.000000}>",
+      "hidden": false,
+      "mesh": "<Object '/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture' (0x0000026D13681800) Class 'StaticMesh'>"
+    }
+  ],
+  "existing_portal_assets": [
+    "/Game/Lobby/Materials/M_Facility_ExhibitHologram.M_Facility_ExhibitHologram",
+    "/Game/Lobby/Materials/M_Facility_Sky.M_Facility_Sky",
+    "/Game/Lobby/Materials/M_Lobby_CyanEdge.M_Lobby_CyanEdge",
+    "/Game/Lobby/Materials/M_Lobby_ResearchHologram.M_Lobby_ResearchHologram",
+    "/Game/Lobby/Materials/M_StageSelect_HoloPanel.M_StageSelect_HoloPanel",
+    "/Game/Lobby/Materials/M_StageSelect_HoloText.M_StageSelect_HoloText",
+    "/Game/Lobby/Materials/MI_Grass_Lobby.MI_Grass_Lobby",
+    "/Game/Lobby/Materials/MI_Lobby_Coral.MI_Lobby_Coral",
+    "/Game/Lobby/Materials/MI_Lobby_Cyan.MI_Lobby_Cyan",
+    "/Game/Lobby/Materials/MI_Lobby_Ice.MI_Lobby_Ice",
+    "/Game/Lobby/Materials/MI_Lobby_Ivory.MI_Lobby_Ivory",
+    "/Game/Lobby/Materials/MI_Lobby_Navy.MI_Lobby_Navy",
+    "/Game/Lobby/Materials/MI_Lobby_PortalCyan.MI_Lobby_PortalCyan",
+    "/Game/Lobby/Materials/MI_Lobby_Yellow.MI_Lobby_Yellow"
+  ]
+}

@@ -1,0 +1,678 @@
+{
+  "actors": [
+    {
+      "label": "FacilityFloor",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        -40.0
+      ]
+    },
+    {
+      "label": "WallX-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -1200.0,
+        0.0,
+        110.0
+      ]
+    },
+    {
+      "label": "WallY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -900.0,
+        110.0
+      ]
+    },
+    {
+      "label": "WallCapY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -900.0,
+        240.0
+      ]
+    },
+    {
+      "label": "WallLightY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -872.0,
+        90.0
+      ]
+    },
+    {
+      "label": "WallX1",
+      "class": "StaticMeshActor",
+      "p": [
+        1200.0,
+        0.0,
+        110.0
+      ]
+    },
+    {
+      "label": "WallY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        900.0,
+        110.0
+      ]
+    },
+    {
+      "label": "WallCapY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        900.0,
+        240.0
+      ]
+    },
+    {
+      "label": "WallLightY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        872.0,
+        90.0
+      ]
+    },
+    {
+      "label": "FacilitySun",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        800.0
+      ]
+    },
+    {
+      "label": "SkyAtmosphere",
+      "class": "SkyAtmosphere",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "SkyLight",
+      "class": "SkyLight",
+      "p": [
+        0.0,
+        0.0,
+        600.0
+      ]
+    },
+    {
+      "label": "FacilityPlayerStart",
+      "class": "PlayerStart",
+      "p": [
+        -750.0,
+        0.0,
+        100.0
+      ]
+    },
+    {
+      "label": "ReturnPillar-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        -185.0,
+        210.0
+      ]
+    },
+    {
+      "label": "ReturnBase-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        -185.0,
+        30.0
+      ]
+    },
+    {
+      "label": "ReturnAccent-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        -185.0,
+        430.0
+      ]
+    },
+    {
+      "label": "ReturnGlow-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1019.0,
+        -185.0,
+        210.0
+      ]
+    },
+    {
+      "label": "ReturnPillar185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        185.0,
+        210.0
+      ]
+    },
+    {
+      "label": "ReturnBase185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        185.0,
+        30.0
+      ]
+    },
+    {
+      "label": "ReturnAccent185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        185.0,
+        430.0
+      ]
+    },
+    {
+      "label": "ReturnGlow185",
+      "class": "StaticMeshActor",
+      "p": [
+        -1019.0,
+        185.0,
+        210.0
+      ]
+    },
+    {
+      "label": "ReturnTop",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        0.0,
+        465.0
+      ]
+    },
+    {
+      "label": "ReturnField",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        0.0,
+        235.0
+      ]
+    },
+    {
+      "label": "ReturnSign",
+      "class": "TextRenderActor",
+      "p": [
+        -1010.0,
+        0.0,
+        500.0
+      ]
+    },
+    {
+      "label": "ReturnToLobby",
+      "class": "HubPortal",
+      "p": [
+        -1070.0,
+        0.0,
+        140.0
+      ]
+    },
+    {
+      "label": "TerminalBase",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -80.0,
+        35.0
+      ]
+    },
+    {
+      "label": "TerminalBody",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -80.0,
+        100.0
+      ]
+    },
+    {
+      "label": "TerminalMonitor",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -125.0,
+        235.0
+      ]
+    },
+    {
+      "label": "MonitorEdge-175",
+      "class": "StaticMeshActor",
+      "p": [
+        -175.0,
+        -120.0,
+        235.0
+      ]
+    },
+    {
+      "label": "MonitorEdge175",
+      "class": "StaticMeshActor",
+      "p": [
+        175.0,
+        -120.0,
+        235.0
+      ]
+    },
+    {
+      "label": "TerminalTitle",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -114.0,
+        315.0
+      ]
+    },
+    {
+      "label": "TerminalPad",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        80.0,
+        2.0
+      ]
+    },
+    {
+      "label": "OpenFacilityUI",
+      "class": "HubPortal",
+      "p": [
+        0.0,
+        80.0,
+        130.0
+      ]
+    },
+    {
+      "label": "TerminalInstruction",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -35.0,
+        175.0
+      ]
+    },
+    {
+      "label": "TestPlatform0",
+      "class": "StaticMeshActor",
+      "p": [
+        -200.0,
+        480.0,
+        35.0
+      ]
+    },
+    {
+      "label": "TestEdge0",
+      "class": "StaticMeshActor",
+      "p": [
+        -200.0,
+        350.0,
+        72.0
+      ]
+    },
+    {
+      "label": "TestPlatform1",
+      "class": "StaticMeshActor",
+      "p": [
+        170.0,
+        480.0,
+        60.0
+      ]
+    },
+    {
+      "label": "TestEdge1",
+      "class": "StaticMeshActor",
+      "p": [
+        170.0,
+        350.0,
+        122.0
+      ]
+    },
+    {
+      "label": "TestPlatform2",
+      "class": "StaticMeshActor",
+      "p": [
+        520.0,
+        480.0,
+        85.0
+      ]
+    },
+    {
+      "label": "TestEdge2",
+      "class": "StaticMeshActor",
+      "p": [
+        520.0,
+        350.0,
+        172.0
+      ]
+    },
+    {
+      "label": "TestRamp",
+      "class": "StaticMeshActor",
+      "p": [
+        -460.0,
+        480.0,
+        32.0
+      ]
+    },
+    {
+      "label": "AttackTestTarget0",
+      "class": "GadgetTestTarget",
+      "p": [
+        700.0,
+        -220.0,
+        140.0
+      ]
+    },
+    {
+      "label": "TargetBase0",
+      "class": "StaticMeshActor",
+      "p": [
+        700.0,
+        -220.0,
+        25.0
+      ]
+    },
+    {
+      "label": "AttackTestTarget1",
+      "class": "GadgetTestTarget",
+      "p": [
+        700.0,
+        130.0,
+        140.0
+      ]
+    },
+    {
+      "label": "TargetBase1",
+      "class": "StaticMeshActor",
+      "p": [
+        700.0,
+        130.0,
+        25.0
+      ]
+    },
+    {
+      "label": "TestTitle",
+      "class": "TextRenderActor",
+      "p": [
+        1160.0,
+        0.0,
+        470.0
+      ]
+    },
+    {
+      "label": "Planter-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1020.0,
+        -750.0,
+        30.0
+      ]
+    },
+    {
+      "label": "Plant-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1020.0,
+        -750.0,
+        65.0
+      ]
+    },
+    {
+      "label": "Planter1",
+      "class": "StaticMeshActor",
+      "p": [
+        1020.0,
+        750.0,
+        30.0
+      ]
+    },
+    {
+      "label": "Plant1",
+      "class": "StaticMeshActor",
+      "p": [
+        1020.0,
+        750.0,
+        65.0
+      ]
+    },
+    {
+      "label": "FacilitySkyDome",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_LoadoutTitle",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -123.0,
+        385.0
+      ]
+    },
+    {
+      "label": "Quality_Movement",
+      "class": "TextRenderActor",
+      "p": [
+        30.0,
+        753.0,
+        262.0
+      ]
+    },
+    {
+      "label": "Quality_Capture",
+      "class": "TextRenderActor",
+      "p": [
+        -730.0,
+        -723.0,
+        242.0
+      ]
+    },
+    {
+      "label": "Quality_Obstacle",
+      "class": "TextRenderActor",
+      "p": [
+        320.0,
+        -803.0,
+        242.0
+      ]
+    },
+    {
+      "label": "Quality_Navy",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_Ivory",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_Yellow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_Glow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_Ice",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_Cyan",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_Holo",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_Panel",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Quality_SoftFill0",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        650.0
+      ]
+    },
+    {
+      "label": "Quality_SoftFill1",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        650.0
+      ]
+    },
+    {
+      "label": "Quality_MovementScreenFace",
+      "class": "StaticMeshActor",
+      "p": [
+        30.0,
+        756.0,
+        280.0
+      ]
+    },
+    {
+      "label": "Quality_LoadoutReverse",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -153.0,
+        385.0
+      ]
+    },
+    {
+      "label": "Quality_LoadoutReversePanel",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -150.0,
+        410.0
+      ]
+    },
+    {
+      "label": "Equipment_Ivory",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Equipment_Navy",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Equipment_Cyan",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "label": "Equipment_Yellow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "gadgets": [
+    {
+      "class": "/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C",
+      "property": "gadget_definition",
+      "data": "/Game/DataAssets/Gadget/DA_Gadget.DA_Gadget",
+      "id": "Net",
+      "name": "\u30a2\u30df",
+      "old_condition": "None"
+    }
+  ],
+  "gi": "/Game/BP/Core/BP_BoarGameInstance.BP_BoarGameInstance",
+  "levels": [
+    "/Game/Level/L_Archive.L_Archive",
+    "/Game/Level/L_GadgetLab.L_GadgetLab",
+    "/Game/Level/L_Lobby.L_Lobby",
+    "/Game/Level/Stage1.Stage1",
+    "/Game/Level/Test.Test",
+    "/Game/Level/Title.Title"
+  ],
+  "widget": {
+    "entry_class": "<Object '/Game/BP/Widget/WBP_LoadoutEntry.WBP_LoadoutEntry_C' (0x000001DA2D452000) Class 'WidgetBlueprintGeneratedClass'>",
+    "slots_panel_name": "SlotsList",
+    "candidates_panel_name": "CandidatesList",
+    "status_widget_name": "Text_Status",
+    "back_button_name": "Button_Back"
+  }
+}

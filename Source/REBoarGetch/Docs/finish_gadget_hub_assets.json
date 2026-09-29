@@ -1,0 +1,14 @@
+{
+  "visible_batches": [
+    "HubStructure_Navy",
+    "HubStructure_Ivory",
+    "HubStructure_Yellow",
+    "Equipment_Glow",
+    "Equipment_Ice",
+    "HubStructure_Cyan",
+    "Equipment_Holo",
+    "Equipment_Panel"
+  ],
+  "row_height": 96.0,
+  "dirty_maps": []
+}

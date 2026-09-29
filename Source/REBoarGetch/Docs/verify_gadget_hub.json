@@ -1,0 +1,82 @@
+{
+  "blueprints": {
+    "/Game/BP/Widget/WBP_GadgetLoadout": true,
+    "/Game/BP/Widget/WBP_LoadoutEntry": true,
+    "/Game/BP/Lobby/BP_GM_GadgetLab": true,
+    "/Game/BP/Lobby/BP_GM_GadgetTest_Net": true,
+    "/Game/BP/Core/BP_BoarGameInstance": true
+  },
+  "levels": {
+    "L_GadgetTest_Net": {
+      "portals": [
+        {
+          "name": "ReturnToGadgetLab",
+          "action": "<HubPortalAction.TRAVEL: 0>",
+          "destination": "<Object '/Game/Level/L_GadgetLab.L_GadgetLab' (0x0000012A6F205400) Class 'World'>"
+        }
+      ],
+      "targets": 2,
+      "trial_class": "<Object '/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C' (0x0000012A27D66900) Class 'BlueprintGeneratedClass'>"
+    },
+    "L_GadgetLab": {
+      "portals": [
+        {
+          "name": "ReturnToLobby",
+          "action": "<HubPortalAction.TRAVEL: 0>",
+          "destination": "<Object '/Game/Level/L_Lobby.L_Lobby' (0x0000012ACFF9A800) Class 'World'>"
+        },
+        {
+          "name": "OpenFacilityUI",
+          "action": "<HubPortalAction.LOADOUT: 1>",
+          "destination": "None"
+        },
+        {
+          "name": "HubTestTrigger",
+          "action": "<HubPortalAction.GADGET_TEST: 3>",
+          "destination": "None"
+        }
+      ],
+      "test_visuals": 14,
+      "retained_hidden": [
+        "TestPlatform0",
+        "TestEdge0",
+        "TestPlatform1",
+        "TestEdge1",
+        "TestPlatform2",
+        "TestEdge2",
+        "TestRamp",
+        "AttackTestTarget0",
+        "TargetBase0",
+        "AttackTestTarget1",
+        "TargetBase1",
+        "TestTitle",
+        "Quality_LoadoutTitle",
+        "Quality_Movement",
+        "Quality_Capture",
+        "Quality_Obstacle",
+        "Quality_Navy",
+        "Quality_Ivory",
+        "Quality_Yellow",
+        "Quality_Glow",
+        "Quality_Ice",
+        "Quality_Cyan",
+        "Quality_Holo",
+        "Quality_Panel",
+        "Quality_MovementScreenFace",
+        "Quality_LoadoutReverse",
+        "Quality_LoadoutReversePanel",
+        "Equipment_Ivory",
+        "Equipment_Navy",
+        "Equipment_Cyan",
+        "Equipment_Yellow"
+      ]
+    }
+  },
+  "net": {
+    "id": "Net",
+    "initial": true,
+    "test_level": "<Object '/Game/Level/L_GadgetTest_Net.L_GadgetTest_Net' (0x0000012A6F207E00) Class 'World'>"
+  },
+  "dirty_maps": [],
+  "dirty_assets": []
+}

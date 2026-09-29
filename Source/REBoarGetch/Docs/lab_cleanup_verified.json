@@ -1,0 +1,16 @@
+{
+  "saved": true,
+  "gameplay_serialized_unchanged": {
+    "HubPortal": true,
+    "GadgetTestTarget": true
+  },
+  "pod_count": 5,
+  "assigned_gadgets": 1,
+  "reserve_pods": 4,
+  "hidden_count": 73,
+  "deleted_count": 0,
+  "PIE": false,
+  "dirty_maps": 0,
+  "new_mesh_assets": 0,
+  "compile": "No Blueprint, C++ or Material changes; built-in static mesh architecture only"
+}

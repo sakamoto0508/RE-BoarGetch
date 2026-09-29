@@ -1,0 +1,40 @@
+{
+  "assets": [
+    "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Navy",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ivory",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Yellow",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Glow",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Ice",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Cyan",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Holo",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Quality_Panel",
+    "/Game/Lobby/Meshes/SM_Archive_Quality_Navy",
+    "/Game/Lobby/Meshes/SM_Archive_Quality_Ivory",
+    "/Game/Lobby/Meshes/SM_Archive_Quality_Yellow",
+    "/Game/Lobby/Meshes/SM_Archive_Quality_Glow",
+    "/Game/Lobby/Meshes/SM_Archive_Quality_Ice",
+    "/Game/Lobby/Meshes/SM_Archive_Quality_Cyan",
+    "/Game/Lobby/Meshes/SM_Archive_Quality_Holo",
+    "/Game/Lobby/Meshes/SM_Archive_Quality_Panel"
+  ],
+  "levels": [
+    "L_GadgetLab",
+    "L_Archive"
+  ],
+  "preserved": {
+    "GadgetReturn": true,
+    "ArchiveReturn": true
+  },
+  "moved": [
+    "TerminalBase",
+    "TerminalBody",
+    "TerminalMonitor",
+    "MonitorEdge-175",
+    "MonitorEdge175",
+    "TerminalTitle",
+    "TerminalPad",
+    "OpenFacilityUI",
+    "TerminalInstruction"
+  ],
+  "compile": "Facility GameMode Blueprints compiled; no source or logic changes"
+}

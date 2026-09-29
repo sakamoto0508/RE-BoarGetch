@@ -1,0 +1,53 @@
+{
+  "assets": [
+    "/Game/Lobby/Materials/M_Architecture_SoftWhite",
+    "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Ice",
+    "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Ivory",
+    "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Navy",
+    "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Cyan",
+    "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_Yellow",
+    "/Game/Lobby/Meshes/SM_L_GadgetLab_Architecture_SoftWhite",
+    "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Navy",
+    "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Ivory",
+    "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_SoftWhite",
+    "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Cyan",
+    "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Yellow",
+    "/Game/Lobby/Meshes/SM_L_Lobby_Architecture_Ice"
+  ],
+  "levels": {
+    "L_GadgetLab": {
+      "added": [
+        "Architecture_Ice",
+        "Architecture_Ivory",
+        "Architecture_Navy",
+        "Architecture_Cyan",
+        "Architecture_Yellow",
+        "Architecture_SoftWhite"
+      ],
+      "saved": true,
+      "original_actor_transforms_visibility_unchanged": true
+    },
+    "L_Lobby": {
+      "added": [
+        "Architecture_Navy",
+        "Architecture_Ivory",
+        "Architecture_SoftWhite",
+        "Architecture_Cyan",
+        "Architecture_Yellow",
+        "Architecture_Ice"
+      ],
+      "saved": true,
+      "original_actor_transforms_visibility_unchanged": true
+    }
+  },
+  "lighting": [
+    "Architecture_LabFill_-780_-425",
+    "Architecture_LabFill_-780_425",
+    "Architecture_LabFill_780_-425",
+    "Architecture_LabFill_780_425",
+    "Architecture_AtriumFill_-900_-650",
+    "Architecture_AtriumFill_-900_650",
+    "Architecture_AtriumFill_900_-650",
+    "Architecture_AtriumFill_900_650"
+  ]
+}

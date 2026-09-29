@@ -1,0 +1,592 @@
+{
+  "world": "/Game/Level/L_GadgetLab.L_GadgetLab",
+  "actors": [
+    {
+      "name": "ReturnPillar-185",
+      "pos": "<Struct 'Vector' (0x0000026BB589A9A0) {x: -1070.000000, y: -185.000000, z: 210.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026BB589A540) {x: -1070.000000, y: -185.000000, z: 210.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnBase-185",
+      "pos": "<Struct 'Vector' (0x0000026BB589A540) {x: -1070.000000, y: -185.000000, z: 30.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026BB589A770) {x: -1070.000000, y: -185.000000, z: 30.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnAccent-185",
+      "pos": "<Struct 'Vector' (0x0000026BB5899320) {x: -1070.000000, y: -185.000000, z: 430.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026BB5899460) {x: -1070.000000, y: -185.000000, z: 430.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnGlow-185",
+      "pos": "<Struct 'Vector' (0x0000026BB5899460) {x: -1019.000000, y: -185.000000, z: 210.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026BB58EDC80) {x: -1019.000000, y: -185.000000, z: 210.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnPillar185",
+      "pos": "<Struct 'Vector' (0x0000026BB58EDC80) {x: -1070.000000, y: 185.000000, z: 210.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026BB28BA720) {x: -1070.000000, y: 185.000000, z: 210.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnBase185",
+      "pos": "<Struct 'Vector' (0x0000026BB28BA720) {x: -1070.000000, y: 185.000000, z: 30.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026BA05F26D0) {x: -1070.000000, y: 185.000000, z: 30.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnAccent185",
+      "pos": "<Struct 'Vector' (0x0000026BA05F26D0) {x: -1070.000000, y: 185.000000, z: 430.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3170) {x: -1070.000000, y: 185.000000, z: 430.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnGlow185",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3170) {x: -1019.000000, y: 185.000000, z: 210.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3210) {x: -1019.000000, y: 185.000000, z: 210.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnTop",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3210) {x: -1070.000000, y: 0.000000, z: 465.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE31C0) {x: -1070.000000, y: 0.000000, z: 465.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnField",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE31C0) {x: -1070.000000, y: 0.000000, z: 235.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE32B0) {x: -1070.000000, y: 0.000000, z: 235.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnSign",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE32B0) {x: -1010.000000, y: 0.000000, z: 500.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "NewTextRenderComponent",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3300) {x: -1010.000000, y: 0.000000, z: 500.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        },
+        {
+          "name": "Sprite",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3300) {x: -1010.000000, y: 0.000000, z: 500.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnToLobby",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3300) {x: -1070.000000, y: 0.000000, z: 140.000000}>",
+      "hidden": false,
+      "components": [
+        {
+          "name": "PortalTrigger",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3300) {x: -1070.000000, y: 0.000000, z: 140.000000}>",
+          "collision": "<CollisionEnabled.QUERY_ONLY: 1>",
+          "pawn": "<CollisionResponseType.ECR_OVERLAP: 1>",
+          "overlap": true,
+          "extent": "<Struct 'Vector' (0x0000026B4EAE3300) {x: 80.000000, y: 140.000000, z: 150.000000}>",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestBase-195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3300) {x: 1010.000000, y: -195.000000, z: 36.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE2C20) {x: 1010.000000, y: -195.000000, z: 36.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestPillar-195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE33F0) {x: 1010.000000, y: -195.000000, z: 237.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3350) {x: 1010.000000, y: -195.000000, z: 237.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestJoint-195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3440) {x: 1010.000000, y: -195.000000, z: 418.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE33A0) {x: 1010.000000, y: -195.000000, z: 418.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestInset-195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3260) {x: 952.000000, y: -195.000000, z: 245.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3490) {x: 952.000000, y: -195.000000, z: 245.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestLight-195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1FF0) {x: 946.000000, y: -195.000000, z: 245.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE2310) {x: 946.000000, y: -195.000000, z: 245.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestBase195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2310) {x: 1010.000000, y: 195.000000, z: 36.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE34E0) {x: 1010.000000, y: 195.000000, z: 36.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestPillar195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3A30) {x: 1010.000000, y: 195.000000, z: 237.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE2630) {x: 1010.000000, y: 195.000000, z: 237.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestJoint195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2630) {x: 1010.000000, y: 195.000000, z: 418.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3B70) {x: 1010.000000, y: 195.000000, z: 418.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestInset195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3B70) {x: 952.000000, y: 195.000000, z: 245.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE39E0) {x: 952.000000, y: 195.000000, z: 245.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestLight195",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE39E0) {x: 946.000000, y: 195.000000, z: 245.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3D00) {x: 946.000000, y: 195.000000, z: 245.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestTop",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3D00) {x: 1010.000000, y: 0.000000, z: 457.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3D50) {x: 1010.000000, y: 0.000000, z: 457.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestField",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3D50) {x: 1010.000000, y: 0.000000, z: 235.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3CB0) {x: 1010.000000, y: 0.000000, z: 235.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestPad",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3CB0) {x: 940.000000, y: 0.000000, z: 2.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3C60) {x: 940.000000, y: 0.000000, z: 2.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "name": "HubTestTitle",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3C60) {x: 932.000000, y: 0.000000, z: 510.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "NewTextRenderComponent",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3DA0) {x: 932.000000, y: 0.000000, z: 510.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        },
+        {
+          "name": "Sprite",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3DA0) {x: 932.000000, y: 0.000000, z: 510.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "HubTestTrigger",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3DA0) {x: 1010.000000, y: 0.000000, z: 140.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "PortalTrigger",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3DA0) {x: 1010.000000, y: 0.000000, z: 140.000000}>",
+          "collision": "<CollisionEnabled.QUERY_ONLY: 1>",
+          "pawn": "<CollisionResponseType.ECR_OVERLAP: 1>",
+          "overlap": true,
+          "extent": "<Struct 'Vector' (0x0000026B4EAE3DA0) {x: 85.000000, y: 140.000000, z: 145.000000}>",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "ReturnTitle",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3DA0) {x: -1000.000000, y: 0.000000, z: 500.000000}>",
+      "hidden": false,
+      "components": [
+        {
+          "name": "NewTextRenderComponent",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3DF0) {x: -1000.000000, y: 0.000000, z: 500.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        },
+        {
+          "name": "Sprite",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3DF0) {x: -1000.000000, y: 0.000000, z: 500.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "Meshy_AI_Cyber_Dock_0928074801_texture",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3E40) {x: 770.000000, y: 720.000000, z: 0.000000}>",
+      "hidden": false,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3DF0) {x: 770.000000, y: 720.000000, z: 0.000000}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "name": "Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3DF0) {x: -1070.000000, y: 20.000000, z: 0.000000}>",
+      "hidden": false,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3E90) {x: -1070.000000, y: 20.000000, z: 0.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "name": "DataPortal_Return_Frame",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE3EE0) {x: -1070.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE1E60) {x: -1070.000000, y: 0.000000, z: 0.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "name": "DataPortal_Return_Surface",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE20E0) {x: -1070.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": false,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE2720) {x: -1070.000000, y: 0.000000, z: 0.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "name": "DataPortal_Test_Frame",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1D70) {x: 1010.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE25E0) {x: 1010.000000, y: 0.000000, z: 0.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "name": "DataPortal_Test_Surface",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE2540) {x: 1010.000000, y: 0.000000, z: 0.000000}>",
+      "hidden": true,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE1CD0) {x: 1010.000000, y: 0.000000, z: 0.000000}>",
+          "collision": "<CollisionEnabled.NO_COLLISION: 0>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "name": "Meshy_AI_Neon_Nexus_Platform_0928085323_texture__1_",
+      "pos": "<Struct 'Vector' (0x0000026B4EAE1CD0) {x: -590.000000, y: 550.000000, z: 0.000000}>",
+      "hidden": false,
+      "components": [
+        {
+          "name": "StaticMeshComponent0",
+          "pos": "<Struct 'Vector' (0x0000026B4EAE3080) {x: -590.000000, y: 550.000000, z: 0.000000}>",
+          "collision": "<CollisionEnabled.QUERY_AND_PHYSICS: 3>",
+          "pawn": "<CollisionResponseType.ECR_BLOCK: 2>",
+          "overlap": false,
+          "extent": "",
+          "visible": true
+        }
+      ]
+    }
+  ]
+}

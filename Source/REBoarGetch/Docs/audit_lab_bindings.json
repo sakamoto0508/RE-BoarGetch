@@ -1,0 +1,31 @@
+{
+  "/Game/BP/Core/BP_BoarGameInstance": {
+    "class": "/Game/BP/Core/BP_BoarGameInstance.BP_BoarGameInstance_C",
+    "gadget_catalog": "[\"/Script/Engine.BlueprintGeneratedClass'/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C'\"]"
+  },
+  "/Game/BP/Widget/WBP_GadgetLoadout": {
+    "class": "/Game/BP/Widget/WBP_GadgetLoadout.WBP_GadgetLoadout_C",
+    "slots_panel_name": "SlotsList",
+    "candidates_panel_name": "CandidatesList"
+  },
+  "/Game/BP/Lobby/BP_GM_GadgetLab": {
+    "class": "/Game/BP/Lobby/BP_GM_GadgetLab.BP_GM_GadgetLab_C",
+    "archive": "False",
+    "gadget_test": "False"
+  },
+  "/Game/BP/Player/BP_BoarPlayerController": {
+    "class": "/Game/BP/Player/BP_BoarPlayerController.BP_BoarPlayerController_C",
+    "loadout_widget_class": "<Object '/Game/BP/Widget/WBP_GadgetLoadout.WBP_GadgetLoadout_C' (0x0000026BB1631000) Class 'WidgetBlueprintGeneratedClass'>",
+    "default_mapping_context": "<Object '/Game/Input/IMC_Default.IMC_Default' (0x0000026BAF571400) Class 'InputMappingContext'>"
+  },
+  "/Game/DataAssets/Gadget/DA_Gadget": {
+    "class": "/Script/REBoarGetch.GadgetDataAsset",
+    "gadget_id": "Net",
+    "initially_unlocked": "True",
+    "required_special_coin_count": "0",
+    "test_level": "<Object '/Game/Level/L_GadgetTest_Net.L_GadgetTest_Net' (0x0000026CF8A22A00) Class 'World'>"
+  },
+  "/Game/Input/IMC_Default": [],
+  "/Game/Input/IMC_Global": [],
+  "assets_in_lab": []
+}

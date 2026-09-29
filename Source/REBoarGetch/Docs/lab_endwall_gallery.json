@@ -1,0 +1,48 @@
+{
+  "saved": true,
+  "layout": [
+    {
+      "name": "CollectionPod_Net",
+      "wall": 1,
+      "x": -750
+    },
+    {
+      "name": "CollectionPod_Reserve_1",
+      "wall": 1,
+      "x": -450
+    },
+    {
+      "name": "CollectionPod_Reserve_2",
+      "wall": 1,
+      "x": 450
+    },
+    {
+      "name": "CollectionPod_Reserve_3",
+      "wall": 1,
+      "x": 750
+    },
+    {
+      "name": "CollectionPod_Reserve_4",
+      "wall": -1,
+      "x": -750
+    },
+    {
+      "name": "CollectionPod_Reserve_5",
+      "wall": -1,
+      "x": -450
+    },
+    {
+      "name": "CollectionPod_Reserve_6",
+      "wall": -1,
+      "x": 450
+    },
+    {
+      "name": "CollectionPod_Reserve_7",
+      "wall": -1,
+      "x": 750
+    }
+  ],
+  "protected_transforms_unchanged": true,
+  "PIE": false,
+  "dirty_maps": 0
+}

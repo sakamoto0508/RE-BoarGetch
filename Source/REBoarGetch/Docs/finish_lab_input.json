@@ -1,0 +1,10 @@
+{
+  "compiled": [
+    "/Game/BP/Player/BP_BoarPlayerController",
+    "/Game/BP/Widget/WBP_GadgetLoadout",
+    "/Game/BP/Core/BP_BoarGameInstance",
+    "/Game/BP/Lobby/BP_GM_GadgetLab"
+  ],
+  "controller_action": "<Object '/Game/Input/Actions/IA_FacilityInteract.IA_FacilityInteract' (0x000001D584FBAA40) Class 'InputAction'>",
+  "context": "<Object '/Game/Input/IMC_Facility.IMC_Facility' (0x000001D55526D480) Class 'InputMappingContext'>"
+}

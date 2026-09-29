@@ -37,6 +37,8 @@ class REBOARGETCH_API ABoarPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	/** Dedicated non-stage terminal entry; existing widget/save implementations are reused. */
+	void OpenFacilityMenu(bool bArchive);
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
 	void HandleStageCleared(const FStageRunData& Run, int32 TargetCount);
 	/** 終了演出からUIまでゲーム入力を遮断します。 */
@@ -74,6 +76,12 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
+	UPROPERTY(EditDefaultsOnly, Category="Input") TObjectPtr<UInputAction> InteractAction;
+	UPROPERTY(EditDefaultsOnly, Category="Input") TObjectPtr<UInputMappingContext> FacilityMappingContext;
+	void InteractWithFacility();
+	bool bFacilityMenuOpen = false;
+	bool bFacilityAddedUIContext = false;
+	void CloseFacilityMenuInput();
 	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarEncyclopediaWidget> EncyclopediaWidgetClass;
 	UPROPERTY(Transient) TObjectPtr<UBoarEncyclopediaWidget> EncyclopediaWidget;
 	UPROPERTY(Transient) TObjectPtr<UUserWidget> EncyclopediaParent;

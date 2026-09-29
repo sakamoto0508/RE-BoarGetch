@@ -19,6 +19,8 @@
 #include "UI/BoarConfirmationWidget.h"
 #include "UI/BoarEncyclopediaWidget.h"
 #include "UI/BoarLobbyWidget.h"
+#include "Core/BoarFacilityGameMode.h"
+#include "Stage/HubPortal.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -56,6 +58,8 @@ void ABoarPlayerController::BeginPlay()
 
 	// Mapping Context登録後にHUDを生成し、現在Possess中のCharacterとGameModeへ接続する。
 	AddOwnedMappingContext(GlobalMappingContext, 10);
+	if (const auto* Facility=GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>(); Facility && !Facility->bGadgetTest && !Facility->bArchive)
+		AddOwnedMappingContext(FacilityMappingContext, 15);
 	CreatePlayerHUD();
 }
 
@@ -92,6 +96,7 @@ void ABoarPlayerController::OnPossess(APawn* InPawn)
 
 void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (bFacilityMenuOpen) CloseLoadoutMenu();
 	CloseEncyclopedia();
 	CloseSettingsMenu();
 	ResumeFromPause();
@@ -143,6 +148,8 @@ void ABoarPlayerController::SetupInputComponent()
 		// Axis2Dの値が変化している間、毎Frame Moveへ移動方向を渡す。
 		EnhancedInput->BindAction(MoveAction,ETriggerEvent::Triggered,this,&ABoarPlayerController::Move);
 	}
+	if (InteractAction)
+		EnhancedInput->BindAction(InteractAction,ETriggerEvent::Started,this,&ABoarPlayerController::InteractWithFacility);
 
 	if (LookAction)
 	{
@@ -542,6 +549,7 @@ void ABoarPlayerController::CloseEncyclopedia()
 	if (!EncyclopediaWidget) return;
 	EncyclopediaWidget->OnClosed.RemoveDynamic(this, &ABoarPlayerController::CloseEncyclopedia);
 	EncyclopediaWidget->RemoveFromParent(); EncyclopediaWidget = nullptr;
+	if (bFacilityMenuOpen) { CloseFacilityMenuInput(); return; }
 	if (bEncyclopediaAddedUIContext) RemoveOwnedMappingContext(UIMappingContext);
 	bEncyclopediaAddedUIContext = false;
 	SetIgnoreMoveInput(false); SetIgnoreLookInput(false);
@@ -642,6 +650,7 @@ void ABoarPlayerController::CloseLoadoutMenu()
 	if (!LoadoutWidget) return;
 	LoadoutWidget->OnClosed.RemoveDynamic(this, &ABoarPlayerController::CloseLoadoutMenu);
 	LoadoutWidget->RemoveFromParent(); LoadoutWidget = nullptr;
+	if (bFacilityMenuOpen) { CloseFacilityMenuInput(); return; }
 	if (PauseWidget)
 	{
 		PauseWidget->SetVisibility(ESlateVisibility::Visible);
@@ -905,7 +914,7 @@ ABoarPlayerCharacter* ABoarPlayerController::GetBoarCharacter() const
 
 bool ABoarPlayerController::CanProcessGameplayInput() const
 {
-	return !bGameplayInputBlocked && !PauseWidget && !SettingsWidget && !EncyclopediaWidget && !bLevelTransitionRequested;
+	return !bGameplayInputBlocked && !bFacilityMenuOpen && !PauseWidget && !SettingsWidget && !EncyclopediaWidget && !bLevelTransitionRequested;
 }
 
 void ABoarPlayerController::AddOwnedMappingContext(UInputMappingContext* Context, int32 Priority)
@@ -923,4 +932,68 @@ void ABoarPlayerController::RemoveOwnedMappingContext(UInputMappingContext* Cont
 	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
 	if (auto* Subsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr)
 		Subsystem->RemoveMappingContext(Context);
+}
+
+void ABoarPlayerController::OpenFacilityMenu(bool bArchive)
+{
+    const auto* Facility=GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
+    if(!IsLocalController()||!Facility||Facility->bGadgetTest||Facility->bArchive!=bArchive||bFacilityMenuOpen||PauseWidget||SettingsWidget||LoadoutWidget||EncyclopediaWidget||bLevelTransitionRequested)return;
+    UUserWidget* Menu=nullptr;
+    if(bArchive)
+    {
+        if(!EncyclopediaWidgetClass)return;
+        EncyclopediaWidget=CreateWidget<UBoarEncyclopediaWidget>(this,EncyclopediaWidgetClass);
+        if(!EncyclopediaWidget)return;
+        EncyclopediaWidget->OnClosed.AddUniqueDynamic(this,&ABoarPlayerController::CloseEncyclopedia);
+        Menu=EncyclopediaWidget;
+    }
+    else
+    {
+        if(!LoadoutWidgetClass)return;
+        LoadoutWidget=CreateWidget<UBoarLoadoutWidget>(this,LoadoutWidgetClass);
+        if(!LoadoutWidget)return;
+        LoadoutWidget->SetLabContext(true);
+        LoadoutWidget->OnClosed.AddUniqueDynamic(this,&ABoarPlayerController::CloseLoadoutMenu);
+        Menu=LoadoutWidget;
+    }
+    bFacilityMenuOpen=true;
+    bFacilityAddedUIContext=UIMappingContext&&!OwnedMappingContexts.Contains(UIMappingContext);
+    if(bFacilityAddedUIContext)AddOwnedMappingContext(UIMappingContext,20);
+    bIsGadgetModifierHeld=false;
+    if(auto* FacilityPlayer=GetBoarCharacter())
+    {
+        FacilityPlayer->StopDash();FacilityPlayer->StopJump();FacilityPlayer->StopGadgetUse();FacilityPlayer->SetMenuOpen(true);
+        FacilityPlayer->GetCharacterMovement()->StopMovementImmediately();
+    }
+    FlushPressedKeys();SetIgnoreMoveInput(true);SetIgnoreLookInput(true);
+    Menu->AddToViewport(100);
+    FInputModeGameAndUI Mode;Mode.SetWidgetToFocus(Menu->TakeWidget());Mode.SetHideCursorDuringCapture(false);Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    SetInputMode(Mode);SetShowMouseCursor(true);
+    if(bArchive)EncyclopediaWidget->FocusInitialChoice();else LoadoutWidget->FocusInitialChoice();
+}
+
+void ABoarPlayerController::InteractWithFacility()
+{
+    if(!CanProcessGameplayInput() || !GetPawn() || bIsGadgetModifierHeld)return;
+    TArray<AActor*> Nearby;
+    GetPawn()->GetOverlappingActors(Nearby,AHubPortal::StaticClass());
+    AHubPortal* Nearest=nullptr;
+    for(AActor* Actor:Nearby)
+    {
+        auto* Portal=Cast<AHubPortal>(Actor);
+        if(Portal && Portal->bRequiresInteraction && (!Nearest ||
+           GetPawn()->GetSquaredDistanceTo(Portal)<GetPawn()->GetSquaredDistanceTo(Nearest)))Nearest=Portal;
+    }
+    if(Nearest)Nearest->Interact(this);
+}
+
+void ABoarPlayerController::CloseFacilityMenuInput()
+{
+    if(!bFacilityMenuOpen)return;
+    bFacilityMenuOpen=false;
+    if(bFacilityAddedUIContext)RemoveOwnedMappingContext(UIMappingContext);
+    bFacilityAddedUIContext=false;
+    if(auto* FacilityPlayer=GetBoarCharacter())FacilityPlayer->SetMenuOpen(false);
+    SetIgnoreMoveInput(false);SetIgnoreLookInput(false);FlushPressedKeys();
+    FInputModeGameOnly Mode;SetInputMode(Mode);SetShowMouseCursor(false);
 }

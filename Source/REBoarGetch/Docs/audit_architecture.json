@@ -1,0 +1,2634 @@
+{
+  "dirty": [
+    "/Game/Level/L_Lobby"
+  ],
+  "L_GadgetLab": [
+    {
+      "name": "FacilityFloor",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        -40.0
+      ],
+      "s": [
+        24.0,
+        18.0,
+        0.8
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallX-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -1200.0,
+        0.0,
+        110.0
+      ],
+      "s": [
+        0.5,
+        18.0,
+        2.4
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -900.0,
+        110.0
+      ],
+      "s": [
+        24.0,
+        0.5,
+        2.4
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallCapY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -900.0,
+        240.0
+      ],
+      "s": [
+        24.0,
+        0.65,
+        0.24
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallLightY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -872.0,
+        90.0
+      ],
+      "s": [
+        22.5,
+        0.07,
+        0.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallX1",
+      "class": "StaticMeshActor",
+      "p": [
+        1200.0,
+        0.0,
+        110.0
+      ],
+      "s": [
+        0.5,
+        18.0,
+        2.4
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        900.0,
+        110.0
+      ],
+      "s": [
+        24.0,
+        0.5,
+        2.4
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallCapY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        900.0,
+        240.0
+      ],
+      "s": [
+        24.0,
+        0.65,
+        0.24
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "WallLightY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        872.0,
+        90.0
+      ],
+      "s": [
+        22.5,
+        0.07,
+        0.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "FacilitySun",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        800.0
+      ],
+      "s": [
+        2.5,
+        2.5,
+        2.5
+      ]
+    },
+    {
+      "name": "SkyLight",
+      "class": "SkyLight",
+      "p": [
+        0.0,
+        0.0,
+        600.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "FacilityPlayerStart",
+      "class": "PlayerStart",
+      "p": [
+        -750.0,
+        0.0,
+        100.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "ReturnToLobby",
+      "class": "HubPortal",
+      "p": [
+        -1070.0,
+        0.0,
+        140.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "OpenFacilityUI",
+      "class": "HubPortal",
+      "p": [
+        0.0,
+        -80.0,
+        150.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "HubStationTitle",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -295.0,
+        350.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "HubStationReverse",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        135.0,
+        350.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "HubTestTrigger",
+      "class": "HubPortal",
+      "p": [
+        1010.0,
+        0.0,
+        140.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Meshy_AI_Neon_Portal_Frame_0928055927_texture",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        20.0,
+        0.0
+      ],
+      "s": [
+        16.0,
+        16.0,
+        16.0
+      ],
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+    },
+    {
+      "name": "DataPortal_Return_Surface",
+      "class": "StaticMeshActor",
+      "p": [
+        -1070.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        16.0,
+        16.0,
+        16.0
+      ],
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface"
+    },
+    {
+      "name": "DataPortal_Test_Frame",
+      "class": "StaticMeshActor",
+      "p": [
+        1010.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        16.0,
+        16.0,
+        16.0
+      ],
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+    },
+    {
+      "name": "LabResearchStation",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -80.0,
+        0.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mesh": "/Game/InportAssets/GadgetResearchStation.GadgetResearchStation"
+    },
+    {
+      "name": "LabStationInteraction",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -295.0,
+        318.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "CollectionPod_Net",
+      "class": "GadgetCollectionPod",
+      "p": [
+        26.0,
+        620.0,
+        0.0
+      ],
+      "s": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    }
+  ],
+  "L_Lobby": [
+    {
+      "name": "LobbyFloor",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        -50.0
+      ],
+      "s": [
+        36.0,
+        30.0,
+        1.0
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "CentralPlaza",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        2.0
+      ],
+      "s": [
+        10.0,
+        10.0,
+        0.04
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyPlayerStart",
+      "class": "PlayerStart",
+      "p": [
+        -1120.0,
+        0.0,
+        110.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "LobbySun",
+      "class": "DirectionalLight",
+      "p": [
+        0.0,
+        0.0,
+        900.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "LobbySkyLight",
+      "class": "SkyLight",
+      "p": [
+        0.0,
+        0.0,
+        500.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Port_PlazaOuter",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        12.0
+      ],
+      "s": [
+        13.0,
+        13.0,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_PlazaInner",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        25.0
+      ],
+      "s": [
+        11.6,
+        11.6,
+        0.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_ColumnBase_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        35.0
+      ],
+      "s": [
+        1.9,
+        1.9,
+        0.7
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_Column_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        245.0
+      ],
+      "s": [
+        0.85,
+        0.85,
+        4.0
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_ColumnCollar_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        390.0
+      ],
+      "s": [
+        1.15,
+        1.15,
+        0.25
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_ColumnCap_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        465.0
+      ],
+      "s": [
+        1.5,
+        1.5,
+        0.16
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_ColumnBase_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        35.0
+      ],
+      "s": [
+        1.9,
+        1.9,
+        0.7
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_Column_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        245.0
+      ],
+      "s": [
+        0.85,
+        0.85,
+        4.0
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_ColumnCollar_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        390.0
+      ],
+      "s": [
+        1.15,
+        1.15,
+        0.25
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "Port_ColumnCap_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        465.0
+      ],
+      "s": [
+        1.5,
+        1.5,
+        0.16
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_GateWing-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1400.0,
+        -625.0,
+        220.0
+      ],
+      "s": [
+        1.8,
+        2.6,
+        4.4
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateWindow-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1307.0,
+        -625.0,
+        265.0
+      ],
+      "s": [
+        0.08,
+        1.8,
+        1.8
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateWindowLight-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1301.0,
+        -625.0,
+        265.0
+      ],
+      "s": [
+        0.05,
+        1.5,
+        1.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateRoof-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1400.0,
+        -625.0,
+        465.0
+      ],
+      "s": [
+        2.45,
+        3.0,
+        0.5
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateThresholdMark-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1220.0,
+        -190.0,
+        7.0
+      ],
+      "s": [
+        1.5,
+        0.12,
+        0.04
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateWing1",
+      "class": "StaticMeshActor",
+      "p": [
+        1400.0,
+        625.0,
+        220.0
+      ],
+      "s": [
+        1.8,
+        2.6,
+        4.4
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateWindow1",
+      "class": "StaticMeshActor",
+      "p": [
+        1307.0,
+        625.0,
+        265.0
+      ],
+      "s": [
+        0.08,
+        1.8,
+        1.8
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateWindowLight1",
+      "class": "StaticMeshActor",
+      "p": [
+        1301.0,
+        625.0,
+        265.0
+      ],
+      "s": [
+        0.05,
+        1.5,
+        1.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateRoof1",
+      "class": "StaticMeshActor",
+      "p": [
+        1400.0,
+        625.0,
+        465.0
+      ],
+      "s": [
+        2.45,
+        3.0,
+        0.5
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_GateThresholdMark1",
+      "class": "StaticMeshActor",
+      "p": [
+        1220.0,
+        190.0,
+        7.0
+      ],
+      "s": [
+        1.5,
+        0.12,
+        0.04
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_WallCapY-1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -1480.0,
+        137.0
+      ],
+      "s": [
+        35.3,
+        0.65,
+        0.14
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_WallCapX-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -1780.0,
+        0.0,
+        137.0
+      ],
+      "s": [
+        0.65,
+        30.0,
+        0.14
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_WallCapY1",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        1480.0,
+        137.0
+      ],
+      "s": [
+        35.3,
+        0.65,
+        0.14
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_WallCapX1",
+      "class": "StaticMeshActor",
+      "p": [
+        1780.0,
+        0.0,
+        137.0
+      ],
+      "s": [
+        0.65,
+        30.0,
+        0.14
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel-1_0",
+      "class": "StaticMeshActor",
+      "p": [
+        -1320.0,
+        -1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow-1_0",
+      "class": "StaticMeshActor",
+      "p": [
+        -1320.0,
+        -1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper-1_0",
+      "class": "StaticMeshActor",
+      "p": [
+        -1320.0,
+        -1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel-1_1",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        -1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow-1_1",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        -1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper-1_1",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        -1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel-1_2",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow-1_2",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper-1_2",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel-1_3",
+      "class": "StaticMeshActor",
+      "p": [
+        660.0,
+        -1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow-1_3",
+      "class": "StaticMeshActor",
+      "p": [
+        660.0,
+        -1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper-1_3",
+      "class": "StaticMeshActor",
+      "p": [
+        660.0,
+        -1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel-1_4",
+      "class": "StaticMeshActor",
+      "p": [
+        1320.0,
+        -1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow-1_4",
+      "class": "StaticMeshActor",
+      "p": [
+        1320.0,
+        -1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper-1_4",
+      "class": "StaticMeshActor",
+      "p": [
+        1320.0,
+        -1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel1_0",
+      "class": "StaticMeshActor",
+      "p": [
+        -1320.0,
+        1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow1_0",
+      "class": "StaticMeshActor",
+      "p": [
+        -1320.0,
+        1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper1_0",
+      "class": "StaticMeshActor",
+      "p": [
+        -1320.0,
+        1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel1_1",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow1_1",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper1_1",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel1_2",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow1_2",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper1_2",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel1_3",
+      "class": "StaticMeshActor",
+      "p": [
+        660.0,
+        1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow1_3",
+      "class": "StaticMeshActor",
+      "p": [
+        660.0,
+        1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper1_3",
+      "class": "StaticMeshActor",
+      "p": [
+        660.0,
+        1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPanel1_4",
+      "class": "StaticMeshActor",
+      "p": [
+        1320.0,
+        1448.0,
+        77.0
+      ],
+      "s": [
+        5.55,
+        0.12,
+        0.72
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallGlow1_4",
+      "class": "StaticMeshActor",
+      "p": [
+        1320.0,
+        1439.0,
+        30.0
+      ],
+      "s": [
+        5.1,
+        0.07,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallUpper1_4",
+      "class": "StaticMeshActor",
+      "p": [
+        1320.0,
+        1448.0,
+        126.0
+      ],
+      "s": [
+        5.85,
+        0.26,
+        0.2
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar-1650-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -1650.0,
+        -1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset-1650-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -1650.0,
+        -1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine-1650-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -1650.0,
+        -1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap-1650-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -1650.0,
+        -1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar-16501",
+      "class": "StaticMeshActor",
+      "p": [
+        -1650.0,
+        1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset-16501",
+      "class": "StaticMeshActor",
+      "p": [
+        -1650.0,
+        1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine-16501",
+      "class": "StaticMeshActor",
+      "p": [
+        -1650.0,
+        1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap-16501",
+      "class": "StaticMeshActor",
+      "p": [
+        -1650.0,
+        1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar-990-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -990.0,
+        -1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset-990-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -990.0,
+        -1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine-990-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -990.0,
+        -1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap-990-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -990.0,
+        -1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar-9901",
+      "class": "StaticMeshActor",
+      "p": [
+        -990.0,
+        1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset-9901",
+      "class": "StaticMeshActor",
+      "p": [
+        -990.0,
+        1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine-9901",
+      "class": "StaticMeshActor",
+      "p": [
+        -990.0,
+        1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap-9901",
+      "class": "StaticMeshActor",
+      "p": [
+        -990.0,
+        1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar-330-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -330.0,
+        -1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset-330-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -330.0,
+        -1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine-330-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -330.0,
+        -1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap-330-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -330.0,
+        -1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar-3301",
+      "class": "StaticMeshActor",
+      "p": [
+        -330.0,
+        1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset-3301",
+      "class": "StaticMeshActor",
+      "p": [
+        -330.0,
+        1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine-3301",
+      "class": "StaticMeshActor",
+      "p": [
+        -330.0,
+        1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap-3301",
+      "class": "StaticMeshActor",
+      "p": [
+        -330.0,
+        1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar330-1",
+      "class": "StaticMeshActor",
+      "p": [
+        330.0,
+        -1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset330-1",
+      "class": "StaticMeshActor",
+      "p": [
+        330.0,
+        -1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine330-1",
+      "class": "StaticMeshActor",
+      "p": [
+        330.0,
+        -1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap330-1",
+      "class": "StaticMeshActor",
+      "p": [
+        330.0,
+        -1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar3301",
+      "class": "StaticMeshActor",
+      "p": [
+        330.0,
+        1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset3301",
+      "class": "StaticMeshActor",
+      "p": [
+        330.0,
+        1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine3301",
+      "class": "StaticMeshActor",
+      "p": [
+        330.0,
+        1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap3301",
+      "class": "StaticMeshActor",
+      "p": [
+        330.0,
+        1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar990-1",
+      "class": "StaticMeshActor",
+      "p": [
+        990.0,
+        -1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset990-1",
+      "class": "StaticMeshActor",
+      "p": [
+        990.0,
+        -1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine990-1",
+      "class": "StaticMeshActor",
+      "p": [
+        990.0,
+        -1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap990-1",
+      "class": "StaticMeshActor",
+      "p": [
+        990.0,
+        -1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar9901",
+      "class": "StaticMeshActor",
+      "p": [
+        990.0,
+        1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset9901",
+      "class": "StaticMeshActor",
+      "p": [
+        990.0,
+        1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine9901",
+      "class": "StaticMeshActor",
+      "p": [
+        990.0,
+        1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap9901",
+      "class": "StaticMeshActor",
+      "p": [
+        990.0,
+        1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar1650-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1650.0,
+        -1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset1650-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1650.0,
+        -1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine1650-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1650.0,
+        -1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap1650-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1650.0,
+        -1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillar16501",
+      "class": "StaticMeshActor",
+      "p": [
+        1650.0,
+        1450.0,
+        106.0
+      ],
+      "s": [
+        0.62,
+        0.62,
+        2.12
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarInset16501",
+      "class": "StaticMeshActor",
+      "p": [
+        1650.0,
+        1416.0,
+        104.0
+      ],
+      "s": [
+        0.34,
+        0.08,
+        1.6
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarLine16501",
+      "class": "StaticMeshActor",
+      "p": [
+        1650.0,
+        1411.0,
+        108.0
+      ],
+      "s": [
+        0.07,
+        0.04,
+        1.35
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Ref_WallPillarCap16501",
+      "class": "StaticMeshActor",
+      "p": [
+        1650.0,
+        1450.0,
+        218.0
+      ],
+      "s": [
+        0.54,
+        0.54,
+        0.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_Body_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        245.0
+      ],
+      "s": [
+        1.23,
+        1.23,
+        3.7
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_Base_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        35.0
+      ],
+      "s": [
+        2.0,
+        2.0,
+        0.7
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_FootCollar_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        85.0
+      ],
+      "s": [
+        1.5,
+        1.5,
+        0.28
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_EnergyCollar_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        431.0
+      ],
+      "s": [
+        1.42,
+        1.42,
+        0.18
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_YellowTop_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        475.0
+      ],
+      "s": [
+        1.23,
+        1.23,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_GateWest-1",
+      "class": "StaticMeshActor",
+      "p": [
+        588.0,
+        -610.0,
+        252.0
+      ],
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_GateWest-1",
+      "class": "StaticMeshActor",
+      "p": [
+        583.0,
+        -610.0,
+        252.0
+      ],
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_GateWest1",
+      "class": "StaticMeshActor",
+      "p": [
+        712.0,
+        -610.0,
+        252.0
+      ],
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_GateWest1",
+      "class": "StaticMeshActor",
+      "p": [
+        717.0,
+        -610.0,
+        252.0
+      ],
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_Body_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        245.0
+      ],
+      "s": [
+        1.23,
+        1.23,
+        3.7
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_Base_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        35.0
+      ],
+      "s": [
+        2.0,
+        2.0,
+        0.7
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_FootCollar_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        85.0
+      ],
+      "s": [
+        1.5,
+        1.5,
+        0.28
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_EnergyCollar_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        431.0
+      ],
+      "s": [
+        1.42,
+        1.42,
+        0.18
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_YellowTop_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        475.0
+      ],
+      "s": [
+        1.23,
+        1.23,
+        0.05
+      ],
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder"
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_GateEast-1",
+      "class": "StaticMeshActor",
+      "p": [
+        588.0,
+        610.0,
+        252.0
+      ],
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_GateEast-1",
+      "class": "StaticMeshActor",
+      "p": [
+        583.0,
+        610.0,
+        252.0
+      ],
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_GateEast1",
+      "class": "StaticMeshActor",
+      "p": [
+        712.0,
+        610.0,
+        252.0
+      ],
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_GateEast1",
+      "class": "StaticMeshActor",
+      "p": [
+        717.0,
+        610.0,
+        252.0
+      ],
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron820-1",
+      "class": "StaticMeshActor",
+      "p": [
+        820.0,
+        -28.0,
+        8.0
+      ],
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron8201",
+      "class": "StaticMeshActor",
+      "p": [
+        820.0,
+        28.0,
+        8.0
+      ],
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron960-1",
+      "class": "StaticMeshActor",
+      "p": [
+        960.0,
+        -28.0,
+        8.0
+      ],
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron9601",
+      "class": "StaticMeshActor",
+      "p": [
+        960.0,
+        28.0,
+        8.0
+      ],
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron1100-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1100.0,
+        -28.0,
+        8.0
+      ],
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron11001",
+      "class": "StaticMeshActor",
+      "p": [
+        1100.0,
+        28.0,
+        8.0
+      ],
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalGadgetSign",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -870.0,
+        730.0
+      ],
+      "s": [
+        7.0,
+        0.04,
+        1.0
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalGadgetFrameZ677",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -864.0,
+        677.0
+      ],
+      "s": [
+        7.14,
+        0.07,
+        0.07
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalGadgetFrameZ783",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -864.0,
+        783.0
+      ],
+      "s": [
+        7.14,
+        0.07,
+        0.07
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalGadgetFrameX-355",
+      "class": "StaticMeshActor",
+      "p": [
+        -355.0,
+        -864.0,
+        730.0
+      ],
+      "s": [
+        0.07,
+        0.07,
+        1.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalGadgetFrameX355",
+      "class": "StaticMeshActor",
+      "p": [
+        355.0,
+        -864.0,
+        730.0
+      ],
+      "s": [
+        0.07,
+        0.07,
+        1.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalGadgetTravel",
+      "class": "HubPortal",
+      "p": [
+        0.0,
+        -970.0,
+        140.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "PortalGadgetFloorGuide-180",
+      "class": "StaticMeshActor",
+      "p": [
+        -180.0,
+        -770.0,
+        6.0
+      ],
+      "s": [
+        0.09,
+        3.6,
+        0.03
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalGadgetFloorGuide180",
+      "class": "StaticMeshActor",
+      "p": [
+        180.0,
+        -770.0,
+        6.0
+      ],
+      "s": [
+        0.09,
+        3.6,
+        0.03
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalArchiveSign",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        870.0,
+        730.0
+      ],
+      "s": [
+        7.0,
+        0.04,
+        1.0
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalArchiveFrameZ677",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        864.0,
+        677.0
+      ],
+      "s": [
+        7.14,
+        0.07,
+        0.07
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalArchiveFrameZ783",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        864.0,
+        783.0
+      ],
+      "s": [
+        7.14,
+        0.07,
+        0.07
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalArchiveFrameX-355",
+      "class": "StaticMeshActor",
+      "p": [
+        -355.0,
+        864.0,
+        730.0
+      ],
+      "s": [
+        0.07,
+        0.07,
+        1.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalArchiveFrameX355",
+      "class": "StaticMeshActor",
+      "p": [
+        355.0,
+        864.0,
+        730.0
+      ],
+      "s": [
+        0.07,
+        0.07,
+        1.1
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalArchiveTravel",
+      "class": "HubPortal",
+      "p": [
+        0.0,
+        970.0,
+        140.0
+      ],
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "PortalArchiveFloorGuide-180",
+      "class": "StaticMeshActor",
+      "p": [
+        -180.0,
+        770.0,
+        6.0
+      ],
+      "s": [
+        0.09,
+        3.6,
+        0.03
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "PortalArchiveFloorGuide180",
+      "class": "StaticMeshActor",
+      "p": [
+        180.0,
+        770.0,
+        6.0
+      ],
+      "s": [
+        0.09,
+        3.6,
+        0.03
+      ],
+      "mesh": "/Engine/BasicShapes/Cube.Cube"
+    },
+    {
+      "name": "DataPortal_Stage_Frame",
+      "class": "StaticMeshActor",
+      "p": [
+        1210.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        28.0,
+        28.0,
+        28.0
+      ],
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+    },
+    {
+      "name": "DataPortal_Stage_Surface",
+      "class": "StaticMeshActor",
+      "p": [
+        1210.0,
+        0.0,
+        0.0
+      ],
+      "s": [
+        28.0,
+        28.0,
+        28.0
+      ],
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface"
+    },
+    {
+      "name": "DataPortal_Gadget_Frame",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -970.0,
+        0.0
+      ],
+      "s": [
+        23.2,
+        23.2,
+        23.2
+      ],
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+    },
+    {
+      "name": "DataPortal_Gadget_Surface",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -970.0,
+        0.0
+      ],
+      "s": [
+        23.2,
+        23.2,
+        23.2
+      ],
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface"
+    },
+    {
+      "name": "DataPortal_Archive_Frame",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        970.0,
+        0.0
+      ],
+      "s": [
+        23.2,
+        23.2,
+        23.2
+      ],
+      "mesh": "/Game/InportAssets/ImportMeshy/Meshy_AI_Neon_Portal_Frame_0928055927_texture/StaticMeshes/Meshy_AI_Neon_Portal_Frame_0928055927_texture.Meshy_AI_Neon_Portal_Frame_0928055927_texture"
+    },
+    {
+      "name": "DataPortal_Archive_Surface",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        970.0,
+        0.0
+      ],
+      "s": [
+        23.2,
+        23.2,
+        23.2
+      ],
+      "mesh": "/Game/Lobby/Meshes/SM_DataPortal_Surface.SM_DataPortal_Surface"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "assets": [
+    "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Ivory",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Navy",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Cyan",
+    "/Game/Lobby/Meshes/SM_GadgetLab_Equipment_Yellow",
+    "/Game/Lobby/Meshes/SM_Archive_Equipment_Ivory",
+    "/Game/Lobby/Meshes/SM_Archive_Equipment_Navy",
+    "/Game/Lobby/Meshes/SM_Archive_Equipment_Cyan",
+    "/Game/Lobby/Meshes/SM_Archive_Equipment_Yellow",
+    "/Game/Lobby/Meshes/SM_Archive_Equipment_Glow"
+  ],
+  "levels": [
+    "GadgetLab",
+    "Archive"
+  ]
+}

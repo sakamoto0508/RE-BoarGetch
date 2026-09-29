@@ -1,0 +1,5121 @@
+{
+  "level_assets": [
+    "/Game/Level/L_Archive.L_Archive",
+    "/Game/Level/L_GadgetLab.L_GadgetLab",
+    "/Game/Level/L_GadgetTest_Net.L_GadgetTest_Net",
+    "/Game/Level/L_Lobby.L_Lobby",
+    "/Game/Level/Stage1.Stage1",
+    "/Game/Level/Test.Test",
+    "/Game/Level/Title.Title"
+  ],
+  "L_Lobby": [
+    {
+      "name": "StageGate_Left",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -270.0,
+        210.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB5899870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.2,
+        1.2,
+        4.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "StageGate_Right",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        270.0,
+        210.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB589A9A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.2,
+        1.2,
+        4.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "StageGate_Lintel",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        0.0,
+        450.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB589A540) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.2,
+        6.6,
+        0.6
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "StageGate_Beacon",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        0.0,
+        540.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB589A770) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Stage1Entrance_Trigger_Unconnected",
+      "class": "TriggerBox",
+      "p": [
+        1210.0,
+        0.0,
+        130.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B4420) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": true
+    },
+    {
+      "name": "Port_ColumnBase_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B44C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.9,
+        1.9,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "Port_Column_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        245.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B57D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.85,
+        0.85,
+        4.0
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "Port_ColumnCollar_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        390.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B5820) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.15,
+        0.25
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "Port_ColumnCap_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        465.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B6680) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.5,
+        1.5,
+        0.16
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "Port_ColumnBase_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B6590) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.9,
+        1.9,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "Port_Column_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        245.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B64A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.85,
+        0.85,
+        4.0
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "Port_ColumnCollar_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        390.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B5780) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.15,
+        0.25
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "Port_ColumnCap_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        465.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B4560) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.5,
+        1.5,
+        0.16
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "Port_GateArch_01",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        416.40684177700035,
+        464.8210007324217
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB58B4470) {pitch: 0.000000, yaw: 0.000000, roll: 97.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_02",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        388.0294036547404,
+        570.7270415933377
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA601F0) {pitch: 0.000000, yaw: 0.000000, roll: 112.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_03",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        333.2084029223188,
+        665.6798001836627
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60290) {pitch: 0.000000, yaw: 0.000000, roll: 127.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_04",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        255.67980018366268,
+        743.2084029223188
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60330) {pitch: 0.000000, yaw: 0.000000, roll: 142.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_05",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        160.72704159333773,
+        798.0294036547405
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA603D0) {pitch: 0.000000, yaw: 0.000000, roll: 157.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_06",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        54.821000732421716,
+        826.4068417770004
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60470) {pitch: 0.000000, yaw: 0.000000, roll: 172.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_07",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -54.82100073242167,
+        826.4068417770004
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60510) {pitch: 0.000000, yaw: 0.000000, roll: -172.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_08",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -160.7270415933376,
+        798.0294036547405
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA605B0) {pitch: 0.000000, yaw: 0.000000, roll: -157.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_09",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -255.67980018366268,
+        743.2084029223188
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60650) {pitch: 0.000000, yaw: 0.000000, roll: -142.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_10",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -333.2084029223187,
+        665.6798001836628
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA606F0) {pitch: 0.000000, yaw: 0.000000, roll: -127.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_11",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -388.0294036547404,
+        570.7270415933377
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60790) {pitch: 0.000000, yaw: 0.000000, roll: -112.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArch_12",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -416.40684177700035,
+        464.82100073242185
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60830) {pitch: 0.000000, yaw: 0.000000, roll: -97.500000}>",
+      "s": [
+        0.95,
+        1.16,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArchSupport_West",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -420.0,
+        205.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA608D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.9,
+        0.9,
+        4.1
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": false
+    },
+    {
+      "name": "Port_GateArchSupport_East",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        420.0,
+        205.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60920) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.9,
+        0.9,
+        4.1
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": false
+    },
+    {
+      "name": "Stage01_UIEntrance",
+      "class": "BP_StageEntrance_Stage01_C",
+      "p": [
+        1210.0,
+        0.0,
+        130.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB287EBD0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    },
+    {
+      "name": "LobbyArt_GateFoot-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1310.0,
+        -430.0,
+        30.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026BB287EBD0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.1,
+        2.0,
+        0.6
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateWing-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1400.0,
+        -625.0,
+        220.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60A60) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.8,
+        2.6,
+        4.4
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateWindow-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1307.0,
+        -625.0,
+        265.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60B00) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        1.8,
+        1.8
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateWindowLight-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1301.0,
+        -625.0,
+        265.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60BA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        1.5,
+        1.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateRoof-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1400.0,
+        -625.0,
+        465.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60C40) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.45,
+        3.0,
+        0.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateThresholdMark-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1220.0,
+        -190.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60CE0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.5,
+        0.12,
+        0.04
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateCrown-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        -205.0,
+        860.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60D80) {pitch: 0.000000, yaw: -12.000000, roll: 0.000000}>",
+      "s": [
+        1.4,
+        3.6,
+        0.45
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_GateFoot1",
+      "class": "StaticMeshActor",
+      "p": [
+        1310.0,
+        430.0,
+        30.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60E20) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.1,
+        2.0,
+        0.6
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateWing1",
+      "class": "StaticMeshActor",
+      "p": [
+        1400.0,
+        625.0,
+        220.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60EC0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.8,
+        2.6,
+        4.4
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateWindow1",
+      "class": "StaticMeshActor",
+      "p": [
+        1307.0,
+        625.0,
+        265.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA60F60) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        1.8,
+        1.8
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateWindowLight1",
+      "class": "StaticMeshActor",
+      "p": [
+        1301.0,
+        625.0,
+        265.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61000) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        1.5,
+        1.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateRoof1",
+      "class": "StaticMeshActor",
+      "p": [
+        1400.0,
+        625.0,
+        465.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA610A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.45,
+        3.0,
+        0.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateThresholdMark1",
+      "class": "StaticMeshActor",
+      "p": [
+        1220.0,
+        190.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61140) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.5,
+        0.12,
+        0.04
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_GateCrown1",
+      "class": "StaticMeshActor",
+      "p": [
+        1300.0,
+        205.0,
+        860.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA611E0) {pitch: 0.000000, yaw: 12.000000, roll: -0.000000}>",
+      "s": [
+        1.4,
+        3.6,
+        0.45
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_GateCrest",
+      "class": "StaticMeshActor",
+      "p": [
+        1218.0,
+        0.0,
+        835.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61280) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.16,
+        1.4,
+        0.65
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateJamb-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1190.0,
+        -293.0,
+        263.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61320) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.95,
+        1.0,
+        4.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateJambInset-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1139.0,
+        -293.0,
+        260.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA613C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        0.65,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateJambLight-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1133.0,
+        -293.0,
+        280.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61460) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.12,
+        1.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateYellowBase-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1190.0,
+        -293.0,
+        43.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61500) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.24,
+        0.3
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateYellowCap-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1190.0,
+        -293.0,
+        506.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA615A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.24,
+        0.4
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateJamb1",
+      "class": "StaticMeshActor",
+      "p": [
+        1190.0,
+        293.0,
+        263.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61640) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.95,
+        1.0,
+        4.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateJambInset1",
+      "class": "StaticMeshActor",
+      "p": [
+        1139.0,
+        293.0,
+        260.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA616E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        0.65,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateJambLight1",
+      "class": "StaticMeshActor",
+      "p": [
+        1133.0,
+        293.0,
+        280.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61780) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.12,
+        1.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateYellowBase1",
+      "class": "StaticMeshActor",
+      "p": [
+        1190.0,
+        293.0,
+        43.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61820) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.24,
+        0.3
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Ref_GateYellowCap1",
+      "class": "StaticMeshActor",
+      "p": [
+        1190.0,
+        293.0,
+        506.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA618C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.24,
+        0.4
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Energy_TowerBody-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1210.0,
+        -340.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61960) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.3,
+        2.0,
+        4.4
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerBase-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1210.0,
+        -340.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61A00) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.65,
+        2.3,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerFoot-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1200.0,
+        -340.0,
+        77.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61AA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.4,
+        2.22,
+        0.25
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerInset-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1090.0,
+        -340.0,
+        255.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61B40) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.12,
+        0.98,
+        2.75
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerLight-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1080.0,
+        -340.0,
+        260.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61BE0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        0.23,
+        2.22
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerCap-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1210.0,
+        -340.0,
+        467.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61C80) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.5,
+        2.3,
+        0.4
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerAccent-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1090.0,
+        -340.0,
+        439.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61D20) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.26,
+        2.11,
+        0.3
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerBody1",
+      "class": "StaticMeshActor",
+      "p": [
+        1210.0,
+        340.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61DC0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.3,
+        2.0,
+        4.4
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerBase1",
+      "class": "StaticMeshActor",
+      "p": [
+        1210.0,
+        340.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61E60) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.65,
+        2.3,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerFoot1",
+      "class": "StaticMeshActor",
+      "p": [
+        1200.0,
+        340.0,
+        77.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61F00) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.4,
+        2.22,
+        0.25
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerInset1",
+      "class": "StaticMeshActor",
+      "p": [
+        1090.0,
+        340.0,
+        255.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA61FA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.12,
+        0.98,
+        2.75
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerLight1",
+      "class": "StaticMeshActor",
+      "p": [
+        1080.0,
+        340.0,
+        260.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62040) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        0.23,
+        2.22
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerCap1",
+      "class": "StaticMeshActor",
+      "p": [
+        1210.0,
+        340.0,
+        467.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA620E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.5,
+        2.3,
+        0.4
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_TowerAccent1",
+      "class": "StaticMeshActor",
+      "p": [
+        1090.0,
+        340.0,
+        439.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62180) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.26,
+        2.11,
+        0.3
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_SignPanel",
+      "class": "StaticMeshActor",
+      "p": [
+        1050.0,
+        0.0,
+        902.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62220) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.04,
+        6.5,
+        1.1
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_SignFrameZ846",
+      "class": "StaticMeshActor",
+      "p": [
+        1043.0,
+        0.0,
+        846.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA622C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        6.6,
+        0.07
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_SignFrameZ958",
+      "class": "StaticMeshActor",
+      "p": [
+        1043.0,
+        0.0,
+        958.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62360) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        6.6,
+        0.07
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_SignFrameY-330",
+      "class": "StaticMeshActor",
+      "p": [
+        1043.0,
+        -330.0,
+        902.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62400) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        0.07,
+        1.16
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_SignFrameY330",
+      "class": "StaticMeshActor",
+      "p": [
+        1043.0,
+        330.0,
+        902.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA624A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        0.07,
+        1.16
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Body_EntryWest",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        -610.0,
+        245.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62540) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.23,
+        1.23,
+        3.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Base_EntryWest",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        -610.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62590) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.0,
+        2.0,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FootCollar_EntryWest",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        -610.0,
+        85.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62590) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.5,
+        1.5,
+        0.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_EnergyCollar_EntryWest",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        -610.0,
+        431.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62590) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.42,
+        1.42,
+        0.18
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_YellowTop_EntryWest",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        -610.0,
+        475.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62590) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.23,
+        1.23,
+        0.05
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_EntryWest-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -712.0,
+        -610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62590) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_EntryWest-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -717.0,
+        -610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA625E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_EntryWest1",
+      "class": "StaticMeshActor",
+      "p": [
+        -588.0,
+        -610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62630) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_EntryWest1",
+      "class": "StaticMeshActor",
+      "p": [
+        -583.0,
+        -610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62680) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Body_EntryEast",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        610.0,
+        245.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62720) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.23,
+        1.23,
+        3.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Base_EntryEast",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        610.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62770) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.0,
+        2.0,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FootCollar_EntryEast",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        610.0,
+        85.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62770) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.5,
+        1.5,
+        0.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_EnergyCollar_EntryEast",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        610.0,
+        431.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62770) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.42,
+        1.42,
+        0.18
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_YellowTop_EntryEast",
+      "class": "StaticMeshActor",
+      "p": [
+        -650.0,
+        610.0,
+        475.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62770) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.23,
+        1.23,
+        0.05
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_EntryEast-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -712.0,
+        610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62770) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_EntryEast-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -717.0,
+        610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA627C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_EntryEast1",
+      "class": "StaticMeshActor",
+      "p": [
+        -588.0,
+        610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62810) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_EntryEast1",
+      "class": "StaticMeshActor",
+      "p": [
+        -583.0,
+        610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62860) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Body_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        245.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62900) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.23,
+        1.23,
+        3.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Base_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62950) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.0,
+        2.0,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FootCollar_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        85.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62950) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.5,
+        1.5,
+        0.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_EnergyCollar_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        431.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62950) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.42,
+        1.42,
+        0.18
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_YellowTop_GateWest",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        -610.0,
+        475.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62950) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.23,
+        1.23,
+        0.05
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_GateWest-1",
+      "class": "StaticMeshActor",
+      "p": [
+        588.0,
+        -610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62950) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_GateWest-1",
+      "class": "StaticMeshActor",
+      "p": [
+        583.0,
+        -610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA629A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_GateWest1",
+      "class": "StaticMeshActor",
+      "p": [
+        712.0,
+        -610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA629F0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_GateWest1",
+      "class": "StaticMeshActor",
+      "p": [
+        717.0,
+        -610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62A40) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Body_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        245.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62AE0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.23,
+        1.23,
+        3.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Base_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62B30) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.0,
+        2.0,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FootCollar_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        85.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62B30) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.5,
+        1.5,
+        0.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_EnergyCollar_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        431.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62B30) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.42,
+        1.42,
+        0.18
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_YellowTop_GateEast",
+      "class": "StaticMeshActor",
+      "p": [
+        650.0,
+        610.0,
+        475.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62B30) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.23,
+        1.23,
+        0.05
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_GateEast-1",
+      "class": "StaticMeshActor",
+      "p": [
+        588.0,
+        610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62B30) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_GateEast-1",
+      "class": "StaticMeshActor",
+      "p": [
+        583.0,
+        610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62B80) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyRecess_GateEast1",
+      "class": "StaticMeshActor",
+      "p": [
+        712.0,
+        610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62BD0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.31,
+        2.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_BodyLine_GateEast1",
+      "class": "StaticMeshActor",
+      "p": [
+        717.0,
+        610.0,
+        252.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62C20) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.05,
+        0.11,
+        2.28
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron820-1",
+      "class": "StaticMeshActor",
+      "p": [
+        820.0,
+        -28.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62C70) {pitch: -40.000000, yaw: 0.000000, roll: -0.000000}>",
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron8201",
+      "class": "StaticMeshActor",
+      "p": [
+        820.0,
+        28.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62CC0) {pitch: 40.000000, yaw: 0.000000, roll: -0.000000}>",
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron960-1",
+      "class": "StaticMeshActor",
+      "p": [
+        960.0,
+        -28.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62D10) {pitch: -40.000000, yaw: 0.000000, roll: -0.000000}>",
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron9601",
+      "class": "StaticMeshActor",
+      "p": [
+        960.0,
+        28.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62D60) {pitch: 40.000000, yaw: 0.000000, roll: -0.000000}>",
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron1100-1",
+      "class": "StaticMeshActor",
+      "p": [
+        1100.0,
+        -28.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62DB0) {pitch: -40.000000, yaw: 0.000000, roll: -0.000000}>",
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_FloorChevron11001",
+      "class": "StaticMeshActor",
+      "p": [
+        1100.0,
+        28.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62E00) {pitch: 40.000000, yaw: 0.000000, roll: -0.000000}>",
+      "s": [
+        0.12,
+        0.75,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Arch_Ivory",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62EA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Ivory.SM_GateEnergy_Ivory",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Arch_Navy",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62EF0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Navy.SM_GateEnergy_Navy",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Energy_Arch_Glow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62F40) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Glow.SM_GateEnergy_Glow",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetTower-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        -720.0,
+        135.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA62F90) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.3,
+        2.6
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetBase-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        -720.0,
+        27.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63030) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.3,
+        1.5,
+        0.5
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetYellow-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        -720.0,
+        260.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA630D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.12,
+        1.42,
+        0.24
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetInset-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        -652.0,
+        146.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63170) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.48,
+        0.08,
+        1.62
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetLamp-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        -645.0,
+        146.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63210) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.16,
+        0.07,
+        1.44
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetTower248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        -720.0,
+        135.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA632B0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.3,
+        2.6
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetBase248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        -720.0,
+        27.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63350) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.3,
+        1.5,
+        0.5
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetYellow248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        -720.0,
+        260.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA633F0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.12,
+        1.42,
+        0.24
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetInset248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        -652.0,
+        146.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63490) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.48,
+        0.08,
+        1.62
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetLamp248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        -645.0,
+        146.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63530) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.16,
+        0.07,
+        1.44
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetSign",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -720.0,
+        589.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA635D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        6.4,
+        0.04,
+        0.86
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetFrame544",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -714.0,
+        544.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63670) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        6.54,
+        0.06,
+        0.06
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetFrame634",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -714.0,
+        634.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63710) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        6.54,
+        0.06,
+        0.06
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetFrameX-325",
+      "class": "StaticMeshActor",
+      "p": [
+        -325.0,
+        -714.0,
+        589.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA637B0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        0.06,
+        0.96
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetFrameX325",
+      "class": "StaticMeshActor",
+      "p": [
+        325.0,
+        -714.0,
+        589.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63850) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        0.06,
+        0.96
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetTitle",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        -855.0,
+        710.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA638F0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetPath-170",
+      "class": "StaticMeshActor",
+      "p": [
+        -170.0,
+        -624.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63940) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        1.8,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetPath170",
+      "class": "StaticMeshActor",
+      "p": [
+        170.0,
+        -624.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA639E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        1.8,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetThreshold-160",
+      "class": "StaticMeshActor",
+      "p": [
+        -160.0,
+        -720.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63A30) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        0.18,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetThreshold0",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -720.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63AD0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        0.18,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_GadgetThreshold160",
+      "class": "StaticMeshActor",
+      "p": [
+        160.0,
+        -720.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63B20) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        0.18,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveTower-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        720.0,
+        135.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63BC0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.3,
+        2.6
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveBase-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        720.0,
+        27.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63C60) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.3,
+        1.5,
+        0.5
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveYellow-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        720.0,
+        260.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63D00) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.12,
+        1.42,
+        0.24
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveInset-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        652.0,
+        146.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63DA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.48,
+        0.08,
+        1.62
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveLamp-248",
+      "class": "StaticMeshActor",
+      "p": [
+        -248.0,
+        645.0,
+        146.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63E40) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.16,
+        0.07,
+        1.44
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveTower248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        720.0,
+        135.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63EE0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.3,
+        2.6
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveBase248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        720.0,
+        27.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA63F80) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.3,
+        1.5,
+        0.5
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveYellow248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        720.0,
+        260.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C060) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.12,
+        1.42,
+        0.24
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveInset248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        652.0,
+        146.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C100) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.48,
+        0.08,
+        1.62
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveLamp248",
+      "class": "StaticMeshActor",
+      "p": [
+        248.0,
+        645.0,
+        146.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C1A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.16,
+        0.07,
+        1.44
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveSign",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        720.0,
+        589.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C240) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        6.4,
+        0.04,
+        0.86
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveFrame544",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        714.0,
+        544.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C2E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        6.54,
+        0.06,
+        0.06
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveFrame634",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        714.0,
+        634.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C380) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        6.54,
+        0.06,
+        0.06
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveFrameX-325",
+      "class": "StaticMeshActor",
+      "p": [
+        -325.0,
+        714.0,
+        589.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C420) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        0.06,
+        0.96
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveFrameX325",
+      "class": "StaticMeshActor",
+      "p": [
+        325.0,
+        714.0,
+        589.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C4C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        0.06,
+        0.96
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveTitle",
+      "class": "TextRenderActor",
+      "p": [
+        0.0,
+        855.0,
+        710.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C560) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchivePath-170",
+      "class": "StaticMeshActor",
+      "p": [
+        -170.0,
+        624.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C5B0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        1.8,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchivePath170",
+      "class": "StaticMeshActor",
+      "p": [
+        170.0,
+        624.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C650) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.08,
+        1.8,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveThreshold-160",
+      "class": "StaticMeshActor",
+      "p": [
+        -160.0,
+        720.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C6A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        0.18,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveThreshold0",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        720.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C740) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        0.18,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveThreshold160",
+      "class": "StaticMeshActor",
+      "p": [
+        160.0,
+        720.0,
+        8.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C790) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        0.18,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_WorkbenchBack",
+      "class": "StaticMeshActor",
+      "p": [
+        -200.0,
+        -1350.0,
+        155.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C830) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        6.0,
+        0.34,
+        2.4
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_BlueprintScreen",
+      "class": "StaticMeshActor",
+      "p": [
+        -200.0,
+        -1328.0,
+        181.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C8D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        3.9,
+        0.08,
+        1.6
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ScreenEdge-360",
+      "class": "StaticMeshActor",
+      "p": [
+        -360.0,
+        -1320.0,
+        181.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7C970) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.06,
+        1.4
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ScreenEdge-40",
+      "class": "StaticMeshActor",
+      "p": [
+        -40.0,
+        -1320.0,
+        181.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CA10) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.06,
+        1.4
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_BlueprintLine230",
+      "class": "StaticMeshActor",
+      "p": [
+        -200.0,
+        -1317.0,
+        230.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CAB0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.7,
+        0.04,
+        0.05
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_BlueprintLine187",
+      "class": "StaticMeshActor",
+      "p": [
+        -240.0,
+        -1317.0,
+        187.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CB50) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.9,
+        0.04,
+        0.05
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_BlueprintLine140",
+      "class": "StaticMeshActor",
+      "p": [
+        -200.0,
+        -1317.0,
+        140.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CBF0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.7,
+        0.04,
+        0.05
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ToolDiagram",
+      "class": "StaticMeshActor",
+      "p": [
+        -110.0,
+        -1312.0,
+        182.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CC90) {pitch: 0.000000, yaw: 25.000000, roll: -0.000000}>",
+      "s": [
+        0.7,
+        0.06,
+        0.38
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_WorkshopSubtitle",
+      "class": "TextRenderActor",
+      "p": [
+        -200.0,
+        -1310.0,
+        330.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CD30) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": true
+    },
+    {
+      "name": "LobbyArt_Hub3_TestLane250-62",
+      "class": "StaticMeshActor",
+      "p": [
+        188.0,
+        -1090.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CD80) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        2.0,
+        0.02
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_TestLane25062",
+      "class": "StaticMeshActor",
+      "p": [
+        312.0,
+        -1090.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CE20) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        2.0,
+        0.02
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_TestLane410-62",
+      "class": "StaticMeshActor",
+      "p": [
+        348.0,
+        -1090.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CEC0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        2.0,
+        0.02
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_TestLane41062",
+      "class": "StaticMeshActor",
+      "p": [
+        472.0,
+        -1090.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7CF60) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        2.0,
+        0.02
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveBase0",
+      "class": "StaticMeshActor",
+      "p": [
+        -690.0,
+        1260.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D000) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.7,
+        1.6,
+        0.7
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveDesk0",
+      "class": "StaticMeshActor",
+      "p": [
+        -690.0,
+        1260.0,
+        104.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D0A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.6,
+        1.5,
+        0.7
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveTop0",
+      "class": "StaticMeshActor",
+      "p": [
+        -690.0,
+        1260.0,
+        148.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D140) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.88,
+        1.8,
+        0.18
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveScreen0",
+      "class": "StaticMeshActor",
+      "p": [
+        -690.0,
+        1315.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D1E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.6,
+        0.05,
+        1.6
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveEdge0-824",
+      "class": "StaticMeshActor",
+      "p": [
+        -824.0,
+        1308.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D280) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        0.06,
+        1.7
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveEdge0-556",
+      "class": "StaticMeshActor",
+      "p": [
+        -556.0,
+        1308.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D320) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        0.06,
+        1.7
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveFrame0150",
+      "class": "StaticMeshActor",
+      "p": [
+        -690.0,
+        1308.0,
+        150.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D3C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.75,
+        0.06,
+        0.06
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveFrame0320",
+      "class": "StaticMeshActor",
+      "p": [
+        -690.0,
+        1308.0,
+        320.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D460) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.75,
+        0.06,
+        0.06
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveCaption0",
+      "class": "TextRenderActor",
+      "p": [
+        -690.0,
+        1300.0,
+        345.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D500) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": true
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchivePage0-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -737.0,
+        1245.0,
+        173.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D550) {pitch: 0.000000, yaw: -10.000000, roll: 0.000000}>",
+      "s": [
+        0.84,
+        0.8,
+        0.07
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchivePage01",
+      "class": "StaticMeshActor",
+      "p": [
+        -643.0,
+        1245.0,
+        173.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D5F0) {pitch: 0.000000, yaw: 10.000000, roll: -0.000000}>",
+      "s": [
+        0.84,
+        0.8,
+        0.07
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveSpine0",
+      "class": "StaticMeshActor",
+      "p": [
+        -690.0,
+        1245.0,
+        174.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D690) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.9,
+        0.07
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveBase1",
+      "class": "StaticMeshActor",
+      "p": [
+        430.0,
+        1260.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D730) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.7,
+        1.6,
+        0.7
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveDesk1",
+      "class": "StaticMeshActor",
+      "p": [
+        430.0,
+        1260.0,
+        104.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D7D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.6,
+        1.5,
+        0.7
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveTop1",
+      "class": "StaticMeshActor",
+      "p": [
+        430.0,
+        1260.0,
+        148.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D870) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.88,
+        1.8,
+        0.18
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveScreen1",
+      "class": "StaticMeshActor",
+      "p": [
+        430.0,
+        1315.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D910) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.6,
+        0.05,
+        1.6
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveEdge1296",
+      "class": "StaticMeshActor",
+      "p": [
+        296.0,
+        1308.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7D9B0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        0.06,
+        1.7
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveEdge1564",
+      "class": "StaticMeshActor",
+      "p": [
+        564.0,
+        1308.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DA50) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.06,
+        0.06,
+        1.7
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveFrame1150",
+      "class": "StaticMeshActor",
+      "p": [
+        430.0,
+        1308.0,
+        150.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DAF0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.75,
+        0.06,
+        0.06
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveFrame1320",
+      "class": "StaticMeshActor",
+      "p": [
+        430.0,
+        1308.0,
+        320.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DB90) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        2.75,
+        0.06,
+        0.06
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveCaption1",
+      "class": "TextRenderActor",
+      "p": [
+        430.0,
+        1300.0,
+        345.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DC30) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": true
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchivePage1-1",
+      "class": "StaticMeshActor",
+      "p": [
+        383.0,
+        1245.0,
+        173.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DC80) {pitch: 0.000000, yaw: -10.000000, roll: 0.000000}>",
+      "s": [
+        0.84,
+        0.8,
+        0.07
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchivePage11",
+      "class": "StaticMeshActor",
+      "p": [
+        477.0,
+        1245.0,
+        173.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DD20) {pitch: 0.000000, yaw: 10.000000, roll: -0.000000}>",
+      "s": [
+        0.84,
+        0.8,
+        0.07
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveSpine1",
+      "class": "StaticMeshActor",
+      "p": [
+        430.0,
+        1245.0,
+        174.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DDC0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.9,
+        0.07
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveGuide-760",
+      "class": "StaticMeshActor",
+      "p": [
+        -760.0,
+        1160.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DE60) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.4,
+        0.06,
+        0.02
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveGuide-540",
+      "class": "StaticMeshActor",
+      "p": [
+        -540.0,
+        1160.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DF00) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.4,
+        0.06,
+        0.02
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveGuide320",
+      "class": "StaticMeshActor",
+      "p": [
+        320.0,
+        1160.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7DFA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.4,
+        0.06,
+        0.02
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_ArchiveGuide540",
+      "class": "StaticMeshActor",
+      "p": [
+        540.0,
+        1160.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E040) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.4,
+        0.06,
+        0.02
+      ],
+      "hidden": true,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_MainGuide-1",
+      "class": "StaticMeshActor",
+      "p": [
+        810.0,
+        -150.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E0E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        3.3,
+        0.1,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_MainGuideAccent-1700",
+      "class": "StaticMeshActor",
+      "p": [
+        700.0,
+        -170.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E130) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.7,
+        0.08,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_MainGuideAccent-1820",
+      "class": "StaticMeshActor",
+      "p": [
+        820.0,
+        -170.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E180) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.7,
+        0.08,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_MainGuideAccent-1940",
+      "class": "StaticMeshActor",
+      "p": [
+        940.0,
+        -170.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E1D0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.7,
+        0.08,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_MainGuide1",
+      "class": "StaticMeshActor",
+      "p": [
+        810.0,
+        150.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E270) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        3.3,
+        0.1,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_MainGuideAccent1700",
+      "class": "StaticMeshActor",
+      "p": [
+        700.0,
+        170.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E2C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.7,
+        0.08,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_MainGuideAccent1820",
+      "class": "StaticMeshActor",
+      "p": [
+        820.0,
+        170.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E310) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.7,
+        0.08,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_MainGuideAccent1940",
+      "class": "StaticMeshActor",
+      "p": [
+        940.0,
+        170.0,
+        7.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E360) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.7,
+        0.08,
+        0.02
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "LobbyArt_Hub3_Arch_Ivory",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E400) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_Hub3_Portal_Ivory.SM_Hub3_Portal_Ivory",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_Arch_Navy",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E450) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_Hub3_Portal_Navy.SM_Hub3_Portal_Navy",
+      "visible": false
+    },
+    {
+      "name": "LobbyArt_Hub3_Arch_Glow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E4A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": true,
+      "mesh": "/Game/Lobby/Meshes/SM_Hub3_Portal_Glow.SM_Hub3_Portal_Glow",
+      "visible": false
+    },
+    {
+      "name": "PortalGadgetArchIvory",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -2.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E4F0) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Ivory.SM_GateEnergy_Ivory",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetArchNavy",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -2.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E540) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Navy.SM_GateEnergy_Navy",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetArchGlow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -2.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E590) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Glow.SM_GateEnergy_Glow",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerBody-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        -970.0,
+        188.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E590) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        1.84,
+        1.6,
+        3.52
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerBase-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        -970.0,
+        28.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E5E0) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        2.12,
+        1.84,
+        0.56
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerFoot-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        -962.0,
+        61.6
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E630) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        1.92,
+        1.7760000000000002,
+        0.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerInset-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        -874.0,
+        204.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E680) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.096,
+        0.784,
+        2.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerLight-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        -866.0,
+        208.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E6D0) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.064,
+        0.18400000000000002,
+        1.7760000000000002
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerCap-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        -970.0,
+        373.6
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E720) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        2.0,
+        1.84,
+        0.32
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerAccent-1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        -874.0,
+        351.20000000000005
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E770) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.20800000000000002,
+        1.6879999999999997,
+        0.24
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerBody1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        -970.0,
+        188.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E7C0) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        1.84,
+        1.6,
+        3.52
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerBase1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        -970.0,
+        28.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E810) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        2.12,
+        1.84,
+        0.56
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerFoot1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        -962.0,
+        61.6
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E860) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        1.92,
+        1.7760000000000002,
+        0.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerInset1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        -874.0,
+        204.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E8B0) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.096,
+        0.784,
+        2.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerLight1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        -866.0,
+        208.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E900) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.064,
+        0.18400000000000002,
+        1.7760000000000002
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerCap1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        -970.0,
+        373.6
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E950) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        2.0,
+        1.84,
+        0.32
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetLobbyArt_Energy_TowerAccent1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        -874.0,
+        351.20000000000005
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7E9A0) {pitch: 0.000000, yaw: -90.000000, roll: 0.000000}>",
+      "s": [
+        0.20800000000000002,
+        1.6879999999999997,
+        0.24
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetField",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -970.0,
+        300.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EA40) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        3.7,
+        0.04,
+        5.6
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetSign",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -870.0,
+        730.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EAE0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        7.0,
+        0.04,
+        1.0
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetFrameZ677",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -864.0,
+        677.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EB80) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        7.14,
+        0.07,
+        0.07
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetFrameZ783",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        -864.0,
+        783.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EC20) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        7.14,
+        0.07,
+        0.07
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetFrameX-355",
+      "class": "StaticMeshActor",
+      "p": [
+        -355.0,
+        -864.0,
+        730.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7ECC0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.07,
+        1.1
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetFrameX355",
+      "class": "StaticMeshActor",
+      "p": [
+        355.0,
+        -864.0,
+        730.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7ED60) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.07,
+        1.1
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetTravel",
+      "class": "HubPortal",
+      "p": [
+        0.0,
+        -970.0,
+        140.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EE00) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    },
+    {
+      "name": "PortalGadgetFloorGuide-180",
+      "class": "StaticMeshActor",
+      "p": [
+        -180.0,
+        -770.0,
+        6.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EE50) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.09,
+        3.6,
+        0.03
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalGadgetFloorGuide180",
+      "class": "StaticMeshActor",
+      "p": [
+        180.0,
+        -770.0,
+        6.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EEF0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.09,
+        3.6,
+        0.03
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveArchIvory",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        2.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EF90) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Ivory.SM_GateEnergy_Ivory",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveArchNavy",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        2.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7EFE0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Navy.SM_GateEnergy_Navy",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveArchGlow",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        2.0,
+        0.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F030) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "hidden": false,
+      "mesh": "/Game/Lobby/Meshes/SM_GateEnergy_Glow.SM_GateEnergy_Glow",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerBody-1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        970.0,
+        188.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F030) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        1.84,
+        1.6,
+        3.52
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerBase-1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        970.0,
+        28.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F080) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        2.12,
+        1.84,
+        0.56
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerFoot-1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        962.0,
+        61.6
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F0D0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        1.92,
+        1.7760000000000002,
+        0.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerInset-1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        874.0,
+        204.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F120) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.096,
+        0.784,
+        2.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerLight-1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        866.0,
+        208.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F170) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.064,
+        0.18400000000000002,
+        1.7760000000000002
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerCap-1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        970.0,
+        373.6
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F1C0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        2.0,
+        1.84,
+        0.32
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerAccent-1",
+      "class": "StaticMeshActor",
+      "p": [
+        272.0,
+        874.0,
+        351.20000000000005
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F210) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.20800000000000002,
+        1.6879999999999997,
+        0.24
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerBody1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        970.0,
+        188.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F260) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        1.84,
+        1.6,
+        3.52
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerBase1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        970.0,
+        28.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F2B0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        2.12,
+        1.84,
+        0.56
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerFoot1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        962.0,
+        61.6
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F300) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        1.92,
+        1.7760000000000002,
+        0.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerInset1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        874.0,
+        204.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F350) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.096,
+        0.784,
+        2.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerLight1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        866.0,
+        208.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F3A0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.064,
+        0.18400000000000002,
+        1.7760000000000002
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerCap1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        970.0,
+        373.6
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F3F0) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        2.0,
+        1.84,
+        0.32
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveLobbyArt_Energy_TowerAccent1",
+      "class": "StaticMeshActor",
+      "p": [
+        -272.0,
+        874.0,
+        351.20000000000005
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F440) {pitch: 0.000000, yaw: 90.000000, roll: -0.000000}>",
+      "s": [
+        0.20800000000000002,
+        1.6879999999999997,
+        0.24
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveField",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        970.0,
+        300.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F4E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        3.7,
+        0.04,
+        5.6
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveSign",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        870.0,
+        730.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F580) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        7.0,
+        0.04,
+        1.0
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveFrameZ677",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        864.0,
+        677.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F620) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        7.14,
+        0.07,
+        0.07
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveFrameZ783",
+      "class": "StaticMeshActor",
+      "p": [
+        0.0,
+        864.0,
+        783.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F6C0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        7.14,
+        0.07,
+        0.07
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveFrameX-355",
+      "class": "StaticMeshActor",
+      "p": [
+        -355.0,
+        864.0,
+        730.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F760) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.07,
+        1.1
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveFrameX355",
+      "class": "StaticMeshActor",
+      "p": [
+        355.0,
+        864.0,
+        730.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F800) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.07,
+        1.1
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveTravel",
+      "class": "HubPortal",
+      "p": [
+        0.0,
+        970.0,
+        140.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F8A0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    },
+    {
+      "name": "PortalArchiveFloorGuide-180",
+      "class": "StaticMeshActor",
+      "p": [
+        -180.0,
+        770.0,
+        6.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F8F0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.09,
+        3.6,
+        0.03
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "PortalArchiveFloorGuide180",
+      "class": "StaticMeshActor",
+      "p": [
+        180.0,
+        770.0,
+        6.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F990) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.09,
+        3.6,
+        0.03
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    }
+  ],
+  "L_Archive": [
+    {
+      "name": "ReturnPillar-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        -185.0,
+        210.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7F9E0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.95,
+        0.95,
+        4.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnBase-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        -185.0,
+        30.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FA80) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.3,
+        1.3,
+        0.6
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnAccent-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        -185.0,
+        430.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FB20) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.15,
+        0.3
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnGlow-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -719.0,
+        -185.0,
+        210.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FB70) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.2,
+        2.8
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnPillar185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        185.0,
+        210.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FBC0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.95,
+        0.95,
+        4.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnBase185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        185.0,
+        30.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FC10) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.3,
+        1.3,
+        0.6
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnAccent185",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        185.0,
+        430.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FC60) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.15,
+        0.3
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnGlow185",
+      "class": "StaticMeshActor",
+      "p": [
+        -719.0,
+        185.0,
+        210.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FCB0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.07,
+        0.2,
+        2.8
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnTop",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        0.0,
+        465.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FD00) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.95,
+        4.65,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnField",
+      "class": "StaticMeshActor",
+      "p": [
+        -770.0,
+        0.0,
+        235.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FD50) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.04,
+        2.7,
+        4.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnSign",
+      "class": "TextRenderActor",
+      "p": [
+        -710.0,
+        0.0,
+        500.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FDA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    },
+    {
+      "name": "ReturnToLobby",
+      "class": "HubPortal",
+      "p": [
+        -770.0,
+        0.0,
+        140.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FDA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    }
+  ],
+  "L_GadgetTest_Net": [
+    {
+      "name": "ReturnFrame-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        -185.0,
+        210.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FDF0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.85,
+        0.85,
+        4.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnBase-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        -185.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FDA0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.15,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnJoint-185",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        -185.0,
+        427.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FE40) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.1,
+        1.1,
+        0.3
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnFrame185",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        185.0,
+        210.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FE90) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.85,
+        0.85,
+        4.2
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnBase185",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        185.0,
+        35.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FEE0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.15,
+        1.15,
+        0.7
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnJoint185",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        185.0,
+        427.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FF30) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.1,
+        1.1,
+        0.3
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnTop",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        0.0,
+        462.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FF80) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.9,
+        4.6,
+        0.5
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnField",
+      "class": "StaticMeshActor",
+      "p": [
+        -660.0,
+        0.0,
+        220.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA7FFD0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        0.04,
+        2.75,
+        4.0
+      ],
+      "hidden": false,
+      "mesh": "/Engine/BasicShapes/Cube.Cube",
+      "visible": true
+    },
+    {
+      "name": "ReturnTitle",
+      "class": "TextRenderActor",
+      "p": [
+        -600.0,
+        0.0,
+        495.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA9C060) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    },
+    {
+      "name": "ReturnToGadgetLab",
+      "class": "HubPortal",
+      "p": [
+        -660.0,
+        0.0,
+        140.0
+      ],
+      "r": "<Struct 'Rotator' (0x0000026B4EA9C0B0) {pitch: 0.000000, yaw: 0.000000, roll: 0.000000}>",
+      "s": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hidden": false
+    }
+  ]
+}
