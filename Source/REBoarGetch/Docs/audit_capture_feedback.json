@@ -1,0 +1,406 @@
+{
+  "assets": {
+    "NiagaraSystem": [
+      "/Game/Variant_Combat/VFX/NS_Damage",
+      "/Game/Variant_Platforming/VFX/NS_Jump_Trail",
+      "/Game/InportAssets/Farm_House/Particles/FXS_Fireflies",
+      "/Game/InportAssets/StylizedEnvironment/Particles/FallingLeafsSystem",
+      "/Game/InportAssets/LevelPrototyping/Interactable/JumpPad/Assets/NS_JumpPad"
+    ],
+    "SoundWave": [
+      "/Game/InportAssets/Audio/button31",
+      "/Game/InportAssets/Audio/cyber",
+      "/Game/InportAssets/Audio/Cyber15-4__mp3cut_net_",
+      "/Game/InportAssets/Audio/Cyber21-4__mp3cut_net_",
+      "/Game/InportAssets/Audio/drumn",
+      "/Game/InportAssets/Audio/isoge",
+      "/Game/InportAssets/Audio/robot01",
+      "/Game/InportAssets/Audio/save",
+      "/Game/InportAssets/Audio/soundlogo12",
+      "/Game/InportAssets/Audio/soundlogo40",
+      "/Game/InportAssets/Audio/spaceship",
+      "/Game/InportAssets/Audio/spaceship01",
+      "/Game/InportAssets/Audio/sumia",
+      "/Game/InportAssets/Audio/ufo02",
+      "/Game/InportAssets/Audio/yodomi",
+      "/Game/InportAssets/Audio/\u30b7\u30e7\u30c3\u30c8",
+      "/Game/InportAssets/Audio/\u30d1\u30ef\u30fc\u30a2\u30c3\u30d7",
+      "/Game/InportAssets/Audio/\u56de\u907f__2_",
+      "/Game/InportAssets/Audio/\u5efa\u7269\u304c\u5c11\u3057\u5d29\u308c\u308b2",
+      "/Game/InportAssets/Audio/\u9078\u629e5",
+      "/Game/InportAssets/Audio/\u96fb\u6e90\u30aa\u30f3",
+      "/Game/InportAssets/Clinic/Demo/FirstPerson/Audio/FirstPersonTemplateWeaponFire02"
+    ],
+    "SoundCue": []
+  },
+  "blueprints": {
+    "/Game/BP/Boar/BP_BoarSpawnPoint": {
+      "class": "/Game/BP/Boar/BP_BoarSpawnPoint.BP_BoarSpawnPoint_C",
+      "components": [
+        {
+          "name": "SceneRoot",
+          "type": "SceneComponent"
+        }
+      ]
+    },
+    "/Game/BP/Boar/BP_BoarAIController": {
+      "class": "/Game/BP/Boar/BP_BoarAIController.BP_BoarAIController_C",
+      "components": [
+        {
+          "name": "TransformComponent0",
+          "type": "SceneComponent"
+        },
+        {
+          "name": "PathFollowingComponent",
+          "type": "PathFollowingComponent"
+        },
+        {
+          "name": "StateTreeAI",
+          "type": "StateTreeAIComponent"
+        }
+      ]
+    },
+    "/Game/BP/Boar/BP_NormalBoar": {
+      "class": "/Game/BP/Boar/BP_NormalBoar.BP_NormalBoar_C",
+      "components": [
+        {
+          "name": "CollisionCylinder",
+          "type": "CapsuleComponent"
+        },
+        {
+          "name": "Arrow",
+          "type": "ArrowComponent"
+        },
+        {
+          "name": "CharMoveComp",
+          "type": "CharacterMovementComponent"
+        },
+        {
+          "name": "CharacterMesh0",
+          "type": "SkeletalMeshComponent",
+          "materials": [
+            "/Game/InportAssets/Meshy_AI_\u30ed\u30fc\u30dd\u30ea\u98a8\u306e\u30b5_quadruped/Meshy_AI_\u30ed\u30fc\u30dd\u30ea\u98a8\u306e\u30b5_quadruped/Material_1.Material_1"
+          ],
+          "skeletal_mesh": "<Object '/Game/InportAssets/Meshy_AI_\u30ed\u30fc\u30dd\u30ea\u98a8\u306e\u30b5_quadruped/Meshy_AI_\u30ed\u30fc\u30dd\u30ea\u98a8\u306e\u30b5_quadruped/Meshy_AI_\u30ed\u30fc\u30dd\u30ea\u98a8\u306e\u30b5_quadruped_model_Animation_Walking_withSkin.Meshy_AI_\u30ed\u30fc\u30dd\u30ea\u98a8\u306e\u30b5_quadruped_model_Animation_Walking_withSkin' (0x0000014F69EA7800) Class 'SkeletalMesh'>"
+        },
+        {
+          "name": "CaptureComponent",
+          "type": "CaptureComponent"
+        }
+      ]
+    },
+    "/Game/BP/Gadget/BP_NetGadget": {
+      "class": "/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C",
+      "components": [
+        {
+          "name": "DummyRoot",
+          "type": "SceneComponent"
+        },
+        {
+          "name": "CaptureCollision",
+          "type": "SphereComponent"
+        }
+      ]
+    },
+    "/Game/BP/Core/BP_BoarGameInstance": {
+      "class": "/Game/BP/Core/BP_BoarGameInstance.BP_BoarGameInstance_C",
+      "components": []
+    },
+    "/Game/BP/Player/BP_PlayerCharacter": {
+      "class": "/Game/BP/Player/BP_PlayerCharacter.BP_PlayerCharacter_C",
+      "components": [
+        {
+          "name": "CollisionCylinder",
+          "type": "CapsuleComponent"
+        },
+        {
+          "name": "Arrow",
+          "type": "ArrowComponent"
+        },
+        {
+          "name": "CharMoveComp",
+          "type": "CharacterMovementComponent"
+        },
+        {
+          "name": "CharacterMesh0",
+          "type": "SkeletalMeshComponent",
+          "materials": [
+            "/Game/InportAssets/Player/Material_001.Material_001"
+          ],
+          "skeletal_mesh": "<Object '/Game/InportAssets/Player/GreatSwordSlash_UE.GreatSwordSlash_UE' (0x0000014FC53F1400) Class 'SkeletalMesh'>"
+        },
+        {
+          "name": "HealthComponent",
+          "type": "HealthComponent"
+        },
+        {
+          "name": "GadgetComponent",
+          "type": "GadgetComponent"
+        },
+        {
+          "name": "CaptureComponent",
+          "type": "CaptureComponent"
+        },
+        {
+          "name": "CameraBoom",
+          "type": "SpringArmComponent",
+          "arm_length": 350.0
+        },
+        {
+          "name": "FollowCamera",
+          "type": "CameraComponent",
+          "fov": 90.0
+        }
+      ]
+    },
+    "/Game/BP/Player/BP_BoarPlayerController": {
+      "class": "/Game/BP/Player/BP_BoarPlayerController.BP_BoarPlayerController_C",
+      "components": [
+        {
+          "name": "TransformComponent0",
+          "type": "SceneComponent"
+        }
+      ]
+    },
+    "/Game/BP/Cage/BP_Cage": {
+      "class": "/Game/BP/Cage/BP_Cage.BP_Cage_C",
+      "components": [
+        {
+          "name": "SceneRoot",
+          "type": "SceneComponent"
+        },
+        {
+          "name": "Shell_00",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Navy.M_Cage_Navy"
+          ]
+        },
+        {
+          "name": "Shell_01",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_02",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_03",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_04",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "Shell_05",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_06",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_07",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_08",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "Shell_09",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_10",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_11",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_12",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "Shell_13",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_14",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_15",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Yellow.M_Cage_Yellow"
+          ]
+        },
+        {
+          "name": "Shell_16",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "Shell_17",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_18",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_19",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_20",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_21",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_22",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_23",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_24",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_White.M_Cage_White"
+          ]
+        },
+        {
+          "name": "Shell_25",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Navy.M_Cage_Navy"
+          ]
+        },
+        {
+          "name": "Shell_26",
+          "type": "StaticMeshComponent",
+          "materials": [
+            "/Game/BP/Cage/Materials/M_Cage_Glow.M_Cage_Glow"
+          ]
+        },
+        {
+          "name": "CageHPGauge",
+          "type": "WidgetComponent",
+          "materials": [
+            "/Engine/EngineMaterials/Widget3DPassThrough_Masked.Widget3DPassThrough_Masked"
+          ]
+        },
+        {
+          "name": "CagePresentation",
+          "type": "CageVisualComponent"
+        },
+        {
+          "name": "CapturedBoarArea",
+          "type": "BoxComponent"
+        }
+      ]
+    },
+    "/Game/BP/Lobby/BP_Display_Net": {
+      "class": "/Game/BP/Lobby/BP_Display_Net.BP_Display_Net_C",
+      "components": [
+        {
+          "name": "SkeletalMeshComponent0",
+          "type": "SkeletalMeshComponent",
+          "materials": [
+            "/Game/InportAssets/mushitoriami/\u30de\u30c6\u30ea\u30a2\u30eb.\u30de\u30c6\u30ea\u30a2\u30eb"
+          ],
+          "skeletal_mesh": "<Object '/Game/InportAssets/mushitoriami/mushitoriami.mushitoriami' (0x0000014FC53F0A00) Class 'SkeletalMesh'>"
+        }
+      ]
+    },
+    "/Game/BP/Lobby/BP_GM_GadgetTest_Net": {
+      "class": "/Game/BP/Lobby/BP_GM_GadgetTest_Net.BP_GM_GadgetTest_Net_C",
+      "components": []
+    },
+    "/Game/BP/Lobby/BP_PC_Lobby": {
+      "class": "/Game/BP/Lobby/BP_PC_Lobby.BP_PC_Lobby_C",
+      "components": [
+        {
+          "name": "TransformComponent0",
+          "type": "SceneComponent"
+        }
+      ]
+    }
+  },
+  "dirty": []
+}

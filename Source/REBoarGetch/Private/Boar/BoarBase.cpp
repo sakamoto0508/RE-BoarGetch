@@ -7,6 +7,8 @@
 #include "BrainComponent.h"
 #include "Cage/Cage.h"
 #include "Component/CaptureComponent.h"
+#include "Component/CapturePresentationComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "Core/BoarGameMode.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -44,21 +46,21 @@ void ABoarBase::Tick(float DeltaSeconds)
 // Componentで二重捕獲を拒否してから、GameModeへ檻収容・カウント・ドロップ処理を委譲する。
 void ABoarBase::Capture()
 {
-	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage()) return;
-	if (CaptureComponent == nullptr)
-		return;
-	if (!CaptureComponent->Capture(nullptr))
-		return;
+ CaptureWithFeedback(true);
+}
 
-	// 捕獲中は移動もスタミナ変化もないため、解放されるまでTickを停止する。
-	SetActorTickEnabled(false);
-	
-	// 捕獲成功後のゲーム進行（檻送致・カウント・ドロップ）はGameModeに集約する。
-	if (ABoarGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-	{
-		GameMode->HandleBoarCaptured(this);
-	}
+bool ABoarBase::CaptureWithFeedback(bool bSharedFeedback)
+{
+ if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+  if (!Mode->CanAdvanceStage()) return false;
+ if (!CaptureComponent || !CaptureComponent->Capture(nullptr)) return false;
+ SetActorTickEnabled(false);
+ // Keep the successful capture at its original position until presentation completes.
+ if (auto* PC = GetWorld()->GetFirstPlayerController())
+  if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
+   if (Presentation->PresentCapturedBoar(this,bSharedFeedback)) return true;
+ if (auto* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>()) Mode->HandleBoarCaptured(this);
+ return true;
 }
 
 // 捕獲状態を返す。

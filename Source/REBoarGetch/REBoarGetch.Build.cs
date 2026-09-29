@@ -20,7 +20,9 @@ public class REBoarGetch : ModuleRules
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
-			"SlateCore"
+			"SlateCore",
+			"Niagara",
+			"EngineCameras"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {

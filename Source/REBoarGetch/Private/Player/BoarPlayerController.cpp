@@ -6,6 +6,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "Component/HealthComponent.h"
+#include "Component/CapturePresentationComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Core/BoarGameMode.h"
 #include "Player/BoarPlayerCharacter.h"
@@ -25,6 +26,11 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
+
+ABoarPlayerController::ABoarPlayerController()
+{
+	CapturePresentation = CreateDefaultSubobject<UCapturePresentationComponent>(TEXT("CapturePresentation"));
+}
 
 void ABoarPlayerController::BeginPlay()
 {

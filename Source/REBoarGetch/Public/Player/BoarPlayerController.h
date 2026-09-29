@@ -37,6 +37,9 @@ class REBOARGETCH_API ABoarPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	ABoarPlayerController();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
+	TObjectPtr<class UCapturePresentationComponent> CapturePresentation;
 	/** Dedicated non-stage terminal entry; existing widget/save implementations are reused. */
 	void OpenFacilityMenu(bool bArchive);
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */

@@ -16,6 +16,7 @@
 #include "AIController.h"
 #include "BrainComponent.h"
 #include "Component/GadgetComponent.h"
+#include "Component/CapturePresentationComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Gadget/GadgetBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -228,6 +229,10 @@ void ABoarGameMode::RefreshHousedBoarCount()
 
 void ABoarGameMode::RequestStageClear()
 {
+	// Preserve collection/count ordering for every target in a capture presentation batch.
+	if (auto* PC = GetWorld()->GetFirstPlayerController())
+		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
+			if (Presentation->HasPendingCaptures()) return;
 	if (StageState == EBoarStageState::Playing && StageConfig && StageConfig->TargetCaptureCount > 0
 		&& CapturedBoarCount >= StageConfig->TargetCaptureCount) bStageClearRequested = true;
 }
@@ -249,6 +254,8 @@ void ABoarGameMode::ResolveStageEnd()
 	const EBoarStageState Next = ResolveBoarStageEnd(StageState, bStageClearRequested, bGameOverRequested);
 	if (Next == StageState) return;
 	StageState = Next;
+	if (auto* PC = GetWorld()->GetFirstPlayerController())
+		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>()) Presentation->CancelPresentation();
 	SetStageActorsStopped(true);
 	if (StageState == EBoarStageState::Cleared)
 	{
@@ -387,3 +394,4 @@ void ABoarGameMode::SpawnConfiguredSpecialCoins()
 		}
 	}
 }
+

@@ -40,6 +40,7 @@ void ANetGadget::Use_Implementation(AActor* TargetActor)
 
 	EndCaptureWindow();
 	AttemptedBoarsThisUse.Reset();
+	bSuccessFeedbackPlayedThisUse = false;
 
 	StartCooldown();
 }
@@ -87,7 +88,8 @@ bool ANetGadget::TryCaptureBoar(ABoarBase* Boar)
 	if (!bCaptureWindowActive || Boar == nullptr || Boar->IsCaptured() || AttemptedBoarsThisUse.Contains(Boar)) return false;
 	AttemptedBoarsThisUse.Add(Boar);
 	
-	Boar->Capture();
+	if (!Boar->CaptureWithFeedback(!bSuccessFeedbackPlayedThisUse)) return false;
+	bSuccessFeedbackPlayedThisUse = true;
 	UE_LOG(LogTemp, Log, TEXT("[Net] Captured %s"), *GetNameSafe(Boar));
 	return true;
 }

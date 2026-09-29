@@ -1,0 +1,90 @@
+{
+  "assets": {
+    "/Game/BP/Player/BP_BoarPlayerController": {
+      "class": "Blueprint",
+      "components": [
+        {
+          "name": "CapturePresentation",
+          "class": "CapturePresentationComponent"
+        }
+      ],
+      "presentation": {
+        "hit_stop_duration": "0.05999999865889549",
+        "slow_duration": "0.25999999046325684",
+        "camera_zoom_amount": "10.0",
+        "camera_duration": "0.2800000011920929",
+        "glow_duration": "0.3400000035762787",
+        "glow_material": "<Object '/Game/REBoarGetch/Art/VFX/Capture/M_CaptureGlow.M_CaptureGlow' (0x0000020632D0D200) Class 'Material'>",
+        "capture_vfx": "<Object '/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureSuccess.NS_CaptureSuccess' (0x00000205D5227000) Class 'NiagaraSystem'>",
+        "impact_sound": "None",
+        "capture_success_sound": "None"
+      }
+    },
+    "/Game/BP/Lobby/BP_PC_Lobby": {
+      "class": "Blueprint",
+      "components": [
+        {
+          "name": "CapturePresentation",
+          "class": "CapturePresentationComponent"
+        }
+      ]
+    },
+    "/Game/BP/Boar/BP_NormalBoar": {
+      "class": "Blueprint",
+      "components": [
+        {
+          "name": "CharacterMesh0",
+          "class": "SkeletalMeshComponent"
+        },
+        {
+          "name": "CaptureComponent",
+          "class": "CaptureComponent"
+        }
+      ]
+    },
+    "/Game/BP/Gadget/BP_NetGadget": {
+      "class": "Blueprint",
+      "components": [
+        {
+          "name": "CaptureCollision",
+          "class": "SphereComponent"
+        }
+      ]
+    },
+    "/Game/BP/Cage/BP_Cage": {
+      "class": "Blueprint",
+      "components": [
+        {
+          "name": "CageHPGauge",
+          "class": "WidgetComponent"
+        },
+        {
+          "name": "CagePresentation",
+          "class": "CageVisualComponent"
+        },
+        {
+          "name": "CapturedBoarArea",
+          "class": "BoxComponent"
+        }
+      ]
+    },
+    "/Game/REBoarGetch/Art/VFX/Capture/M_CaptureGlow": "Material",
+    "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureSuccess": "NiagaraSystem",
+    "/Game/InportAssets/Meshy_AI_ローポリ風のサ_quadruped/Meshes/Material_1": null
+  },
+  "existing_new_assets": {
+    "/Game/REBoarGetch/Art/VFX/Capture/M_CaptureDataTransfer": false,
+    "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureRing": false,
+    "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureTransfer": false,
+    "/Game/REBoarGetch/Art/VFX/Capture/NS_CageReceive": false
+  },
+  "dirty": {
+    "maps": [],
+    "content": []
+  },
+  "material_custom_properties": [],
+  "custom_input_type": [
+    "CustomInput",
+    "SwitchCustomInput"
+  ]
+}

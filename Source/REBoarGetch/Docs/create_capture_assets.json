@@ -1,0 +1,9 @@
+{
+  "existing": {
+    "/Game/REBoarGetch/Art/VFX/Capture/M_CaptureGlow": false,
+    "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureSuccess": false
+  },
+  "material": "/Game/REBoarGetch/Art/VFX/Capture/M_CaptureGlow.M_CaptureGlow",
+  "vfx": "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureSuccess.NS_CaptureSuccess",
+  "dirty": []
+}

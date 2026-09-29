@@ -34,6 +34,8 @@ public:
 	/** 捕獲Componentの状態を確定し、成功時だけGameModeへ捕獲後処理を通知します。 */
 	UFUNCTION(BlueprintCallable, Category = "Boar")
 	void Capture();
+	/** Net passes one shared-feedback flag per swing; success state is still owned by CaptureComponent. */
+	bool CaptureWithFeedback(bool bSharedFeedback);
 	
 	/** 捕獲済み個体を解放し、到達可能なNavMesh地点まで歩かせてから通常AIへ戻します。 */
 	UFUNCTION(BlueprintCallable, Category = "Boar")

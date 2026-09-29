@@ -1,0 +1,43 @@
+{
+  "material": {
+    "path": "/Game/REBoarGetch/Art/VFX/Capture/M_CaptureDataTransfer",
+    "blend": "<BlendMode.BLEND_MASKED: 1>",
+    "shading": "<MaterialShadingModel.MSM_UNLIT: 0>",
+    "two_sided": true,
+    "expressions": 15,
+    "emissive_connected": true,
+    "opacity_mask_connected": true
+  },
+  "controllers": [
+    {
+      "path": "/Game/BP/Player/BP_BoarPlayerController",
+      "status": "<BlueprintStatus.BS_UP_TO_DATE: 3>",
+      "data_material": "/Game/REBoarGetch/Art/VFX/Capture/M_CaptureDataTransfer.M_CaptureDataTransfer",
+      "capture_vfx": "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureSuccess.NS_CaptureSuccess",
+      "cage_reception_vfx": "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureSuccess.NS_CaptureSuccess",
+      "presentation_duration": 0.8500000312924385,
+      "reception_duration": 0.18000000715255737,
+      "impact_sound": "None",
+      "transfer_sound": "None",
+      "confirm_sound": "None"
+    },
+    {
+      "path": "/Game/BP/Lobby/BP_PC_Lobby",
+      "status": "<BlueprintStatus.BS_UP_TO_DATE: 3>",
+      "data_material": "/Game/REBoarGetch/Art/VFX/Capture/M_CaptureDataTransfer.M_CaptureDataTransfer",
+      "capture_vfx": "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureSuccess.NS_CaptureSuccess",
+      "cage_reception_vfx": "/Game/REBoarGetch/Art/VFX/Capture/NS_CaptureSuccess.NS_CaptureSuccess",
+      "presentation_duration": 0.8500000312924385,
+      "reception_duration": 0.18000000715255737,
+      "impact_sound": "None",
+      "transfer_sound": "None",
+      "confirm_sound": "None"
+    }
+  ],
+  "boar_materials": [
+    "<Object '/Game/InportAssets/Meshy_AI_\u30ed\u30fc\u30dd\u30ea\u98a8\u306e\u30b5_quadruped/Meshy_AI_\u30ed\u30fc\u30dd\u30ea\u98a8\u306e\u30b5_quadruped/Material_1.Material_1' (0x0000021147993800) Class 'MaterialInstanceConstant'>"
+  ],
+  "dirty_assets": [],
+  "dirty_maps": [],
+  "PIE": false
+}
