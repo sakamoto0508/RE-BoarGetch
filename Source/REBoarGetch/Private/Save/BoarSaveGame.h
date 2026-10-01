@@ -15,6 +15,14 @@ public:
 	void FreezeRunResult(FStageRunData& Run) const;
 	/** 確定済みClear結果だけを候補データへ併合します。 */
 	bool MergeClearedRun(const FStageRunData& Run);
+	/** 捕獲済みIDまたは空欄の3枠を検証し、展示選択だけを変更します。 */
+	bool SetArchiveDisplays(const TArray<FName>& Ids);
+	/** 明示選択を優先し、未選択なら確定捕獲履歴から最新3体を返します。 */
+	TArray<FName> ResolveArchiveDisplays() const;
+	/** 末尾が直近の確定捕獲です。古いセーブのSetから順序を推測しません。 */
+	UPROPERTY(SaveGame, BlueprintReadOnly) TArray<FName> CapturedBoarHistory;
+	UPROPERTY(SaveGame, BlueprintReadOnly) TArray<FName> ArchiveDisplayBoarIds;
+	UPROPERTY(SaveGame, BlueprintReadOnly) bool bHasSavedArchiveDisplays = false;
 	UPROPERTY(SaveGame, BlueprintReadOnly) TSet<FName> CapturedBoarUniqueIds;
 	UPROPERTY(SaveGame, BlueprintReadOnly) TSet<FName> SpecialCoinIds;
 	UPROPERTY(SaveGame, BlueprintReadOnly) TSet<FName> ClearedStageIds;

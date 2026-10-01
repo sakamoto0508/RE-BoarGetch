@@ -19,6 +19,7 @@
 #include "UI/BoarSettingsWidget.h"
 #include "UI/BoarConfirmationWidget.h"
 #include "UI/BoarEncyclopediaWidget.h"
+#include "UI/BoarArchiveSelectionWidget.h"
 #include "UI/BoarLobbyWidget.h"
 #include "Core/BoarFacilityGameMode.h"
 #include "Stage/HubPortal.h"
@@ -103,6 +104,7 @@ void ABoarPlayerController::OnPossess(APawn* InPawn)
 void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (bFacilityMenuOpen) CloseLoadoutMenu();
+	CloseArchiveDisplaySelection();
 	CloseEncyclopedia();
 	CloseSettingsMenu();
 	ResumeFromPause();
@@ -489,12 +491,13 @@ void ABoarPlayerController::RetryStage()
 
 void ABoarPlayerController::TogglePauseMenu()
 {
-	if (PauseWidget || SettingsWidget || EncyclopediaWidget) HandleMenuBack();
+	if (PauseWidget || SettingsWidget || EncyclopediaWidget || ArchiveSelectionWidget) HandleMenuBack();
 	else OpenPauseMenu();
 }
 
 void ABoarPlayerController::HandleMenuBack()
 {
+	if (ArchiveSelectionWidget) { CloseArchiveDisplaySelection(); return; }
 	if (EncyclopediaWidget) CloseEncyclopedia();
 	else if (LobbyExitConfirmation) ResolveLobbyExit(false);
 	else if (SettingsWidget) CloseSettingsMenu();
@@ -521,6 +524,8 @@ void ABoarPlayerController::OpenLoadoutMenu()
 
 void ABoarPlayerController::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* ReturnFocus)
 {
+	const auto* ArchiveMode=GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
+	if (!ArchiveMode || !ArchiveMode->bArchive) return;
 	if (!IsLocalController() || !ParentMenu || EncyclopediaWidget || !EncyclopediaWidgetClass ||
 		LoadoutWidget || LobbyExitConfirmation || bLevelTransitionRequested) return;
 	if (ParentMenu != SettingsWidget && !Cast<UBoarLobbyWidget>(ParentMenu)) return;
@@ -920,7 +925,7 @@ ABoarPlayerCharacter* ABoarPlayerController::GetBoarCharacter() const
 
 bool ABoarPlayerController::CanProcessGameplayInput() const
 {
-	return !bGameplayInputBlocked && !bFacilityMenuOpen && !PauseWidget && !SettingsWidget && !EncyclopediaWidget && !bLevelTransitionRequested;
+	return !bGameplayInputBlocked && !bFacilityMenuOpen && !PauseWidget && !SettingsWidget && !EncyclopediaWidget && !ArchiveSelectionWidget && !bLevelTransitionRequested;
 }
 
 void ABoarPlayerController::AddOwnedMappingContext(UInputMappingContext* Context, int32 Priority)
@@ -991,6 +996,36 @@ void ABoarPlayerController::InteractWithFacility()
            GetPawn()->GetSquaredDistanceTo(Portal)<GetPawn()->GetSquaredDistanceTo(Nearest)))Nearest=Portal;
     }
     if(Nearest)Nearest->Interact(this);
+}
+
+void ABoarPlayerController::OpenArchiveDisplaySelection()
+{
+    const auto* Mode=GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
+    if(!IsLocalController() || !Mode || !Mode->bArchive || !CanProcessGameplayInput() || !ArchiveSelectionWidgetClass)return;
+    ArchiveSelectionWidget=CreateWidget<UBoarArchiveSelectionWidget>(this,ArchiveSelectionWidgetClass);
+    if(!ArchiveSelectionWidget)return;
+    ArchiveSelectionWidget->OnClosed.AddUniqueDynamic(this,&ABoarPlayerController::CloseArchiveDisplaySelection);
+    bFacilityMenuOpen=true;
+    bFacilityAddedUIContext=UIMappingContext && !OwnedMappingContexts.Contains(UIMappingContext);
+    if(bFacilityAddedUIContext)AddOwnedMappingContext(UIMappingContext,20);
+    bIsGadgetModifierHeld=false;
+    if(auto* ArchivePlayer=GetBoarCharacter())
+    {
+        ArchivePlayer->StopDash();ArchivePlayer->StopJump();ArchivePlayer->StopGadgetUse();ArchivePlayer->SetMenuOpen(true);
+        ArchivePlayer->GetCharacterMovement()->StopMovementImmediately();
+    }
+    FlushPressedKeys();SetIgnoreMoveInput(true);SetIgnoreLookInput(true);
+    ArchiveSelectionWidget->AddToViewport(100);
+    FInputModeGameAndUI Input;Input.SetWidgetToFocus(ArchiveSelectionWidget->TakeWidget());Input.SetHideCursorDuringCapture(false);
+    Input.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);SetInputMode(Input);SetShowMouseCursor(true);
+    ArchiveSelectionWidget->FocusInitialChoice();
+}
+void ABoarPlayerController::CloseArchiveDisplaySelection()
+{
+    if(!ArchiveSelectionWidget)return;
+    ArchiveSelectionWidget->OnClosed.RemoveDynamic(this,&ABoarPlayerController::CloseArchiveDisplaySelection);
+    ArchiveSelectionWidget->RemoveFromParent();ArchiveSelectionWidget=nullptr;
+    CloseFacilityMenuInput();
 }
 
 void ABoarPlayerController::CloseFacilityMenuInput()

@@ -42,6 +42,8 @@ public:
 	TObjectPtr<class UCapturePresentationComponent> CapturePresentation;
 	/** Dedicated non-stage terminal entry; existing widget/save implementations are reused. */
 	void OpenFacilityMenu(bool bArchive);
+	void OpenArchiveDisplaySelection();
+	UFUNCTION() void CloseArchiveDisplaySelection();
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
 	void HandleStageCleared(const FStageRunData& Run, int32 TargetCount);
 	/** 終了演出からUIまでゲーム入力を遮断します。 */
@@ -79,6 +81,8 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
+	UPROPERTY(EditDefaultsOnly,Category="UI") TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;
+	UPROPERTY(Transient) TObjectPtr<class UBoarArchiveSelectionWidget> ArchiveSelectionWidget;
 	UPROPERTY(EditDefaultsOnly, Category="Input") TObjectPtr<UInputAction> InteractAction;
 	UPROPERTY(EditDefaultsOnly, Category="Input") TObjectPtr<UInputMappingContext> FacilityMappingContext;
 	void InteractWithFacility();

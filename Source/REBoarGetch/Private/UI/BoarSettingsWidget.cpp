@@ -20,6 +20,7 @@ void UBoarSettingsWidget::NativeConstruct()
 	EncyclopediaButton = WidgetTree ? Cast<UButton>(WidgetTree->FindWidget(EncyclopediaButtonName)) : nullptr;
 	if (EncyclopediaButton)
 	{
+		EncyclopediaButton->SetVisibility(ESlateVisibility::Collapsed);
 		EncyclopediaButton->OnClicked.AddUniqueDynamic(this, &UBoarSettingsWidget::OpenEncyclopedia);
 		EncyclopediaButton->OnHovered.AddUniqueDynamic(this, &UBoarSettingsWidget::FocusEncyclopedia);
 	}

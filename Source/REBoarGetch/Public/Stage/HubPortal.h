@@ -20,7 +20,7 @@ public:
     UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<AActor>> TestBarrierActors;
     UPROPERTY(EditInstanceOnly, Category="Portal") bool bClearTestTargetOnTravel=false;
     UPROPERTY(EditInstanceOnly, Category="Portal") bool bRequiresInteraction=false;
-    void Interact(class ABoarPlayerController* Controller);
+    virtual void Interact(class ABoarPlayerController* Controller);
     UPROPERTY(EditInstanceOnly, Category="Portal") TObjectPtr<class ATextRenderActor> TestLabel;
     UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<class ATextRenderActor>> CollectionLabels;
 protected:

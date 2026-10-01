@@ -22,6 +22,8 @@ struct FBoarSpawnDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia", meta = (MultiLine = "true")) FText EncyclopediaDescription;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia", meta = (MultiLine = "true")) FText EncyclopediaTraits;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia") TSoftObjectPtr<UTexture2D> EncyclopediaPhoto;
+	/** 展示専用のIdleを指定します。歩行・攻撃AnimBPは展示で使用しません。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia") TSoftObjectPtr<class UAnimSequence> ArchiveIdleAnimation;
 };
 
 /** 特別コインの固定IDと配置地点です。 */

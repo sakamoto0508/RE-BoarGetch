@@ -73,6 +73,22 @@ bool UBoarGameInstance::IsStageUnlocked(const UStageConfig* Config) const
 		|| (Progress && Progress->ClearedStageIds.Contains(Config->UnlockCondition.RequiredClearedStageId)));
 }
 
+bool UBoarGameInstance::SaveArchiveDisplays(const TArray<FName>& Ids)
+{
+	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>() : nullptr;
+	if (!Progress || !Mode || !Mode->bArchive) return false;
+	auto* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);
+	if (!Candidate->SetArchiveDisplays(Ids) || !SaveCandidate(Candidate)) return false;
+	OnArchiveDisplaysChanged.Broadcast();
+	return true;
+}
+
+TArray<FName> UBoarGameInstance::GetArchiveDisplayIds() const
+{
+	if (Progress) return Progress->ResolveArchiveDisplays();
+	TArray<FName> Empty; Empty.SetNum(3); return Empty;
+}
+
 bool UBoarGameInstance::IsGadgetUnlocked(FName GadgetId) const
 {
 	return Progress && !GadgetId.IsNone() && Progress->UnlockedGadgetIds.Contains(GadgetId);

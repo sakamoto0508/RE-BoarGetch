@@ -26,6 +26,10 @@ public:
 	bool SaveLastAttemptedStage(FName StageId);
 	/** 構成済み4スロットのIDを即時保存します。空スロットも保存します。 */
 	bool SaveGadgetLoadout(const TArray<FName>& Ids);
+	/** Archive展示3枠だけを即時保存します。Clear・GameOverとは独立です。 */
+	UFUNCTION(BlueprintCallable) bool SaveArchiveDisplays(const TArray<FName>& Ids);
+	UFUNCTION(BlueprintPure) TArray<FName> GetArchiveDisplayIds() const;
+	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnArchiveDisplaysChanged;
 	UFUNCTION(BlueprintPure) bool IsStageUnlocked(const UStageConfig* Config) const;
 	UFUNCTION(BlueprintPure) bool IsGadgetUnlocked(FName GadgetId) const;
 	/** UEで順番を指定する実装済みガジェット一覧です。IDからClassを解決します。 */
