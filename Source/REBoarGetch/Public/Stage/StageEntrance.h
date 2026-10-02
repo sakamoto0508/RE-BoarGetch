@@ -13,7 +13,7 @@ class UStageConfig;
 /**
  * @brief ロビー内でステージ選択UIとLevel遷移を仲介する入口Actorです。
  *
- * Triggerへローカルプレイヤーが進入すると、設定されたStageConfigをLobby Widgetへ渡して表示します。
+ * Trigger内のローカルプレイヤーが共通Interactを押すと、StageConfigをLobby Widgetへ渡して表示します。
  * Widgetの決定通知ではStageConfigのSoft World参照を開き、キャンセルまたはTrigger退出時にはUIと
  * 入力モードをゲーム状態へ戻します。Level遷移要求は一度だけ受け付けます。
  */
@@ -25,12 +25,16 @@ class REBOARGETCH_API AStageEntrance : public AActor
 public:
 	/** @brief Scene RootとPawn検知用Box Triggerを構築します。 */
 	AStageEntrance();
+    /** Lobby共通Interactで、範囲内の入口だけを操作します。 */
+    bool CanInteract(const class APlayerController* Controller) const;
+    void Interact(class APlayerController* Controller);
+    UPROPERTY(EditAnywhere, Category="Interaction") bool bRequiresInteraction=true;
 
 protected:
 	/** @brief Level終了時にWidgetと入力状態を後始末します。 */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	/** @brief ローカルプレイヤーのTrigger進入を検知し、ステージ選択UIを表示します。 */
+	/** @brief Trigger進入を検知します。自動起動はRequiresInteractionを無効にした場合だけです。 */
 	/** @brief 操作中プレイヤーのTrigger退出を検知し、ステージ選択UIを閉じます。 */
 	UFUNCTION()
 	void HandleTriggerBeginOverlap(

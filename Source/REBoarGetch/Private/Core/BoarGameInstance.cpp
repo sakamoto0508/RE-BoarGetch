@@ -89,6 +89,16 @@ TArray<FName> UBoarGameInstance::GetArchiveDisplayIds() const
 	TArray<FName> Empty; Empty.SetNum(3); return Empty;
 }
 
+bool UBoarGameInstance::AssignArchiveDisplay(int32 Slot, FName Id)
+{
+	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>() : nullptr;
+	if (!Progress || !Mode || !Mode->bArchive) return false;
+	auto* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);
+	if (!Candidate->AssignArchiveDisplay(Slot, Id) || !SaveCandidate(Candidate)) return false;
+	OnArchiveDisplaysChanged.Broadcast();
+	return true;
+}
+
 bool UBoarGameInstance::IsGadgetUnlocked(FName GadgetId) const
 {
 	return Progress && !GadgetId.IsNone() && Progress->UnlockedGadgetIds.Contains(GadgetId);

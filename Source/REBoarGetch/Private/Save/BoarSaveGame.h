@@ -17,6 +17,8 @@ public:
 	bool MergeClearedRun(const FStageRunData& Run);
 	/** 捕獲済みIDまたは空欄の3枠を検証し、展示選択だけを変更します。 */
 	bool SetArchiveDisplays(const TArray<FName>& Ids);
+	/** 別枠展示中の個体はSwap。空欄も明示選択として保存します。 */
+	bool AssignArchiveDisplay(int32 Slot, FName Id);
 	/** 明示選択を優先し、未選択なら確定捕獲履歴から最新3体を返します。 */
 	TArray<FName> ResolveArchiveDisplays() const;
 	/** 末尾が直近の確定捕獲です。古いセーブのSetから順序を推測しません。 */

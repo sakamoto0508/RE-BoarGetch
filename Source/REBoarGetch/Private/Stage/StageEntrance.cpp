@@ -8,6 +8,7 @@
 #include "Stage/StageConfig.h"
 #include "UI/BoarLobbyWidget.h"
 #include "BoarGameInstance.h"
+#include "Player/BoarPlayerController.h"
 
 AStageEntrance::AStageEntrance()
 {
@@ -52,12 +53,21 @@ void AStageEntrance::HandleTriggerBeginOverlap(
 	// AI PawnやRemote ControllerではUIを生成せず、ローカルプレイヤーだけを対象にする。
 	const APawn* Pawn = Cast<APawn>(OtherActor);
 	APlayerController* PlayerController = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
-	if (PlayerController && PlayerController->IsLocalController())
+	if (!bRequiresInteraction && PlayerController && PlayerController->IsLocalController())
 	{
 		ShowStageSelection(PlayerController);
 	}
 }
 
+bool AStageEntrance::CanInteract(const APlayerController* Controller) const
+{
+    return bRequiresInteraction && !LobbyWidget && !bTravelRequested && Controller &&
+        Controller->IsLocalController() && Controller->GetPawn() && Trigger->IsOverlappingActor(Controller->GetPawn());
+}
+void AStageEntrance::Interact(APlayerController* Controller)
+{
+    if(CanInteract(Controller))ShowStageSelection(Controller);
+}
 void AStageEntrance::HandleTriggerEndOverlap(
 	UPrimitiveComponent* OverlappedComponent,
 	AActor* OtherActor,
@@ -104,6 +114,7 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 	if (StageCatalog.IsEmpty()) Stages.Add(StageConfig);
 	else for (UStageConfig* Stage : StageCatalog) Stages.Add(Stage);
 	LobbyWidget->ShowStageCatalog(Stages, StageConfig);
+    if(auto* PC=Cast<ABoarPlayerController>(PlayerController))PC->SetStageInputBlocked(true);
 	FInputModeGameAndUI InputMode;
 	InputMode.SetWidgetToFocus(LobbyWidget->TakeWidget());
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -125,6 +136,7 @@ void AStageEntrance::CloseStageSelection()
 	// Level遷移中は入力状態を戻さず、通常のキャンセル／退出時だけGame Onlyへ復帰する。
 	if (InteractingPlayerController && !bTravelRequested)
 	{
+		if(auto* PC=Cast<ABoarPlayerController>(InteractingPlayerController))PC->SetStageInputBlocked(false);
 		FInputModeGameOnly InputMode;
 		InteractingPlayerController->SetInputMode(InputMode);
 		InteractingPlayerController->SetShowMouseCursor(false);

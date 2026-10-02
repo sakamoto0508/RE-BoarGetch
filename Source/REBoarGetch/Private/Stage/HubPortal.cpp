@@ -25,6 +25,10 @@ void AHubPortal::Enter(UPrimitiveComponent*,AActor* Other,UPrimitiveComponent*,i
 {
     const APawn* Pawn=Cast<APawn>(Other);
     auto* PC=Pawn?Cast<ABoarPlayerController>(Pawn->GetController()):nullptr;
+    if(!bRequiresInteraction)Activate(PC);
+}
+void AHubPortal::Activate(ABoarPlayerController* PC)
+{
     if(!PC||!PC->IsLocalController()||bTravelRequested)return;
     if(Action==EHubPortalAction::GadgetTest)
     {
@@ -32,7 +36,7 @@ void AHubPortal::Enter(UPrimitiveComponent*,AActor* Other,UPrimitiveComponent*,i
         if(!GI || !GI->IsInGadgetLab())return;
         Destination=GI->GetSelectedTestLevel();
     }
-    else if(Action!=EHubPortalAction::Travel){if(!bRequiresInteraction)PC->OpenFacilityMenu(Action==EHubPortalAction::Archive);return;}
+    else if(Action!=EHubPortalAction::Travel){PC->OpenFacilityMenu(Action==EHubPortalAction::Archive);return;}
     // PIE rewrites soft references to visited worlds. Validate and travel using
     // the on-disk package, never the transient UEDPIE_<instance>_ package.
     const FString PackageName=UWorld::RemovePIEPrefix(Destination.ToSoftObjectPath().GetLongPackageName());
@@ -62,6 +66,7 @@ void AHubPortal::Interact(ABoarPlayerController* Controller)
        !Controller->GetPawn() || !Trigger->IsOverlappingActor(Controller->GetPawn()))return;
     if(Action==EHubPortalAction::Loadout || Action==EHubPortalAction::Archive)
         Controller->OpenFacilityMenu(Action==EHubPortalAction::Archive);
+    else Activate(Controller);
 }
 void AHubPortal::EndPlay(const EEndPlayReason::Type Reason)
 {

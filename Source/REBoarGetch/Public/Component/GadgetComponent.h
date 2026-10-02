@@ -31,7 +31,6 @@ class REBOARGETCH_API UGadgetComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
 	/** Tickを使用しないガジェット管理Componentの初期状態を構築します。 */
 	UGadgetComponent();
 	/** 保存済み装備の復元と初期装備を一度だけ実行します。 */

@@ -29,10 +29,22 @@ bool UBoarSaveGame::MergeClearedRun(const FStageRunData& Run)
 bool UBoarSaveGame::SetArchiveDisplays(const TArray<FName>& Ids)
 {
 	if (Ids.Num() != 3) return false;
+	TSet<FName> Seen;
 	for (FName Id : Ids) if (!Id.IsNone() && !CapturedBoarUniqueIds.Contains(Id)) return false;
+	for (FName Id : Ids) if (!Id.IsNone()) { if (Seen.Contains(Id)) return false; Seen.Add(Id); }
 	ArchiveDisplayBoarIds = Ids;
 	bHasSavedArchiveDisplays = true;
 	return true;
+}
+
+bool UBoarSaveGame::AssignArchiveDisplay(int32 Slot, FName Id)
+{
+	if (Slot < 0 || Slot >= 3 || (!Id.IsNone() && !CapturedBoarUniqueIds.Contains(Id))) return false;
+	TArray<FName> Ids = ResolveArchiveDisplays();
+	const int32 Other = Id.IsNone() ? INDEX_NONE : Ids.Find(Id);
+	if (Other != INDEX_NONE && Other != Slot) Swap(Ids[Slot], Ids[Other]);
+	else Ids[Slot] = Id;
+	return SetArchiveDisplays(Ids);
 }
 
 TArray<FName> UBoarSaveGame::ResolveArchiveDisplays() const

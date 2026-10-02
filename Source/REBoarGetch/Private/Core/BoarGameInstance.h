@@ -28,6 +28,7 @@ public:
 	bool SaveGadgetLoadout(const TArray<FName>& Ids);
 	/** Archive展示3枠だけを即時保存します。Clear・GameOverとは独立です。 */
 	UFUNCTION(BlueprintCallable) bool SaveArchiveDisplays(const TArray<FName>& Ids);
+	UFUNCTION(BlueprintCallable) bool AssignArchiveDisplay(int32 Slot, FName Id);
 	UFUNCTION(BlueprintPure) TArray<FName> GetArchiveDisplayIds() const;
 	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnArchiveDisplaysChanged;
 	UFUNCTION(BlueprintPure) bool IsStageUnlocked(const UStageConfig* Config) const;

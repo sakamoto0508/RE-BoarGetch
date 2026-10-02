@@ -23,6 +23,7 @@
 #include "UI/BoarLobbyWidget.h"
 #include "Core/BoarFacilityGameMode.h"
 #include "Stage/HubPortal.h"
+#include "Stage/StageEntrance.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -65,7 +66,8 @@ void ABoarPlayerController::BeginPlay()
 
 	// Mapping Context登録後にHUDを生成し、現在Possess中のCharacterとGameModeへ接続する。
 	AddOwnedMappingContext(GlobalMappingContext, 10);
-	if (const auto* Facility=GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>(); Facility && !Facility->bGadgetTest && !Facility->bArchive)
+	// Lobby・施設・施設TestのReturnで使用。通常Stageには登録しません。
+	if (GetWorld() && !GetWorld()->GetAuthGameMode<ABoarGameMode>())
 		AddOwnedMappingContext(FacilityMappingContext, 15);
 	CreatePlayerHUD();
 }
@@ -985,25 +987,33 @@ void ABoarPlayerController::OpenFacilityMenu(bool bArchive)
 
 void ABoarPlayerController::InteractWithFacility()
 {
-    if(!CanProcessGameplayInput() || !GetPawn() || bIsGadgetModifierHeld)return;
-    TArray<AActor*> Nearby;
-    GetPawn()->GetOverlappingActors(Nearby,AHubPortal::StaticClass());
-    AHubPortal* Nearest=nullptr;
+    if(!CanProcessGameplayInput() || !GetPawn() || bIsGadgetModifierHeld ||
+       GetWorld()->GetAuthGameMode<ABoarGameMode>())return;
+    TArray<AActor*> Nearby;GetPawn()->GetOverlappingActors(Nearby);
+    AActor* Nearest=nullptr;
     for(AActor* Actor:Nearby)
     {
-        auto* Portal=Cast<AHubPortal>(Actor);
-        if(Portal && Portal->bRequiresInteraction && (!Nearest ||
-           GetPawn()->GetSquaredDistanceTo(Portal)<GetPawn()->GetSquaredDistanceTo(Nearest)))Nearest=Portal;
+        const auto* Portal=Cast<AHubPortal>(Actor);
+        const auto* Entrance=Cast<AStageEntrance>(Actor);
+        const bool bEligible=(Portal && Portal->bRequiresInteraction) || (Entrance && Entrance->CanInteract(this));
+        if(bEligible && (!Nearest || GetPawn()->GetSquaredDistanceTo(Actor)<GetPawn()->GetSquaredDistanceTo(Nearest)))Nearest=Actor;
     }
-    if(Nearest)Nearest->Interact(this);
+    if(auto* Portal=Cast<AHubPortal>(Nearest))Portal->Interact(this);
+    else if(auto* Entrance=Cast<AStageEntrance>(Nearest))Entrance->Interact(this);
 }
-
 void ABoarPlayerController::OpenArchiveDisplaySelection()
 {
     const auto* Mode=GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
     if(!IsLocalController() || !Mode || !Mode->bArchive || !CanProcessGameplayInput() || !ArchiveSelectionWidgetClass)return;
     ArchiveSelectionWidget=CreateWidget<UBoarArchiveSelectionWidget>(this,ArchiveSelectionWidgetClass);
     if(!ArchiveSelectionWidget)return;
+	ArchiveSelectionWidget->TakeWidget();
+	if(!ArchiveSelectionWidget->IsReadyForDisplay())
+	{
+		UE_LOG(LogTemp,Error,TEXT("[Archive] Display Selection UI could not build its layout."));
+		ArchiveSelectionWidget=nullptr;
+		return;
+	}
     ArchiveSelectionWidget->OnClosed.AddUniqueDynamic(this,&ABoarPlayerController::CloseArchiveDisplaySelection);
     bFacilityMenuOpen=true;
     bFacilityAddedUIContext=UIMappingContext && !OwnedMappingContexts.Contains(UIMappingContext);
@@ -1016,7 +1026,7 @@ void ABoarPlayerController::OpenArchiveDisplaySelection()
     }
     FlushPressedKeys();SetIgnoreMoveInput(true);SetIgnoreLookInput(true);
     ArchiveSelectionWidget->AddToViewport(100);
-    FInputModeGameAndUI Input;Input.SetWidgetToFocus(ArchiveSelectionWidget->TakeWidget());Input.SetHideCursorDuringCapture(false);
+    FInputModeUIOnly Input;Input.SetWidgetToFocus(ArchiveSelectionWidget->TakeWidget());
     Input.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);SetInputMode(Input);SetShowMouseCursor(true);
     ArchiveSelectionWidget->FocusInitialChoice();
 }

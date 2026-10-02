@@ -1,5 +1,5 @@
 #include "UI/BoarArchiveSelectionWidget.h"
-#include "UI/BoarLoadoutEntry.h"
+#include "UI/BoarArchiveCard.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
@@ -8,101 +8,192 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Components/UniformGridPanel.h"
+#include "Components/UniformGridSlot.h"
 #include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
+#include "Components/SizeBox.h"
+#include "Components/ScaleBox.h"
 #include "Core/BoarGameInstance.h"
 #include "Save/BoarSaveGame.h"
 #include "Stage/StageConfig.h"
+#include "Boar/BoarBase.h"
+#include "Engine/Texture2D.h"
 #include "InputCoreTypes.h"
 
+namespace
+{
+ const FLinearColor Cyan(0.12f,0.74f,0.93f), Amber(1,0.68f,0.08f), Navy(0.006f,0.018f,0.042f);
+ const FBoarSpawnDefinition* Definition(const TArray<TObjectPtr<UStageConfig>>& Stages,FName Id,const UStageConfig*& FoundStage)
+ {
+  FoundStage=nullptr; if(Id.IsNone())return nullptr;
+  for(const auto& S:Stages)if(S)for(const auto& D:S->BoarSpawnDefinitions)if(D.BoarUniqueId==Id){FoundStage=S;return &D;}
+  return nullptr;
+ }
+}
+UBoarArchiveSelectionWidget::UBoarArchiveSelectionWidget(const FObjectInitializer& O):Super(O){SetIsFocusable(true);}
+TSharedRef<SWidget> UBoarArchiveSelectionWidget::RebuildWidget()
+{
+ // Build before Slate consumes RootWidget. NativeConstruct must not replace an already-built Slate root.
+ auto* Root=WidgetTree->ConstructWidget<UCanvasPanel>();WidgetTree->RootWidget=Root;
+ auto* Backdrop=WidgetTree->ConstructWidget<UBorder>();Backdrop->SetBrushColor(FLinearColor(0.002f,0.006f,0.015f,0.75f));
+ auto* BG=Root->AddChildToCanvas(Backdrop);BG->SetAnchors(FAnchors(0,0,1,1));BG->SetOffsets(FMargin(0));
+ auto* Scale=WidgetTree->ConstructWidget<UScaleBox>();Scale->SetStretch(EStretch::ScaleToFit);
+ auto* View=Root->AddChildToCanvas(Scale);View->SetAnchors(FAnchors(0.04f,0.06f,0.96f,0.94f));View->SetOffsets(FMargin(0));
+ auto* Size=WidgetTree->ConstructWidget<USizeBox>();Size->SetWidthOverride(1700);Size->SetHeightOverride(900);Scale->SetContent(Size);
+ auto* Rim=WidgetTree->ConstructWidget<UBorder>();Rim->SetBrushColor(Cyan);Rim->SetPadding(FMargin(3));Size->SetContent(Rim);
+ auto* Frame=WidgetTree->ConstructWidget<UBorder>();Frame->SetBrushColor(Navy);Frame->SetPadding(FMargin(36));Rim->SetContent(Frame);
+ auto* Column=WidgetTree->ConstructWidget<UVerticalBox>();Frame->SetContent(Column);
+ auto Text=[&](const TCHAR* Value,int32 Size,FLinearColor Color){auto* T=WidgetTree->ConstructWidget<UTextBlock>();T->SetText(FText::FromString(Value));T->SetColorAndOpacity(FSlateColor(Color));auto F=T->GetFont();F.Size=Size;T->SetFont(F);T->SetAutoWrapText(true);return T;};
+ Column->AddChildToVerticalBox(Text(TEXT("展示ボア選択"),38,FLinearColor::White));
+ Column->AddChildToVerticalBox(Text(TEXT("アーカイブに展示するボアを選択してください"),20,Cyan))->SetPadding(FMargin(0,6,0,26));
+ auto* Main=WidgetTree->ConstructWidget<UHorizontalBox>();Column->AddChildToVerticalBox(Main)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+ auto* Left=WidgetTree->ConstructWidget<UVerticalBox>();auto* L=Main->AddChildToHorizontalBox(Left);FSlateChildSize LeftFill(ESlateSizeRule::Fill);LeftFill.Value=0.44f;L->SetSize(LeftFill);L->SetPadding(FMargin(0,0,32,0));
+ Left->AddChildToVerticalBox(Text(TEXT("DISPLAY SLOTS  /  展示枠"),23,Cyan))->SetPadding(FMargin(0,0,0,18));
+ SlotsPanel=WidgetTree->ConstructWidget<UHorizontalBox>();Left->AddChildToVerticalBox(SlotsPanel);
+ if(IsDesignTime())for(int32 I=0;I<3;++I)
+ {
+  // Empty presentation only, never registered as captured data or saved selection.
+  auto* PreviewSize=WidgetTree->ConstructWidget<USizeBox>();PreviewSize->SetWidthOverride(206);PreviewSize->SetHeightOverride(242);
+  auto* PreviewRim=WidgetTree->ConstructWidget<UBorder>();PreviewRim->SetBrushColor(I==0?Amber:Cyan);PreviewRim->SetPadding(FMargin(4));PreviewSize->SetContent(PreviewRim);
+  auto* PreviewBody=WidgetTree->ConstructWidget<UBorder>();PreviewBody->SetBrushColor(Navy);PreviewBody->SetPadding(FMargin(16));PreviewRim->SetContent(PreviewBody);
+  auto* PreviewColumn=WidgetTree->ConstructWidget<UVerticalBox>();PreviewBody->SetContent(PreviewColumn);
+  PreviewColumn->AddChildToVerticalBox(Text(TEXT("EMPTY"),26,Cyan))->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+  PreviewColumn->AddChildToVerticalBox(Text(*FString::Printf(TEXT("展示%d"),I+1),22,FLinearColor::White));
+  SlotsPanel->AddChildToHorizontalBox(PreviewSize)->SetPadding(FMargin(0,0,8,0));
+ }
+ Left->AddChildToVerticalBox(Text(TEXT("1  展示枠を選ぶ\n2  捕獲済みボアを選ぶ\n3  展示に設定"),23,FLinearColor(0.75f,0.88f,0.95f)))->SetPadding(FMargin(0,36,0,20));
+ Left->AddChildToVerticalBox(Text(TEXT("変更はその場で展示へ反映・保存されます。\n別の枠に展示中のボアを選ぶと入れ替わります。"),19,Cyan));
+ auto* Right=WidgetTree->ConstructWidget<UVerticalBox>();FSlateChildSize RightFill(ESlateSizeRule::Fill);RightFill.Value=0.56f;Main->AddChildToHorizontalBox(Right)->SetSize(RightFill);
+ Right->AddChildToVerticalBox(Text(TEXT("CAPTURED BOARS  /  捕獲済み"),23,Cyan))->SetPadding(FMargin(0,0,0,14));
+ GridScroll=WidgetTree->ConstructWidget<UScrollBox>();GridScroll->SetClipping(EWidgetClipping::ClipToBounds);Right->AddChildToVerticalBox(GridScroll)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+ Grid=WidgetTree->ConstructWidget<UUniformGridPanel>();Grid->SetSlotPadding(FMargin(8));GridScroll->AddChild(Grid);
+ auto* Detail=WidgetTree->ConstructWidget<UBorder>();Detail->SetBrushColor(FLinearColor(0.014f,0.047f,0.085f));Detail->SetPadding(FMargin(16));Right->AddChildToVerticalBox(Detail)->SetPadding(FMargin(0,16,0,0));
+ auto* DetailRow=WidgetTree->ConstructWidget<UHorizontalBox>();Detail->SetContent(DetailRow);
+ auto* PhotoSize=WidgetTree->ConstructWidget<USizeBox>();PhotoSize->SetWidthOverride(136);PhotoSize->SetHeightOverride(136);DetailPhoto=WidgetTree->ConstructWidget<UImage>();DetailPhoto->SetVisibility(ESlateVisibility::Hidden);PhotoSize->SetContent(DetailPhoto);DetailRow->AddChildToHorizontalBox(PhotoSize)->SetPadding(FMargin(0,0,18,0));
+ DetailText=Text(TEXT("ボアを選択してください"),20,FLinearColor::White);DetailRow->AddChildToHorizontalBox(DetailText)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+ Status=Text(TEXT("捕獲済みのボアがいません"),19,Cyan);Column->AddChildToVerticalBox(Status)->SetPadding(FMargin(0,18,0,14));
+ auto* Footer=WidgetTree->ConstructWidget<UHorizontalBox>();Column->AddChildToVerticalBox(Footer);
+ auto Button=[&](const TCHAR* Label,FLinearColor Color){auto* B=WidgetTree->ConstructWidget<UButton>();FButtonStyle Style=B->GetStyle();Style.Normal.TintColor=FSlateColor(FLinearColor(0.035f,0.11f,0.18f));Style.Hovered.TintColor=FSlateColor(FLinearColor(0.11f,0.21f,0.28f));Style.Pressed.TintColor=FSlateColor(FLinearColor(0.2f,0.25f,0.18f));B->SetStyle(Style);B->SetContent(Text(Label,21,Color));Footer->AddChildToHorizontalBox(B)->SetPadding(FMargin(0,0,20,0));return B;};
+ SetButton=Button(TEXT("展示に設定  [E / East]"),Amber);SetButton->OnClicked.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::Confirm);
+ Button(TEXT("外す  [Delete / West]"),Cyan)->OnClicked.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::RemoveBoar);
+ BackButton=Button(TEXT("戻る  [Esc / South]"),FLinearColor::White);BackButton->OnClicked.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::Cancel);
+ Column->AddChildToVerticalBox(Text(TEXT("枠切替  1 / 2 / 3・L1 / R1     一覧移動  矢印 / WASD・D-Pad / Stick"),17,Cyan))->SetPadding(FMargin(0,16,0,0));
+ return Super::RebuildWidget();
+}
 void UBoarArchiveSelectionWidget::NativeConstruct()
 {
-    Super::NativeConstruct();
-    auto* GI=GetGameInstance<UBoarGameInstance>();
-    PendingIds=GI?GI->GetArchiveDisplayIds():TArray<FName>();PendingIds.SetNum(3);
-    Candidates.Reset();Candidates.Add(NAME_None);
-    if(const auto* Save=GI?GI->GetProgress():nullptr)
-    {
-        auto Captured=Save->CapturedBoarUniqueIds.Array();
-        Captured.Sort([](FName A,FName B){return A.LexicalLess(B);});
-        for(FName Id:Captured)if(!Id.IsNone())Candidates.Add(Id);
-    }
-    SlotRows.Reset();CandidateRows.Reset();
-    auto* Root=WidgetTree->ConstructWidget<UCanvasPanel>();WidgetTree->RootWidget=Root;
-    auto* Backdrop=WidgetTree->ConstructWidget<UBorder>();Backdrop->SetBrushColor(FLinearColor(0.003f,0.008f,0.02f,0.68f));
-    auto* BG=Root->AddChildToCanvas(Backdrop);BG->SetAnchors(FAnchors(0,0,1,1));BG->SetOffsets(FMargin(0));
-    auto* Frame=WidgetTree->ConstructWidget<UBorder>();Frame->SetBrushColor(FLinearColor(0.008f,0.035f,0.075f,0.98f));Frame->SetPadding(FMargin(32));
-    auto* Panel=Root->AddChildToCanvas(Frame);Panel->SetAnchors(FAnchors(0.5f,0.5f));Panel->SetAlignment(FVector2D(0.5f,0.5f));Panel->SetSize(FVector2D(1120,720));
-    auto* Column=WidgetTree->ConstructWidget<UVerticalBox>();Frame->SetContent(Column);
-    auto Text=[&](const FString& Value,int32 Size,FLinearColor Color)
-    {
-        auto* T=WidgetTree->ConstructWidget<UTextBlock>();T->SetText(FText::FromString(Value));T->SetColorAndOpacity(FSlateColor(Color));
-        auto Font=T->GetFont();Font.Size=Size;T->SetFont(Font);return T;
-    };
-    Column->AddChildToVerticalBox(Text(TEXT("BOAR DISPLAY / 展示選択"),30,FLinearColor(0.22f,0.88f,1)))->SetPadding(FMargin(0,0,0,16));
-    Column->AddChildToVerticalBox(Text(TEXT("展示枠を選び、捕獲済みBoarを割り当ててください。空欄も保存できます。"),19,FLinearColor::White))->SetPadding(FMargin(0,0,0,20));
-    auto* Rows=WidgetTree->ConstructWidget<UHorizontalBox>();Column->AddChildToVerticalBox(Rows)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    auto* Slots=WidgetTree->ConstructWidget<UVerticalBox>();auto* Left=Rows->AddChildToHorizontalBox(Slots);Left->SetSize(FSlateChildSize(ESlateSizeRule::Fill));Left->SetPadding(FMargin(0,0,24,0));
-    Slots->AddChildToVerticalBox(Text(TEXT("DISPLAY SLOT"),19,FLinearColor(0.25f,0.9f,1)))->SetPadding(FMargin(0,0,0,16));
-    auto* Right=WidgetTree->ConstructWidget<UVerticalBox>();Rows->AddChildToHorizontalBox(Right)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    Right->AddChildToVerticalBox(Text(TEXT("CAPTURED BOARS / 捕獲済み"),19,FLinearColor(0.25f,0.9f,1)))->SetPadding(FMargin(0,0,0,16));
-    auto* List=WidgetTree->ConstructWidget<UScrollBox>();Right->AddChildToVerticalBox(List)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    if(EntryClass)
-    {
-        for(int32 I=0;I<3;++I)
-        {
-            auto* E=CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(),EntryClass);if(!E)continue;
-            E->OnChosen.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::SelectSlot);
-            Slots->AddChildToVerticalBox(E)->SetPadding(FMargin(0,0,0,14));SlotRows.Add(E);
-        }
-        for(int32 I=0;I<Candidates.Num();++I)
-        {
-            auto* E=CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(),EntryClass);if(!E)continue;
-            E->Setup(I,LabelFor(Candidates[I]));E->OnChosen.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::ChooseBoar);
-            List->AddChild(E);CandidateRows.Add(E);
-        }
-    }
-    Status=Text(Candidates.Num()==1?TEXT("捕獲済みBoarはまだありません。展示枠は空のままです。"):TEXT("確定すると、この3枠をすぐに保存します。"),18,FLinearColor(0.9f,0.94f,1));
-    Status->SetAutoWrapText(true);Column->AddChildToVerticalBox(Status)->SetPadding(FMargin(0,18,0,16));
-    auto* Footer=WidgetTree->ConstructWidget<UHorizontalBox>();Column->AddChildToVerticalBox(Footer);
-    auto* SaveButton=WidgetTree->ConstructWidget<UButton>();SaveButton->SetContent(Text(TEXT("保存して閉じる"),22,FLinearColor(0.98f,0.8f,0.2f)));
-    SaveButton->OnClicked.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::Confirm);Footer->AddChildToHorizontalBox(SaveButton)->SetPadding(FMargin(0,0,24,0));
-    auto* Back=WidgetTree->ConstructWidget<UButton>();Back->SetContent(Text(TEXT("戻る / 変更を破棄"),22,FLinearColor(0.5f,0.9f,1)));
-    Back->OnClicked.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::Cancel);Footer->AddChildToHorizontalBox(Back);
-    RefreshSlotRows();
+ Super::NativeConstruct();auto* GI=GetGameInstance<UBoarGameInstance>();
+ PendingIds=GI?GI->GetArchiveDisplayIds():TArray<FName>();PendingIds.SetNum(3);ActiveSlot=0;FocusedCandidate=INDEX_NONE;
+ Candidates.Reset();SlotRows.Reset();CandidateRows.Reset();SlotsPanel->ClearChildren();Grid->ClearChildren();
+ if(const auto* Save=GI?GI->GetProgress():nullptr)
+ {
+  for(int32 I=Save->CapturedBoarHistory.Num()-1;I>=0;--I){const FName Id=Save->CapturedBoarHistory[I];if(!Id.IsNone()&&Save->CapturedBoarUniqueIds.Contains(Id))Candidates.AddUnique(Id);}
+  // Legacy saves have no capture order for their remaining IDs; use a stable fallback without fabricating history.
+  auto Remaining=Save->CapturedBoarUniqueIds.Array();Remaining.Sort([](FName A,FName B){return A.LexicalLess(B);});
+  for(FName Id:Remaining)if(!Id.IsNone())Candidates.AddUnique(Id);
+ }
+ const TSubclassOf<UBoarLoadoutEntry> CardClass=EntryClass?EntryClass:TSubclassOf<UBoarLoadoutEntry>(UBoarArchiveCard::StaticClass());
+ for(int32 I=0;I<3;++I)
+ {
+  auto* C=CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(),CardClass);if(!C)continue;
+  C->OnChosen.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::SelectSlot);SlotsPanel->AddChildToHorizontalBox(C)->SetPadding(FMargin(0,0,8,0));SlotRows.Add(C);
+ }
+ for(int32 I=0;I<Candidates.Num();++I)
+ {
+  auto* C=CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(),CardClass);if(!C)continue;
+  C->Setup(I,LabelFor(Candidates[I]));C->OnChosen.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::ChooseBoar);C->OnFocused.AddUniqueDynamic(this,&UBoarArchiveSelectionWidget::ChooseBoar);
+  Grid->AddChildToUniformGrid(C,I/3,I%3);CandidateRows.Add(C);
+ }
+ Status->SetText(FText::FromString(Candidates.IsEmpty()?TEXT("捕獲済みのボアがいません"):TEXT("ボアを選び、展示に設定してください。")));
+ RefreshSlotRows();RefreshDetail();bInitialFocusPending=true;
 }
 FText UBoarArchiveSelectionWidget::LabelFor(FName Id) const
 {
-    if(Id.IsNone())return FText::FromString(TEXT("空欄"));
-    for(const auto& S:StageCatalog)if(S)for(const auto& D:S->BoarSpawnDefinitions)
-        if(D.BoarUniqueId==Id && !D.EncyclopediaName.IsEmpty())return FText::Format(FText::FromString(TEXT("{0} [{1}]")),D.EncyclopediaName,FText::FromName(Id));
-    return FText::FromName(Id);
+ if(Id.IsNone())return FText::FromString(TEXT("EMPTY"));
+ const UStageConfig* S;const auto* D=Definition(StageCatalog,Id,S);return D&&!D->EncyclopediaName.IsEmpty()?D->EncyclopediaName:FText::FromName(Id);
+}
+void UBoarArchiveSelectionWidget::UpdatePortrait(UBoarLoadoutEntry* Entry,FName Id,const FText& Badge,bool bActive)
+{
+ if(auto* Card=Cast<UBoarArchiveCard>(Entry))
+ {
+  const UStageConfig* S;const auto* D=Definition(StageCatalog,Id,S);auto* Texture=D?D->EncyclopediaPhoto.LoadSynchronous():nullptr;
+  Card->SetPortrait(Texture,FText::FromString(Id.IsNone()?TEXT("EMPTY"):TEXT("写真未登録")),Badge,bActive);
+ }
 }
 void UBoarArchiveSelectionWidget::RefreshSlotRows()
 {
-    for(int32 I=0;I<SlotRows.Num();++I)SlotRows[I]->Setup(I,FText::Format(FText::FromString(TEXT("Slot {0}  /  {1}")),I,LabelFor(PendingIds[I])),ActiveSlot==I);
+ for(int32 I=0;I<SlotRows.Num();++I)
+ {
+  SlotRows[I]->Setup(I,LabelFor(PendingIds[I]),ActiveSlot==I);UpdatePortrait(SlotRows[I],PendingIds[I],FText::Format(FText::FromString(TEXT("展示{0}")),I+1),ActiveSlot==I);
+ }
+ for(int32 I=0;I<CandidateRows.Num();++I)
+ {
+  const int32 DisplayIndex=PendingIds.Find(Candidates[I]);FText Badge=DisplayIndex==INDEX_NONE?FText::GetEmpty():FText::Format(FText::FromString(TEXT("DISPLAY {0}")),DisplayIndex+1);
+  UpdatePortrait(CandidateRows[I],Candidates[I],Badge,false);
+ }
+ SetButton->SetIsEnabled(Candidates.IsValidIndex(FocusedCandidate));
 }
-void UBoarArchiveSelectionWidget::SelectSlot(int32 Index)
+void UBoarArchiveSelectionWidget::RefreshDetail()
 {
-    if(!PendingIds.IsValidIndex(Index))return;
-    ActiveSlot=Index;RefreshSlotRows();if(!CandidateRows.IsEmpty())CandidateRows[0]->FocusEntry();
+ const FName Id=Candidates.IsValidIndex(FocusedCandidate)?Candidates[FocusedCandidate]:NAME_None;const UStageConfig* S;const auto* D=Definition(StageCatalog,Id,S);
+ FString Value=Id.IsNone()?TEXT("ボアを選択してください"):LabelFor(Id).ToString();
+ if(D)
+ {
+  const FText Type=D->BoarClass?StaticEnum<EBoarArchetype>()->GetDisplayNameTextByValue(static_cast<int64>(D->BoarClass.GetDefaultObject()->GetBoarArchetype())):FText::FromString(TEXT("未登録"));
+  Value+=FString::Printf(TEXT("\n種類：%s\n初捕獲Stage：%s"),*Type.ToString(),*(S->DisplayName.IsEmpty()?S->StageId.ToString():S->DisplayName.ToString()));
+  if(!D->EncyclopediaDescription.IsEmpty())Value+=TEXT("\n")+D->EncyclopediaDescription.ToString().Left(140);
+ }
+ else if(!Id.IsNone())Value+=TEXT("\n個体情報未登録");
+ auto* Texture=D?D->EncyclopediaPhoto.LoadSynchronous():nullptr;DetailPhoto->SetBrushFromTexture(Texture);DetailPhoto->SetVisibility(Texture?ESlateVisibility::HitTestInvisible:ESlateVisibility::Hidden);
+ DetailText->SetText(FText::FromString(Value));SetButton->SetIsEnabled(!Id.IsNone());
 }
-void UBoarArchiveSelectionWidget::ChooseBoar(int32 Index)
+void UBoarArchiveSelectionWidget::SelectSlot(int32 Index){if(PendingIds.IsValidIndex(Index)){ActiveSlot=Index;RefreshSlotRows();}}
+void UBoarArchiveSelectionWidget::ChooseBoar(int32 Index){if(Candidates.IsValidIndex(Index)){FocusedCandidate=Index;RefreshDetail();}}
+void UBoarArchiveSelectionWidget::AssignBoar(FName Id)
 {
-    if(!Candidates.IsValidIndex(Index))return;
-    PendingIds[ActiveSlot]=Candidates[Index];RefreshSlotRows();if(SlotRows.IsValidIndex(ActiveSlot))SlotRows[ActiveSlot]->FocusEntry();
+ if(!Id.IsNone() && PendingIds[ActiveSlot]==Id)
+ {
+  Status->SetColorAndOpacity(FSlateColor(Cyan));Status->SetText(FText::FromString(TEXT("この枠には選択中のボアが展示されています。")));return;
+ }
+ auto* GI=GetGameInstance<UBoarGameInstance>();
+ if(!GI||!GI->AssignArchiveDisplay(ActiveSlot,Id)){Status->SetColorAndOpacity(FSlateColor(FLinearColor(1,0.24f,0.2f)));Status->SetText(FText::FromString(TEXT("保存できませんでした。展示は変更されていません。")));return;}
+ PendingIds=GI->GetArchiveDisplayIds();RefreshSlotRows();Status->SetColorAndOpacity(FSlateColor(Cyan));Status->SetText(FText::FromString(TEXT("展示を更新・保存しました。")));
 }
-void UBoarArchiveSelectionWidget::Confirm()
-{
-    auto* GI=GetGameInstance<UBoarGameInstance>();
-    if(GI && GI->SaveArchiveDisplays(PendingIds))OnClosed.Broadcast();
-    else if(Status)Status->SetText(FText::FromString(TEXT("保存できませんでした。変更は確定していません。")));
-}
+void UBoarArchiveSelectionWidget::Confirm(){if(Candidates.IsValidIndex(FocusedCandidate))AssignBoar(Candidates[FocusedCandidate]);}
+void UBoarArchiveSelectionWidget::RemoveBoar(){AssignBoar(NAME_None);}
 void UBoarArchiveSelectionWidget::Cancel(){OnClosed.Broadcast();}
-void UBoarArchiveSelectionWidget::FocusInitialChoice(){if(!SlotRows.IsEmpty())SlotRows[0]->FocusEntry();}
-FReply UBoarArchiveSelectionWidget::NativeOnKeyDown(const FGeometry& Geometry,const FKeyEvent& Event)
+void UBoarArchiveSelectionWidget::FocusInitialChoice(){if(!CandidateRows.IsEmpty())CandidateRows[0]->FocusEntry();else if(BackButton)BackButton->SetKeyboardFocus();}
+void UBoarArchiveSelectionWidget::NativeTick(const FGeometry& G,float D){Super::NativeTick(G,D);if(bInitialFocusPending){bInitialFocusPending=false;FocusInitialChoice();}}
+void UBoarArchiveSelectionWidget::MoveGridFocus(int32 Offset)
 {
-    if(Event.GetKey()==EKeys::Escape || Event.GetKey()==EKeys::Gamepad_FaceButton_Right){Cancel();return FReply::Handled();}
-    return Super::NativeOnKeyDown(Geometry,Event);
+ if(CandidateRows.IsEmpty())return;int32 Index=FMath::Clamp((FocusedCandidate==INDEX_NONE?0:FocusedCandidate)+Offset,0,CandidateRows.Num()-1);CandidateRows[Index]->FocusEntry();GridScroll->ScrollWidgetIntoView(CandidateRows[Index],true,EDescendantScrollDestination::IntoView);
 }
+FReply UBoarArchiveSelectionWidget::NativeOnPreviewKeyDown(const FGeometry& G,const FKeyEvent& E)
+{
+ const FKey K=E.GetKey();
+ if(K==EKeys::Escape||K==EKeys::Gamepad_FaceButton_Bottom){Cancel();return FReply::Handled();}
+ if(K==EKeys::E||K==EKeys::Gamepad_FaceButton_Right){if(!E.IsRepeat())Confirm();return FReply::Handled();}
+ if(K==EKeys::Delete||K==EKeys::Gamepad_FaceButton_Left){if(!E.IsRepeat())RemoveBoar();return FReply::Handled();}
+ if(K==EKeys::One||K==EKeys::Two||K==EKeys::Three){SelectSlot(K==EKeys::One?0:K==EKeys::Two?1:2);return FReply::Handled();}
+ if(K==EKeys::Gamepad_LeftShoulder||K==EKeys::Gamepad_RightShoulder){SelectSlot((ActiveSlot+(K==EKeys::Gamepad_RightShoulder?1:2))%3);return FReply::Handled();}
+ int32 Move=0;
+ if(K==EKeys::Right||K==EKeys::D||K==EKeys::Gamepad_DPad_Right)Move=1;
+ if(K==EKeys::Left||K==EKeys::A||K==EKeys::Gamepad_DPad_Left)Move=-1;
+ if(K==EKeys::Down||K==EKeys::S||K==EKeys::Gamepad_DPad_Down)Move=3;
+ if(K==EKeys::Up||K==EKeys::W||K==EKeys::Gamepad_DPad_Up)Move=-3;
+ if(Move){MoveGridFocus(Move);return FReply::Handled();}
+ return Super::NativeOnPreviewKeyDown(G,E);
+}
+FReply UBoarArchiveSelectionWidget::NativeOnAnalogValueChanged(const FGeometry& G,const FAnalogInputEvent& E)
+{
+ if(E.GetKey()==EKeys::Gamepad_LeftX||E.GetKey()==EKeys::Gamepad_LeftY)
+ {
+  if(FMath::Abs(E.GetAnalogValue())>0.6f&&FPlatformTime::Seconds()>=NextAnalogNavigation){const int32 Sign=E.GetAnalogValue()>0?1:-1;MoveGridFocus(E.GetKey()==EKeys::Gamepad_LeftX?Sign:-Sign*3);NextAnalogNavigation=FPlatformTime::Seconds()+0.18;}
+  return FReply::Handled();
+ }
+ return Super::NativeOnAnalogValueChanged(G,E);
+}
+FReply UBoarArchiveSelectionWidget::NativeOnKeyDown(const FGeometry& G,const FKeyEvent& E){return Super::NativeOnKeyDown(G,E);}

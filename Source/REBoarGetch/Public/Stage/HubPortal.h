@@ -19,7 +19,7 @@ public:
     /** Frame stays visible; only effect actors belong in TestVisualActors. */
     UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<AActor>> TestBarrierActors;
     UPROPERTY(EditInstanceOnly, Category="Portal") bool bClearTestTargetOnTravel=false;
-    UPROPERTY(EditInstanceOnly, Category="Portal") bool bRequiresInteraction=false;
+    UPROPERTY(EditInstanceOnly, Category="Portal") bool bRequiresInteraction=true;
     virtual void Interact(class ABoarPlayerController* Controller);
     UPROPERTY(EditInstanceOnly, Category="Portal") TObjectPtr<class ATextRenderActor> TestLabel;
     UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<class ATextRenderActor>> CollectionLabels;
@@ -29,5 +29,6 @@ protected:
 private:
     UFUNCTION() void RefreshTestTarget();
     bool bTravelRequested=false;
+    void Activate(class ABoarPlayerController* Controller);
     UFUNCTION() void Enter(UPrimitiveComponent* Component,AActor* Other,UPrimitiveComponent* OtherComponent,int32 BodyIndex,bool bSweep,const FHitResult& Hit);
 };

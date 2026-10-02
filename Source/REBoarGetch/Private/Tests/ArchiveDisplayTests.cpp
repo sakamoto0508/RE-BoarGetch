@@ -15,6 +15,7 @@ bool FArchiveDisplaysTest::RunTest(const FString& Parameters)
  TestEqual(TEXT("Third latest"),Ids[2],FName(TEXT("B")));
  TestFalse(TEXT("Uncaptured selection rejected"),Save->SetArchiveDisplays({TEXT("X"),NAME_None,NAME_None}));
  TestFalse(TEXT("Wrong slot count rejected"),Save->SetArchiveDisplays({TEXT("A")}));
+ TestFalse(TEXT("Duplicate individual rejected"),Save->SetArchiveDisplays({TEXT("A"),TEXT("A"),NAME_None}));
  TestTrue(TEXT("Captured IDs and empties accepted"),Save->SetArchiveDisplays({TEXT("A"),NAME_None,TEXT("C")}));
  Run.CapturedBoarUniqueIds={TEXT("B")};Save->MergeClearedRun(Run);
  TestEqual(TEXT("Saved selection takes priority"),Save->ResolveArchiveDisplays()[0],FName(TEXT("A")));
@@ -27,6 +28,17 @@ bool FArchiveDisplaysTest::RunTest(const FString& Parameters)
   TestEqual(TEXT("Empty middle slot persists"),Loaded->ResolveArchiveDisplays()[1],NAME_None);
   TestEqual(TEXT("History persists"),Loaded->CapturedBoarHistory.Last(),FName(TEXT("B")));
  }
+ TestTrue(TEXT("Assign an already displayed Boar swaps slots"),Save->AssignArchiveDisplay(2,TEXT("A")));
+ TestEqual(TEXT("Old active Boar moves to source slot"),Save->ResolveArchiveDisplays()[0],FName(TEXT("C")));
+ TestEqual(TEXT("Selected Boar moves to active slot"),Save->ResolveArchiveDisplays()[2],FName(TEXT("A")));
+ TestFalse(TEXT("Uncaptured assignment rejected"),Save->AssignArchiveDisplay(0,TEXT("X")));
+ TestFalse(TEXT("Invalid slot rejected"),Save->AssignArchiveDisplay(3,TEXT("A")));
+ for(int32 I=0;I<3;++I)TestTrue(TEXT("Explicitly clear each slot"),Save->AssignArchiveDisplay(I,NAME_None));
+ Run.CapturedBoarUniqueIds={TEXT("D")};Save->MergeClearedRun(Run);
+ TestTrue(TEXT("Empty custom archive does not revert to default"),Save->ResolveArchiveDisplays()[0].IsNone()&&Save->ResolveArchiveDisplays()[1].IsNone()&&Save->ResolveArchiveDisplays()[2].IsNone());
+ TArray<uint8> EmptyBytes;UGameplayStatics::SaveGameToMemory(Save,EmptyBytes);
+ auto* EmptyLoaded=Cast<UBoarSaveGame>(UGameplayStatics::LoadGameFromMemory(EmptyBytes));
+ TestTrue(TEXT("All empty custom slots survive reload"),EmptyLoaded&&EmptyLoaded->bHasSavedArchiveDisplays&&EmptyLoaded->ResolveArchiveDisplays()[0].IsNone());
  return true;
 }
 #endif

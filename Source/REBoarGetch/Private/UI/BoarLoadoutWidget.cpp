@@ -102,7 +102,8 @@ void UBoarLoadoutWidget::RefreshSlots()
 	if (!Gadgets) return;
 	for (int32 Index = 0; Index < SlotEntries.Num(); ++Index)
 	{
-		const FText Text = FText::Format(FText::FromString(TEXT("Slot {0}  /  {1}")), FText::AsNumber(Index + 1), GadgetName(Gadgets->GetGadgetSlotClass(Index)));
+		const TCHAR* Directions[] = {TEXT("↑"), TEXT("←"), TEXT("→"), TEXT("↓")};
+		const FText Text = FText::Format(FText::FromString(TEXT("Slot {0} {1}  /  {2}")), FText::AsNumber(Index + 1), FText::FromString(Directions[Index]), GadgetName(Gadgets->GetGadgetSlotClass(Index)));
 		SlotEntries[Index]->Setup(Index, Text, Index == SelectedSlot);
 	}
 }
