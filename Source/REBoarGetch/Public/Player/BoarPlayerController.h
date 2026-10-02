@@ -68,7 +68,7 @@ public:
 	/** ポーズ画面からLobby退出確認を開きます。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void LeaveStageFromPause();
 	/** ポーズメニューが開いているかどうかを返します。 */
-	UFUNCTION(BlueprintPure, Category = "REBoarGetch|UI") bool IsPauseMenuOpen() const { return PauseWidget != nullptr; }
+	UFUNCTION(BlueprintPure, Category = "REBoarGetch|UI") bool IsPauseMenuOpen() const;
 
 protected:
 	/** 入力Mapping Contextをローカルプレイヤーへ登録します。 */
@@ -81,38 +81,23 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
+	friend class UBoarUIFlowComponent;
+	UPROPERTY(Transient) TObjectPtr<class UBoarUIFlowComponent> UIFlow;
 	UPROPERTY(EditDefaultsOnly,Category="UI") TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;
-	UPROPERTY(Transient) TObjectPtr<class UBoarArchiveSelectionWidget> ArchiveSelectionWidget;
 	UPROPERTY(EditDefaultsOnly, Category="Input") TObjectPtr<UInputAction> InteractAction;
 	UPROPERTY(EditDefaultsOnly, Category="Input") TObjectPtr<UInputMappingContext> FacilityMappingContext;
 	void InteractWithFacility();
-	bool bFacilityMenuOpen = false;
-	bool bFacilityAddedUIContext = false;
 	void CloseFacilityMenuInput();
 	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarEncyclopediaWidget> EncyclopediaWidgetClass;
-	UPROPERTY(Transient) TObjectPtr<UBoarEncyclopediaWidget> EncyclopediaWidget;
-	UPROPERTY(Transient) TObjectPtr<UUserWidget> EncyclopediaParent;
-	UPROPERTY(Transient) TObjectPtr<UWidget> EncyclopediaReturnFocus;
-	ESlateVisibility EncyclopediaParentVisibility = ESlateVisibility::Visible;
-	bool bEncyclopediaGameAndUI = false;
-	bool bEncyclopediaAddedUIContext = false;
 	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarConfirmationWidget> LobbyExitConfirmationClass;
-	UPROPERTY(Transient) TObjectPtr<UBoarConfirmationWidget> LobbyExitConfirmation;
 	UFUNCTION() void ResolveLobbyExit(bool bConfirmed);
 	void RemoveLobbyExitConfirmation();
 	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarSettingsWidget> SettingsWidgetClass;
-	UPROPERTY(Transient) TObjectPtr<UBoarSettingsWidget> SettingsWidget;
-	UPROPERTY(Transient) TObjectPtr<UUserWidget> SettingsParent;
-	UPROPERTY(Transient) TObjectPtr<UWidget> SettingsReturnFocus;
-	ESlateVisibility SettingsParentVisibility = ESlateVisibility::SelfHitTestInvisible;
 	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarLoadoutWidget> LoadoutWidgetClass;
-	UPROPERTY(Transient) TObjectPtr<UBoarLoadoutWidget> LoadoutWidget;
 	/** ポーズメニューWidget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarPauseWidget> PauseWidgetClass;
 	
-	/** ポーズメニューWidgetのインスタンスです。 */
-	UPROPERTY(Transient) TObjectPtr<UBoarPauseWidget> PauseWidget;
 	
 	/** ゲームオーバー画面Widget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")

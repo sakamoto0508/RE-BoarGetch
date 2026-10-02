@@ -42,13 +42,13 @@ public:
 	UFUNCTION(BlueprintPure) bool CanUnlockGadget(FName Id) const;
 	UFUNCTION(BlueprintCallable) bool UnlockGadgetInLab(FName Id);
 	UFUNCTION(BlueprintCallable) bool SelectTestGadget(FName Id);
-	UFUNCTION(BlueprintPure) FName GetSelectedTestGadget() const { return SelectedTestGadget; }
+	UFUNCTION(BlueprintPure) FName GetSelectedTestGadget() const;
 	TSoftObjectPtr<UWorld> GetSelectedTestLevel() const;
 	bool IsInGadgetLab() const;
 	void ClearTestGadget();
 private:
-	/** セッション中だけ保持。装備・永続Saveとは独立。 */
-	UPROPERTY(Transient) FName SelectedTestGadget;
+	friend class UBoarGadgetSubsystem;
+	friend class FBoarGadgetProgressTest;
 	bool SaveCandidate(UBoarSaveGame* Candidate);
 	void UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const;
 	UPROPERTY(Transient) TObjectPtr<UBoarSaveGame> Progress;

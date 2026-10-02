@@ -4,9 +4,8 @@
 #include "BoarLoadoutWidget.generated.h"
 
 class UBoarLoadoutEntry;
-class UGadgetComponent;
-class UBoarGameInstance;
-class AGadgetBase;
+class UBoarLoadoutPresenter;
+struct FBoarLoadoutEntryViewData;
 class UPanelWidget;
 class UTextBlock;
 class UImage;
@@ -46,10 +45,9 @@ private:
 	UFUNCTION() void PreviewCandidate(int32 Index);
 	UFUNCTION() void Close();
 	UFUNCTION() void FocusBack();
-	void ShowDetails(TSubclassOf<AGadgetBase> Class);
+	void ShowDetails(const FBoarLoadoutEntryViewData& Data);
 	void SetStatus(const FText& Text, bool bError = false);
-	UPROPERTY(Transient) TObjectPtr<UGadgetComponent> Gadgets;
-	UPROPERTY(Transient) TObjectPtr<UBoarGameInstance> Progress;
+	UPROPERTY(Transient) TObjectPtr<UBoarLoadoutPresenter> Presenter;
 	UPROPERTY(Transient) TObjectPtr<UPanelWidget> SlotsPanel;
 	UPROPERTY(Transient) TObjectPtr<UPanelWidget> CandidatesPanel;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> DetailName;
@@ -60,10 +58,6 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UButton> BackButton;
 	UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> SlotEntries;
 	UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> CandidateEntries;
-	UPROPERTY(Transient) TArray<TSubclassOf<AGadgetBase>> Candidates;
-	int32 SelectedSlot = 0;
-	int32 LabMode = 0; // Equip / manual unlock / test target, independent of SelectedSlot.
-	bool bLabContext = false;
 	bool bRequestedLabContext = false;
 	UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> LabModeEntries;
 	bool bInitialFocusPending = true;

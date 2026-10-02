@@ -5,7 +5,7 @@
 
 #include "Boar/BoarBase.h"
 #include "Cage/Cage.h"
-#include "Item/HealPickup.h"
+#include "Core/BoarCaptureResolution.h"
 #include "Player/BoarPlayerController.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Stage/StageConfig.h"
@@ -36,29 +36,7 @@ void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 {
 	if (!IsValid(Boar) || !Boar->IsCaptured() || !CanAdvanceStage() || HandledCapturedBoars.Contains(Boar)) return;
 	HandledCapturedBoars.Add(Boar);
-	const FVector CaptureLocation = Boar->GetActorLocation();
-	ACage* NearestHealthy = nullptr;
-	ACage* NearestDestroyed = nullptr;
-	for (TActorIterator<ACage> It(GetWorld()); It; ++It)
-	{
-		ACage*& Candidate = It->GetIsCageDestroyed() ? NearestDestroyed : NearestHealthy;
-		const double Distance = FVector::DistSquared(CaptureLocation, It->GetActorLocation());
-		// 同距離だけは既存Actorのパス順で安定化します。永続IDには使用しません。
-		if (!Candidate || Distance < FVector::DistSquared(CaptureLocation, Candidate->GetActorLocation())
-			|| (Distance == FVector::DistSquared(CaptureLocation, Candidate->GetActorLocation())
-				&& It->GetPathName() < Candidate->GetPathName())) Candidate = *It;
-	}
-	if (!Boar->BoarUniqueId.IsNone()) StageRunData.CapturedBoarUniqueIds.AddUnique(Boar->BoarUniqueId);
-	else UE_LOG(LogTemp, Warning, TEXT("[Stage] %s has no persistent BoarUniqueId."), *GetNameSafe(Boar));
-	if (ACage* Cage = NearestHealthy ? NearestHealthy : NearestDestroyed) Cage->CollectBoar(Boar);
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[Stage] No cage exists; captured boar is released."));
-		Boar->ReleaseBoar();
-	}
-	// 檻へ移動した後の座標ではなく、捕獲地点にドロップします。
-	if (HealPickupClass && FMath::FRand() <= HealItemDropChance)
-		GetWorld()->SpawnActor<AHealPickup>(HealPickupClass, CaptureLocation + FVector(0, 0, 40), FRotator::ZeroRotator);
+	BoarCaptureResolution::Resolve(GetWorld(), Boar, StageRunData, HealPickupClass, HealItemDropChance);
 	RefreshHousedBoarCount();
 }
 

@@ -2,7 +2,7 @@
 #include "Save/BoarSaveGame.h"
 #include "Stage/StageConfig.h"
 #include "Gadget/GadgetBase.h"
-#include "GadgetDataAsset.h"
+#include "Gadget/BoarGadgetSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "Core/BoarFacilityGameMode.h"
 #include "Engine/World.h"
@@ -29,7 +29,11 @@ bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
 	}
 	const bool bNewUnlocks = !Progress || Candidate->UnlockedGadgetIds.Num() > Progress->UnlockedGadgetIds.Num();
 	Progress = Candidate;
-	if (bNewUnlocks) OnGadgetsUnlocked.Broadcast();
+	if (bNewUnlocks)
+ {
+  OnGadgetsUnlocked.Broadcast();
+  if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) Gadgets->OnGadgetsUnlocked.Broadcast();
+ }
 	return true;
 }
 
@@ -53,14 +57,8 @@ bool UBoarGameInstance::SaveLastAttemptedStage(FName StageId)
 
 bool UBoarGameInstance::SaveGadgetLoadout(const TArray<FName>& Ids)
 {
-	if (!Progress || Ids.Num() != 4) return false;
-	TSet<FName> Used;
-	for (FName Id : Ids)
-	{
-		if (Id.IsNone()) continue;
-		if (!IsGadgetUnlocked(Id) || !FindGadgetClass(Id) || Used.Contains(Id)) return false;
-		Used.Add(Id);
-	}
+ const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ if (!Progress || !Gadgets || !Gadgets->IsLoadoutValid(Ids)) return false;
 	UBoarSaveGame* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);
 	Candidate->GadgetLoadout = Ids;
 	Candidate->bHasSavedLoadout = true;
@@ -101,64 +99,54 @@ bool UBoarGameInstance::AssignArchiveDisplay(int32 Slot, FName Id)
 
 bool UBoarGameInstance::IsGadgetUnlocked(FName GadgetId) const
 {
-	return Progress && !GadgetId.IsNone() && Progress->UnlockedGadgetIds.Contains(GadgetId);
+ const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets ? Gadgets->IsGadgetUnlocked(GadgetId) : false;
 }
-
 TSubclassOf<AGadgetBase> UBoarGameInstance::FindGadgetClass(FName Id) const
 {
-	if (Id.IsNone()) return nullptr;
-	for (const TSubclassOf<AGadgetBase>& Class : GadgetCatalog)
-	{
-		const UGadgetDataAsset* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
-		if (Def && Def->GadgetId == Id) return Class;
-	}
-	return nullptr;
+ const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets ? Gadgets->FindGadgetClass(Id) : nullptr;
 }
-
-void UBoarGameInstance::UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const
+int32 UBoarGameInstance::GetSpecialCoinCount() const
 {
-	for (const TSubclassOf<AGadgetBase>& Class : GadgetCatalog)
-	{
-		const UGadgetDataAsset* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
-		if (Def && !Def->GadgetId.IsNone() && Def->bInitiallyUnlocked)
-			Candidate->UnlockedGadgetIds.Add(Def->GadgetId);
-	}
+ const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets ? Gadgets->GetSpecialCoinCount() : 0;
 }
-
-bool UBoarGameInstance::IsInGadgetLab() const
-{
-	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>() : nullptr;
-	return Mode && !Mode->bArchive && !Mode->bGadgetTest;
-}
-int32 UBoarGameInstance::GetSpecialCoinCount() const { return Progress ? Progress->SpecialCoinIds.Num() : 0; }
 bool UBoarGameInstance::CanUnlockGadget(FName Id) const
 {
-	const auto Class = FindGadgetClass(Id);
-	const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
-	return Progress && Def && !IsGadgetUnlocked(Id) && GetSpecialCoinCount() >= FMath::Max(0,Def->RequiredSpecialCoinCount);
+ const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets ? Gadgets->CanUnlockGadget(Id) : false;
 }
-bool UBoarGameInstance::UnlockGadgetInLab(FName Id)
+bool UBoarGameInstance::IsInGadgetLab() const
 {
-	if (!IsInGadgetLab() || !CanUnlockGadget(Id)) return false;
-	auto* Candidate = DuplicateObject<UBoarSaveGame>(Progress,this);
-	Candidate->UnlockedGadgetIds.Add(Id);
-	return SaveCandidate(Candidate); // Coin IDs are never removed; publish only after save succeeds.
+ const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets ? Gadgets->IsInGadgetLab() : false;
 }
-bool UBoarGameInstance::SelectTestGadget(FName Id)
+FName UBoarGameInstance::GetSelectedTestGadget() const
 {
-	if (!IsInGadgetLab() || (!Id.IsNone() && (!FindGadgetClass(Id) || !IsGadgetUnlocked(Id)))) return false;
-	SelectedTestGadget = Id; OnTestGadgetChanged.Broadcast(); return true;
+ const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets ? Gadgets->GetSelectedTestGadget() : NAME_None;
 }
 TSoftObjectPtr<UWorld> UBoarGameInstance::GetSelectedTestLevel() const
 {
-	const auto Class = FindGadgetClass(SelectedTestGadget);
-	const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
-	return Def && IsGadgetUnlocked(SelectedTestGadget) ? Def->TestLevel : TSoftObjectPtr<UWorld>();
+ const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets ? Gadgets->GetSelectedTestLevel() : TSoftObjectPtr<UWorld>();
 }
-
+bool UBoarGameInstance::UnlockGadgetInLab(FName Id)
+{
+ auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets && Gadgets->UnlockGadgetInLab(Id);
+}
+bool UBoarGameInstance::SelectTestGadget(FName Id)
+{
+ auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
+ return Gadgets && Gadgets->SelectTestGadget(Id);
+}
 void UBoarGameInstance::ClearTestGadget()
 {
-	if (SelectedTestGadget.IsNone()) return;
-	SelectedTestGadget = NAME_None;
-	OnTestGadgetChanged.Broadcast();
+ if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) Gadgets->ClearTestGadget();
+}
+void UBoarGameInstance::UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const
+{
+ if (const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) Gadgets->UpdateInitialUnlocks(Candidate);
 }

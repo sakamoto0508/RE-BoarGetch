@@ -8,6 +8,7 @@
 
 class AGadgetBase;
 class APawn;
+class UBoarGadgetSubsystem;
 enum class EGadgetUseStyle : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGadgetLoadoutChanged);
@@ -35,9 +36,16 @@ public:
 	UGadgetComponent();
 	/** 保存済み装備の復元と初期装備を一度だけ実行します。 */
 	void InitializeForStage();
+    /** Coordinator supplies resolved slots and persistence policy before first equip. */
+    void InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots, UBoarGadgetSubsystem* Progress, bool bTemporary);
+    const TArray<TSubclassOf<AGadgetBase>>& GetDefaultGadgetSlots() const { return DefaultGadgetSlots; }
+    bool IsLoadoutInitialized() const { return bStageInitialized; }
+    bool IsTemporaryLoadout() const { return bTemporaryLoadout; }
 
 private:
 	bool bStageInitialized = false;
+    bool bTemporaryLoadout = false;
+    UPROPERTY(Transient) TObjectPtr<UBoarGadgetSubsystem> GadgetProgress;
 
 public:
 	/** スロット仕様値の唯一の取得元です。保存済み4枠の仕様は変更しません。 */
@@ -132,8 +140,6 @@ private:
 	bool IsValidSlotIndex(int32 SlotIndex) const;
 	/** ガジェットが登録されている最初のスロットを検索しています。 */
 	int32 FindFirstValidSlot() const;
-	/** エディタで設定された初期ガジェットから実際に使用するスロット配列を構築します。 */
-	void InitializeDefaultSlots();
 
 	/**
 	 * 初期装備スロットです。最大4件までを使用します。
