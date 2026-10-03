@@ -3,7 +3,7 @@
 #include "Blueprint/UserWidget.h"
 #include "CageHealthWidget.generated.h"
 
-/** A simple horizontal world-space health bar. All values are presentation copies. */
+/** ワールド空間に表示する横型HPバー。保持する値は呼び出し元から受け取った表示用コピーです。 */
 UCLASS()
 class REBOARGETCH_API UCageHealthWidget : public UUserWidget
 {
@@ -13,6 +13,7 @@ public:
 protected:
 	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& CullingRect, FSlateWindowElementList& Elements, int32 Layer, const FWidgetStyle& Style, bool bEnabled) const override;
 private:
+	// 現在HP比率、遅れて追従する残像、被弾時の白色混合、警告の強さ。
 	float Fraction=1, Trail=1, Flash=0, Pulse=0;
 	FLinearColor Color=FLinearColor(.02f,.75f,1.f);
 };

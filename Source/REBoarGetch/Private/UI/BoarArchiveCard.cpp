@@ -15,6 +15,7 @@ UBoarArchiveCard::UBoarArchiveCard(const FObjectInitializer& O):Super(O)
 {
  ButtonName=TEXT("CardButton");LabelName=TEXT("CardLabel");
 }
+// LoadoutEntryが参照するボタン名とラベル名を使い、写真・バッジ・発光枠を持つカードを構築します。
 TSharedRef<SWidget> UBoarArchiveCard::RebuildWidget()
 {
  auto* Size=WidgetTree->ConstructWidget<USizeBox>();Size->SetWidthOverride(206);Size->SetHeightOverride(242);WidgetTree->RootWidget=Size;
@@ -33,6 +34,7 @@ TSharedRef<SWidget> UBoarArchiveCard::RebuildWidget()
  RefreshFrame();
  return Super::RebuildWidget();
 }
+// 写真がない場合は代替文言を表示し、展示枠の選択状態とバッジを描画へ反映します。
 void UBoarArchiveCard::SetPortrait(UTexture2D* Texture,const FText& Caption,const FText& Badge,bool bActive)
 {
  if(Portrait){Portrait->SetBrushFromTexture(Texture);Portrait->SetVisibility(Texture?ESlateVisibility::HitTestInvisible:ESlateVisibility::Hidden);}
@@ -40,6 +42,7 @@ void UBoarArchiveCard::SetPortrait(UTexture2D* Texture,const FText& Caption,cons
  if(BadgeText)BadgeText->SetText(Badge);
  bActiveCard=bActive;RefreshFrame();
 }
+// 編集中の展示枠とフォーカス中のカードを強調します。展示の保存や割り当て処理は親画面が担当します。
 void UBoarArchiveCard::RefreshFrame()
 {
  if(Frame)Frame->SetBrushColor(bActiveCard||bFocusedCard?FLinearColor(1,0.66f,0.08f):FLinearColor(0.06f,0.54f,0.75f));

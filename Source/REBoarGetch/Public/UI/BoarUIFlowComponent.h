@@ -15,7 +15,7 @@ class UBoarEncyclopediaWidget;
 class UBoarConfirmationWidget;
 class UBoarArchiveSelectionWidget;
 
-/** Local menu lifetime, nesting, focus and menu input policy. Stage-end UI stays in Controller. */
+/** ローカルメニューの生成・親子関係・フォーカス・入力切替を管理します。ステージ終了UIはControllerが担当します。 */
 UCLASS()
 class REBOARGETCH_API UBoarUIFlowComponent : public UActorComponent
 {
@@ -61,6 +61,7 @@ class REBOARGETCH_API UBoarUIFlowComponent : public UActorComponent
 	ESlateVisibility EncyclopediaParentVisibility = ESlateVisibility::Visible;
 	ESlateVisibility SettingsParentVisibility = ESlateVisibility::SelfHitTestInvisible;
 	bool bFacilityMenuOpen = false;
+	// 自分が追加したContextだけを閉じる際に解除し、親画面の入力設定を維持します。
 	bool bFacilityAddedUIContext = false;
 	bool bEncyclopediaGameAndUI = false;
 	bool bEncyclopediaAddedUIContext = false;

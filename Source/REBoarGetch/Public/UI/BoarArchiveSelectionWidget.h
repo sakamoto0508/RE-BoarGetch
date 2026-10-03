@@ -36,11 +36,13 @@ private:
 	void AssignBoar(FName Id);
 	void UpdatePortrait(UBoarLoadoutEntry* Card,FName Id,const FText& Badge,bool bActive);
     FText LabelFor(FName Id) const;
+    // 未保存の一括編集ではなく、保存済み展示枠を表示するためのコピーです。変更成功時に読み直します。
     TArray<FName> PendingIds;
     TArray<FName> Candidates;
     int32 ActiveSlot=0;
 	int32 FocusedCandidate=INDEX_NONE;
 	bool bInitialFocusPending=false;
+	// WorldのPause状態に依存しない、実時間によるスティック連続移動の待機期限です。
 	double NextAnalogNavigation=0;
     UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> SlotRows;
     UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> CandidateRows;

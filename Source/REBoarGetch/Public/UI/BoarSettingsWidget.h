@@ -45,6 +45,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> BGMValueText;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> SEValueText;
 	UPROPERTY(Transient) TObjectPtr<UButton> BackButton;
+	// プログラムによるスライダー更新を、ユーザーの音量変更操作と区別します。
 	bool bRefreshing = false;
 	bool bInitialFocusPending = true;
 };

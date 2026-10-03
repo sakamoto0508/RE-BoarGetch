@@ -3,6 +3,7 @@
 #include "Components/Button.h"
 #include "Player/BoarPlayerController.h"
 
+// BPで配置したボタンへ操作とホバー時のフォーカスを接続します。
 void UBoarPauseWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -47,10 +48,12 @@ void UBoarPauseWidget::OpenLoadout()
 }
 void UBoarPauseWidget::FocusResume() { if (ResumeButton) ResumeButton->SetKeyboardFocus(); }
 void UBoarPauseWidget::FocusLobby() { if (LobbyButton) LobbyButton->SetKeyboardFocus(); }
+// 時間停止と入力復帰の処理はController経由でUIFlowへ依頼します。
 void UBoarPauseWidget::Resume()
 {
 	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->ResumeFromPause();
 }
+// 途中退出の確認画面を要求します。このボタンの処理では直接レベル遷移しません。
 void UBoarPauseWidget::LeaveStage()
 {
 	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->LeaveStageFromPause();

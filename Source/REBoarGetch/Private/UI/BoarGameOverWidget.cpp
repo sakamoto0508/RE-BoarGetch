@@ -26,6 +26,7 @@ void UBoarGameOverWidget::NativeOnInitialized()
 	}
 }
 
+// RetryとLobbyの選択を通知へ接続します。BPに必要なボタンがない場合は警告します。
 void UBoarGameOverWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -36,6 +37,7 @@ void UBoarGameOverWidget::NativeConstruct()
 	if (!RetryButton || !LobbyButton) UE_LOG(LogTemp, Warning, TEXT("[GameOver] Configure Retry/Lobby widget references."));
 }
 
+// 再表示や画面破棄で古いボタン通知が残らないよう解除します。
 void UBoarGameOverWidget::NativeDestruct()
 {
 	if (RetryButton) RetryButton->OnClicked.RemoveDynamic(this, &UBoarGameOverWidget::RequestRetry);
@@ -48,5 +50,6 @@ void UBoarGameOverWidget::FocusInitialChoice()
 	if (RetryButton) RetryButton->SetUserFocus(GetOwningPlayer());
 }
 
+// 再挑戦の意思だけを通知し、レベル再読み込みは呼び出し元に任せます。
 void UBoarGameOverWidget::RequestRetry() { OnRetryRequested.Broadcast(); }
 void UBoarGameOverWidget::RequestLobby() { OnLobbyRequested.Broadcast(); }

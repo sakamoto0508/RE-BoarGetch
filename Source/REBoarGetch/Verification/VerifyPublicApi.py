@@ -2,14 +2,21 @@
 from pathlib import Path
 import re
 import subprocess
+import argparse
 
 root = Path(__file__).resolve().parent.parent
-baseline = '184aa6e13cb0f153b33434b8fe4b74959f43bacf'
+parser = argparse.ArgumentParser()
+parser.add_argument('--baseline', default='184aa6e13cb0f153b33434b8fe4b74959f43bacf')
+parser.add_argument('--stage-select', action='store_true')
+args = parser.parse_args()
+baseline = args.baseline
 files = [
     'Public/UI/BoarLoadoutWidget.h', 'Private/Core/BoarGameInstance.h',
     'Public/Core/BoarGameMode.h', 'Public/Player/BoarPlayerController.h',
     'Public/Component/GadgetComponent.h',
 ]
+if args.stage_select:
+    files += ['Public/UI/BoarLobbyWidget.h', 'Public/Stage/StageEntrance.h']
 
 def declarations(text, macro):
     result = {}

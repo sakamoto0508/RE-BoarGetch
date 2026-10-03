@@ -55,6 +55,7 @@ protected:
 	TArray<FName> GadgetSelectionWidgetNames;
 
 private:
+	// 名前設定を実Widgetへ解決します。未配置の表示部品は更新時にスキップします。
 	void ResolveWidgetReferences();
 
 	UPROPERTY(Transient)

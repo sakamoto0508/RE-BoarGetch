@@ -5,6 +5,8 @@
 #include "InputCoreTypes.h"
 #include "BoarLobbyWidget.generated.h"
 
+class UBoarStageSelectPresenter;
+struct FBoarStageSelectViewData;
 class UButton;
 class UImage;
 class UStageConfig;
@@ -18,7 +20,7 @@ class UMaterialInstanceDynamic;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLobbyStageStartRequested, UStageConfig*, StageConfig);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbyStageSelectionClosed);
 
-/** ステージ選択、装備変更、解放確認を行うロビーUIの基底Widgetです。 */
+/** Stage Selectの描画、Focus、入力、Carousel/Preview表現を担当するViewです。 */
 UCLASS(Abstract, Blueprintable)
 class REBOARGETCH_API UBoarLobbyWidget : public UUserWidget
 {
@@ -28,6 +30,7 @@ public:
 	/** 指定ステージの表示内容を更新し、決定操作を受け付けます。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Lobby")
 	void ShowStageSelection(UStageConfig* StageConfig);
+	/** カタログをPresenterへ渡し、一覧またはカルーセルの表示を組み立てます。 */
 	void ShowStageCatalog(const TArray<UStageConfig*>& Stages, UStageConfig* FallbackStage);
 	void ShowTravelError(const FText& Message);
 
@@ -35,6 +38,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Lobby")
 	void HideStageSelection();
 
+	/** 開始要求をStageEntranceへ通知します。View自身は進捗保存やレベル遷移を行いません。 */
 	UPROPERTY(BlueprintAssignable, Category = "REBoarGetch|Lobby")
 	FOnLobbyStageStartRequested OnStageStartRequested;
 
@@ -85,31 +89,31 @@ protected:
 	FName CancelButtonWidgetName;
 
 private:
-	UMaterialInstanceDynamic* GetDioramaBrush(const UStageConfig* Stage);
+	UMaterialInstanceDynamic* GetDioramaBrush(const FBoarStageSelectViewData& Stage);
 	void ReleasePreviews();
+	// 表示範囲内のミニチュアと描画用MaterialをStageIdで対応付けて保持します。
 	UPROPERTY(Transient) TMap<FName, TObjectPtr<ABoarStagePreviewActor>> PreviewActors;
 	UPROPERTY(Transient) TMap<FName, TObjectPtr<UMaterialInstanceDynamic>> PreviewBrushes;
-	bool IsUnlocked(const UStageConfig* Stage) const;
-	void RefreshSelectedStage();
+	UFUNCTION() void RefreshSelectedStage();
 	void FocusSelection();
 	void StepStage(int32 Direction);
 	void RefreshCarousel();
 	void AnimateCarousel(float DeltaTime);
 	float CarouselElapsed = 0.f;
-	int32 PendingStageIndex = INDEX_NONE;
 	int32 SlideDirection = 0;
 	UFUNCTION() void SelectStage(int32 Index);
 	UFUNCTION() void ChooseStage(int32 Index);
 	UFUNCTION() void PreviousStage();
 	UFUNCTION() void NextStage();
-	UPROPERTY(Transient) TArray<TObjectPtr<UStageConfig>> AvailableStages;
+	// 選択ルールと進捗の整形はPresenter、描画・入力・フォーカスはこのWidgetが担当します。
+	UPROPERTY(Transient) TObjectPtr<UBoarStageSelectPresenter> Presenter;
 	UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> StageEntries;
 	UPROPERTY(Transient) TObjectPtr<UScrollBox> StageList;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> StageStatus;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> StageProgress;
 	UPROPERTY(Transient) TObjectPtr<UButton> PreviousButton;
 	UPROPERTY(Transient) TObjectPtr<UButton> NextButton;
-	int32 SelectedStageIndex = INDEX_NONE;
+	// 表示直後のフォーカス設定を次のTickまで遅らせます。
 	bool bInitialFocusPending = false;
 	UFUNCTION() void OpenEncyclopedia();
 	UFUNCTION() void FocusEncyclopedia();
@@ -121,9 +125,6 @@ private:
 
 	UFUNCTION()
 	void HandleCancelClicked();
-
-	UPROPERTY(Transient)
-	TObjectPtr<UStageConfig> SelectedStageConfig;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> StageNameText;

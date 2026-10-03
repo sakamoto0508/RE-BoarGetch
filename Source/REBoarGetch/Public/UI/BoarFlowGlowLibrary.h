@@ -4,7 +4,7 @@
 #include "BoarFlowGlowLibrary.generated.h"
 class UUserWidget;
 
-/** Keeps existing Widget classes and input delegates intact. */
+/** 名前がFocusFrameのImageを使って、各Widget共通の発光枠の寸法と操作状態を更新します。 */
 UCLASS()
 class REBOARGETCH_API UBoarFlowGlowLibrary : public UBlueprintFunctionLibrary
 {

@@ -10,17 +10,18 @@ class AGadgetBase;
 class APlayerController;
 class UTexture2D;
 
-/** View receives display data, never Gadget definitions or SaveData. */
+/** Viewへ渡す表示データ。装備定義やSaveDataの参照・判断はPresenter内で行います。 */
 struct FBoarLoadoutEntryViewData
 {
 	FText Label;
 	FText Name;
 	FText Role;
 	FText Description;
-	UTexture2D *Icon = nullptr; // Borrowed from the model's referenced definition.
+	UTexture2D *Icon = nullptr; // モデルが参照する定義から借用するアイコンです。
 	bool bSelected = false;
 };
 
+/** 操作後の状態文と、候補再描画・スロットへのフォーカス復帰の指示です。 */
 struct FBoarLoadoutActionResult
 {
 	FText Status;
@@ -31,12 +32,13 @@ struct FBoarLoadoutActionResult
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadoutViewChanged);
 
-/** Per-open-menu presentation state and intents. No ownership of persistent progress. */
+/** 画面を開いている間の選択状態と操作要求を担当します。永続進捗はSubsystemが管理します。 */
 UCLASS()
 class REBOARGETCH_API UBoarLoadoutPresenter : public UObject
 {
 	GENERATED_BODY()
   public:
+	/** モデルの取得に失敗した場合はfalseを返し、Viewに利用不能状態を表示させます。 */
 	bool Initialize(APlayerController *Owner, bool bRequestedLabContext);
 	void Shutdown();
 	UPROPERTY() FOnLoadoutViewChanged OnSlotsChanged;
@@ -74,6 +76,7 @@ class REBOARGETCH_API UBoarLoadoutPresenter : public UObject
 	UPROPERTY(Transient) TObjectPtr<UBoarGadgetSubsystem> Progress;
 	UPROPERTY(Transient) TArray<TSubclassOf<AGadgetBase>> Candidates;
 	int32 SelectedSlot = 0;
+	// 0: 装備変更、1: 研究所での解放、2: 装備枠とは別のTest対象選択。
 	int32 LabMode = 0;
 	bool bLabContext = false;
 };

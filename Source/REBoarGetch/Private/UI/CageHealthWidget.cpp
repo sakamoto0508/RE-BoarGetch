@@ -2,11 +2,13 @@
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "Rendering/DrawElements.h"
 
+// 呼び出し元で計算済みの表示値を受け取り、Slateに再描画を要求します。HP本体は変更しません。
 void UCageHealthWidget::SetPresentation(float InFraction,float InTrail,FLinearColor InColor,float InFlash,float InPulse)
 {
 	Fraction=InFraction; Trail=InTrail; Color=InColor; Flash=InFlash; Pulse=InPulse;
 	if (const TSharedPtr<SWidget> Cached = GetCachedWidget()) Cached->Invalidate(EInvalidateWidgetReason::Paint);
 }
+// 640×100の基準座標を実サイズへ拡縮し、背景・残像・現在HP・警告の順で重ねて描画します。
 int32 UCageHealthWidget::NativePaint(const FPaintArgs& Args,const FGeometry& G,const FSlateRect& Cull,FSlateWindowElementList& E,int32 L,const FWidgetStyle& Style,bool bEnabled) const
 {
 	L=Super::NativePaint(Args,G,Cull,E,L,Style,bEnabled);

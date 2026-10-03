@@ -26,6 +26,7 @@ void UBoarHUDWidget::NativeConstruct()
 	ResolveWidgetReferences();
 }
 
+// 未配置のWidgetも含めてスロット順を維持し、装備添字と表示の対応を揃えます。
 void UBoarHUDWidget::ResolveWidgetReferences()
 {
 	CapturedCountText = ResolveHUDTextBlock(WidgetTree, CapturedCountTextWidgetName);
@@ -46,6 +47,7 @@ void UBoarHUDWidget::ResolveWidgetReferences()
 	}
 }
 
+// 装備Actorを生成せず、クラス既定値の定義からアイコンを取得して選択枠とともに描画します。
 void UBoarHUDWidget::UpdateGadgetSlots(
 	const TArray<TSubclassOf<AGadgetBase>>& GadgetSlots,
 	int32 SelectedSlotIndex)
@@ -90,6 +92,7 @@ void UBoarHUDWidget::UpdateCaptureCount(int32 CurrentCount, int32 TargetCount)
 	}
 }
 
+// 受け取ったHPを整数表示へ丸めます。ダメージ計算やHPの更新はゲームプレイ側が担当します。
 void UBoarHUDWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 {
 	if (CurrentHealthText)

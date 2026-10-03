@@ -12,6 +12,7 @@ class REBOARGETCH_API UBoarGameOverWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+	// 選択の意思だけをControllerへ渡し、レベル遷移や終了状態の管理は外側で行います。
 	UPROPERTY(BlueprintAssignable) FOnGameOverChoice OnRetryRequested;
 	UPROPERTY(BlueprintAssignable) FOnGameOverChoice OnLobbyRequested;
 	UFUNCTION(BlueprintCallable) void RequestRetry();

@@ -14,16 +14,18 @@ UMaterialInstanceDynamic* FlowMaterial(UUserWidget* Owner)
 	return Image->GetDynamicMaterial();
 }
 }
+// FocusFrameのMaterialへWidgetの寸法を渡し、表示サイズが変わったときだけ更新します。
 void UBoarFlowGlowLibrary::ResizeFlowFrame(UUserWidget* Owner, FVector2D LocalSize)
 {
 	if (LocalSize.X <= 0 || LocalSize.Y <= 0) return;
 	if (auto* MID = FlowMaterial(Owner))
 	{
-		// Tick only observes geometry; no per-frame parameter writes or flow animation.
+		// Tickから呼ばれても寸法変更時だけ書き込みます。流れる発光のアニメーションはMaterial側で行います。
 		if (!FMath::IsNearlyEqual(MID->K2_GetScalarParameterValue(TEXT("Width")), LocalSize.X)) MID->SetScalarParameterValue(TEXT("Width"), LocalSize.X);
 		if (!FMath::IsNearlyEqual(MID->K2_GetScalarParameterValue(TEXT("Height")), LocalSize.Y)) MID->SetScalarParameterValue(TEXT("Height"), LocalSize.Y);
 	}
 }
+// フォーカスとホバーのどちらかが有効なら発光を有効化し、Widgetの拡大表示も更新します。
 void UBoarFlowGlowLibrary::SetFlowFrameState(UUserWidget* Owner, bool bFocused, bool bValue)
 {
 	if (auto* MID = FlowMaterial(Owner))

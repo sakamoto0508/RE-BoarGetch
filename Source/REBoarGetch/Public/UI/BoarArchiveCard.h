@@ -9,7 +9,8 @@ class REBOARGETCH_API UBoarArchiveCard : public UBoarLoadoutEntry
  GENERATED_BODY()
 public:
  UBoarArchiveCard(const FObjectInitializer& ObjectInitializer);
-	UPROPERTY(EditDefaultsOnly, Category="Visual") TObjectPtr<class UMaterialInterface> FlowGlowMaterial;
+	UPROPERTY(EditDefaultsOnly, Category="Visual") 
+ TObjectPtr<class UMaterialInterface> FlowGlowMaterial;
  void SetPortrait(class UTexture2D* Texture, const FText& Caption, const FText& Badge, bool bActive);
 protected:
  virtual TSharedRef<SWidget> RebuildWidget() override;
@@ -17,6 +18,7 @@ protected:
  virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& Event) override;
 private:
  void RefreshFrame();
+ // 編集対象の展示枠と現在のフォーカスを別々に保持して枠の強調を決めます。
  bool bActiveCard=false, bFocusedCard=false;
  UPROPERTY(Transient) TObjectPtr<class UBorder> Frame;
  UPROPERTY(Transient) TObjectPtr<class UImage> Portrait;

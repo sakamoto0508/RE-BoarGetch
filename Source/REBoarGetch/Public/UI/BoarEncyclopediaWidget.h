@@ -45,6 +45,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PhotoStatus;
 	UPROPERTY(Transient) TObjectPtr<UButton> BackButton;
 	UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> Entries;
+	// XはStageCatalogの添字、Yはステージ内の個体定義の添字。表示行から元の定義へ対応付けます。
 	TArray<FIntPoint> Definitions;
 	TArray<FText> Labels;
 	bool bInitialFocusPending = true;
