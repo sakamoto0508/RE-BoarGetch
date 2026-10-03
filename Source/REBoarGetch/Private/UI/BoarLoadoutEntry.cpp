@@ -25,6 +25,7 @@ void UBoarLoadoutEntry::NativeConstruct()
 	}
 	Refresh();
 }
+// 親画面が決めた添字・ラベル・選択状態を保持します。装備やステージのルールはこの行では判断しません。
 void UBoarLoadoutEntry::Setup(int32 InIndex, const FText& Text, bool bSelected)
 {
 	EntryIndex = InIndex; EntryText = Text; bEntrySelected = bSelected; Refresh();
@@ -38,8 +39,10 @@ void UBoarLoadoutEntry::Refresh()
 }
 void UBoarLoadoutEntry::FocusEntry() { if (ActionButton) ActionButton->SetKeyboardFocus(); }
 void UBoarLoadoutEntry::Hover() { FocusEntry(); }
+// 操作可能な項目だけを決定通知へ渡します。添字の意味と実際の変更処理は親画面が担当します。
 void UBoarLoadoutEntry::Choose() { if (bEntryAvailable) OnChosen.Broadcast(EntryIndex); }
 void UBoarLoadoutEntry::SetAvailable(bool bAvailable) { bEntryAvailable = bAvailable; Refresh(); }
+// マウスとキーボード・ゲームパッドのフォーカス移動を、共通のプレビュー通知へ接続します。
 void UBoarLoadoutEntry::NativeOnAddedToFocusPath(const FFocusEvent& Event)
 {
 	Super::NativeOnAddedToFocusPath(Event);

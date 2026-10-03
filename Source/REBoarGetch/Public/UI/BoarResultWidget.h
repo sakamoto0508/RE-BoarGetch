@@ -16,7 +16,7 @@ class REBOARGETCH_API UBoarResultWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	/** リザルトへ表示する捕獲数を設定します。 */
+	/** 確定済みRunの捕獲数・時間・収集結果と、ステージ設定の目標数を表示します。 */
 	void InitializeResult(const FStageRunData& Run, int32 TargetCount);
 	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result") FStageRunData ResultData;
 	/** NEW個体一覧などをReusable Widgetへ展開するための通知です。 */

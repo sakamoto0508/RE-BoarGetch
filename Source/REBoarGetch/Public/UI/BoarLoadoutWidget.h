@@ -12,7 +12,7 @@ class UImage;
 class UButton;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadoutClosed);
 
-/** Catalog順の解放済み候補を表示し、既存GadgetComponentへ変更を依頼します。 */
+/** 装備スロット・候補・詳細を描画するView。操作の判断とモデルへの変更要求はPresenterへ渡します。 */
 UCLASS(Abstract, Blueprintable)
 class REBOARGETCH_API UBoarLoadoutWidget : public UUserWidget
 {
@@ -20,7 +20,7 @@ class REBOARGETCH_API UBoarLoadoutWidget : public UUserWidget
 public:
 	UPROPERTY(BlueprintAssignable) FOnLoadoutClosed OnClosed;
 	void FocusInitialChoice();
-	/** Set before AddToViewport. Pause defaults to equipment-only. */
+	/** AddToViewport前に指定します。Pauseから開く場合は装備変更だけを使用します。 */
 	void SetLabContext(bool bEnabled) { bRequestedLabContext = bEnabled; }
 protected:
 	virtual void NativeConstruct() override;

@@ -18,6 +18,7 @@ public:
 	void FocusEntry();
 	void SetAvailable(bool bAvailable);
 	void UseCompactLabRow();
+	// 決定とフォーカスを別々に通知し、親画面で変更とプレビューを分けられるようにします。
 	FOnLoadoutEntry OnChosen;
 	FOnLoadoutEntry OnFocused;
 protected:

@@ -22,6 +22,7 @@ FText GadgetName(TSubclassOf<AGadgetBase> Class)
 }
 } // namespace
 
+// 再表示時の購読を解除してから、装備Componentと進捗Subsystemを接続します。研究所モードは実際の滞在状態も確認します。
 bool UBoarLoadoutPresenter::Initialize(APlayerController *Owner, bool bRequestedLabContext)
 {
 	Shutdown();
@@ -39,6 +40,7 @@ bool UBoarLoadoutPresenter::Initialize(APlayerController *Owner, bool bRequested
 	RebuildCatalog();
 	return true;
 }
+// 装備変更・解放通知の購読を解除します。永続進捗の所有権はSubsystem側に残します。
 void UBoarLoadoutPresenter::Shutdown()
 {
 	if (Gadgets)
@@ -62,6 +64,7 @@ int32 UBoarLoadoutPresenter::GetSlotCount() const
 {
 	return UGadgetComponent::GetGadgetSlotCount();
 }
+// 先頭の空き候補を確保し、抽象クラス・未定義・重複GadgetIdを除いてカタログ順に並べます。
 void UBoarLoadoutPresenter::RebuildCatalog()
 {
 	Candidates.Reset();
@@ -78,6 +81,7 @@ void UBoarLoadoutPresenter::RebuildCatalog()
 		Candidates.Add(Class);
 	}
 }
+// 装備定義を表示用のテキストとアイコンに変換し、Viewへモデルの詳細を持ち込ませません。
 FBoarLoadoutEntryViewData UBoarLoadoutPresenter::BuildDetails(TSubclassOf<AGadgetBase> Class) const
 {
 	FBoarLoadoutEntryViewData Data;
@@ -115,6 +119,7 @@ FBoarLoadoutEntryViewData UBoarLoadoutPresenter::GetCandidate(int32 Index) const
 	Data.bSelected = Def && LabMode == 2 && Def->GadgetId == Progress->GetSelectedTestGadget();
 	return Data;
 }
+// 編集対象スロットを記録し、現在の装備に対応する候補へフォーカスを移すための添字を返します。
 int32 UBoarLoadoutPresenter::ChooseSlot(int32 Index)
 {
 	if (Index < 0 || Index >= GetSlotCount())
@@ -136,6 +141,7 @@ FText UBoarLoadoutPresenter::GetLabModeStatus() const
 							 : LabMode == 2 ? TEXT("装備Slotとは別にTest対象を選択します。")
 											: TEXT("Slotを選び、装備候補を決定してください。"));
 }
+// 研究所の解放・Test対象選択・通常装備変更を振り分け、結果とViewに必要な更新指示を返します。
 FBoarLoadoutActionResult UBoarLoadoutPresenter::ChooseCandidate(int32 Index)
 {
 	FBoarLoadoutActionResult Result;

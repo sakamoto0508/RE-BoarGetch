@@ -43,6 +43,7 @@ void UBoarEncyclopediaWidget::NativeConstruct()
 	BuildEntries();
 }
 
+// カタログ全体で個体IDの出現数を調べ、一意な有効定義だけを一覧と捕獲進捗へ取り込みます。
 void UBoarEncyclopediaWidget::BuildEntries()
 {
 	Definitions.Reset(); Entries.Reset(); Labels.Reset();
@@ -100,6 +101,7 @@ void UBoarEncyclopediaWidget::BuildEntries()
 	if (!Definitions.IsEmpty()) SelectEntry(0);
 }
 
+// 未捕獲の名前・種類・詳細・写真を伏せ、捕獲済みの個体だけ登録情報を表示します。
 void UBoarEncyclopediaWidget::SelectEntry(int32 Index)
 {
 	if (!Definitions.IsValidIndex(Index)) return;
@@ -132,6 +134,7 @@ void UBoarEncyclopediaWidget::SelectEntry(int32 Index)
 	if (PhotoStatus) PhotoStatus->SetText(Texture ? FText::GetEmpty() : FText::FromString(bCaptured ? TEXT("写真未登録") : TEXT("???")));
 }
 
+// 一覧行と戻るボタンの通知を解除し、破棄後のViewへの呼び出しを残さないようにします。
 void UBoarEncyclopediaWidget::NativeDestruct()
 {
 	for (const auto& Entry : Entries)

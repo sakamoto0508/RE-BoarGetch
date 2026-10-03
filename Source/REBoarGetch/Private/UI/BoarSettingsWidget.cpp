@@ -7,6 +7,7 @@
 #include "Engine/GameInstance.h"
 #include "Player/BoarPlayerController.h"
 
+// AudioSubsystemの現在値を表示してから変更通知を接続し、初期表示で設定変更が起きるのを避けます。
 void UBoarSettingsWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -68,6 +69,7 @@ void UBoarSettingsWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 	FocusInitialChoice();
 }
 
+// 表示更新中のフラグでスライダー変更通知の再入を抑え、音量と百分率表示を揃えます。
 void UBoarSettingsWidget::RefreshValues()
 {
 	TGuardValue<bool> Guard(bRefreshing, true);
@@ -85,6 +87,7 @@ void UBoarSettingsWidget::RefreshValues()
 	if (SEValueText) SEValueText->SetText(FText::AsNumber(FMath::RoundToInt(SE * 100.0f)));
 }
 
+// ユーザー操作による有限値だけをAudioSubsystemへ渡し、反映された値を読み直します。
 void UBoarSettingsWidget::ChangeBGM(float Value)
 {
 	if (!Audio || bRefreshing || !FMath::IsFinite(Value)) return;

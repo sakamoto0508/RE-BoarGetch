@@ -29,5 +29,6 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UButton> YesButton;
 	UPROPERTY(Transient) TObjectPtr<UButton> NoButton;
 	bool bInitialFocusPending = true;
+	// 承認・否定のどちらかを通知したら、同じ表示中の追加決定を抑えます。
 	bool bDecisionSent = false;
 };

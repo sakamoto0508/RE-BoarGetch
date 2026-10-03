@@ -22,6 +22,7 @@ bool UBoarUIFlowComponent::BlocksGameplayInput() const
 {
 	return bFacilityMenuOpen || PauseWidget || SettingsWidget || EncyclopediaWidget || ArchiveSelectionWidget;
 }
+// 子画面を閉じてからPauseを解除し、メニューに伴う入力状態を片付けます。
 void UBoarUIFlowComponent::Shutdown()
 {
 	if (bFacilityMenuOpen)
@@ -42,6 +43,7 @@ void UBoarUIFlowComponent::TogglePauseMenu()
 		OpenPauseMenu();
 }
 
+// 開いている子画面を優先して戻します。親メニューを一度に閉じないための戻る順序です。
 void UBoarUIFlowComponent::HandleMenuBack()
 {
 	auto *PC = GetController();
@@ -87,6 +89,7 @@ void UBoarUIFlowComponent::OpenLoadoutMenu()
 	LoadoutWidget->FocusInitialChoice();
 }
 
+// 親画面の可視状態と復帰先フォーカスを記録し、図鑑表示中の移動・視点入力を抑えます。
 void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget *ParentMenu, UWidget *ReturnFocus)
 {
 	auto *PC = GetController();
@@ -132,6 +135,7 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget *ParentMenu, UWidget *Re
 	EncyclopediaWidget->FocusInitialChoice();
 }
 
+// 図鑑が追加した入力Contextだけを解除し、親画面の表示・入力モード・フォーカスを復元します。
 void UBoarUIFlowComponent::CloseEncyclopedia()
 {
 	auto *PC = GetController();
@@ -328,6 +332,7 @@ void UBoarUIFlowComponent::OpenPauseMenu()
 	Widget->FocusInitialChoice();
 }
 
+// 子画面を閉じた後、時間停止・入力Context・カーソルをゲームプレイ用に戻します。
 void UBoarUIFlowComponent::ResumeFromPause()
 {
 	auto *PC = GetController();
@@ -412,6 +417,7 @@ void UBoarUIFlowComponent::ResolveLobbyExit(bool bConfirmed)
 	PC->ReturnToLobby();
 }
 
+// 施設に対応する画面を開きます。施設メニューはPauseせず、移動と進行中のアクションを止めます。
 void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 {
 	auto *PC = GetController();
@@ -529,6 +535,7 @@ void UBoarUIFlowComponent::CloseArchiveDisplaySelection()
 	CloseFacilityMenuInput();
 }
 
+// 施設メニュー用に追加したContextを外し、押下状態をクリアして操作へ復帰します。
 void UBoarUIFlowComponent::CloseFacilityMenuInput()
 {
 	auto *PC = GetController();

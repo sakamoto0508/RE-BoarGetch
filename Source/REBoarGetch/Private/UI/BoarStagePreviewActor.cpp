@@ -22,6 +22,7 @@ ABoarStagePreviewActor::ABoarStagePreviewActor()
 	Capture->ShowFlags.SetBloom(false);
 }
 
+// 定義されたMeshだけを撮影対象に登録します。衝突・Navigationへの影響を無効にした表示専用の構成です。
 UTextureRenderTarget2D* ABoarStagePreviewActor::CreatePreview()
 {
 	if (Target) return Target;
@@ -48,11 +49,11 @@ UTextureRenderTarget2D* ABoarStagePreviewActor::CreatePreview()
 	}
 	if (!ValidParts) return nullptr;
 	Target = NewObject<UTextureRenderTarget2D>(this);
-	Target->ClearColor = FLinearColor(0,0,0,1); // Capture stores inverse opacity in alpha.
+	Target->ClearColor = FLinearColor(0,0,0,1); // Captureのアルファには不透明度の反転値が入ります。
 	Target->InitCustomFormat(1024, 768, PF_FloatRGBA, false);
 	Target->UpdateResourceImmediate(true);
 	Capture->TextureTarget = Target;
 	Capture->OrthoWidth = OrthoWidth;
-	Capture->CaptureScene(); // Static model: capture only when entering the visible carousel.
+	Capture->CaptureScene(); // 静止モデルなのでプレビュー作成時だけ撮影します。
 	return Target;
 }

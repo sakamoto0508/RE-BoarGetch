@@ -63,6 +63,7 @@ void UBoarResultWidget::FocusForDismissInput()
 	SetUserFocus(GetOwningPlayer());
 }
 
+// 確定済みのRunだけを表示へ取り込みます。表示用コピーから進行中の結果や保存データを変更しません。
 void UBoarResultWidget::InitializeResult(const FStageRunData& Run, int32 TargetCount)
 {
 	if (!Run.bResultFrozen) return;
@@ -93,6 +94,7 @@ FReply UBoarResultWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, c
 	return RequestDismiss();
 }
 
+// 任意キー・マウス入力を共通の終了要求へまとめ、実際の復帰処理は呼び出し元に委ねます。
 FReply UBoarResultWidget::RequestDismiss()
 {
 	OnDismissRequested.Broadcast();

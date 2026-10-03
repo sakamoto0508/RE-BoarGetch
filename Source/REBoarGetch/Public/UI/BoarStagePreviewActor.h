@@ -18,7 +18,7 @@ struct FBoarPreviewPart
 	UPROPERTY(EditAnywhere) FTransform Transform;
 };
 
-/** Presentation-only miniature. Never loads a gameplay level or spawns gameplay actors. */
+/** ステージ表示用のミニチュア。Gameplayレベルをロードせず、定義されたMeshだけで構成します。 */
 UCLASS(Blueprintable)
 class REBOARGETCH_API ABoarStagePreviewActor : public AActor
 {
@@ -27,6 +27,7 @@ public:
 	ABoarStagePreviewActor();
 	UPROPERTY(EditDefaultsOnly, Category="Preview") TArray<FBoarPreviewPart> Parts;
 	UPROPERTY(EditDefaultsOnly, Category="Preview") float OrthoWidth = 1250.f;
+	/** 静止画を一度撮影し、以降は同じRenderTargetを返します。 */
 	UTextureRenderTarget2D* CreatePreview();
 private:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<USceneCaptureComponent2D> Capture;

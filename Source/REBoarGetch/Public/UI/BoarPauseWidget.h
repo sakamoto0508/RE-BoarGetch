@@ -13,6 +13,7 @@ class REBOARGETCH_API UBoarPauseWidget : public UUserWidget
 	GENERATED_BODY()
 public:
 	void FocusInitialChoice();
+	/** 装備画面から戻った際、開く前の操作へフォーカスを戻します。 */
 	void FocusLoadoutChoice();
 	void FocusLobbyChoice();
 protected:

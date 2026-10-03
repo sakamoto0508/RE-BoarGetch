@@ -36,7 +36,7 @@ namespace
 UBoarArchiveSelectionWidget::UBoarArchiveSelectionWidget(const FObjectInitializer& O):Super(O){SetIsFocusable(true);}
 TSharedRef<SWidget> UBoarArchiveSelectionWidget::RebuildWidget()
 {
- // Build before Slate consumes RootWidget. NativeConstruct must not replace an already-built Slate root.
+ // SlateがRootWidgetを取り込む前に構築します。NativeConstructでは構築済みのルートを差し替えません。
  auto* Root=WidgetTree->ConstructWidget<UCanvasPanel>();WidgetTree->RootWidget=Root;
  auto* Backdrop=WidgetTree->ConstructWidget<UBorder>();Backdrop->SetBrushColor(FLinearColor(0.002f,0.006f,0.015f,0.75f));
  auto* BG=Root->AddChildToCanvas(Backdrop);BG->SetAnchors(FAnchors(0,0,1,1));BG->SetOffsets(FMargin(0));
@@ -55,7 +55,7 @@ TSharedRef<SWidget> UBoarArchiveSelectionWidget::RebuildWidget()
  SlotsPanel=WidgetTree->ConstructWidget<UHorizontalBox>();Left->AddChildToVerticalBox(SlotsPanel);
  if(IsDesignTime())for(int32 I=0;I<3;++I)
  {
-  // Empty presentation only, never registered as captured data or saved selection.
+  // デザイナー用の空枠表示です。捕獲履歴や保存済み展示には登録しません。
   auto* PreviewSize=WidgetTree->ConstructWidget<USizeBox>();PreviewSize->SetWidthOverride(206);PreviewSize->SetHeightOverride(242);
   auto* PreviewRim=WidgetTree->ConstructWidget<UBorder>();PreviewRim->SetBrushColor(I==0?Amber:Cyan);PreviewRim->SetPadding(FMargin(4));PreviewSize->SetContent(PreviewRim);
   auto* PreviewBody=WidgetTree->ConstructWidget<UBorder>();PreviewBody->SetBrushColor(Navy);PreviewBody->SetPadding(FMargin(16));PreviewRim->SetContent(PreviewBody);
@@ -83,6 +83,7 @@ TSharedRef<SWidget> UBoarArchiveSelectionWidget::RebuildWidget()
  Column->AddChildToVerticalBox(Text(TEXT("枠切替  1 / 2 / 3・L1 / R1     一覧移動  矢印 / WASD・D-Pad / Stick"),17,Cyan))->SetPadding(FMargin(0,16,0,0));
  return Super::RebuildWidget();
 }
+// 保存済みの展示枠を表示用に取り込み、最近の捕獲順を優先して候補を並べます。
 void UBoarArchiveSelectionWidget::NativeConstruct()
 {
  Super::NativeConstruct();auto* GI=GetGameInstance<UBoarGameInstance>();
@@ -91,7 +92,7 @@ void UBoarArchiveSelectionWidget::NativeConstruct()
  if(const auto* Save=GI?GI->GetProgress():nullptr)
  {
   for(int32 I=Save->CapturedBoarHistory.Num()-1;I>=0;--I){const FName Id=Save->CapturedBoarHistory[I];if(!Id.IsNone()&&Save->CapturedBoarUniqueIds.Contains(Id))Candidates.AddUnique(Id);}
-  // Legacy saves have no capture order for their remaining IDs; use a stable fallback without fabricating history.
+  // 古いセーブで捕獲順のないIDは名前順で補います。表示順のために履歴を書き換えません。
   auto Remaining=Save->CapturedBoarUniqueIds.Array();Remaining.Sort([](FName A,FName B){return A.LexicalLess(B);});
   for(FName Id:Remaining)if(!Id.IsNone())Candidates.AddUnique(Id);
  }
@@ -152,6 +153,7 @@ void UBoarArchiveSelectionWidget::RefreshDetail()
 }
 void UBoarArchiveSelectionWidget::SelectSlot(int32 Index){if(PendingIds.IsValidIndex(Index)){ActiveSlot=Index;RefreshSlotRows();}}
 void UBoarArchiveSelectionWidget::ChooseBoar(int32 Index){if(Candidates.IsValidIndex(Index)){FocusedCandidate=Index;RefreshDetail();}}
+// 重複展示の調整と保存はGameInstanceへ依頼します。成功後に保存側の確定値を読み直します。
 void UBoarArchiveSelectionWidget::AssignBoar(FName Id)
 {
  if(!Id.IsNone() && PendingIds[ActiveSlot]==Id)
@@ -167,6 +169,7 @@ void UBoarArchiveSelectionWidget::RemoveBoar(){AssignBoar(NAME_None);}
 void UBoarArchiveSelectionWidget::Cancel(){OnClosed.Broadcast();}
 void UBoarArchiveSelectionWidget::FocusInitialChoice(){if(!CandidateRows.IsEmpty())CandidateRows[0]->FocusEntry();else if(BackButton)BackButton->SetKeyboardFocus();}
 void UBoarArchiveSelectionWidget::NativeTick(const FGeometry& G,float D){Super::NativeTick(G,D);if(bInitialFocusPending){bInitialFocusPending=false;FocusInitialChoice();}}
+// 3列グリッドの候補へフォーカスを移し、選択中のカードが見えるようにスクロールします。
 void UBoarArchiveSelectionWidget::MoveGridFocus(int32 Offset)
 {
  if(CandidateRows.IsEmpty())return;int32 Index=FMath::Clamp((FocusedCandidate==INDEX_NONE?0:FocusedCandidate)+Offset,0,CandidateRows.Num()-1);CandidateRows[Index]->FocusEntry();GridScroll->ScrollWidgetIntoView(CandidateRows[Index],true,EDescendantScrollDestination::IntoView);
@@ -187,6 +190,7 @@ FReply UBoarArchiveSelectionWidget::NativeOnPreviewKeyDown(const FGeometry& G,co
  if(Move){MoveGridFocus(Move);return FReply::Handled();}
  return Super::NativeOnPreviewKeyDown(G,E);
 }
+// スティックの閾値と実時間の待ち間隔で移動を制限し、フレームごとの過剰なフォーカス移動を抑えます。
 FReply UBoarArchiveSelectionWidget::NativeOnAnalogValueChanged(const FGeometry& G,const FAnalogInputEvent& E)
 {
  if(E.GetKey()==EKeys::Gamepad_LeftX||E.GetKey()==EKeys::Gamepad_LeftY)

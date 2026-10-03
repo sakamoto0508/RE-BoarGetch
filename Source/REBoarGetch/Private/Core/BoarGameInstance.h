@@ -9,6 +9,7 @@ class UBoarSaveGame;
 class UStageConfig;
 class AGadgetBase;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGadgetsUnlocked);
+DECLARE_MULTICAST_DELEGATE(FOnBoarProgressChanged);
 
 /** 永続進行の読み書きを集約します。失敗・中断した挑戦から進行を保存しません。 */
 UCLASS()
@@ -16,6 +17,8 @@ class REBOARGETCH_API UBoarGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 public:
+	/** Read-only UI consumers are notified only after a saved candidate is published. */
+	FOnBoarProgressChanged OnProgressChanged;
 	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnGadgetsUnlocked;
 	virtual void Init() override;
 	/** 読み取り用の確定済み進行です。 */

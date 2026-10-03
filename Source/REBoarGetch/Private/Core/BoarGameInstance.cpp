@@ -34,6 +34,7 @@ bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
   OnGadgetsUnlocked.Broadcast();
   if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) Gadgets->OnGadgetsUnlocked.Broadcast();
  }
+	OnProgressChanged.Broadcast();
 	return true;
 }
 

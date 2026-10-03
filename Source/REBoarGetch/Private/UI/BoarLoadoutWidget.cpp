@@ -8,6 +8,7 @@
 #include "Components/Image.h"
 #include "Components/ScrollBox.h"
 
+// 名前指定のWidgetを接続し、Presenterの表示データと通知から装備画面を組み立てます。
 void UBoarLoadoutWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -71,6 +72,7 @@ void UBoarLoadoutWidget::NativeConstruct()
 	SetStatus(FText::FromString(TEXT("スロットを決定し、装備候補を選んでください。")));
 	bInitialFocusPending = true;
 }
+// 画面破棄時はViewへの通知とPresenterのモデル購読を解除します。
 void UBoarLoadoutWidget::NativeDestruct()
 {
 	if (Presenter)
@@ -140,6 +142,7 @@ void UBoarLoadoutWidget::ChooseSlot(int32 Index)
 	if (CandidateEntries.IsValidIndex(CandidateIndex) && CandidateEntries[CandidateIndex])
 		CandidateEntries[CandidateIndex]->FocusEntry();
 }
+// 操作結果に従って表示とフォーカスを更新します。解放条件や保存結果の判断はPresenterに任せます。
 void UBoarLoadoutWidget::ChooseCandidate(int32 Index)
 {
 	if (!Presenter)
@@ -176,6 +179,7 @@ void UBoarLoadoutWidget::PreviewSlot(int32 Index)
 	if (Presenter)
 		ShowDetails(Presenter->GetSlot(Index));
 }
+// フォーカス中の候補を詳細欄へ反映し、スクロール範囲内に収めます。装備変更は決定操作で行います。
 void UBoarLoadoutWidget::PreviewCandidate(int32 Index)
 {
 	if (!Presenter || Index < 0 || Index >= Presenter->GetCandidateCount())
