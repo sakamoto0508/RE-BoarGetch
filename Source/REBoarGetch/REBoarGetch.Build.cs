@@ -7,6 +7,7 @@ public class REBoarGetch : ModuleRules
 	public REBoarGetch(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		PrivateDependencyModuleNames.Add("RHI");
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
