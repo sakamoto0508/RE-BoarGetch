@@ -1,0 +1,51 @@
+{
+ "patched": {
+  "/Game/InportAssets/LevelPrototyping/Materials/M_FlatCol": [
+   "vertex snap"
+  ],
+  "/Game/InportAssets/LPRiverForest/Materials/M_LowPoly": [
+   "vertex snap (chained existing WPO)"
+  ],
+  "/Game/InportAssets/LPRiverForest/Materials/M_LowPolyGrass": [
+   "vertex snap (chained existing WPO)"
+  ],
+  "/Game/InportAssets/LPRiverForest/Materials/M_LowPolyWater": [
+   "vertex snap (chained existing WPO)"
+  ],
+  "/Game/Stage01/Ground/Materials/M_Grass_LowPoly_World": [
+   "vertex snap",
+   "affine world position (1 users)",
+   "texel snap (3 samples)"
+  ],
+  "/Game/Stage01/Ground/Materials/M_Ground_LowPoly_World": [
+   "vertex snap",
+   "affine world position (1 users)",
+   "texel snap (3 samples)"
+  ],
+  "/Game/BP/Cage/Materials/M_Cage_White": [
+   "vertex snap"
+  ],
+  "/Game/BP/Cage/Materials/M_Cage_Yellow": [
+   "vertex snap"
+  ],
+  "/Game/BP/Cage/Materials/M_Cage_Glow": [
+   "vertex snap"
+  ],
+  "/Game/BP/Cage/Materials/M_Cage_Navy": [
+   "vertex snap"
+  ],
+  "/Game/Art/Rendering/Retro/Materials/M_RetroFBXPhong": [
+   "vertex snap",
+   "affine uv0 (9 users)",
+   "texel snap (9 samples)"
+  ]
+ },
+ "reparented": [
+  "/Game/InportAssets/Meshy_AI_ローポリ風のサ_quadruped/Meshy_AI_ローポリ風のサ_quadruped/Material_1",
+  "/Game/InportAssets/Player/Material_001",
+  "/Game/InportAssets/mushitoriami/マテリアル",
+  "/Game/InportAssets/檻/cage_color"
+ ],
+ "errors": {},
+ "mode": "patch"
+}

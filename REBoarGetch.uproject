@@ -47,6 +47,10 @@
 		{
 			"Name": "PhysicsToolsets",
 			"Enabled": true
+		},
+		{
+			"Name": "RetroRender",
+			"Enabled": true
 		}
 	]
 }

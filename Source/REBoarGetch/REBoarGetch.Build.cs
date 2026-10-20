@@ -7,6 +7,7 @@ public class REBoarGetch : ModuleRules
 	public REBoarGetch(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		// Retro rendering lives in Plugins/RetroRender.
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",

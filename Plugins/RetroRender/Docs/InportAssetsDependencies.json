@@ -1,0 +1,295 @@
+{
+ "modified": [
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength",
+   "change": "+4 snap scalars (default 0)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/M_LowPoly",
+   "change": "patched parent material (vertex snap, _LP)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/M_LowPolyGrass",
+   "change": "patched parent material (vertex snap, _LP)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/M_LowPolyWater",
+   "change": "patched parent material (vertex snap, _LP)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LevelPrototyping/Materials/M_FlatCol",
+   "change": "patched parent material (vertex snap)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/Meshy_AI_ローポリ風のサ_quadruped/Meshy_AI_ローポリ風のサ_quadruped/Material_1",
+   "change": "material instance reparented to M_RetroFBXPhong",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/Player/Material_001",
+   "change": "material instance reparented to M_RetroFBXPhong",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/mushitoriami/マテリアル",
+   "change": "material instance reparented to M_RetroFBXPhong",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/檻/cage_color",
+   "change": "material instance reparented to M_RetroFBXPhong",
+   "present": true
+  }
+ ],
+ "referenced": [
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Cliffs/MI_BGMountains",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPBGMountain01_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Cliffs/MI_RockCliffs",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPCliffRock01_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength",
+   "by": [
+    "/Game/Art/Rendering/Retro/MF_RetroVertexSnap_LP"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Plants/MI_Bushes",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPBush01_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPBush02_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Plants/MI_Grass",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPGrass01_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPGrass02_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPGrass03_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Rocks/MI_Rock",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPRock01_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPRock02_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPRock03_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Trees/MI_TreeLeaves",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree01_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree02_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree03_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Trees/MI_TreeTrunk",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPFence01_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree01_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree02_Retro",
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree03_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Trees/MI_TreeWood",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPFence01_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Water/MI_Lake",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPLake01_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Materials/Water/MI_River",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPRiverPlane01_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Cliffs/SM_LPBGMountain01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPBGMountain01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Cliffs/SM_LPCliffRock01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPCliffRock01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/HeroProps/SM_LPFence01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPFence01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPBush01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPBush02",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPBush02_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPGrass01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPGrass01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPGrass02",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPGrass02_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Plants/SM_LPGrass03",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPGrass03_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Rocks/SM_LPRock01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPRock01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Rocks/SM_LPRock02",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPRock02_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Rocks/SM_LPRock03",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPRock03_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Trees/SM_LPTree01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Trees/SM_LPTree02",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree02_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Trees/SM_LPTree03",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPTree03_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Water/SM_LPLake01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPLake01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LPRiverForest/Meshes/Water/SM_LPRiverPlane01",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_LPRiverPlane01_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LevelPrototyping/Materials/MI_DefaultColorway",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_ChamferCube_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/LevelPrototyping/Meshes/SM_ChamferCube",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/SM_ChamferCube_Retro",
+    "/Game/Art/Rendering/Retro/L_RetroCompare"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/檻/cage",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/cage_Retro"
+   ],
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/檻/cage_color",
+   "by": [
+    "/Game/Art/Rendering/Retro/Baked/cage_Retro"
+   ],
+   "present": true
+  }
+ ]
+}

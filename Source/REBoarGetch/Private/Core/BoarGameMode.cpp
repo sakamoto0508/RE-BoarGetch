@@ -36,6 +36,7 @@ void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 {
 	if (!IsValid(Boar) || !Boar->IsCaptured() || !CanAdvanceStage() || HandledCapturedBoars.Contains(Boar)) return;
 	HandledCapturedBoars.Add(Boar);
+	// 捕獲成立時の演出や報酬付与をBoarCaptureResolutionに委譲する。
 	BoarCaptureResolution::Resolve(GetWorld(), Boar, StageRunData, HealPickupClass, HealItemDropChance);
 	RefreshHousedBoarCount();
 }
@@ -47,11 +48,13 @@ void ABoarGameMode::StartPlay()
 	Super::StartPlay();
 	// BeginPlayは通常のライフサイクルに任せ、Stage用の初期化順だけを明示します。
 	SetStageActorsStopped(true);
-	for (TActorIterator<ACage> It(GetWorld()); It; ++It) It->InitializeForStage();
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It) 
+		It->InitializeForStage();
 	SpawnConfiguredBoars();
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] Boar spawning complete"));
 	SpawnConfiguredSpecialCoins();
-	for (TActorIterator<ABoarPlayerCharacter> It(GetWorld()); It; ++It) It->InitializeForStage();
+	for (TActorIterator<ABoarPlayerCharacter> It(GetWorld()); It; ++It) 
+		It->InitializeForStage();
 	// 今生成したBoarと装備も含め、演出完了まで進行を停止します。
 	SetStageActorsStopped(true);
 	bStageInitializationComplete = true;
@@ -85,7 +88,9 @@ void ABoarGameMode::SpawnConfiguredBoars()
 	}
 	if (!StageConfig->BoarSpawnDefinitions.IsEmpty())
 	{
+		// spawn point IDの重複を検出するために、IDをキーにしたマップを作成します。
 		TMap<FName, ABoarSpawnPoint*> ById;
+		// コピーしたIDを記録するためのセットを作成します。
 		TSet<FName> DuplicatePoints;
 		for (ABoarSpawnPoint* Point : SpawnPoints)
 		{
@@ -94,7 +99,8 @@ void ABoarGameMode::SpawnConfiguredBoars()
 			ById.Add(Point->SpawnPointId, Point);
 		}
 		TMap<FName, int32> IdCounts;
-		for (const FBoarSpawnDefinition& Entry : StageConfig->BoarSpawnDefinitions) ++IdCounts.FindOrAdd(Entry.BoarUniqueId);
+		for (const FBoarSpawnDefinition& Entry : StageConfig->BoarSpawnDefinitions) 
+			++IdCounts.FindOrAdd(Entry.BoarUniqueId);
 		for (TActorIterator<ABoarBase> It(World); It; ++It)
 			if (!It->BoarUniqueId.IsNone()) ++IdCounts.FindOrAdd(It->BoarUniqueId);
 		for (const FBoarSpawnDefinition& Entry : StageConfig->BoarSpawnDefinitions)
@@ -196,9 +202,10 @@ void ABoarGameMode::RefreshHousedBoarCount()
 {
 	if (!CanAdvanceStage()) return;
 	int32 Count = 0;
-	for (TActorIterator<ACage> It(GetWorld()); It; ++It) Count += It->GetCapturedBoarCount();
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It) 
+		Count += It->GetCapturedBoarCount();
 	for (auto It = HandledCapturedBoars.CreateIterator(); It; ++It)
-		if (!It->IsValid() || !It->Get()->IsCaptured()) It.RemoveCurrent();
+		if (!It->IsValid() || !It->Get()->IsCaptured())		It.RemoveCurrent();
 	CapturedBoarCount = Count;
 	StageRunData.CurrentHousedCount = Count;
 	OnCapturedBoarCountChanged.Broadcast(Count, StageConfig ? StageConfig->TargetCaptureCount : 0);
@@ -207,7 +214,7 @@ void ABoarGameMode::RefreshHousedBoarCount()
 
 void ABoarGameMode::RequestStageClear()
 {
-	// Preserve collection/count ordering for every target in a capture presentation batch.
+	// StageClearの演出が残っている場合は、演出完了までクリアを保留します。
 	if (auto* PC = GetWorld()->GetFirstPlayerController())
 		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
 			if (Presentation->HasPendingCaptures()) return;
@@ -279,8 +286,10 @@ void ABoarGameMode::CompleteStageEndPresentation()
 	ABoarPlayerController* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (!PC) return;
 	bEndUIShown = true;
-	if (StageState == EBoarStageState::Cleared) PC->HandleStageCleared(StageRunData, StageConfig->TargetCaptureCount);
-	else PC->HandleStageGameOver();
+	if (StageState == EBoarStageState::Cleared) 
+		PC->HandleStageCleared(StageRunData, StageConfig->TargetCaptureCount);
+	else 
+		PC->HandleStageGameOver();
 }
 
 void ABoarGameMode::SetStageActorsStopped(bool bStopped)
@@ -314,8 +323,10 @@ void ABoarGameMode::SetStageActorsStopped(bool bStopped)
 		if (bStopped) It->GetCharacterMovement()->DisableMovement();
 		else if (!It->IsCaptured()) It->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	}
-	for (TActorIterator<ACage> It(GetWorld()); It; ++It) It->SetStageStopped(bStopped);
-	for (TActorIterator<AGadgetBase> It(GetWorld()); It; ++It) It->SetStageStopped(bStopped);
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It) 
+		It->SetStageStopped(bStopped);
+	for (TActorIterator<AGadgetBase> It(GetWorld()); It; ++It) 
+		It->SetStageStopped(bStopped);
 }
 
 bool ABoarGameMode::RecordSpecialCoin(FName CoinId)
