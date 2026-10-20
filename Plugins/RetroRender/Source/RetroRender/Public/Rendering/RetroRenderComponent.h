@@ -16,6 +16,10 @@ class USceneComponent;
  *  - MPC_Retro scalars read by patched surface materials (vertex snap, affine UV, texel snap),
  *  - optional pipeline switches (AA, Lumen, modern post FX, clouds, low-res render) that are restored on OFF/unregister.
  * Works in the editor viewport (preview) and in PIE/game. Existing volumes, cameras and maps are not modified.
+ *
+ * One component drives a world: the first one registered owns it, later ones stay inert (logged) until the owner
+ * unregisters. Global CVars go through a process-wide request stack, so several worlds (editor + PIE clients)
+ * never restore each other's values.
  */
 UCLASS(ClassGroup=Rendering, meta=(BlueprintSpawnableComponent))
 class RETRORENDER_API URetroRenderComponent : public UActorComponent
@@ -49,6 +53,8 @@ public:
 	UFUNCTION(BlueprintPure, Category="Retro") FRetroRenderParameters GetEffectiveParameters() const;
 	UFUNCTION(BlueprintPure, Category="Retro") UMaterialInstanceDynamic* GetDynamicMaterial() const { return MID; }
 	UFUNCTION(BlueprintPure, Category="Retro") bool IsReady() const { return MID != nullptr; }
+	// True when this component drives its world (false for a duplicate in the same world).
+	UFUNCTION(BlueprintPure, Category="Retro") bool IsWorldOwner() const;
 	UFUNCTION(BlueprintPure, Category="Retro") bool IsRetroActive() const { return CurrentPreset != ERetroRenderPreset::OFF || bCRTOverlay; }
 
 #if WITH_EDITOR
@@ -75,5 +81,6 @@ private:
 	UPROPERTY(Transient) TArray<FRetroRenderParameters> Working;
 	UPROPERTY(Transient) ERetroRenderPreset CurrentPreset = ERetroRenderPreset::OFF;
 	TArray<TWeakObjectPtr<USceneComponent>> HiddenClouds;
-	TMap<FString, FString> SavedCVars;
+	void SetCVar(const TCHAR* Name, const FString& Value);
+	void ReleaseCVar(const TCHAR* Name);
 };

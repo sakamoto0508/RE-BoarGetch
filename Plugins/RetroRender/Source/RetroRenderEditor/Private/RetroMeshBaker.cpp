@@ -8,6 +8,8 @@
 #include "GameFramework/Actor.h"
 #include "ScopedTransaction.h"
 #include "StaticMeshResources.h"
+#include "UObject/MetaData.h"
+#include "UObject/Package.h"
 
 #define LOCTEXT_NAMESPACE "RetroMeshBaker"
 
@@ -17,6 +19,14 @@
 namespace RetroMeshBaker
 {
 	static const FString TagPrefix = TEXT("RetroOriginalMesh=");
+	// Package metadata written on every bake: identifies assets this tool owns and may re-bake.
+	static const TCHAR* BakedFromKey = TEXT("RetroRender.BakedFrom");
+
+	static FString BakedFrom(UStaticMesh* Mesh)
+	{
+		FMetaData& Meta = Mesh->GetPackage()->GetMetaData();
+		return Meta.HasValue(Mesh, BakedFromKey) ? Meta.GetValue(Mesh, BakedFromKey) : FString();
+	}
 
 	static FString OutputPackagePath(UStaticMesh* Source, const URetroDecimateOptions& Options)
 	{
@@ -37,6 +47,23 @@ namespace RetroMeshBaker
 		const FString Name = Source->GetName() + Options.Suffix;
 		const FString ObjectPath = Path / Name + TEXT(".") + Name;
 		UStaticMesh* Baked = LoadObject<UStaticMesh>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		if (Baked)
+		{
+			const FString Origin = BakedFrom(Baked);
+			if (Origin != Source->GetPathName())
+			{
+				R.Note = Origin.IsEmpty() ? TEXT("SKIPPED: an asset with this name exists and was not created by the baker")
+					: TEXT("SKIPPED: existing bake belongs to ") + Origin;
+				return R;
+			}
+			if (!Options.bOverwriteExisting)
+			{
+				R.Baked = Baked;
+				R.BakedTriangles = Baked->GetNumTriangles(0);
+				R.Note = TEXT("kept existing bake (enable Overwrite Existing to re-bake)");
+				return R;
+			}
+		}
 		if (!Baked)
 		{
 			IAssetTools& Tools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
@@ -66,6 +93,7 @@ namespace RetroMeshBaker
 			Baked->SetNaniteSettings(Nanite);
 		}
 		if (Options.bKeepOriginalComplexCollision) Baked->ComplexCollisionMesh = Source;
+		Baked->GetPackage()->GetMetaData().SetValue(Baked, BakedFromKey, *Source->GetPathName());
 		Baked->Build(true);
 		Baked->PostEditChange();
 		Baked->MarkPackageDirty();

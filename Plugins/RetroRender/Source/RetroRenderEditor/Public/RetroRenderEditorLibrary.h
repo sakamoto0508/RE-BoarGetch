@@ -26,6 +26,14 @@ public:
 	// for nodes that are referenced from the root set in UE 5.8; detached nodes are moved to the transient package.
 	UFUNCTION(BlueprintCallable, Category="Retro Render|Materials")
 	static int32 RemoveRetroExpressions(UObject* MaterialOrFunction, const TArray<UMaterialExpression*>& Expressions);
+	// Current value of a collection scalar in the given world (NaN when the collection/parameter is missing).
+	UFUNCTION(BlueprintCallable, Category="Retro Render|Verification", meta=(WorldContext="WorldContext"))
+	static float GetCollectionScalar(UObject* WorldContext, class UMaterialParameterCollection* Collection, FName Name);
+	// Registers an extra URetroRenderComponent on Host at runtime (ownership test); pass it to RemoveTestComponent.
+	UFUNCTION(BlueprintCallable, Category="Retro Render|Verification")
+	static class URetroRenderComponent* AddTestRetroComponent(AActor* Host);
+	UFUNCTION(BlueprintCallable, Category="Retro Render|Verification")
+	static void RemoveTestComponent(UActorComponent* Component);
 	// Pending shader jobs (0 = every material on screen uses its real shaders, not the default fallback).
 	UFUNCTION(BlueprintCallable, Category="Retro Render|Verification")
 	static int32 GetRemainingShaderJobs();
@@ -40,5 +48,5 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Retro Render|Meshes")
 	static TArray<UStaticMesh*> BakeRetroMeshes(const TArray<UStaticMesh*>& Meshes, FString& Report, float PercentTriangles = 0.15f,
 		int32 TargetTriangles = 0, int32 MinimumTriangles = 64, float HardAngleThreshold = 30.f, bool bRecalculateNormals = true,
-		const FString& OutputFolder = TEXT(""));
+		const FString& OutputFolder = TEXT(""), bool bOverwriteExisting = false);
 };

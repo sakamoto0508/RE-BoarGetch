@@ -316,6 +316,8 @@ if UNPATCH:
             lib.save_loaded_asset(mi)
             report['reparented'].append(mi_path)
     for path in TARGETS:
+        if not lib.does_asset_exist(path):
+            continue
         try:
             unpatch(path)
         except Exception as e:
@@ -330,6 +332,11 @@ else:
         lib.save_asset(FBX_COPY)
         log('duplicated %s -> %s' % (FBX_PHONG, FBX_COPY))
     for path, features in TARGETS.items():
+        if not lib.does_asset_exist(path):
+            # InportAssets is git-ignored: a checkout without that pack simply skips its materials.
+            report.setdefault('missing', []).append(path)
+            log('missing (pack not installed), skipped: ' + path)
+            continue
         try:
             if PURGE and lib.does_asset_exist(path):
                 m = unreal.load_asset(path)
@@ -350,6 +357,9 @@ else:
         if mi:
             candidates[mi.get_path_name()] = mi
     for mi in candidates.values():
+        parent = mi.get_editor_property('parent')
+        if parent and parent.get_path_name().split('.')[0] == FBX_PHONG:
+            backup(mi.get_path_name().split('.')[0])  # pristine copy before the first reparent
         mel.set_material_instance_parent(mi, copy)
         lib.save_loaded_asset(mi)
         report['reparented'].append(mi.get_path_name().split('.')[0])

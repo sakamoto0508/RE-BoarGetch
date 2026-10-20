@@ -23,6 +23,19 @@ args = unreal.SystemLibrary.get_command_line()
 lib.make_directory(ROOT)
 
 
+def _backup_package(path):
+    import shutil
+    content = Path(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()))
+    saved = Path(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()))
+    rel = path[len('/Game/'):] + '.uasset'
+    src, dst = content / rel, saved / 'RetroRender' / 'MaterialBackup' / rel
+    lp = unreal.load_asset(path)
+    names = {str(p.get_editor_property('parameter_name')) for p in lp.get_editor_property('scalar_parameters')} if lp else set()
+    if src.exists() and not dst.exists() and 'VertexSnapStrength' not in names:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+
+
 def main():
     global mpc
 
@@ -86,7 +99,10 @@ def main():
     snap_scalars = ['VertexSnapStrength', 'SnapResolutionX', 'SnapResolutionY', 'SnapMaxObjectRadius']
     lp_mpc = unreal.load_asset(LP_MPC) if lib.does_asset_exist(LP_MPC) else None
     if lp_mpc:
+        _backup_package(LP_MPC)  # git-ignored pack: keep the untouched file once (Saved/RetroRender/MaterialBackup)
         ensure_scalars(lp_mpc, snap_scalars)
+    else:
+        log('LowPoly pack not installed: MPC_UnlitStrength / MF_RetroVertexSnap_LP skipped')
 
     FLOAT1 = unreal.CustomMaterialOutputType.CMOT_FLOAT1
     FLOAT2 = unreal.CustomMaterialOutputType.CMOT_FLOAT2

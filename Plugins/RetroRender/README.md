@@ -7,7 +7,7 @@ Fabの「Retro Render」の公開仕様を参考にした独自実装で、製�
 
 | 層 | 実体 | 役割 |
 |---|---|---|
-| Runtime | `URetroRenderComponent` | 1つのunbound PostProcessでMIDを適用。`MPC_Retro`と`MPC_UnlitStrength`に形状系の値を書き込む。AA・Lumen反射・ポストFX・雲・低解像度描画の切り替えを、OFFや登録解除時に復元 |
+| Runtime | `URetroRenderComponent` | **1ワールドにつき1つ**（2つ目は警告ログを出して無効）。CVarはプロセス共通のリクエストスタックで管理し、最後の要求者が解放した時だけ元値へ戻す。1つのunbound PostProcessでMIDを適用。`MPC_Retro`と`MPC_UnlitStrength`に形状系の値を書き込む。AA・Lumen反射・ポストFX・雲・低解像度描画の切り替えを、OFFや登録解除時に復元 |
 | Runtime | `ARetroRenderActor` | レベルに置く設定アクタ（エディタのビューポートでもプレビュー可） |
 | Runtime | `ARetroCompareActor` | 比較・撮影用。Ctrl+Alt+F7のUMG、`+CRT`ボタン、自動撮影API |
 | Runtime | `FRetroRenderParameters` / `DA_RetroPresets` | プリセットの値。`GetRetroParameterDescriptors()`でマテリアル名・MPC名・UI範囲を一元管理 |
@@ -51,6 +51,27 @@ Fabの「Retro Render」の公開仕様を参考にした独自実装で、製�
 | 配置メッシュ | パネルで明示的に置換した場合のみ。元パスをComponentTagに保存（Undo可） | Meshes › Restore |
 
 **重要**：`SetupRetroAssets.py`は関数のInput/Outputノードを再利用します。作り直すと、呼び出し側マテリアルの接続がGUID不一致で外れるためです。変更後は必ず`CheckRetroMaterials.py`で確認してください。
+
+## InportAssets（git管理外）への依存と別環境での導入
+
+`Content/InportAssets/` は `.gitignore` 対象です。Stage1自体がこのフォルダの資産（LowPolyパック、LevelPrototyping、Player/Boar、網、檻）を使うため、プロジェクトを開くには元々このフォルダが必要です。RetroRenderが変更・参照するパッケージの一覧は `Docs/InportAssetsDependencies.md` にあり、`Scripts/InventoryInportAssets.py` で再生成できます。
+
+**別環境での導入**（`InportAssets` は従来どおりチーム内の共有手段で配置しておく）
+1. git checkoutしてビルド（`RetroRender` プラグインは自動で有効）
+2. 次のどちらかで、InportAssets側の変更を再現する
+   - **A. 再生成（推奨）**：エディタで `Scripts/SetupRetroAssets.py` → `Scripts/PatchRetroMaterials.py` を実行（`run_ue_gui.sh` でも可）。パッチは元のWPOチェーンを自動で検出して繋ぐので、未変更のパックからそのまま再現できる。パックがない場合、そのマテリアルは `missing` としてスキップされる。
+   - **B. バックアップから復元**：エディタを閉じた状態で `powershell -File Scripts/InportAssetsBackup.ps1 -Restore -Archive <zip>` を実行（SHA256で検証）
+3. `Scripts/CheckRetroMaterials.py` で11マテリアルが `OK` になることを確認
+
+**バックアップ**：`InportAssetsBackup.ps1 -Backup -Archive <zip>` で、変更済みの9パッケージとハッシュを1つのzipにまとめる。パッチを当てる前の未変更コピーは、パッチ／セットアップ実行時に `Saved/RetroRender/MaterialBackup` へ自動保存される（初回のみ）。そのコピーは `-Restore -Pristine` で書き戻せる。
+
+**元に戻す**：`PatchRetroMaterials.py -RetroUnpatch` で、マテリアルとMIの親が元に戻る。`MPC_UnlitStrength` に追加したスカラー4つは既定値0の不活性データとして残る。完全に元のファイルに戻すときは `-Restore -Pristine` を使う。
+
+## Decimate Bakerの上書き規則
+- `_Retro` アセットにはパッケージメタデータ `RetroRender.BakedFrom=<元メッシュ>` を付ける
+- 同名アセットが既にある場合、既定では**再Bakeせず既存を使う**（手作業の修正が保たれる）。`Overwrite Existing` をONにしたときだけ再Bakeする
+- 同名でもBaker製ではないもの、または別のソースから作られたものは**常にスキップ**する（上書きしない）
+- 再Bakeで三角形が減らなかった場合（Naniteのソースなど）は警告を出し、Replaceでは差し替えない
 
 ## 制約
 

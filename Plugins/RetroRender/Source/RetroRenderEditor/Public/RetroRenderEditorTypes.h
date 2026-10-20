@@ -58,6 +58,9 @@ public:
 	// Empty = next to the source mesh.
 	UPROPERTY(EditAnywhere, Category="Output", meta=(ContentDir)) FDirectoryPath OutputFolder;
 	UPROPERTY(EditAnywhere, Category="Output") FString Suffix = TEXT("_Retro");
+	// Off: an existing bake is kept as is (its manual edits survive). On: re-bake it with these settings.
+	// Assets with the target name that were not created by the baker are never overwritten.
+	UPROPERTY(EditAnywhere, Category="Output") bool bOverwriteExisting = false;
 };
 
 namespace RetroTextureUtility

@@ -10,9 +10,70 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
+#include "Misc/PackageName.h"
 #include "UObject/UObjectIterator.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRetroRender, Log, All);
+
+namespace RetroRenderState
+{
+	// The component that drives each world. Weak pointers: stale entries are treated as free.
+	TMap<TWeakObjectPtr<UWorld>, TWeakObjectPtr<URetroRenderComponent>>& Owners()
+	{
+		static TMap<TWeakObjectPtr<UWorld>, TWeakObjectPtr<URetroRenderComponent>> Map;
+		return Map;
+	}
+
+	// CVars are process-wide. Every requester keeps its own value; the newest live request wins and the value from
+	// before the first request is restored only when the last requester releases it.
+	struct FCVarEntry
+	{
+		FString Original;
+		TArray<TPair<TWeakObjectPtr<const UObject>, FString>> Requests;
+	};
+
+	TMap<FString, FCVarEntry>& CVars()
+	{
+		static TMap<FString, FCVarEntry> Map;
+		return Map;
+	}
+
+	void ApplyTop(const FString& Name, FCVarEntry& Entry)
+	{
+		Entry.Requests.RemoveAll([](const TPair<TWeakObjectPtr<const UObject>, FString>& R) { return !R.Key.IsValid(); });
+		if (IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(*Name))
+		{
+			Var->Set(Entry.Requests.IsEmpty() ? *Entry.Original : *Entry.Requests.Last().Value, ECVF_SetByCode);
+		}
+	}
+
+	void Push(const UObject* Owner, const TCHAR* Name, const FString& Value)
+	{
+		IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(Name);
+		if (!Var) return;
+		FCVarEntry* Entry = CVars().Find(Name);
+		if (!Entry)
+		{
+			Entry = &CVars().Add(Name);
+			Entry->Original = Var->GetString();
+		}
+		Entry->Requests.RemoveAll([Owner](const TPair<TWeakObjectPtr<const UObject>, FString>& R) { return R.Key.Get() == Owner; });
+		Entry->Requests.Emplace(Owner, Value);
+		ApplyTop(Name, *Entry);
+	}
+
+	void Release(const UObject* Owner, const TCHAR* Name)
+	{
+		FCVarEntry* Entry = CVars().Find(Name);
+		if (!Entry) return;
+		const int32 Removed = Entry->Requests.RemoveAll([Owner](const TPair<TWeakObjectPtr<const UObject>, FString>& R) { return R.Key.Get() == Owner; });
+		if (!Removed) return;
+		ApplyTop(Name, *Entry);
+		if (Entry->Requests.IsEmpty()) CVars().Remove(Name);
+	}
+
+	const TCHAR* const Managed[] = {TEXT("r.AntiAliasingMethod"), TEXT("r.ScreenPercentage"), TEXT("r.Upscale.Quality")};
+}
 
 URetroRenderComponent::URetroRenderComponent()
 {
@@ -21,6 +82,7 @@ URetroRenderComponent::URetroRenderComponent()
 	Material = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/Art/Rendering/Retro/M_RetroPost.M_RetroPost")));
 	PresetData = TSoftObjectPtr<URetroRenderPresetData>(FSoftObjectPath(TEXT("/Game/Art/Rendering/Retro/DA_RetroPresets.DA_RetroPresets")));
 	ParameterCollection = TSoftObjectPtr<UMaterialParameterCollection>(FSoftObjectPath(TEXT("/Game/Art/Rendering/Retro/MPC_Retro.MPC_Retro")));
+	// Optional (InportAssets, not in git): skipped silently when the LowPoly pack is not installed.
 	SharedCollections.Add(TSoftObjectPtr<UMaterialParameterCollection>(FSoftObjectPath(TEXT("/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength.MPC_UnlitStrength"))));
 }
 
@@ -54,9 +116,24 @@ void URetroRenderComponent::BeginPlay()
 	Apply();
 }
 
+bool URetroRenderComponent::IsWorldOwner() const
+{
+	const TWeakObjectPtr<URetroRenderComponent>* Owner = RetroRenderState::Owners().Find(GetWorld());
+	return Owner && Owner->Get() == this;
+}
+
 void URetroRenderComponent::Setup()
 {
 	if (MID) return;
+	UWorld* World = GetWorld();
+	TWeakObjectPtr<URetroRenderComponent>& Owner = RetroRenderState::Owners().FindOrAdd(World);
+	if (Owner.IsValid() && Owner.Get() != this && Owner->IsRegistered())
+	{
+		UE_LOG(LogRetroRender, Warning, TEXT("%s: %s already drives this world; this component stays inactive (one per world)."),
+			*GetPathName(), *Owner->GetPathName());
+		return;
+	}
+	Owner = this;
 	const URetroRenderPresetData* Data = PresetData.LoadSynchronous();
 	Defaults = (Data && Data->Presets.Num() == 5) ? Data->Presets : GetDefault<URetroRenderPresetData>()->Presets;
 	if (Working.Num() != 5) Working = Defaults;
@@ -65,12 +142,14 @@ void URetroRenderComponent::Setup()
 	if (Collection) Collections.Add(Collection);
 	for (const TSoftObjectPtr<UMaterialParameterCollection>& Shared : SharedCollections)
 	{
+		if (Shared.IsNull() || !FPackageName::DoesPackageExist(Shared.ToSoftObjectPath().GetLongPackageName())) continue;
 		if (UMaterialParameterCollection* Loaded = Shared.LoadSynchronous()) Collections.AddUnique(Loaded);
 	}
 	UMaterialInterface* Base = Material.LoadSynchronous();
 	if (!Base || Base->GetMaterial()->MaterialDomain != MD_PostProcess)
 	{
 		UE_LOG(LogRetroRender, Error, TEXT("Post process material missing/invalid. Run Plugins/RetroRender/Scripts/SetupRetroAssets.py."));
+		RetroRenderState::Owners().Remove(World);
 		return;
 	}
 	if (!Collection) UE_LOG(LogRetroRender, Warning, TEXT("MPC_Retro missing: geometry features (vertex snap, affine, texel snap) disabled."));
@@ -94,6 +173,8 @@ void URetroRenderComponent::Teardown()
 	if (PostProcess) PostProcess->DestroyComponent();
 	PostProcess = nullptr;
 	MID = nullptr;
+	Collections.Reset();
+	if (IsWorldOwner()) RetroRenderState::Owners().Remove(GetWorld());
 }
 
 void URetroRenderComponent::WriteCollections(const FRetroRenderParameters* Values)
@@ -240,51 +321,43 @@ void URetroRenderComponent::ApplyPipeline(const FRetroRenderParameters& P, bool 
 		HiddenClouds.Reset();
 	}
 
-	// Global CVars: only from a game world, original values saved once and restored on OFF/unregister.
+	// Global CVars: only from a game world, through the shared request stack (restored when released).
 	if (!IsGameWorld()) return;
-	auto SetCVar = [this](const TCHAR* Name, const FString& Value)
-	{
-		if (IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(Name))
-		{
-			if (!SavedCVars.Contains(Name)) SavedCVars.Add(Name, Var->GetString());
-			Var->Set(*Value, ECVF_SetByCode);
-		}
-	};
-	auto RestoreCVar = [this](const TCHAR* Name)
-	{
-		FString Original;
-		if (SavedCVars.RemoveAndCopyValue(Name, Original))
-		{
-			if (IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(Name)) Var->Set(*Original, ECVF_SetByCode);
-		}
-	};
 	if (bActive && P.bDisableTemporalAA) SetCVar(TEXT("r.AntiAliasingMethod"), TEXT("0"));
-	else RestoreCVar(TEXT("r.AntiAliasingMethod"));
+	else ReleaseCVar(TEXT("r.AntiAliasingMethod"));
 
 	FIntPoint ViewSize(0, 0);
 	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport()) if (Viewport->Viewport) ViewSize = Viewport->Viewport->GetSizeXY();
-	if (bActive && P.bLowResolutionRender && ViewSize.Y > 0)
+	const float LowResPercent = ViewSize.Y > 0 ? 100.f * FMath::Max(P.PixelResolutionY, 60.f) / ViewSize.Y : 100.f;
+	if (bActive && P.bLowResolutionRender && LowResPercent < 100.f)
 	{
-		const float Rows = FMath::Max(P.PixelResolutionY, 60.f);
-		SetCVar(TEXT("r.ScreenPercentage"), FString::SanitizeFloat(FMath::Clamp(100.f * Rows / ViewSize.Y, 10.f, 100.f)));
+		// Viewports already at or below the virtual resolution keep the project's own settings.
+		SetCVar(TEXT("r.ScreenPercentage"), FString::SanitizeFloat(FMath::Max(LowResPercent, 10.f)));
 		SetCVar(TEXT("r.Upscale.Quality"), TEXT("0"));
 	}
 	else
 	{
-		RestoreCVar(TEXT("r.ScreenPercentage"));
-		RestoreCVar(TEXT("r.Upscale.Quality"));
+		ReleaseCVar(TEXT("r.ScreenPercentage"));
+		ReleaseCVar(TEXT("r.Upscale.Quality"));
 	}
+}
+
+void URetroRenderComponent::SetCVar(const TCHAR* Name, const FString& Value)
+{
+	RetroRenderState::Push(this, Name, Value);
+}
+
+void URetroRenderComponent::ReleaseCVar(const TCHAR* Name)
+{
+	RetroRenderState::Release(this, Name);
 }
 
 void URetroRenderComponent::RestorePipeline()
 {
+	// Clouds back + every CVar request of this component released (other requesters keep theirs).
 	FRetroRenderParameters Off;
 	ApplyPipeline(Off, false);
-	for (const TPair<FString, FString>& Saved : SavedCVars)
-	{
-		if (IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(*Saved.Key)) Var->Set(*Saved.Value, ECVF_SetByCode);
-	}
-	SavedCVars.Reset();
+	for (const TCHAR* Name : RetroRenderState::Managed) ReleaseCVar(Name);
 }
 
 #if WITH_EDITOR
@@ -293,7 +366,13 @@ void URetroRenderComponent::PostEditChangeProperty(FPropertyChangedEvent& Event)
 	Super::PostEditChangeProperty(Event);
 	const FName Name = Event.GetMemberPropertyName();
 	if (Name == GET_MEMBER_NAME_CHECKED(URetroRenderComponent, InitialPreset)) CurrentPreset = InitialPreset;
-	if (Name == GET_MEMBER_NAME_CHECKED(URetroRenderComponent, bPreviewInEditor) && !bPreviewInEditor) Teardown();
+	if (Name == GET_MEMBER_NAME_CHECKED(URetroRenderComponent, bPreviewInEditor))
+	{
+		UWorld* World = GetWorld();
+		if (!bPreviewInEditor) Teardown();
+		// Turning preview back on must rebuild the blendable; OnRegister is not guaranteed to run again here.
+		else if (IsRegistered() && World && World->WorldType == EWorldType::Editor) Setup();
+	}
 	Apply();
 }
 #endif

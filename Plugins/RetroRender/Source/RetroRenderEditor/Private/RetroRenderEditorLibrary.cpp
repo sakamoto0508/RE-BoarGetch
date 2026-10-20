@@ -6,6 +6,10 @@
 #include "Materials/MaterialFunction.h"
 #include "UObject/Package.h"
 #include "ShaderCompiler.h"
+#include "Rendering/RetroRenderComponent.h"
+#include "GameFramework/Actor.h"
+#include "Materials/MaterialParameterCollection.h"
+#include "Materials/MaterialParameterCollectionInstance.h"
 #include "SRetroRenderPanel.h"
 #include "Slate/WidgetRenderer.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -28,6 +32,28 @@ bool URetroRenderEditorLibrary::RenderRetroPanelToPng(const FString& Path, int32
 	FImage Image;
 	if (!Target || !FImageUtils::GetRenderTargetImage(Target, Image)) return false;
 	return FImageUtils::SaveImageByExtension(*Path, Image);
+}
+
+float URetroRenderEditorLibrary::GetCollectionScalar(UObject* WorldContext, UMaterialParameterCollection* Collection, FName Name)
+{
+	UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
+	UMaterialParameterCollectionInstance* Instance = World && Collection ? World->GetParameterCollectionInstance(Collection) : nullptr;
+	float Value = NAN;
+	if (!Instance || !Instance->GetScalarParameterValue(Name, Value)) return NAN;
+	return Value;
+}
+
+URetroRenderComponent* URetroRenderEditorLibrary::AddTestRetroComponent(AActor* Host)
+{
+	if (!Host) return nullptr;
+	URetroRenderComponent* Component = NewObject<URetroRenderComponent>(Host, NAME_None, RF_Transient);
+	Component->RegisterComponent();
+	return Component;
+}
+
+void URetroRenderEditorLibrary::RemoveTestComponent(UActorComponent* Component)
+{
+	if (Component) Component->DestroyComponent();
 }
 
 int32 URetroRenderEditorLibrary::GetRemainingShaderJobs()
@@ -99,7 +125,7 @@ FString URetroRenderEditorLibrary::RevertRetroTextures(const TArray<UTexture2D*>
 }
 
 TArray<UStaticMesh*> URetroRenderEditorLibrary::BakeRetroMeshes(const TArray<UStaticMesh*>& Meshes, FString& Report, float PercentTriangles,
-	int32 TargetTriangles, int32 MinimumTriangles, float HardAngleThreshold, bool bRecalculateNormals, const FString& OutputFolder)
+	int32 TargetTriangles, int32 MinimumTriangles, float HardAngleThreshold, bool bRecalculateNormals, const FString& OutputFolder, bool bOverwriteExisting)
 {
 	URetroDecimateOptions* Options = NewObject<URetroDecimateOptions>();
 	Options->Mode = TargetTriangles > 0 ? ERetroDecimateMode::TargetTriangles : ERetroDecimateMode::Percent;
@@ -109,6 +135,7 @@ TArray<UStaticMesh*> URetroRenderEditorLibrary::BakeRetroMeshes(const TArray<USt
 	Options->HardAngleThreshold = HardAngleThreshold;
 	Options->bRecalculateNormals = bRecalculateNormals;
 	Options->OutputFolder.Path = OutputFolder;
+	Options->bOverwriteExisting = bOverwriteExisting;
 	TArray<RetroMeshBaker::FResult> Results;
 	TArray<UStaticMesh*> Baked;
 	for (UStaticMesh* Mesh : Meshes)
