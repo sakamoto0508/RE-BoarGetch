@@ -1,5 +1,10 @@
 # RE-BoarGetch レトロ描画比較
 
+> **2026-10-20 更新**：レトロ描画は `Plugins/RetroRender` に移動・拡張しました（頂点スナップ、アフィン、テクセルスナップ、
+> Texture/Mesh ユーティリティ、Editorタブ）。最新の構成・復元方法は [Plugins/RetroRender/README.md](../../../Plugins/RetroRender/README.md) を参照。
+> 以下は 2026-10-16 時点（ポストプロセスのみ）の記録です。`M_RetroCompare` は `M_RetroPost` に置き換え済み。
+
+
 ## 起動・操作
 
 UE5.8で `/Game/Art/Rendering/Retro/L_RetroCompare` を開き、PIEを開始します。

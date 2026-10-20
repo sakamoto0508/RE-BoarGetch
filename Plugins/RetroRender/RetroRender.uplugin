@@ -1,0 +1,13 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Retro Render",
+	"Description": "PS1 / N64 / PS2 / CRT look: post process, MPC-driven vertex snapping, affine mapping, texture and mesh retro utilities.",
+	"Category": "Rendering",
+	"CanContainContent": false,
+	"Modules": [
+		{ "Name": "RetroRender", "Type": "Runtime", "LoadingPhase": "Default" },
+		{ "Name": "RetroRenderEditor", "Type": "Editor", "LoadingPhase": "Default" }
+	]
+}
