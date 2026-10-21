@@ -156,6 +156,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool IsStaminaRecovering() const { return bIsRecoveringStamina; }
 
+	/** DataAssetから適用された通常時の移動速度を返します。アニメーションの速度正規化に使用します。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
+	float GetBaseWalkSpeed() const { return BaseWalkSpeed; }
+
 	/** 旧来の固定巡回ルートを返します。現在のランダムNavMesh巡回では未使用です。 */
 	UFUNCTION(BlueprintPure)
 	APatrolPath* GetPatrolPath() const { return PatrolPath; }
