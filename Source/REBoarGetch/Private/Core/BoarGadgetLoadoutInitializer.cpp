@@ -1,34 +1,34 @@
 #include "Core/BoarGadgetLoadoutInitializer.h"
 #include "Component/GadgetComponent.h"
 #include "Core/BoarGameInstance.h"
-#include "Core/BoarGameMode.h"
 #include "Core/BoarFacilityGameMode.h"
 #include "Gadget/BoarGadgetSubsystem.h"
-#include "Player/BoarPlayerCharacter.h"
+#include "Gadget/GadgetBase.h"
 #include "Engine/World.h"
 
-void BoarGadgetLoadoutInitializer::Initialize(UGadgetComponent *Component, bool bAllowStageDeferral)
+FBoarGadgetLoadoutContext BoarGadgetLoadoutInitializer::ResolveContext(UWorld* World)
 {
-	if (!Component || !Component->GetWorld() || Component->IsLoadoutInitialized())
-		return;
-	UWorld *World = Component->GetWorld();
-	const auto *Stage = World->GetAuthGameMode<ABoarGameMode>();
-	if (bAllowStageDeferral && Cast<ABoarPlayerCharacter>(Component->GetOwner()) && Stage &&
-		Stage->GetStageState() == EBoarStageState::Preparing)
-		return;
+	FBoarGadgetLoadoutContext Context;
+	if (!World) return Context;
+	const auto* Instance = World->GetGameInstance<UBoarGameInstance>();
+	Context.Progress = Instance ? Instance->GetSubsystem<UBoarGadgetSubsystem>() : nullptr;
+	const auto* Facility = World->GetAuthGameMode<ABoarFacilityGameMode>();
+	Context.bTemporary = Facility && Facility->bGadgetTest;
+	if (Context.bTemporary) Context.TestGadgetClass = Facility->TestGadgetClass;
+	return Context;
+}
 
-	const auto *Instance = World->GetGameInstance<UBoarGameInstance>();
-	auto *Progress = Instance ? Instance->GetSubsystem<UBoarGadgetSubsystem>() : nullptr;
+bool BoarGadgetLoadoutInitializer::Initialize(UGadgetComponent* Component, const FBoarGadgetLoadoutContext& Context)
+{
+	if (!Component) return false;
+	if (Component->IsLoadoutInitialized()) return true;
 	TArray<TSubclassOf<AGadgetBase>> Slots = Component->GetDefaultGadgetSlots();
 	Slots.SetNum(UGadgetComponent::GetGadgetSlotCount());
-	if (Progress)
-		Progress->RestoreSavedLoadout(Slots);
-	const auto *Facility = World->GetAuthGameMode<ABoarFacilityGameMode>();
-	const bool bTemporary = Facility && Facility->bGadgetTest;
-	if (bTemporary && Facility->TestGadgetClass)
+	if (Context.Progress) Context.Progress->RestoreSavedLoadout(Slots);
+	if (Context.bTemporary && Context.TestGadgetClass)
 	{
 		Slots.Init(nullptr, UGadgetComponent::GetGadgetSlotCount());
-		Slots[0] = Facility->TestGadgetClass;
+		Slots[0] = Context.TestGadgetClass;
 	}
-	Component->InitializeResolvedLoadout(Slots, Progress, bTemporary);
+	return Component->InitializeResolvedLoadout(Slots, Context.Progress, Context.bTemporary);
 }

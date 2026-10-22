@@ -18,6 +18,31 @@ Fabの「Retro Render」の公開仕様を参考にした独自実装で、製�
 
 コンソール：`Retro.Preset PS1|N64|PS2|CRT|OFF`、`Retro.CRT 1`、`Retro.Set VertexSnapStrength 0.5`
 
+## プロジェクト全体への適用（常時オン）
+
+**Project Settings › Plugins › Retro Render**（`Config/DefaultGame.ini` の `[/Script/RetroRender.RetroRenderSettings]`）
+
+| 項目 | 既定値 | 内容 |
+|---|---|---|
+| Auto Apply In Game | ON | すべてのゲームワールド（PIE／パッケージ版）の開始時に、`URetroRenderWorldSubsystem` が一時アクタ `RetroRender_ProjectDefault` を生成する（レベルには保存されない） |
+| Default Preset | PS1 | 自動適用するプリセット |
+| Default CRT Overlay | ON | CRTレイヤーを重ねる |
+| Excluded Maps | なし | 自動適用しないマップ |
+
+レベルに `Retro Render Settings` または `RetroCompareActor` が置いてある場合は、そちらが優先される（1ワールドにつき1つ）。プレイ中の切り替えは、従来どおりコンソールの `Retro.Preset` や `Retro.CRT` で行う。OFFにすると、自動適用中でも元の描画に戻る。
+
+頂点スナップなどの形状系の効果は、パッチを当てた親マテリアルだけに効く。対象はL_Stage01、L_Lobby、L_GadgetLab、L_Archiveで使われているプロジェクトマテリアル（`PatchRetroMaterials.py` の `TARGETS`、計29個）。エンジン／Interchange由来のマテリアル（BasicShape、glTF）、空（`M_Facility_Sky`）、`M_LowPolyTerrain` はポストプロセスのみが効く。
+
+## 新しいレベル・マテリアルへの対応（ツール）
+
+- **レベルごとの作業は不要**。ポストプロセス（画素化・色数・ディザ・CRT）はプロジェクト設定によって全ゲームワールドに自動で効く。
+- 頂点スナップなど形状系の効果は、**新しい親マテリアル**に一度だけパッチを当てれば、そのマテリアルを使うすべてのレベルで有効になる。
+  1. レベルを開くと、未パッチのマテリアルがあれば通知が出る（Project Settings › Retro Render › Notify Unpatched Materials でOFFにできる）
+  2. Tools › Retro Render › Look の **Scan Level Materials** で一覧を確認する（何も変更しない）
+  3. **Patch Level Materials** を押すと、確認ダイアログのあと `[patch]`／`[reparent]` の対象だけを処理する（事前にバックアップを取り、失敗した場合はメモリ上で元に戻すので、壊れた状態でdirtyにならない）
+- 自動でスキップされるもの：エンジン／プラグイン由来のマテリアル、Sky、Material Attributesのグラフ、すでにパラメータコレクションを2つ使っているもの。理由は一覧に表示される。
+- 見つけたマテリアルは `PatchRetroMaterials.json` の `auto_targets` に記録され、`-RetroUnpatch` と `CheckRetroMaterials.py` の対象にも含まれる。
+
 ## 各機能の実装方式
 
 - **Pixelation**：仮想グリッドの中心を1回だけサンプリングするUV量子化（最近傍）。`PixelResolutionX=0`のときは正方形ピクセル（240行なら16:9で427列、4:3で320列）。`IntegerScale`は1ブロックを整数ピクセルにそろえる設定で、1080pでは270行になる。`bLowResolutionRender`は実際に低解像度で描画する（`r.ScreenPercentage`＋最近傍アップスケール、ゲームワールドのみ）。

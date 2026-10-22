@@ -53,4 +53,5 @@ private:
 	bool bCRTOverlay = false;
 	FString TextureReport;
 	FString MeshReport;
+	FString LevelReport;
 };

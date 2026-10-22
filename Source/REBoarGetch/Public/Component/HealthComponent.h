@@ -23,6 +23,9 @@ class REBOARGETCH_API UHealthComponent : public UActorComponent
 public:
 	/** Tickを使用しないHP管理Componentの初期状態を構築します。 */
 	UHealthComponent();
+	/** 初期化済みならHPを維持します。開始処理の所有者から先に呼べます。 */
+	bool InitializeHealth();
+	bool IsHealthInitialized() const { return bHealthInitialized; }
 
 	/** ダメージを受けます */
 	UFUNCTION(BlueprintCallable, Category="Health")
@@ -61,6 +64,7 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	bool bHealthInitialized = false;
 	/**
 	 * 最大 HP です（プレイヤー仕様に合わせて5スタック想定）。
 	 * BP で調整できるようにしています。

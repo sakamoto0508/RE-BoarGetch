@@ -29,9 +29,16 @@ ABoarBase::ABoarBase()
 void ABoarBase::BeginPlay()
 {
 	Super::BeginPlay();
+	InitializeForStage();
+}
+
+void ABoarBase::InitializeForStage()
+{
+	if (bSettingsInitialized) return;
 	ApplyArchetypeDefaults();
 	CurrentStamina = MaxStamina;
 	SetActorTickEnabled(bUseStamina);
+	bSettingsInitialized = true;
 }
 
 // Tickが有効なのは原則としてスタミナ対応かつ未捕獲の個体だけ。

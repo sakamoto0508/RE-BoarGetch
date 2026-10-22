@@ -53,6 +53,8 @@ public:
 	UFUNCTION(BlueprintPure, Category="Retro") FRetroRenderParameters GetEffectiveParameters() const;
 	UFUNCTION(BlueprintPure, Category="Retro") UMaterialInstanceDynamic* GetDynamicMaterial() const { return MID; }
 	UFUNCTION(BlueprintPure, Category="Retro") bool IsReady() const { return MID != nullptr; }
+	// The component that currently drives World (null when none is registered).
+	static URetroRenderComponent* FindWorldOwner(const UWorld* World);
 	// True when this component drives its world (false for a duplicate in the same world).
 	UFUNCTION(BlueprintPure, Category="Retro") bool IsWorldOwner() const;
 	UFUNCTION(BlueprintPure, Category="Retro") bool IsRetroActive() const { return CurrentPreset != ERetroRenderPreset::OFF || bCRTOverlay; }

@@ -2,6 +2,9 @@
 
 Patch : UnrealEditor-Cmd REBoarGetch.uproject -run=pythonscript -script=<this> -unattended -nosplash -NullRHI
 Revert: same with -RetroUnpatch
+Level : -RetroLevelScan [-RetroDryRun] patches the parent materials used by the level open in the editor
+        (Retro Render panel > Look > "Patch Level Materials"). Newly found materials are remembered in the JSON
+        record ('auto_targets') so -RetroUnpatch and CheckRetroMaterials.py cover them too.
 
 Every inserted node is tagged with Description "RetroRender..." and driven by MPC_Retro whose defaults are 0,
 so without an active URetroRenderComponent the materials output the same values as before:
@@ -15,6 +18,7 @@ Writes Plugins/RetroRender/Scripts/PatchRetroMaterials.json.
 """
 from pathlib import Path
 import json
+import sys
 import unreal
 
 HERE = Path(__file__).resolve().parent
@@ -23,7 +27,11 @@ ROOT = '/Game/Art/Rendering/Retro'
 TAG = 'RetroRender'
 lib = unreal.EditorAssetLibrary
 mel = unreal.MaterialEditingLibrary
-args = unreal.SystemLibrary.get_command_line()
+# Flags come from the editor command line (batch runs) or from sys.argv (run from the Retro Render panel).
+args = unreal.SystemLibrary.get_command_line() + ' ' + ' '.join(sys.argv[1:])
+LEVEL_SCAN = '-RetroLevelScan' in args
+DRY_RUN = '-RetroDryRun' in args
+SCAN_RESULT = Path(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir())) / 'RetroRender' / 'LevelScan.json'
 UNPATCH = '-RetroUnpatch' in args
 CAN_DELETE = True  # RemoveRetroExpressions works in commandlets too
 # Removing "unused" tagged nodes is opt-in: if a function's outputs were ever re-created, live nodes look unused.
@@ -48,7 +56,33 @@ TARGETS = {
     '/Game/BP/Cage/Materials/M_Cage_Glow': {'snap'},
     '/Game/BP/Cage/Materials/M_Cage_Navy': {'snap'},
     FBX_COPY: {'snap', 'texel', 'uv'},
+    # Cage materials copied to /Game/Art/Materials/Cage (used by L_Stage01); copies of the patched ones above.
+    '/Game/Art/Materials/Cage/M_Cage_White': {'snap'},
+    '/Game/Art/Materials/Cage/M_Cage_Yellow': {'snap'},
+    '/Game/Art/Materials/Cage/M_Cage_Glow': {'snap'},
+    '/Game/Art/Materials/Cage/M_Cage_Navy': {'snap'},
+    # L_Stage01 (new Stage1): Farm_House trims.
+    '/Game/InportAssets/Farm_House/Materials/MM_Hybrid_Trim': {'snap'},
+    # Lobby / GadgetLab / Archive. Flat-colour or emissive surfaces: vertex snap only. The facility sky is not
+    # snapped (a sky must not wobble); Interchange glTF / engine BasicShape materials are engine content.
+    '/Game/Lobby/Materials/M_Lobby_CyanEdge': {'snap'},
+    '/Game/Lobby/Materials/M_Architecture_SoftWhite': {'snap'},
+    '/Game/Lobby/Materials/M_Architecture_CeilingWhite': {'snap'},
+    '/Game/Lobby/Materials/M_StageSelect_HoloPanel': {'snap'},
+    '/Game/Lobby/Materials/M_Facility_ExhibitHologram': {'snap'},
+    '/Game/Lobby/Materials/M_Lobby_ResearchHologram': {'snap'},
+    '/Game/Lobby/Materials/M_DataPortal_Tunnel': {'snap'},
+    '/Game/InportAssets/Clinic/Materials/M_Default_Master': {'snap'},
+    '/Game/InportAssets/Clinic/Materials/M_Translucent_Master': {'snap'},
+    '/Game/InportAssets/Clinic/Materials/M_Lights': {'snap'},
+    '/Game/InportAssets/Clinic/Materials/M_Screen': {'snap'},
+    '/Game/InportAssets/Clinic/Materials/M_Grid': {'snap'},
+    '/Game/InportAssets/Clinic/Materials/M_Grid2': {'snap'},
 }
+# Materials found by -RetroLevelScan in earlier runs.
+if RECORD.exists():
+    for _path, _features in json.loads(RECORD.read_text(encoding='utf-8')).get('auto_targets', {}).items():
+        TARGETS.setdefault(_path, set(_features))
 MF = {name: unreal.load_asset(ROOT + '/' + name) for name in
       ['MF_RetroVertexSnap', 'MF_RetroVertexSnap_LP', 'MF_RetroAffine3', 'MF_RetroAffine2', 'MF_RetroTexel']}
 assert all(MF.values()), 'Run SetupRetroAssets.py first'
@@ -154,6 +188,20 @@ def snap_function(features):
 
 
 def patch(path, features):
+    try:
+        _patch(path, features)
+    except Exception:
+        m = unreal.load_asset(path)
+        if m and is_patched(m):
+            try:
+                unpatch(path, save=False)
+                log('rolled back failed patch in memory: ' + path)
+            except Exception as rollback_error:
+                unreal.log_error('[RetroPatch] rollback failed for %s: %s' % (path, rollback_error))
+        raise
+
+
+def _patch(path, features):
     m = unreal.load_asset(path)
     wanted = MF[snap_function(features)]
     for e in mel.get_material_expressions(m):
@@ -248,7 +296,7 @@ def patch(path, features):
     log('patched %s: %s' % (path, '; '.join(done)))
 
 
-def unpatch(path):
+def unpatch(path, save=True):
     if not lib.does_asset_exist(path):
         return
     m = unreal.load_asset(path)
@@ -288,6 +336,8 @@ def unpatch(path):
     errors = mel.recompile_material(m)
     if errors:
         raise RuntimeError('compile: %s' % errors)
+    if not save:
+        return
     lib.save_loaded_asset(m)
     report['patched'][path] = ['reverted']
     log('reverted ' + path)
@@ -306,7 +356,101 @@ def project_instances_of(parent_path):
     return found
 
 
-if UNPATCH:
+def collections_used(material):
+    """Distinct MaterialParameterCollections referenced by the material graph (one function level deep)."""
+    found = set()
+    for e in mel.get_material_expressions(material):
+        if isinstance(e, unreal.MaterialExpressionCollectionParameter) and e.get_editor_property('collection'):
+            found.add(e.get_editor_property('collection').get_path_name())
+        if isinstance(e, unreal.MaterialExpressionMaterialFunctionCall):
+            f = e.get_editor_property('material_function')
+            if isinstance(f, unreal.MaterialFunction):
+                for fe in mel.get_material_function_expressions(f):
+                    if isinstance(fe, unreal.MaterialExpressionCollectionParameter) and fe.get_editor_property('collection'):
+                        found.add(fe.get_editor_property('collection').get_path_name())
+    return found
+
+
+def scan_level():
+    """{base material path: (decision, detail)} for every primitive in the editor's current level."""
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    bases = {}
+    fbx_instances = {}
+    for actor in unreal.get_editor_subsystem(unreal.EditorActorSubsystem).get_all_level_actors():
+        for comp in actor.get_components_by_class(unreal.PrimitiveComponent):
+            for i in range(comp.get_num_materials()):
+                mi = comp.get_material(i)
+                base = mi.get_base_material() if mi else None
+                if base:
+                    bases.setdefault(base.get_path_name().split('.')[0], [base, 0])[1] += 1
+                    if base.get_path_name().split('.')[0] == FBX_PHONG and isinstance(mi, unreal.MaterialInstanceConstant)                             and mi.get_path_name().startswith('/Game/'):
+                        fbx_instances[mi.get_path_name()] = mi
+    lp_mpc = '/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength.MPC_UnlitStrength'
+    decisions = {}
+    for path, (base, uses) in sorted(bases.items()):
+        name = path.split('/')[-1]
+        if path == FBX_PHONG:
+            decisions[path] = ('reparent', '%d FBX instance(s) -> M_RetroFBXPhong' % len(fbx_instances), uses)
+        elif not path.startswith('/Game/'):
+            decisions[path] = ('skip', 'engine/plugin content', uses)
+        elif base.get_editor_property('material_domain') != unreal.MaterialDomain.MD_SURFACE:
+            decisions[path] = ('skip', 'not a surface material', uses)
+        elif 'sky' in name.lower():
+            decisions[path] = ('skip', 'sky (must not wobble)', uses)
+        elif base.get_editor_property('use_material_attributes'):
+            decisions[path] = ('skip', 'Material Attributes graph (not supported)', uses)
+        elif is_patched(base):
+            decisions[path] = ('ok', 'already patched', uses)
+        else:
+            used = collections_used(base)
+            if lp_mpc in used:
+                decisions[path] = ('patch', 'snap_lp', uses)
+            elif len(used) >= 2:
+                decisions[path] = ('skip', 'already uses 2 parameter collections (UE limit)', uses)
+            else:
+                decisions[path] = ('patch', 'snap', uses)
+    return world.get_name() if world else '?', decisions, list(fbx_instances.values())
+
+
+if LEVEL_SCAN:
+    level_name, decisions, fbx_instances = scan_level()
+    outcome = {'level': level_name, 'dry_run': DRY_RUN, 'materials': {}}
+    previous = json.loads(RECORD.read_text(encoding='utf-8')) if RECORD.exists() else {}
+    auto = previous.get('auto_targets', {})
+    for path, (decision, detail, uses) in decisions.items():
+        entry = {'decision': decision, 'detail': detail, 'uses': uses}
+        if decision == 'patch' and not DRY_RUN:
+            features = {detail}
+            try:
+                patch(path, features)
+                entry['decision'] = 'patched'
+                auto[path] = sorted(features)
+            except Exception as e:
+                entry['decision'] = 'failed'
+                entry['detail'] = str(e)[:300]
+                unreal.log_error('[RetroPatch] %s: %s' % (path, e))
+        outcome['materials'][path] = entry
+    copy = unreal.load_asset(FBX_COPY) if lib.does_asset_exist(FBX_COPY) else None
+    if fbx_instances and copy and not DRY_RUN:
+        for mi in fbx_instances:
+            mi_path = mi.get_path_name().split('.')[0]
+            backup(mi_path)
+            mel.set_material_instance_parent(mi, copy)
+            lib.save_loaded_asset(mi)
+            previous.setdefault('reparented', [])
+            if mi_path not in previous['reparented']:
+                previous['reparented'].append(mi_path)
+        outcome['materials'][FBX_PHONG]['decision'] = 'reparented'
+    if not DRY_RUN:
+        previous['auto_targets'] = auto
+        RECORD.write_text(json.dumps(previous, ensure_ascii=False, indent=1), encoding='utf-8')
+    SCAN_RESULT.parent.mkdir(parents=True, exist_ok=True)
+    SCAN_RESULT.write_text(json.dumps(outcome, ensure_ascii=False, indent=1), encoding='utf-8')
+    counts = {}
+    for entry in outcome['materials'].values():
+        counts[entry['decision']] = counts.get(entry['decision'], 0) + 1
+    log('LEVEL SCAN %s %s: %s' % (level_name, '(dry run)' if DRY_RUN else '', counts))
+elif UNPATCH:
     previous = json.loads(RECORD.read_text(encoding='utf-8')) if RECORD.exists() else {}
     original = unreal.load_asset(FBX_PHONG)
     for mi_path in previous.get('reparented', []):
@@ -367,7 +511,10 @@ else:
     report['mode'] = 'patch'
     previous = json.loads(RECORD.read_text(encoding='utf-8')) if RECORD.exists() else {}
     report['reparented'] = sorted(set(report['reparented']) | set(previous.get('reparented', [])))
-RECORD.write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding='utf-8')
+if not LEVEL_SCAN:
+    # Keep the materials discovered by level scans across normal patch/unpatch runs.
+    report['auto_targets'] = (json.loads(RECORD.read_text(encoding='utf-8')) if RECORD.exists() else {}).get('auto_targets', {})
+    RECORD.write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding='utf-8')
 log('COMPLETE errors=%d' % len(report['errors']))
 
 if '-RetroQuit' in unreal.SystemLibrary.get_command_line():

@@ -34,10 +34,8 @@ class REBOARGETCH_API UGadgetComponent : public UActorComponent
 public:
 	/** Tickを使用しないガジェット管理Componentの初期状態を構築します。 */
 	UGadgetComponent();
-	/** 保存済み装備の復元と初期装備を一度だけ実行します。 */
-	void InitializeForStage();
     /** Coordinator supplies resolved slots and persistence policy before first equip. */
-    void InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots, UBoarGadgetSubsystem* Progress, bool bTemporary);
+    bool InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots, UBoarGadgetSubsystem* Progress, bool bTemporary);
     const TArray<TSubclassOf<AGadgetBase>>& GetDefaultGadgetSlots() const { return DefaultGadgetSlots; }
     bool IsLoadoutInitialized() const { return bStageInitialized; }
     bool IsTemporaryLoadout() const { return bTemporaryLoadout; }
@@ -125,11 +123,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	EGadgetUseStyle GetCurrentGadgetUseStyle() const;
 	
-protected:
-	// Called when the game starts
-	/** 所有Pawnを取得し、初期スロットと初期装備を準備します。 */
-	virtual void BeginPlay() override;
-
 private:
 	bool SaveCurrentLoadout();
 	bool bLastLoadoutSaveSuccessful = false;

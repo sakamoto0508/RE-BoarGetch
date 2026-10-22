@@ -12,6 +12,7 @@ class UCameraComponent;
 class USpringArmComponent;
 class UPrimitiveComponent;
 class ABoarBase;
+struct FBoarGadgetLoadoutContext;
 struct FHitResult;
 
 /** アニメーションや入力可否の判断に使用するプレイヤーの行動状態です。 */
@@ -37,7 +38,9 @@ enum class EPlayerActionState : uint8
 	/** 捕獲処理を実行している状態です。 */
 	Capture,
 	/** ポーズ中の表示状態。中断前の実行状態は保持します。 */
-	Menu
+	Menu,
+	/** HP0でダウンした状態。GameOver演出のダウンアニメを再生し、通常状態へ戻りません。 */
+	Down
 };
 
 /**
@@ -61,8 +64,9 @@ public:
 
 	/** Component、カメラ、移動設定を含むプレイヤーの初期状態を構築します。 */
 	ABoarPlayerCharacter();
-	/** GameModeがCage初期化とBoar生成の後に一度だけ呼びます。 */
-	void InitializeForStage();
+	/** GameModeが解決した依存先を受け取り、HPと装備を一度だけ準備します。 */
+	bool InitializeForPlay(const FBoarGadgetLoadoutContext& Context);
+	bool IsReadyForPlay() const { return bStageInitialized; }
 
 private:
 	bool bStageInitialized = false;
@@ -161,6 +165,10 @@ public:
 	}
 	void SetMenuOpen(bool bOpen) { bMenuOpen = bOpen; }
 
+	/** HP0でダウンしているかを返します。ダウン後はStun・移動・ガジェットへ戻りません。 */
+	UFUNCTION(BlueprintPure, Category = "Player")
+	bool IsDowned() const { return bIsDowned; }
+
 	/** ガジェット使用中かを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Player|Gadget")
 	bool IsGadgetInUse() const
@@ -182,12 +190,23 @@ private:
 	void OnCapsuleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	/** PlayerとBoarのCapsuleは互いにPawnをBlockするためOverlapが発生しません。Blocking Hitも同じ接触判定へ渡します。 */
+	UFUNCTION()
+	void OnCapsuleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		FVector NormalImpulse, const FHitResult& Hit);
+
+	/** Boarとの接触でダメージ/スタン/無敵（HP0ではダウン）を開始します。 */
+	void HandleBoarContact(AActor* OtherActor);
+
 	/** 死亡イベント受信時にGameModeへ通知します。 */
 	UFUNCTION()
 	void OnDeath();
 
 	/** 移動停止を伴うスタン状態を開始します。 */
 	void BeginStun();
+
+	/** HP0時にStunの代わりに呼び、行動を止めてダウン状態にします（ダウンアニメはGameOver演出が再生）。 */
+	void EnterDowned();
 	
 	/** スタン終了後に通常移動へ復帰します。 */
 	void EndStun();
@@ -287,6 +306,8 @@ private:
 	bool bIsStunned = false;
 	/** 接触ダメージを重複して受けない無敵時間中かを表します。 */
 	bool bIsInvincible = false;
+	/** HP0でダウンした状態です。Stun終了Timer等で通常状態へ戻さないためのガードです。 */
+	bool bIsDowned = false;
 	/** ガジェットの開始から共通終了処理までの使用中状態を表します。 */
 	bool bIsGadgetInUse = false;
 	/** 直前の移動更新で入力が存在したかを保持し、状態更新の重複を抑えます。 */

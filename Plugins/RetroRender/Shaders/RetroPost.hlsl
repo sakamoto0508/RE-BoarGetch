@@ -20,6 +20,16 @@ float2 sampleUV = lerp(uv, snapped, Pixelation);
 #define RETRO_TAP(p) SceneTextureLookup(ClampSceneTextureUV(ViewportUVToSceneTextureUV(saturate(p), 14), 14), 14, false).rgb
 float3 color = RETRO_TAP(sampleUV);
 
+// Box filter inside the virtual pixel (4 taps at the quarter points): sub-pixel features of the native-resolution
+// image (1px seams, shadow slivers, specular sparkle) become a tint instead of whole black/white virtual pixels.
+if (PixelFilter > 0.001)
+{
+	float2 q = 0.25 / grid;
+	float3 box = (RETRO_TAP(snapped + float2(-q.x, -q.y)) + RETRO_TAP(snapped + float2(q.x, -q.y))
+	            + RETRO_TAP(snapped + float2(-q.x, q.y)) + RETRO_TAP(snapped + float2(q.x, q.y))) * 0.25;
+	color = lerp(color, box, PixelFilter * Pixelation);
+}
+
 // N64: 3-point (triangle) filter between neighbouring virtual pixels instead of nearest.
 if (SoftSampling > 0.001)
 {

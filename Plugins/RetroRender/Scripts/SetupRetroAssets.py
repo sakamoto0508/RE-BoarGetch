@@ -313,7 +313,7 @@ def main():
     create = lambda cls, x, y: mel.create_material_expression(material, cls, x, y)
     defaults = unreal.RetroRenderParameters()
     SCALAR_FIELDS = ['Pixelation', 'PixelResolutionX', 'PixelResolutionY', 'IntegerScale', 'ColorLevels', 'ColorQuantization',
-                     'DitheringStrength', 'DitherMatrixSize', 'Saturation', 'Contrast', 'Brightness', 'SoftSampling',
+                     'DitheringStrength', 'DitherMatrixSize', 'Saturation', 'Contrast', 'Brightness', 'PixelFilter', 'SoftSampling',
                      'FogStrength', 'FogStart', 'FogEnd', 'ScanlineStrength', 'PhosphorMask', 'CRTCurvature',
                      'ChromaticAberration', 'ColorBleed', 'VignetteStrength']
     code = (SHADERS / 'RetroPost.hlsl').read_text(encoding='utf-8')

@@ -4,6 +4,7 @@
 
 #include "Boar/BoarBase.h"
 #include "Core/BoarGameMode.h"
+#include "Core/BoarGadgetLoadoutInitializer.h"
 #include "Component/HealthComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Component/CaptureComponent.h"
@@ -66,6 +67,8 @@ void ABoarPlayerCharacter::BeginPlay()
 	{
 		// プレイヤー被弾判定はカプセル接触で受ける。
 		Capsule->OnComponentBeginOverlap.AddDynamic(this, &ABoarPlayerCharacter::OnCapsuleBeginOverlap);
+		// Pawn同士がBlockする設定では接触はHitとして届くため、同じ被弾処理へ渡す。
+		Capsule->OnComponentHit.AddDynamic(this, &ABoarPlayerCharacter::OnCapsuleHit);
 	}
 
 	if (HealthComponent)
@@ -73,22 +76,33 @@ void ABoarPlayerCharacter::BeginPlay()
 		// HP0時の遷移はGameModeに一本化する。
 		HealthComponent->OnDeath.AddDynamic(this, &ABoarPlayerCharacter::OnDeath);
 	}
+
+	// Stages prepare the player before BeginPlay. Unmanaged lobby worlds and
+	// runtime-spawned players use the same initialization with an explicit context.
+	const auto* Stage = GetWorld()->GetAuthGameMode<ABoarGameMode>();
+	if (!bStageInitialized && (!Stage || Stage->CanAdvanceStage()) &&
+		!InitializeForPlay(BoarGadgetLoadoutInitializer::ResolveContext(GetWorld())))
+	{
+		GetCharacterMovement()->DisableMovement();
+		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Player preparation failed: %s"), *GetName());
+	}
 }
 
-void ABoarPlayerCharacter::InitializeForStage()
+bool ABoarPlayerCharacter::InitializeForPlay(const FBoarGadgetLoadoutContext& Context)
 {
-	if (bStageInitialized) return;
+	if (bStageInitialized) return true;
+	if (!HealthComponent || !HealthComponent->InitializeHealth()
+		|| !BoarGadgetLoadoutInitializer::Initialize(GadgetComponent, Context)) return false;
 	bStageInitialized = true;
-	if (HealthComponent) HealthComponent->ResetHealth();
-	if (GadgetComponent) GadgetComponent->InitializeForStage();
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] Player ready: %s"), *GetName());
+	return true;
 }
 
 void ABoarPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
 {
 	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
 
-	if (bIsStunned || CurrentActionState == EPlayerActionState::Capture)
+	if (bIsStunned || bIsDowned || CurrentActionState == EPlayerActionState::Capture)
 		return;
 
 
@@ -298,9 +312,23 @@ void ABoarPlayerCharacter::OnCapsuleBeginOverlap(UPrimitiveComponent* Overlapped
 	(void)OtherBodyIndex;
 	(void)bFromSweep;
 	(void)SweepResult;
+	HandleBoarContact(OtherActor);
+}
 
-	// 無敵中・スタン中は追加ダメージを受けないComponentや接触相手が無効な場合も処理しない。
-	if (bIsInvincible || bIsStunned || HealthComponent == nullptr || OtherActor == nullptr || OtherActor == this)
+void ABoarPlayerCharacter::OnCapsuleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+                                        FVector NormalImpulse, const FHitResult& Hit)
+{
+	(void)HitComponent;
+	(void)OtherComp;
+	(void)NormalImpulse;
+	(void)Hit;
+	HandleBoarContact(OtherActor);
+}
+
+void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
+{
+	// 無敵中・スタン中・ダウン中は追加ダメージを受けないComponentや接触相手が無効な場合も処理しない。
+	if (bIsInvincible || bIsStunned || bIsDowned || HealthComponent == nullptr || OtherActor == nullptr || OtherActor == this)
 		return;
 
 	if (Cast<ABoarBase>(OtherActor) == nullptr)
@@ -310,6 +338,12 @@ void ABoarPlayerCharacter::OnCapsuleBeginOverlap(UPrimitiveComponent* Overlapped
 
 	// ダメージを受けてスタン状態にする
 	HealthComponent->TakeDamage(ContactDamage);
+	// HP0ではStunを開始せず、GameOver演出のダウンアニメがStun状態で上書きされないようにする。
+	if (HealthComponent->IsDead())
+	{
+		EnterDowned();
+		return;
+	}
 	BeginStun();
 
 	// 多段ヒットを防ぐため、被弾後に短い無敵を付与する。
@@ -322,6 +356,7 @@ void ABoarPlayerCharacter::OnCapsuleBeginOverlap(UPrimitiveComponent* Overlapped
 
 void ABoarPlayerCharacter::OnDeath()
 {
+	EnterDowned();
 	if (ABoarGameMode* GameMode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
 	{
 		GameMode->HandlePlayerDeath(this);
@@ -348,9 +383,23 @@ void ABoarPlayerCharacter::BeginStun()
 	GetWorldTimerManager().SetTimer(StunTimerHandle, this, &ABoarPlayerCharacter::EndStun, StunDuration, false);
 }
 
+void ABoarPlayerCharacter::EnterDowned()
+{
+	if (bIsDowned) return;
+	bIsDowned = true;
+	// 既に開始していたStunのTimerで通常状態へ戻らないようにする。
+	GetWorldTimerManager().ClearTimer(StunTimerHandle);
+	bIsStunned = false;
+	EndGadgetUse(true);
+	StopDash();
+	if (UCharacterMovementComponent* Move = GetCharacterMovement()) Move->StopMovementImmediately();
+	SetPlayerActionState(EPlayerActionState::Down);
+}
+
 void ABoarPlayerCharacter::EndStun()
 {
 	bIsStunned = false;
+	if (bIsDowned) return;
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
 		if (!Mode->CanAdvanceStage()) return;
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
@@ -432,5 +481,5 @@ bool ABoarPlayerCharacter::IsActionLocked() const
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
 		if (!Mode->CanAdvanceStage()) return true;
-	return bIsStunned || bIsGadgetInUse;
+	return bIsStunned || bIsGadgetInUse || bIsDowned;
 }

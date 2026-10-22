@@ -1,7 +1,6 @@
 #include "Component/HealthComponent.h"
 #include "Core/BoarGameMode.h"
 #include "Engine/World.h"
-#include "Player/BoarPlayerCharacter.h"
 
 /**
  * コンストラクタです。
@@ -19,10 +18,15 @@ UHealthComponent::UHealthComponent()
 void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
-	// StageのPlayer HPはBoar生成後にPlayer開始処理から初期化します。
-	if (Cast<ABoarPlayerCharacter>(GetOwner()) && Mode && Mode->GetStageState() == EBoarStageState::Preparing) return;
+	InitializeHealth();
+}
+
+bool UHealthComponent::InitializeHealth()
+{
+	if (bHealthInitialized) return true;
+	if (!FMath::IsFinite(MaxHealth) || MaxHealth <= 0.f) return false;
 	ResetHealth();
+	return true;
 }
 
 /**
@@ -58,6 +62,7 @@ void UHealthComponent::Heal(float HealAmount)
  */
 void UHealthComponent::ResetHealth()
 {
+	bHealthInitialized = true;
 	CurrentHealth = MaxHealth;
 	ClampAndBroadcastHealth();
 }

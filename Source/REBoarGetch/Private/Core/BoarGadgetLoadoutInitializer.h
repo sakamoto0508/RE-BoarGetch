@@ -1,9 +1,12 @@
 #pragma once
 
-class UGadgetComponent;
+#include "Core/BoarInitializationContext.h"
 
-/** World-level initialization policy shared by BeginPlay and explicit stage initialization. */
+class UGadgetComponent;
+class UWorld;
+
 namespace BoarGadgetLoadoutInitializer
 {
-void Initialize(UGadgetComponent *Component, bool bAllowStageDeferral);
+FBoarGadgetLoadoutContext ResolveContext(UWorld* World);
+bool Initialize(UGadgetComponent* Component, const FBoarGadgetLoadoutContext& Context);
 }

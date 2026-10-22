@@ -116,6 +116,12 @@ void URetroRenderComponent::BeginPlay()
 	Apply();
 }
 
+URetroRenderComponent* URetroRenderComponent::FindWorldOwner(const UWorld* World)
+{
+	const TWeakObjectPtr<URetroRenderComponent>* Owner = RetroRenderState::Owners().Find(const_cast<UWorld*>(World));
+	return Owner && Owner->IsValid() && (*Owner)->IsRegistered() ? Owner->Get() : nullptr;
+}
+
 bool URetroRenderComponent::IsWorldOwner() const
 {
 	const TWeakObjectPtr<URetroRenderComponent>* Owner = RetroRenderState::Owners().Find(GetWorld());

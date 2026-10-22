@@ -26,6 +26,8 @@ public:
 	FName BoarUniqueId;
 	/** 捕獲Componentを生成します。TickはBeginPlay後、スタミナを使う種別だけ有効になります。 */
 	ABoarBase();
+	/** GameModeからBeginPlay前に呼べる、個体設定の初期化です。 */
+	void InitializeForStage();
 	/** 種別設定と初期スタミナを適用します。 */
 	virtual void BeginPlay() override;
 	/** 種別がスタミナを使用する場合に消費・回復状態を更新します。 */
@@ -156,11 +158,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool IsStaminaRecovering() const { return bIsRecoveringStamina; }
 
+	/** DataAssetから適用された通常時の移動速度を返します。アニメーションの速度正規化に使用します。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
+	float GetBaseWalkSpeed() const { return BaseWalkSpeed; }
+
 	/** 旧来の固定巡回ルートを返します。現在のランダムNavMesh巡回では未使用です。 */
 	UFUNCTION(BlueprintPure)
 	APatrolPath* GetPatrolPath() const { return PatrolPath; }
 
 private:
+	bool bSettingsInitialized = false;
 	/** 距離・視野角・遮蔽・絶対発見距離から対象を認識できるか判定します。 */
 	bool CanDetectTarget(const AActor* TargetActor, float Distance) const;
 

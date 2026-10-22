@@ -14,10 +14,10 @@ UCageVisualComponent::UCageVisualComponent()
 {
 	PrimaryComponentTick.bCanEverTick=true; PrimaryComponentTick.TickInterval=.05f;
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube"));
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> White(TEXT("/Game/BP/Cage/Materials/M_Cage_White"));
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Navy(TEXT("/Game/BP/Cage/Materials/M_Cage_Navy"));
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Yellow(TEXT("/Game/BP/Cage/Materials/M_Cage_Yellow"));
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Glow(TEXT("/Game/BP/Cage/Materials/M_Cage_Glow"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> White(TEXT("/Game/Art/Materials/Cage/M_Cage_White"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Navy(TEXT("/Game/Art/Materials/Cage/M_Cage_Navy"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Yellow(TEXT("/Game/Art/Materials/Cage/M_Cage_Yellow"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Glow(TEXT("/Game/Art/Materials/Cage/M_Cage_Glow"));
 	int32 Index=0;
 	auto Box=[&](FVector P,FVector Size,UMaterialInterface* Material,bool bLamp=false)
 	{

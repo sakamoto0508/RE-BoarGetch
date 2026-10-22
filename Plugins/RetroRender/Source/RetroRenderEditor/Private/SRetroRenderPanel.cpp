@@ -1,4 +1,5 @@
 #include "SRetroRenderPanel.h"
+#include "RetroLevelMaterials.h"
 #include "RetroRenderEditorTypes.h"
 #include "Rendering/RetroRenderActor.h"
 #include "Rendering/RetroRenderComponent.h"
@@ -212,9 +213,26 @@ TSharedRef<SWidget> SRetroRenderPanel::BuildLook()
 			+ SWrapBox::Slot()[ActionButton(LOCTEXT("Pull", "Refresh"), LOCTEXT("PullTip", "Read the values from the live component."), [this]() { PullLook(); })]
 			+ SWrapBox::Slot()[ActionButton(LOCTEXT("Reset", "Reset Preset"), LOCTEXT("ResetTip", "Restore the preset defaults from DA_RetroPresets."), [this]() { for (URetroRenderComponent* C : LiveComponents()) C->ResetCurrentPreset(); PullLook(); })]
 			+ SWrapBox::Slot()[ActionButton(LOCTEXT("Save", "Save as Preset Default"), LOCTEXT("SaveTip", "Write these values into DA_RetroPresets for the current preset."), [this]() { SaveToPresetAsset(); })]
+			+ SWrapBox::Slot()[ActionButton(LOCTEXT("ScanLevel", "Scan Level Materials"),
+				LOCTEXT("ScanLevelTip", "List the open level's materials and whether they have the retro geometry patch (no changes)."),
+				[this]() { LevelReport = RetroLevelMaterials::RunLevelScan(true); })]
+			+ SWrapBox::Slot()[ActionButton(LOCTEXT("PatchLevel", "Patch Level Materials"),
+				LOCTEXT("PatchLevelTip", "Add vertex snapping to the open level's unpatched project materials (backed up first; revert with PatchRetroMaterials.py -RetroUnpatch)."),
+				[this]()
+				{
+					const FString Preview = RetroLevelMaterials::RunLevelScan(true);
+					if (FMessageDialog::Open(EAppMsgType::YesNo, FText::FromString(Preview + TEXT("\nPatch the materials marked [patch] / [reparent]?"))) == EAppReturnType::Yes)
+					{
+						LevelReport = RetroLevelMaterials::RunLevelScan(false);
+					}
+				})]
 			+ SWrapBox::Slot()[ActionButton(LOCTEXT("Off", "Original (OFF)"), LOCTEXT("OffTip", "Disable every retro effect; pipeline CVars and clouds are restored."), [this]() { bCRTOverlay = false; SelectPreset(ERetroRenderPreset::OFF); PushLook(); })]
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(6, 2)[SNew(STextBlock).Text_Lambda([this]() { return StatusText(); }).AutoWrapText(true)]
+		+ SVerticalBox::Slot().AutoHeight().MaxHeight(160.f).Padding(6, 2)
+		[
+			SNew(SScrollBox) + SScrollBox::Slot()[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(LevelReport); })]
+		]
 		+ SVerticalBox::Slot().FillHeight(1.f)[LookDetails.ToSharedRef()];
 }
 

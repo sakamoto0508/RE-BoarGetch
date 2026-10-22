@@ -34,6 +34,8 @@ struct RETRORENDER_API FRetroRenderParameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen") float Saturation = 1.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen") float Contrast = 1.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen") float Brightness = 1.f;
+	// 0 = one sample per virtual pixel (crisp, aliased), 1 = average of 4 samples inside it (stable, no sparkle).
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1)) float PixelFilter = 0.f;
 	// N64 style 3-point filter between virtual pixels.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1)) float SoftSampling = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Fog", meta=(ClampMin=0, ClampMax=1)) float FogStrength = 0.f;

@@ -12,4 +12,6 @@ public:
     UPROPERTY(EditDefaultsOnly, Category="Facility") bool bArchive=false;
     UPROPERTY(EditDefaultsOnly, Category="Facility") bool bGadgetTest=false;
     UPROPERTY(EditDefaultsOnly, Category="Facility") TSubclassOf<class AGadgetBase> TestGadgetClass;
+protected:
+	virtual void StartPlay() override;
 };
