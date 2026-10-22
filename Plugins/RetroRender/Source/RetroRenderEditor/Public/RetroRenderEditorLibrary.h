@@ -34,6 +34,12 @@ public:
 	static class URetroRenderComponent* AddTestRetroComponent(AActor* Host);
 	UFUNCTION(BlueprintCallable, Category="Retro Render|Verification")
 	static void RemoveTestComponent(UActorComponent* Component);
+	// Same as the panel's "Scan / Patch Level Materials" buttons (runs PatchRetroMaterials.py -RetroLevelScan).
+	UFUNCTION(BlueprintCallable, Category="Retro Render|Materials")
+	static FString RunLevelMaterialScan(bool bDryRun = true);
+	// Same check as the map-open notification: unpatched project materials / FBX instances in the editor level.
+	UFUNCTION(BlueprintCallable, Category="Retro Render|Materials")
+	static TArray<FString> FindUnpatchedLevelMaterials();
 	// Pending shader jobs (0 = every material on screen uses its real shaders, not the default fallback).
 	UFUNCTION(BlueprintCallable, Category="Retro Render|Verification")
 	static int32 GetRemainingShaderJobs();

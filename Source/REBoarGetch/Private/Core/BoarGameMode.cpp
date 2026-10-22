@@ -6,6 +6,7 @@
 #include "Boar/BoarBase.h"
 #include "Cage/Cage.h"
 #include "Core/BoarCaptureResolution.h"
+#include "Core/BoarGadgetLoadoutInitializer.h"
 #include "Player/BoarPlayerController.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Stage/StageConfig.h"
@@ -17,6 +18,7 @@
 #include "BrainComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Component/CapturePresentationComponent.h"
+#include "Component/StageClearPresentationComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Gadget/GadgetBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -43,20 +45,24 @@ void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 
 void ABoarGameMode::StartPlay()
 {
+	if (bStartupAttempted) return;
+	bStartupAttempted = true;
 	StageRunData = FStageRunData();
 	StageRunData.StageId = StageConfig ? StageConfig->StageId : NAME_None;
+
+	// All required actors and player dependencies are prepared before UE
+	// dispatches BeginPlay. Actor/component BeginPlay only completes local setup.
+	const bool bPrepared = PrepareStage();
 	Super::StartPlay();
-	// BeginPlayは通常のライフサイクルに任せ、Stage用の初期化順だけを明示します。
+	// BeginPlay can create presentation/gadget actors; keep them stopped too.
 	SetStageActorsStopped(true);
-	for (TActorIterator<ACage> It(GetWorld()); It; ++It) 
-		It->InitializeForStage();
-	SpawnConfiguredBoars();
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] Boar spawning complete"));
-	SpawnConfiguredSpecialCoins();
-	for (TActorIterator<ABoarPlayerCharacter> It(GetWorld()); It; ++It) 
-		It->InitializeForStage();
-	// 今生成したBoarと装備も含め、演出完了まで進行を停止します。
-	SetStageActorsStopped(true);
+	if (!bPrepared)
+	{
+		if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
+			PC->HandleStageInitializationFailed(InitializationError);
+		OnStageInitializationFailed(InitializationError);
+		return;
+	}
 	bStageInitializationComplete = true;
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] Preparing: initialization complete"));
 	WorldTickEndHandle = FWorldDelegates::OnWorldTickEnd.AddUObject(this, &ABoarGameMode::HandleWorldTickEnd);
@@ -67,18 +73,79 @@ void ABoarGameMode::StartPlay()
 	else CompleteStageIntroduction();
 }
 
-void ABoarGameMode::SpawnConfiguredBoars()
+bool ABoarGameMode::PrepareStage()
+{
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] 1/4 Validate configuration and progress"));
+	if (!ValidateStageSetup()) return false;
+	SetStageActorsStopped(true);
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] 2/4 Spawn configured actors"));
+	if (!SpawnConfiguredBoars() || !SpawnConfiguredSpecialCoins())
+		return FailInitialization(NSLOCTEXT("StageInit", "SpawnFailed", "ステージの配置を準備できませんでした。"));
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] 3/4 Initialize cages, boars, player health and loadout"));
+	if (!InitializeStageActors()) return false;
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] 4/4 Ready for BeginPlay and introduction"));
+	return true;
+}
+
+bool ABoarGameMode::ValidateStageSetup()
+{
+	// Unconfigured sandbox maps keep supporting placed actors and default equipment.
+	if (!StageConfig) return true;
+	if (StageConfig->StageId.IsNone() || StageConfig->TargetCaptureCount < 0)
+		return FailInitialization(NSLOCTEXT("StageInit", "InvalidConfig", "ステージ設定が正しくありません。"));
+	const auto* Instance = GetGameInstance<UBoarGameInstance>();
+	if (!Instance || !Instance->IsProgressReady())
+		return FailInitialization(NSLOCTEXT("StageInit", "ProgressUnavailable", "進行データを読み込めませんでした。"));
+	return true;
+}
+
+bool ABoarGameMode::InitializeStageActors()
+{
+	int32 CageCount = 0, BoarCount = 0, PlayerCount = 0;
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It)
+	{
+		It->InitializeForStage();
+		++CageCount;
+	}
+	for (TActorIterator<ABoarBase> It(GetWorld()); It; ++It)
+	{
+		It->InitializeForStage();
+		if (!It->IsCaptured()) ++BoarCount;
+	}
+	const auto Context = BoarGadgetLoadoutInitializer::ResolveContext(GetWorld());
+	for (TActorIterator<ABoarPlayerCharacter> It(GetWorld()); It; ++It)
+	{
+		if (!It->InitializeForPlay(Context))
+			return FailInitialization(NSLOCTEXT("StageInit", "PlayerFailed", "プレイヤーの体力・装備を準備できませんでした。"));
+		++PlayerCount;
+	}
+	if (StageConfig && PlayerCount == 0)
+		return FailInitialization(NSLOCTEXT("StageInit", "NoPlayer", "プレイヤーを生成できませんでした。"));
+	if (StageConfig && StageConfig->TargetCaptureCount > 0 &&
+		(CageCount == 0 || BoarCount < StageConfig->TargetCaptureCount))
+		return FailInitialization(NSLOCTEXT("StageInit", "UnreachableTarget", "捕獲目標に必要な檻・ボアが不足しています。"));
+	return true;
+}
+
+bool ABoarGameMode::FailInitialization(const FText& Reason)
+{
+	InitializationError = Reason;
+	UE_LOG(LogTemp, Error, TEXT("[StageInit] %s"), *Reason.ToString());
+	return false;
+}
+
+bool ABoarGameMode::SpawnConfiguredBoars()
 {
 	// Spawn Entryが空なら、既存Levelに手置きされたBoarだけを使用する。
 	if (!StageConfig || (StageConfig->BoarSpawnEntries.IsEmpty() && StageConfig->BoarSpawnDefinitions.IsEmpty()))
 	{
-		return;
+		return true;
 	}
 
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		return;
+		return false;
 	}
 
 	TArray<ABoarSpawnPoint*> SpawnPoints;
@@ -88,6 +155,7 @@ void ABoarGameMode::SpawnConfiguredBoars()
 	}
 	if (!StageConfig->BoarSpawnDefinitions.IsEmpty())
 	{
+		bool bSucceeded = true;
 		// spawn point IDの重複を検出するために、IDをキーにしたマップを作成します。
 		TMap<FName, ABoarSpawnPoint*> ById;
 		// コピーしたIDを記録するためのセットを作成します。
@@ -111,6 +179,7 @@ void ABoarGameMode::SpawnConfiguredBoars()
 			{
 				UE_LOG(LogTemp, Error, TEXT("[Stage] Invalid/duplicate identity or spawn point: %s / %s"),
 					*Entry.BoarUniqueId.ToString(), *Entry.SpawnPointId.ToString());
+				bSucceeded = false;
 				continue;
 			}
 			// BeginPlayより前にIDを渡し、生成順から永続IDを作らないようにします。
@@ -121,8 +190,9 @@ void ABoarGameMode::SpawnConfiguredBoars()
 				Boar->BoarUniqueId = Entry.BoarUniqueId;
 				UGameplayStatics::FinishSpawningActor(Boar, Point->GetActorTransform());
 			}
+			bSucceeded &= IsValid(Boar);
 		}
-		return;
+		return bSucceeded;
 	}
 
 	if (SpawnPoints.IsEmpty())
@@ -130,7 +200,7 @@ void ABoarGameMode::SpawnConfiguredBoars()
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Stage] %s has BoarSpawnEntries but no BoarSpawnPoint actors."),
 			*GetNameSafe(StageConfig));
-		return;
+		return false;
 	}
 
 	const int32 TotalSpawnCount = StageConfig->GetTotalBoarSpawnCount();
@@ -172,6 +242,7 @@ void ABoarGameMode::SpawnConfiguredBoars()
 		SpawnedCount,
 		TotalSpawnCount,
 		SpawnPoints.Num());
+	return SpawnedCount == TotalSpawnCount;
 }
 
 void ABoarGameMode::EvaluateStageClearCondition()
@@ -246,6 +317,11 @@ void ABoarGameMode::ResolveStageEnd()
 	{
 		RetryClearSave();
 		OnStageCleared();
+		// 勝利演出はClear専用です。完了時にComponentがCompleteStageEndPresentationを呼びます。
+		// BP側で独自演出を待つ設定（bWaitForStageEndPresentation）の場合はそちらを優先します。
+		if (bUseStageClearPresentation && !bWaitForStageEndPresentation)
+			if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
+				if (PC->StageClearPresentation && PC->StageClearPresentation->StartPresentation()) return;
 	}
 	else
 	{
@@ -342,14 +418,15 @@ void ABoarGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void ABoarGameMode::SpawnConfiguredSpecialCoins()
+bool ABoarGameMode::SpawnConfiguredSpecialCoins()
 {
-	if (!StageConfig || StageConfig->SpecialCoinDefinitions.IsEmpty()) return;
+	if (!StageConfig || StageConfig->SpecialCoinDefinitions.IsEmpty()) return true;
 	if (!SpecialCoinClass)
 	{
 		UE_LOG(LogTemp, Error, TEXT("[Stage] SpecialCoinDefinitions require SpecialCoinClass."));
-		return;
+		return false;
 	}
+	bool bSucceeded = true;
 	TMap<FName, ABoarSpawnPoint*> Points;
 	TSet<FName> DuplicatePoints;
 	for (TActorIterator<ABoarSpawnPoint> It(GetWorld()); It; ++It)
@@ -372,6 +449,7 @@ void ABoarGameMode::SpawnConfiguredSpecialCoins()
 		{
 			UE_LOG(LogTemp, Error, TEXT("[Stage] Invalid/duplicate coin or spawn point: %s / %s"),
 				*Entry.SpecialCoinId.ToString(), *Entry.SpawnPointId.ToString());
+			bSucceeded = false;
 			continue;
 		}
 		if (Save && Save->SpecialCoinIds.Contains(Entry.SpecialCoinId)) continue;
@@ -381,6 +459,8 @@ void ABoarGameMode::SpawnConfiguredSpecialCoins()
 			Coin->SpecialCoinId = Entry.SpecialCoinId;
 			UGameplayStatics::FinishSpawningActor(Coin, Point->GetActorTransform());
 		}
+		bSucceeded &= IsValid(Coin);
 	}
+	return bSucceeded;
 }
 

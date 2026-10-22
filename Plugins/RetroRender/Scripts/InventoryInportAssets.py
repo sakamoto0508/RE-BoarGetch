@@ -23,7 +23,10 @@ MODIFIED = {
     '/Game/InportAssets/LPRiverForest/Materials/M_LowPolyGrass': 'patched parent material (vertex snap, _LP)',
     '/Game/InportAssets/LPRiverForest/Materials/M_LowPolyWater': 'patched parent material (vertex snap, _LP)',
     '/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength': '+4 snap scalars (default 0)',
+    '/Game/InportAssets/Farm_House/Materials/MM_Hybrid_Trim': 'patched parent material (vertex snap)',
 }
+for name in ['M_Default_Master', 'M_Translucent_Master', 'M_Lights', 'M_Screen', 'M_Grid', 'M_Grid2']:
+    MODIFIED['/Game/InportAssets/Clinic/Materials/' + name] = 'patched parent material (vertex snap)'
 if RECORD.exists():
     for mi in json.loads(RECORD.read_text(encoding='utf-8')).get('reparented', []):
         MODIFIED.setdefault(mi, 'material instance reparented to M_RetroFBXPhong')

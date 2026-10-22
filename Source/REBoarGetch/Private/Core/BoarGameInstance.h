@@ -21,6 +21,8 @@ public:
 	FOnBoarProgressChanged OnProgressChanged;
 	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnGadgetsUnlocked;
 	virtual void Init() override;
+	/** Startup can reject a missing/unreadable progress dependency before spawning. */
+	bool IsProgressReady() const { return Progress && !bSaveLoadFailed; }
 	/** 読み取り用の確定済み進行です。 */
 	UFUNCTION(BlueprintPure) const UBoarSaveGame* GetProgress() const { return Progress; }
 	/** NEWを確定してから保存します。失敗時は既存の確定データを維持します。 */

@@ -40,6 +40,11 @@ public:
 	ABoarPlayerController();
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
 	TObjectPtr<class UCapturePresentationComponent> CapturePresentation;
+	/** ステージクリア確定後からResult表示までの勝利演出です。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
+	TObjectPtr<class UStageClearPresentationComponent> StageClearPresentation;
+	/** 勝利演出中に通常HUDを隠します。 */
+	void SetPlayerHUDHidden(bool bHideHUD);
 	/** Dedicated non-stage terminal entry; existing widget/save implementations are reused. */
 	void OpenFacilityMenu(bool bArchive);
 	void OpenArchiveDisplaySelection();
@@ -50,6 +55,7 @@ public:
 	void SetStageInputBlocked(bool bBlocked);
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	void HandleStageGameOver();
+	void HandleStageInitializationFailed(const FText& Reason);
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage") void RetryStage();
 	/** ポーズ画面を開き、ゲーム入力を遮断します。 */
@@ -81,6 +87,8 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
+	UPROPERTY(Transient) TObjectPtr<class UBoarInitializationErrorWidget> InitializationErrorWidget;
+	bool bInitializationFailed = false;
 	friend class UBoarUIFlowComponent;
 	UPROPERTY(Transient) TObjectPtr<class UBoarUIFlowComponent> UIFlow;
 	UPROPERTY(EditDefaultsOnly,Category="UI") TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;

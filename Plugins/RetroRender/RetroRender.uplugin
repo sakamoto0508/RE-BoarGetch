@@ -7,7 +7,21 @@
 	"Category": "Rendering",
 	"CanContainContent": false,
 	"Modules": [
-		{ "Name": "RetroRender", "Type": "Runtime", "LoadingPhase": "Default" },
-		{ "Name": "RetroRenderEditor", "Type": "Editor", "LoadingPhase": "Default" }
+		{
+			"Name": "RetroRender",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "RetroRenderEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "PythonScriptPlugin",
+			"Enabled": true
+		}
 	]
 }

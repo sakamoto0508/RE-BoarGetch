@@ -6,6 +6,13 @@
 
 | パッケージ | 変更 | この環境に存在 |
 |---|---|---|
+| `/Game/InportAssets/Clinic/Materials/M_Default_Master` | patched parent material (vertex snap) | yes |
+| `/Game/InportAssets/Clinic/Materials/M_Grid` | patched parent material (vertex snap) | yes |
+| `/Game/InportAssets/Clinic/Materials/M_Grid2` | patched parent material (vertex snap) | yes |
+| `/Game/InportAssets/Clinic/Materials/M_Lights` | patched parent material (vertex snap) | yes |
+| `/Game/InportAssets/Clinic/Materials/M_Screen` | patched parent material (vertex snap) | yes |
+| `/Game/InportAssets/Clinic/Materials/M_Translucent_Master` | patched parent material (vertex snap) | yes |
+| `/Game/InportAssets/Farm_House/Materials/MM_Hybrid_Trim` | patched parent material (vertex snap) | yes |
 | `/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength` | +4 snap scalars (default 0) | yes |
 | `/Game/InportAssets/LPRiverForest/Materials/M_LowPoly` | patched parent material (vertex snap, _LP) | yes |
 | `/Game/InportAssets/LPRiverForest/Materials/M_LowPolyGrass` | patched parent material (vertex snap, _LP) | yes |

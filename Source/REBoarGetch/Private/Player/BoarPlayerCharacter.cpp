@@ -4,6 +4,7 @@
 
 #include "Boar/BoarBase.h"
 #include "Core/BoarGameMode.h"
+#include "Core/BoarGadgetLoadoutInitializer.h"
 #include "Component/HealthComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Component/CaptureComponent.h"
@@ -73,15 +74,26 @@ void ABoarPlayerCharacter::BeginPlay()
 		// HP0時の遷移はGameModeに一本化する。
 		HealthComponent->OnDeath.AddDynamic(this, &ABoarPlayerCharacter::OnDeath);
 	}
+
+	// Stages prepare the player before BeginPlay. Unmanaged lobby worlds and
+	// runtime-spawned players use the same initialization with an explicit context.
+	const auto* Stage = GetWorld()->GetAuthGameMode<ABoarGameMode>();
+	if (!bStageInitialized && (!Stage || Stage->CanAdvanceStage()) &&
+		!InitializeForPlay(BoarGadgetLoadoutInitializer::ResolveContext(GetWorld())))
+	{
+		GetCharacterMovement()->DisableMovement();
+		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Player preparation failed: %s"), *GetName());
+	}
 }
 
-void ABoarPlayerCharacter::InitializeForStage()
+bool ABoarPlayerCharacter::InitializeForPlay(const FBoarGadgetLoadoutContext& Context)
 {
-	if (bStageInitialized) return;
+	if (bStageInitialized) return true;
+	if (!HealthComponent || !HealthComponent->InitializeHealth()
+		|| !BoarGadgetLoadoutInitializer::Initialize(GadgetComponent, Context)) return false;
 	bStageInitialized = true;
-	if (HealthComponent) HealthComponent->ResetHealth();
-	if (GadgetComponent) GadgetComponent->InitializeForStage();
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] Player ready: %s"), *GetName());
+	return true;
 }
 
 void ABoarPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)

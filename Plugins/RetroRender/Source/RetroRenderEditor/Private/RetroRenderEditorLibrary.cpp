@@ -6,6 +6,8 @@
 #include "Materials/MaterialFunction.h"
 #include "UObject/Package.h"
 #include "ShaderCompiler.h"
+#include "RetroLevelMaterials.h"
+#include "Editor.h"
 #include "Rendering/RetroRenderComponent.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialParameterCollection.h"
@@ -54,6 +56,16 @@ URetroRenderComponent* URetroRenderEditorLibrary::AddTestRetroComponent(AActor* 
 void URetroRenderEditorLibrary::RemoveTestComponent(UActorComponent* Component)
 {
 	if (Component) Component->DestroyComponent();
+}
+
+FString URetroRenderEditorLibrary::RunLevelMaterialScan(bool bDryRun)
+{
+	return RetroLevelMaterials::RunLevelScan(bDryRun);
+}
+
+TArray<FString> URetroRenderEditorLibrary::FindUnpatchedLevelMaterials()
+{
+	return RetroLevelMaterials::FindUnpatched(GEditor ? GEditor->GetEditorWorldContext().World() : nullptr);
 }
 
 int32 URetroRenderEditorLibrary::GetRemainingShaderJobs()

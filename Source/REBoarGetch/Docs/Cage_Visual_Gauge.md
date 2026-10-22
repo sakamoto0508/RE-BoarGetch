@@ -5,7 +5,7 @@
 - CagePresentation / Gauge settings: DisplayDistance 12000 cm (0 = unlimited), GaugeHeight 650 cm, GaugeWorldScale 0.9, MediumThreshold 0.6, LowThreshold 0.25.
 - Presentation subscribes to OnHealthChanged / OnCageDestroyed / OnRespawned. No health, recovery, capture, release, or respawn logic is rewritten.
 - Camera facing updates at 20 Hz. Gauge rendering is requested only for value changes, trailing damage, white flash (0.18 seconds), or low-HP pulse.
-- Materials: /Game/BP/Cage/Materials/M_Cage_White, M_Cage_Navy, M_Cage_Yellow, M_Cage_Glow. Glow has Tint and Intensity parameters; runtime lamp instances are transient.
+- Materials: /Game/Art/Materials/Cage/M_Cage_White, M_Cage_Navy, M_Cage_Yellow, M_Cage_Glow. Glow has Tint and Intensity parameters; runtime lamp instances are transient.
 - All added geometry and gauge components disable collision and navigation influence. Existing imported cage assets are unchanged.
 - C++ Development Editor build succeeded. BP_Cage compiled and saved; /Game/Level/Test saved. Editor viewport confirmed shell placement.
 - PIE was not run. User should verify camera facing, distance visibility, high/mid/low HP, damage flash/trail, recovery, destruction/respawn, captured boar visibility, and contact with the visually thicker frames/base.

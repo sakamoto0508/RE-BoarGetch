@@ -12,6 +12,7 @@ class UCameraComponent;
 class USpringArmComponent;
 class UPrimitiveComponent;
 class ABoarBase;
+struct FBoarGadgetLoadoutContext;
 struct FHitResult;
 
 /** アニメーションや入力可否の判断に使用するプレイヤーの行動状態です。 */
@@ -61,8 +62,9 @@ public:
 
 	/** Component、カメラ、移動設定を含むプレイヤーの初期状態を構築します。 */
 	ABoarPlayerCharacter();
-	/** GameModeがCage初期化とBoar生成の後に一度だけ呼びます。 */
-	void InitializeForStage();
+	/** GameModeが解決した依存先を受け取り、HPと装備を一度だけ準備します。 */
+	bool InitializeForPlay(const FBoarGadgetLoadoutContext& Context);
+	bool IsReadyForPlay() const { return bStageInitialized; }
 
 private:
 	bool bStageInitialized = false;

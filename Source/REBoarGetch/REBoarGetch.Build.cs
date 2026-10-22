@@ -26,6 +26,12 @@ public class REBoarGetch : ModuleRules
 			"EngineCameras"
 		});
 
+		// Editor専用の自動化関数（UBoarUIAuthoringLibrary）だけが使用します。
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMGEditor", "MovieScene", "MovieSceneTracks" });
+		}
+
 		PublicIncludePaths.AddRange(new string[] {
 			"REBoarGetch",
 			"REBoarGetch/Variant_Platforming",

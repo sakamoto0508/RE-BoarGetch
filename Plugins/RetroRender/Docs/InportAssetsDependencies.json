@@ -1,6 +1,41 @@
 {
  "modified": [
   {
+   "package": "/Game/InportAssets/Clinic/Materials/M_Default_Master",
+   "change": "patched parent material (vertex snap)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/Clinic/Materials/M_Grid",
+   "change": "patched parent material (vertex snap)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/Clinic/Materials/M_Grid2",
+   "change": "patched parent material (vertex snap)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/Clinic/Materials/M_Lights",
+   "change": "patched parent material (vertex snap)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/Clinic/Materials/M_Screen",
+   "change": "patched parent material (vertex snap)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/Clinic/Materials/M_Translucent_Master",
+   "change": "patched parent material (vertex snap)",
+   "present": true
+  },
+  {
+   "package": "/Game/InportAssets/Farm_House/Materials/MM_Hybrid_Trim",
+   "change": "patched parent material (vertex snap)",
+   "present": true
+  },
+  {
    "package": "/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength",
    "change": "+4 snap scalars (default 0)",
    "present": true

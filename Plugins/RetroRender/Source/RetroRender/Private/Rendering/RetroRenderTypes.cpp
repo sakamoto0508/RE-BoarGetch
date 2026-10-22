@@ -17,6 +17,7 @@ TConstArrayView<FRetroParameterDescriptor> GetRetroParameterDescriptors()
 		{TEXT("Saturation"), &P::Saturation, 0, 2, Post, false},
 		{TEXT("Contrast"), &P::Contrast, .5f, 1.5f, Post, false},
 		{TEXT("Brightness"), &P::Brightness, .5f, 1.5f, Post, false},
+		{TEXT("PixelFilter"), &P::PixelFilter, 0, 1, Post, false},
 		{TEXT("SoftSampling"), &P::SoftSampling, 0, 1, Post, false},
 		{TEXT("FogStrength"), &P::FogStrength, 0, 1, Post, false},
 		{TEXT("FogStart"), &P::FogStart, 0, 50000, Post, false},
@@ -75,6 +76,8 @@ FRetroRenderParameters MakeDefaultRetroPreset(ERetroRenderPreset Preset)
 	{
 	case ERetroRenderPreset::PS1:
 		P.Pixelation = 1; P.PixelResolutionY = 240; P.ColorLevels = 32; P.ColorQuantization = 1;
+		// Box filter: with AA off, 1px seams/grass cards otherwise turn into black dashes on the ground.
+		P.PixelFilter = 1;
 		P.DitheringStrength = .85f; P.DitherMatrixSize = 4; P.Saturation = 1.2f; P.Contrast = 1.06f; P.Brightness = 1.04f;
 		P.VertexSnapStrength = 1; P.SnapResolutionX = 160; P.SnapResolutionY = 120;
 		P.AffineAmount = 1; P.TexelSnapStrength = 1; P.TextureResolution = 64;

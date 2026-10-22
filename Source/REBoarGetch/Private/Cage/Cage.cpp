@@ -34,8 +34,9 @@ ACage::ACage()
 void ACage::BeginPlay()
 {
 	Super::BeginPlay();
-	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
-	if (!Mode || Mode->GetStageState() != EBoarStageState::Preparing) InitializeForStage();
+	// The stage prepares placed cages before BeginPlay. Standalone cages use
+	// the same idempotent initialization without knowing any startup phase.
+	InitializeForStage();
 }
 
 

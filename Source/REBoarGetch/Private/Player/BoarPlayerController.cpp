@@ -7,6 +7,7 @@
 #include "InputMappingContext.h"
 #include "Component/HealthComponent.h"
 #include "Component/CapturePresentationComponent.h"
+#include "Component/StageClearPresentationComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Core/BoarGameMode.h"
 #include "Player/BoarPlayerCharacter.h"
@@ -14,6 +15,7 @@
 #include "UI/BoarHUDWidget.h"
 #include "UI/BoarResultWidget.h"
 #include "UI/BoarGameOverWidget.h"
+#include "UI/BoarInitializationErrorWidget.h"
 #include "UI/BoarUIFlowComponent.h"
 #include "Core/BoarFacilityGameMode.h"
 #include "Stage/HubPortal.h"
@@ -26,6 +28,7 @@
 ABoarPlayerController::ABoarPlayerController()
 {
 	CapturePresentation = CreateDefaultSubobject<UCapturePresentationComponent>(TEXT("CapturePresentation"));
+	StageClearPresentation = CreateDefaultSubobject<UStageClearPresentationComponent>(TEXT("StageClearPresentation"));
 	UIFlow = CreateDefaultSubobject<UBoarUIFlowComponent>(TEXT("UIFlow"));
 }
 
@@ -73,6 +76,7 @@ void ABoarPlayerController::RestoreGameplayInputState()
 	// ignore-input、押下中キー、Mouse/UI入力状態を明示的にゲーム開始状態へ戻す。
 	bGameplayInputBlocked = false;
 	bLevelTransitionRequested = false;
+	bInitializationFailed = false;
 	bIsGadgetModifierHeld = false;
 
 	// Result表示時に設定した移動・視点ロックを解除する。
@@ -417,6 +421,12 @@ void ABoarPlayerController::HandleStageCleared(const FStageRunData& Run, int32 T
 	SetInputMode(InputMode);
 	SetShowMouseCursor(false);
 	ResultWidget->FocusForDismissInput();
+	if (StageClearPresentation) StageClearPresentation->NotifyResultShown();
+}
+
+void ABoarPlayerController::SetPlayerHUDHidden(bool bHideHUD)
+{
+	if (PlayerHUDWidget) PlayerHUDWidget->SetVisibility(bHideHUD ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
 }
 
 void ABoarPlayerController::ReturnToLobby()
@@ -475,10 +485,29 @@ void ABoarPlayerController::HandleStageGameOver()
 void ABoarPlayerController::RetryStage()
 {
 	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
-	if (bLevelTransitionRequested || !Mode || Mode->GetStageState() != EBoarStageState::GameOver) return;
+	if (bLevelTransitionRequested || (!bInitializationFailed &&
+		(!Mode || Mode->GetStageState() != EBoarStageState::GameOver))) return;
 	bLevelTransitionRequested = true;
 	// Map再読込でHP・檻・Boar・Timerを初期化し、GameInstanceの保存済み装備は維持します。
 	UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this, true)));
+}
+
+void ABoarPlayerController::HandleStageInitializationFailed(const FText& Reason)
+{
+	if (!IsLocalController() || InitializationErrorWidget) return;
+	bInitializationFailed = true;
+	SetStageInputBlocked(true);
+	if (PlayerHUDWidget) PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+	InitializationErrorWidget = CreateWidget<UBoarInitializationErrorWidget>(this);
+	if (!InitializationErrorWidget) return;
+	InitializationErrorWidget->OnRetry.AddUniqueDynamic(this, &ThisClass::RetryStage);
+	InitializationErrorWidget->OnLobby.AddUniqueDynamic(this, &ThisClass::ReturnToLobby);
+	InitializationErrorWidget->AddToViewport(200);
+	FInputModeUIOnly Input;
+	Input.SetWidgetToFocus(InitializationErrorWidget->TakeWidget());
+	SetInputMode(Input);
+	SetShowMouseCursor(true);
+	InitializationErrorWidget->ShowError(Reason);
 }
 
 

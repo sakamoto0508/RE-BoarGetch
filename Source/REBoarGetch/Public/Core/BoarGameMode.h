@@ -69,6 +69,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage")
 	bool RetryClearSave();
 	bool RecordSpecialCoin(FName CoinId);
+	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")
+	FText GetInitializationError() const { return InitializationError; }
 
 protected:
 	/** Stage開始時にStageConfigのSpawn EntryからBoarを生成します。 */
@@ -76,6 +78,9 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStageIntroductionRequested();
+	/** Native recovery UI is also available if the stage cannot be prepared. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
+	void OnStageInitializationFailed(const FText& Reason);
 
 	/** ゲームオーバー演出・遷移をBP側で実装するためのイベントです。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Game")
@@ -86,6 +91,14 @@ protected:
 	void OnStageCleared();
 
 private:
+	friend class FBoarStageInitializationTest;
+	/** Validate -> spawn -> initialize -> check readiness; BeginPlay follows this sequence. */
+	bool PrepareStage();
+	bool ValidateStageSetup();
+	bool InitializeStageActors();
+	bool FailInitialization(const FText& Reason);
+	bool bStartupAttempted = false;
+	UPROPERTY(Transient) FText InitializationError;
 	bool bStageInitializationComplete = false;
 	void HandleWorldTickEnd(UWorld* World, ELevelTick TickType, float DeltaSeconds);
 	void ResolveStageEnd();
@@ -99,14 +112,17 @@ private:
 	bool bWaitForStageIntroduction = false;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bWaitForStageEndPresentation = false;
+	/** Clear時にPlayerControllerのStageClearPresentation（勝利カメラ・消失・暗転）を再生してからResultへ進みます。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
+	bool bUseStageClearPresentation = true;
 	bool bGameOverRequested = false;
 	bool bClearSaveSucceeded = false;
 	bool bEndPresentationCompleted = false;
 	bool bEndUIShown = false;
 	TSet<TWeakObjectPtr<class ABoarBase>> HandledCapturedBoars;
 	/** Level内のBoarSpawnPointを使用して設定済みBoarを生成します。 */
-	void SpawnConfiguredBoars();
-	void SpawnConfiguredSpecialCoins();
+	bool SpawnConfiguredBoars();
+	bool SpawnConfiguredSpecialCoins();
 	/** コインの見た目・Overlapを持つ既存BPを指定します。未設定では生成しません。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Spawn")
 	TSubclassOf<class ASpecialCoin> SpecialCoinClass;

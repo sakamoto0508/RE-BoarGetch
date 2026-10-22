@@ -1,6 +1,5 @@
 #include "Component/GadgetComponent.h"
 #include "Gadget/BoarGadgetSubsystem.h"
-#include "Core/BoarGadgetLoadoutInitializer.h"
 
 #include "Engine/World.h"
 #include "Gadget/GadgetBase.h"
@@ -15,30 +14,16 @@ UGadgetComponent::UGadgetComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	// ゲーム開始前からスロット数を固定しておく。 
-	// 実際の初期装備内容はBeginPlayのInitializeDefaultSlotsで設定する。
+	// 実際の装備内容は所有者がInitializeResolvedLoadoutへ渡す。
 	EquippedGadgetSlots.SetNum(MaxGadgetSlots);
 }
 
 
-void UGadgetComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	OwningPawn = Cast<APawn>(GetOwner());
-	UE_LOG(LogTemp, Log, TEXT("[Gadget] Owner pawn: %s"), *GetNameSafe(OwningPawn.Get()));
-	BoarGadgetLoadoutInitializer::Initialize(this, true);
-}
-
-void UGadgetComponent::InitializeForStage()
-{
-    BoarGadgetLoadoutInitializer::Initialize(this, false);
-}
-
-void UGadgetComponent::InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots,
+bool UGadgetComponent::InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots,
     UBoarGadgetSubsystem* Progress, bool bTemporary)
 {
-    if (bStageInitialized || Slots.Num() != MaxGadgetSlots) return;
-    bStageInitialized = true;
+    if (bStageInitialized) return true;
+    if (Slots.Num() != MaxGadgetSlots || !Cast<APawn>(GetOwner())) return false;
     GadgetProgress = Progress;
     bTemporaryLoadout = bTemporary;
     OwningPawn = Cast<APawn>(GetOwner());
@@ -50,11 +35,14 @@ void UGadgetComponent::InitializeResolvedLoadout(const TArray<TSubclassOf<AGadge
 		const bool bEquipped = SwitchGadgetBySlot(FirstSlot);
 		UE_LOG(LogTemp, Log, TEXT("[Gadget] Initial slot %d equip: %s"),
 			FirstSlot, bEquipped ? TEXT("success") : TEXT("failed"));
+		if (!bEquipped) return false;
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Gadget] No valid gadget slot is configured"));
 	}
+	bStageInitialized = true;
+	return true;
 }
 
 /** ガジェットを装備します。 */

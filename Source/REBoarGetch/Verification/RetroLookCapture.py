@@ -158,6 +158,27 @@ def run():
         yield from shot(harness, 'identity_Original')
         results['checks']['identity_label'] = next((t.split('=', 1)[1] for t in args.split() if t.startswith('-RetroLabel=')), '')
 
+    if 'groundab' in SETS:
+        # Ground seam investigation: PS1 + CRT overlay with one pipeline/filter switch changed per shot.
+        variants = [('a_current', {}), ('b_aa_on', {'disable_temporal_aa': False}), ('c_box', {'pixel_filter': 1.0}),
+                    ('d_aa_on_box', {'disable_temporal_aa': False, 'pixel_filter': 1.0}), ('e_texel0', {'texel_snap_strength': 0.0}),
+                    ('f_lighting_on', {'simplify_lighting': False}), ('g_snap0', {'vertex_snap_strength': 0.0, 'affine_amount': 0.0})]
+        for pitch, view in ((-12.0, 'path'), (-28.0, 'low')):
+            unreal.GameplayStatics.set_game_paused(world, False)
+            look(pc, pitch, base_yaw)
+            yield 30
+            unreal.GameplayStatics.set_game_paused(world, True)
+            yield 20
+            for label, changes in variants:
+                p = params_of(renderer, P.PS1)
+                set_fields(p, **changes)
+                renderer.set_preset_parameters(p)
+                renderer.set_crt_overlay(True)
+                yield 30
+                yield from shot(harness, 'ground_%s_%s' % (view, label))
+        renderer.set_crt_overlay(False)
+        renderer.reset_current_preset()
+
     if 'presets' in SETS:
         for preset, label in [(P.OFF, 'Original'), (P.PS1, 'PS1'), (P.N64, 'N64'), (P.PS2, 'PS2'), (P.CRT, 'CRT')]:
             renderer.set_crt_overlay(False)
