@@ -9,6 +9,7 @@
 #include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "MovieScene.h"
 #include "Sections/MovieSceneFloatSection.h"
@@ -34,6 +35,9 @@ namespace
 			Out += FString::Printf(TEXT(" text=\"%s\" size=%.0f font=%s color=%s"), *Text->GetText().ToString(), Text->GetFont().Size,
 				*GetNameSafe(Text->GetFont().FontObject), *Text->GetColorAndOpacity().GetSpecifiedColor().ToString());
 		if (Widget->Slot) Out += FString::Printf(TEXT(" slot=%s"), *Widget->Slot->GetClass()->GetName());
+		if (const UCanvasPanelSlot* Canvas = Cast<UCanvasPanelSlot>(Widget->Slot))
+			Out += FString::Printf(TEXT(" pos=%s size=%s auto=%d anchors=%s align=%s"), *Canvas->GetPosition().ToString(), *Canvas->GetSize().ToString(),
+				Canvas->GetAutoSize() ? 1 : 0, *Canvas->GetAnchors().Minimum.ToString(), *Canvas->GetAlignment().ToString());
 		Out += TEXT("\n");
 		if (const UPanelWidget* Panel = Cast<UPanelWidget>(Widget))
 			for (int32 I = 0; I < Panel->GetChildrenCount(); ++I) DescribeWidget(Panel->GetChildAt(I), Depth + 1, Out);
@@ -91,6 +95,44 @@ bool UBoarUIAuthoringLibrary::EnsureTextBlock(UObject* Object, FName WidgetName,
 	TextBlock->SetJustification(ETextJustify::Center);
 	if (UVerticalBoxSlot* Slot = Cast<UVerticalBoxSlot>(TextBlock->Slot)) Slot->SetHorizontalAlignment(HAlign_Center);
 	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
+	return true;
+}
+
+bool UBoarUIAuthoringLibrary::ConfigureTextBlockStyle(UObject* Object, FName WidgetName, const FText& Text, int32 FontSize, FName Typeface,
+	FLinearColor Color, int32 OutlineSize, FLinearColor OutlineColor, FVector2D ShadowOffset, FLinearColor ShadowColor)
+{
+	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
+	UTextBlock* TextBlock = WBP && WBP->WidgetTree ? Cast<UTextBlock>(WBP->WidgetTree->FindWidget(WidgetName)) : nullptr;
+	if (!TextBlock) return false;
+	WBP->Modify();
+	TextBlock->Modify();
+	FSlateFontInfo Font = TextBlock->GetFont();
+	if (FontSize > 0) Font.Size = FontSize;
+	if (!Typeface.IsNone()) Font.TypefaceFontName = Typeface;
+	Font.OutlineSettings.OutlineSize = FMath::Max(0, OutlineSize);
+	Font.OutlineSettings.OutlineColor = OutlineColor;
+	TextBlock->SetFont(Font);
+	if (!Text.IsEmpty()) TextBlock->SetText(Text);
+	TextBlock->SetColorAndOpacity(FSlateColor(Color));
+	TextBlock->SetShadowOffset(ShadowOffset);
+	TextBlock->SetShadowColorAndOpacity(ShadowColor);
+	TextBlock->SetJustification(ETextJustify::Center);
+	FBlueprintEditorUtils::MarkBlueprintAsModified(WBP);
+	return true;
+}
+
+bool UBoarUIAuthoringLibrary::SetCanvasSlotLayout(UObject* Object, FName WidgetName, FVector2D Position, FVector2D Size, bool bAutoSize)
+{
+	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
+	UWidget* Widget = WBP && WBP->WidgetTree ? WBP->WidgetTree->FindWidget(WidgetName) : nullptr;
+	UCanvasPanelSlot* Slot = Widget ? Cast<UCanvasPanelSlot>(Widget->Slot) : nullptr;
+	if (!Slot) return false;
+	WBP->Modify();
+	Slot->Modify();
+	Slot->SetPosition(Position);
+	Slot->SetSize(Size);
+	Slot->SetAutoSize(bAutoSize);
+	FBlueprintEditorUtils::MarkBlueprintAsModified(WBP);
 	return true;
 }
 

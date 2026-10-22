@@ -26,6 +26,15 @@ public:
 	static bool EnsureTextBlock(UObject* WidgetBlueprint, FName WidgetName, FName ParentPanelName, int32 InsertIndex,
 		FName StyleSourceName, const FText& Text, int32 FontSize, FLinearColor Color);
 
+	/** 既存TextBlockの文字・書体（Typeface名、例 "Bold"）・色・アウトライン・影を設定します。FontSize<=0は維持します。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static bool ConfigureTextBlockStyle(UObject* WidgetBlueprint, FName WidgetName, const FText& Text, int32 FontSize, FName Typeface,
+		FLinearColor Color, int32 OutlineSize, FLinearColor OutlineColor, FVector2D ShadowOffset, FLinearColor ShadowColor);
+
+	/** CanvasPanelSlot上のWidgetの位置・サイズ・AutoSizeを設定します。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static bool SetCanvasSlotLayout(UObject* WidgetBlueprint, FName WidgetName, FVector2D Position, FVector2D Size, bool bAutoSize);
+
 	/** 不透明度0→1、拡大→等倍、下からのSlideで登場するアニメを作成（既存は作り直し）します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
 	static bool EnsureRevealAnimation(UObject* WidgetBlueprint, FName AnimationName, FName WidgetName,

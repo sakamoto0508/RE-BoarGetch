@@ -8,6 +8,7 @@
 #include "Component/HealthComponent.h"
 #include "Component/CapturePresentationComponent.h"
 #include "Component/StageClearPresentationComponent.h"
+#include "Component/GameOverPresentationComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Core/BoarGameMode.h"
 #include "Player/BoarPlayerCharacter.h"
@@ -29,6 +30,7 @@ ABoarPlayerController::ABoarPlayerController()
 {
 	CapturePresentation = CreateDefaultSubobject<UCapturePresentationComponent>(TEXT("CapturePresentation"));
 	StageClearPresentation = CreateDefaultSubobject<UStageClearPresentationComponent>(TEXT("StageClearPresentation"));
+	GameOverPresentation = CreateDefaultSubobject<UGameOverPresentationComponent>(TEXT("GameOverPresentation"));
 	UIFlow = CreateDefaultSubobject<UBoarUIFlowComponent>(TEXT("UIFlow"));
 }
 
@@ -429,6 +431,11 @@ void ABoarPlayerController::SetPlayerHUDHidden(bool bHideHUD)
 	if (PlayerHUDWidget) PlayerHUDWidget->SetVisibility(bHideHUD ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
 }
 
+void ABoarPlayerController::SetPlayerHUDOpacity(float Opacity)
+{
+	if (PlayerHUDWidget) PlayerHUDWidget->SetRenderOpacity(FMath::Clamp(Opacity, 0.f, 1.f));
+}
+
 void ABoarPlayerController::ReturnToLobby()
 {
 	// 任意入力の連打中もLobbyを複数回Openしないよう、最初の要求だけ受け付ける。
@@ -480,6 +487,7 @@ void ABoarPlayerController::HandleStageGameOver()
 	SetInputMode(InputMode);
 	SetShowMouseCursor(true);
 	GameOverWidget->FocusInitialChoice();
+	if (GameOverPresentation) GameOverPresentation->NotifyGameOverUIShown();
 }
 
 void ABoarPlayerController::RetryStage()

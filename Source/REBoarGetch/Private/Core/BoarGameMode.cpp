@@ -19,6 +19,7 @@
 #include "Component/GadgetComponent.h"
 #include "Component/CapturePresentationComponent.h"
 #include "Component/StageClearPresentationComponent.h"
+#include "Component/GameOverPresentationComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Gadget/GadgetBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -328,6 +329,11 @@ void ABoarGameMode::ResolveStageEnd()
 		// GameOverでは今回の未確定進行を破棄し、永続データには触れません。
 		StageRunData = FStageRunData();
 		OnGameOver();
+		// GameOver演出もClearと同じ完了通知（CompleteStageEndPresentation）でUIへ進みます。
+		// BP側で独自演出を待つ設定（bWaitForStageEndPresentation）の場合はそちらを優先します。
+		if (bUseGameOverPresentation && !bWaitForStageEndPresentation)
+			if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
+				if (PC->GameOverPresentation && PC->GameOverPresentation->StartPresentation()) return;
 	}
 	if (!bWaitForStageEndPresentation) CompleteStageEndPresentation();
 }

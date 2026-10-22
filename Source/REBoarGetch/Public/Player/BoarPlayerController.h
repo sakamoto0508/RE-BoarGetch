@@ -43,8 +43,13 @@ public:
 	/** ステージクリア確定後からResult表示までの勝利演出です。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
 	TObjectPtr<class UStageClearPresentationComponent> StageClearPresentation;
+	/** GameOver確定（HP0）後からGameOver UI表示までのダウン演出です。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
+	TObjectPtr<class UGameOverPresentationComponent> GameOverPresentation;
 	/** 勝利演出中に通常HUDを隠します。 */
 	void SetPlayerHUDHidden(bool bHideHUD);
+	/** GameOver演出中に通常HUDをフェードアウトします（1で元に戻ります）。 */
+	void SetPlayerHUDOpacity(float Opacity);
 	/** Dedicated non-stage terminal entry; existing widget/save implementations are reused. */
 	void OpenFacilityMenu(bool bArchive);
 	void OpenArchiveDisplaySelection();

@@ -115,6 +115,9 @@ private:
 	/** Clear時にPlayerControllerのStageClearPresentation（勝利カメラ・消失・暗転）を再生してからResultへ進みます。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bUseStageClearPresentation = true;
+	/** GameOver時にPlayerControllerのGameOverPresentation（ダウン・カメラ後退・警告UI）を再生してからGameOver UIへ進みます。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
+	bool bUseGameOverPresentation = true;
 	bool bGameOverRequested = false;
 	bool bClearSaveSucceeded = false;
 	bool bEndPresentationCompleted = false;
