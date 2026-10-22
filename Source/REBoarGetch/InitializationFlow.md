@@ -7,7 +7,7 @@
 1. `UBoarGameInstance::Init()` が永続進行を読み込む。
 2. UEがレベル配置Actor・Controller・デフォルトPawnを構築する。
 3. `ABoarGameMode::PrepareStage()` が設定と進行データの使用可否を確認する。
-4. ステージ操作を停止し、設定されたボア・コインを生成する。個体IDは生成完了前に設定する。
+4. ステージ操作を停止し、設定されたボア・コインを生成する。生成方法（ID検証、`SpawnActorDeferred` で生成完了前に個体IDを設定、取得済みコインの除外）は `BoarStageSpawner`（`Private/Core/BoarStageSpawner`）が担当し、GameModeは呼び出しと成否判定だけを行う。
 5. 檻、ボアの種類設定、プレイヤーHP・装備を初期化する。装備方針と進行への参照は `FBoarGadgetLoadoutContext` で渡す。
 6. 初期装備の生成成功と、目標に必要なボア数・檻・プレイヤーの存在を確認する。
 7. `Super::StartPlay()` が通常のActor／ComponentのBeginPlayを実行する。イベント登録、HUD生成、ローカルな見た目の準備は従来の所有者が担当する。
@@ -26,7 +26,7 @@
 
 ## 拡張時の入口
 
-- 新しい必須Actorの生成は `PrepareStage()` の生成段階に追加し、失敗をboolで返す。
+- 新しい必須Actorの生成は `BoarStageSpawner` 等の担当へ実装し、`PrepareStage()` の生成段階から呼んで失敗をboolで返す。
 - Actor間の依存解決はGameMode側で行い、初期化引数として渡す。
 - 新しい準備処理は `InitializeStageActors()` に追加する。初期化済み判定は成功後に確定する。
 - 非同期の準備を追加する場合は、その完了前に `bStageInitializationComplete` を立てない。

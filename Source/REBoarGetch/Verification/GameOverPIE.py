@@ -130,7 +130,7 @@ def sample(t0):
     fwd = rot.get_forward_vector()
     err = math.degrees(math.acos(max(-1, min(1, (fwd.x * d.x + fwd.y * d.y + fwd.z * d.z) / max(dist, 1e-3)))))
     anim = p.mesh.get_anim_instance()
-    mont = c.get_editor_property('down_montage')
+    mont = c.get_director().get_editor_property('down_montage') if c.get_director() else None
     hud = [w for w in unreal.WidgetLibrary.get_all_widgets_of_class(world(), unreal.BoarHUDWidget, False)]
     base = p.get_actor_location().z
     return {'t': round(time.monotonic() - t0, 3), 'age': round(c.get_presentation_age(), 3), 'state': ename(mode().get_stage_state()),

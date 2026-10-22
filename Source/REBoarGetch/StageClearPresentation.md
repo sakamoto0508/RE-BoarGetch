@@ -5,8 +5,17 @@
 （捕獲演出が残っている間は保留）→ フレーム終端 `ResolveStageEnd` で Cleared 確定 → `SetStageActorsStopped(true)` → `RetryClearSave()` →
 `OnStageCleared()`（BP） → `UStageClearPresentationComponent::StartPresentation()`（Clear専用・1回だけ）。
 
-Component（`ABoarPlayerController::StageClearPresentation`）の流れ：
-1. WaitingCapture：捕獲演出の残りを `CaptureWaitTimeout` まで待つ（超過時は捕獲演出を中断）。
+責務：Clear判定・保存・Result可否はGameMode（C++）。`UStageClearPresentationComponent` は進行制御だけ（捕獲演出待ち、演出BPの生成、
+`SafetyTimeout`、中断、完了報告→`CompleteStageEndPresentation()`。`DirectorClass` 未設定なら即Result）。
+演出の順序・タイミング・SE・ジングルは `/Game/BP/Presentation/BP_StageClearPresentation` のEvent Graph、Montage・VFX・カメラ値はそのClass Defaults。
+毎フレーム処理が要る下位処理（カメラ選定・後退、Montage保持、分解Proxy、粒子、復元）は `AStageClearPresentationDirector`（C++）の部品として提供。
+
+BPタイムライン：BeginVictoryShot+StopStageBGM(0.45) → 0.25s PlayVictoryMontage+Jingle → 0.45 Jump SE → 0.81 SpawnStarBurst+Star SE → 1.45 BeginGlow(0.25)
+→ 1.70 Transfer SE+BeginDissolve(0.75) → 2.45 Transfer完了SE → 2.50 BeginCameraRetreat(2.1, 0.7) → 4.60 BeginScreenFadeOut(0.6) → 5.20 FinishPresentation。
+`OnResultShown`（BP）はResult表示時に呼ばれます（Result BGMを足す場合はここ）。
+
+演出の流れ（各部品の内容）：
+1. WaitingCapture（Component）：捕獲演出の残りを `CaptureWaitTimeout` まで待つ（超過時は捕獲演出を中断）。
 2. Victory：HUD非表示、ステージBGMフェードアウト、`VictoryFocusPoint`（足元＋`VictoryFocusOffset`）を固定、遮蔽の少ない斜め前方に一時 `ACameraActor` を生成して `SetViewTargetWithBlend`。
    `MontageStartDelay` 後に `AM_Player_Victory_NetRaise`（FullBody Slot）を再生、最終ポーズでPause（消失まで掲げたまま）。Montage不可ならMeshを上下させるFallback。
    ジングル（BGMチャンネル）、ジャンプSE、`StarBurstTime` で網先端から星Niagaraを黄・白・シアン3色で生成、`GlowStartTime` からシアンOverlay、
@@ -21,7 +30,8 @@ ActorはDestroyしない：元の Visibility / HiddenInGame / OverlayMaterial �
 GameOverは従来どおり（Componentは開始されない）。`SafetyTimeout` 超過・Player消失時は残りを省略してResultへ進む。
 
 ## Editor tuning
-- `BP_BoarPlayerController > StageClearPresentation`：Timing / Camera / Animation / VFX / Audio（すべて秒・cm・度）。
+- `BP_StageClearPresentation`：Event Graph（Delay秒数・SE・ジングル）、Class Defaults（Camera / Animation / VFX）。
+- `BP_BoarPlayerController > StageClearPresentation`：`bEnabled`、`DirectorClass`、`CaptureWaitTimeout`、`SafetyTimeout`。
 - `BP_BoarGameMode > bUseStageClearPresentation`（OFFで従来の即Result）。`bWaitForStageEndPresentation` をBP演出に使う場合はそちらが優先。
 - `WBP_Result`：`Anim_StageClear / Anim_CaptureCount / Anim_SpecialCoin`（UMGアニメ、Designerで編集可）、
   `RevealStepInterval`、`InputUnlockDelay`、`CaptureLineFormat`（{Captured}/{Target}）、`CoinLineFormat`（{Coins}）、`LateRevealWidgetNames`、各SE。
@@ -37,5 +47,6 @@ GameOverは従来どおり（Componentは開始されない）。`SafetyTimeout`
 ## Scripts（再実行可能）
 - `Verification/StageClearSetupAssets.py`：星Texture/Material、Victory FBX import、Montage。
 - `Verification/StageClearNiagara.py create|configure`：NiagaraToolsets経由で星Niagaraを作成・設定。
-- `Verification/StageClearConfigureBP.py`：WBP_Result（Text/UMGアニメ/SE）、PlayerController Component、GameModeを設定。
+- `Verification/StageClearConfigureBP.py`：WBP_Result（Text/UMGアニメ/SE）、GameModeを設定（Component部分は旧構成用。演出設定は下記）。
+- `Verification/PresentationBPSetup.py`：`BP_StageClearPresentation` / `BP_GameOverPresentation` の作成・設定・Controller接続。
 - `Verification/StageClearPIE.py`：PIEでの実動作検証（SaveGamesを退避・復元）。

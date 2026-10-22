@@ -118,9 +118,9 @@ int32 UBoarGameOverEffectWidget::NativePaint(const FPaintArgs& Args, const FGeom
 				Box(Out, Layer, G, Cx ? W - In - CT : In, Cy ? H - In - L : In, CT, L, Corner);
 			}
 
-		const FLinearColor Cyan = WithAlpha(CyanColor, WarningAlpha * .55f);
+		const FLinearColor CyanTint = WithAlpha(CyanColor, WarningAlpha * .55f);
 		for (int32 I = 0; I < 12; ++I)
-			Box(Out, Layer, G, W - In - L - 26.f - I * 9.f, H - In - 16.f, 2.f, (I % 3 == 0) ? 9.f : 5.f, Cyan);
+			Box(Out, Layer, G, W - In - L - 26.f - I * 9.f, H - In - 16.f, 2.f, (I % 3 == 0) ? 9.f : 5.f, CyanTint);
 
 		if (!WarningLabel.IsEmpty())
 		{
@@ -132,7 +132,7 @@ int32 UBoarGameOverEffectWidget::NativePaint(const FPaintArgs& Args, const FGeom
 			{
 				const FSlateFontInfo Small = FCoreStyle::GetDefaultFontStyle("Regular", 14);
 				FSlateDrawElement::MakeText(Out, Layer, G.ToPaintGeometry(FVector2D(520, 22), FSlateLayoutTransform(FVector2D(In + 20.f, In + 42.f))),
-					SubLabel.ToString(), Small, ESlateDrawEffect::None, Cyan);
+					SubLabel.ToString(), Small, ESlateDrawEffect::None, CyanTint);
 			}
 		}
 	}

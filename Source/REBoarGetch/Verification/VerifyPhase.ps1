@@ -28,7 +28,7 @@ $bpContent = Get-Content -LiteralPath $blueprintLog -Raw
 $compiled = ([regex]::Matches($bpContent, 'Loading and Compiling:')).Count
 $cleanCompilation = $bpContent.Contains('Compiling Completed with 0 errors and 0 warnings and 0 blueprints that failed to load.')
 Write-Output "Phase $Phase Blueprint: exit=$($bpProcess.ExitCode), compiled=$compiled, cleanCompilation=$cleanCompilation"
-if (-not $cleanCompilation -or $compiled -ne 41) { throw 'Blueprint compilation failed; inspect log.' }
+if (-not $cleanCompilation -or $compiled -ne 43) { throw 'Blueprint compilation failed; inspect log.' }
 if ($bpProcess.ExitCode -ne 0) {
     # Recorded before edits in REBoarGetch-backup-2026.10.02-08.05.52.log.
     if (-not $bpContent.Contains('Asset Manager settings do not include an entry for assets of type GameFeatureData')) {

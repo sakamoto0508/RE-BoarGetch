@@ -78,4 +78,13 @@ REBoarGetch.sln.DotSettings.user
 Content/InportAssets/
 Content/LPRiverForest/
 Source/REBoarGetch/Docs/
-SourceArt/
+# SourceArt: Blender / FBX / WAV / scripts are tracked (LFS, see .gitattributes); generated output is not.
+SourceArt/**/Logs/
+SourceArt/**/Screenshots/
+SourceArt/**/Preview/
+SourceArt/**/Review/
+# FBX re-exported from Content/InportAssets (itself not tracked); regenerate from UE when needed.
+SourceArt/**/UEExport/
+SourceArt/**/__pycache__/
+SourceArt/**/*.log
+*.blend1

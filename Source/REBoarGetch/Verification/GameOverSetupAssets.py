@@ -3,7 +3,7 @@
 - Imports SourceArt/GameOver/Player_GameOver_Down.fbx onto the player skeleton -> /Game/Animation/Player/A_Player_GameOver_Down
   and creates AM_Player_GameOver_Down (FullBody slot, no auto blend-out so the last pose is held).
 - Imports SourceArt/GameOver/Audio/*.wav -> /Game/REBoarGetch/Art/Audio/GameOver/.
-- BP_BoarPlayerController.GameOverPresentation: montage, glow material, SEs, timings.
+- (Presentation settings — montage, camera, SEs, timeline — now live in BP_GameOverPresentation; see PresentationBPSetup.py.)
 - BP_BoarGameMode.bUseGameOverPresentation = True (bWaitForStageEndPresentation is left untouched).
 - WBP_GameOver: existing Heading restyled (bold red-orange, navy outline, orange shadow) and its slot enlarged to fit.
 Writes Saved/GameOverSetupAssets.json (also re-reads every saved value)."""
@@ -109,35 +109,6 @@ def style_heading():
     OUT['wbp_after'] = L.describe_widget_blueprint(unreal.load_asset('/Game/BP/Widget/WBP_GameOver'))
 
 
-def configure_controller(mont, anim):
-    bp = unreal.load_asset('/Game/BP/Player/BP_BoarPlayerController')
-    cd = unreal.get_default_object(bp.generated_class())
-    c = cd.get_component_by_class(unreal.GameOverPresentationComponent)
-    assert c, 'GameOverPresentation component missing (rebuild C++)'
-    snd = lambda n: unreal.load_asset(AUDIO + '/' + n)
-    c.set_editor_property('down_montage', mont)
-    c.set_editor_property('down_animation', anim)
-    c.set_editor_property('gadget_glow_material', unreal.load_asset('/Game/REBoarGetch/Art/VFX/Capture/M_CaptureGlow'))
-    c.set_editor_property('impact_sound', snd('SFX_GameOver_Impact'))
-    c.set_editor_property('noise_sound', snd('SFX_GameOver_Noise'))
-    c.set_editor_property('system_down_sound', snd('SFX_GameOver_PowerDown'))
-    c.set_editor_property('body_fall_sound', snd('SFX_GameOver_BodyFall'))
-    c.set_editor_property('defeat_jingle', snd('SFX_GameOver_Jingle'))
-    # Timeline matched to A_Player_GameOver_Down (recoil 0-0.2s, stagger -0.56s, sit 0.74s, back hits the floor 1.06s, rest 1.32s, 1.4s long).
-    for k, v in {'hit_stop_duration': .09, 'hit_stop_time_scale': .05, 'flash_peak_alpha': .5, 'flash_duration': .24,
-                 'down_start_time': .1, 'down_play_rate': 1.0, 'body_impact_anim_time': 1.04,
-                 'camera_start_time': .8, 'camera_duration': 1.4, 'camera_rise_duration': .6, 'camera_end_pitch': -40.,
-                 'camera_yaw_drift': 12., 'pull_back_distance': 230., 'camera_end_fov': 80., 'focus_interp_speed': 5.,
-                 'warning_start_time': .25, 'warning_fade_in_time': .35, 'warning_alpha_during_ui': .35, 'vignette_alpha': .45,
-                 'noise_burst_times': [.02, 1.14], 'noise_burst_duration': .18, 'noise_intensity': .8,
-                 'gadget_glow_start_time': .15, 'gadget_glow_decay_time': 1.1, 'hud_fade_start_time': .15, 'hud_fade_out_time': .4,
-                 'impact_pitch': 1.0, 'system_down_sound_time': .45, 'bgm_fade_out_time': .8,
-                 'ui_delay_after_settle': .3, 'fallback_finish_time': 2.4, 'safety_timeout': 6.}.items():
-        c.set_editor_property(k, v)
-    unreal.BlueprintEditorLibrary.compile_blueprint(bp)
-    OUT['pc_save'] = E.save_loaded_asset(bp)
-
-
 def configure_game_mode():
     gm = unreal.load_asset('/Game/BP/GameMode/BP_BoarGameMode')
     gcd = unreal.get_default_object(gm.generated_class())
@@ -148,14 +119,6 @@ def configure_game_mode():
 
 def reread():
     """Reload what was saved and report it (verifies the settings actually persisted)."""
-    bp = unreal.load_asset('/Game/BP/Player/BP_BoarPlayerController')
-    c = unreal.get_default_object(bp.generated_class()).get_component_by_class(unreal.GameOverPresentationComponent)
-    OUT['reread_pc'] = {k: str(c.get_editor_property(k)) for k in ['enabled', 'down_montage', 'down_animation', 'gadget_glow_material', 'impact_sound',
-                                                                     'noise_sound', 'system_down_sound', 'body_fall_sound', 'defeat_jingle',
-                                                                     'camera_start_time', 'camera_duration', 'pull_back_distance', 'camera_end_pitch',
-                                                                     'noise_burst_times', 'safety_timeout']}
-    other = unreal.get_default_object(bp.generated_class()).get_component_by_class(unreal.StageClearPresentationComponent)
-    OUT['reread_stage_clear_untouched'] = {k: str(other.get_editor_property(k)) for k in ['victory_montage', 'retreat_duration', 'victory_jingle']}
     gm = unreal.get_default_object(unreal.load_asset('/Game/BP/GameMode/BP_BoarGameMode').generated_class())
     OUT['reread_gm'] = {k: gm.get_editor_property(k) for k in ['use_game_over_presentation', 'use_stage_clear_presentation', 'wait_for_stage_end_presentation']}
     mont = unreal.load_asset(ANIM + '/AM_Player_GameOver_Down')
@@ -172,7 +135,6 @@ try:
     anim = import_anim()
     mont = make_montage(anim)
     style_heading()
-    configure_controller(mont, anim)
     configure_game_mode()
     reread()
 except Exception:

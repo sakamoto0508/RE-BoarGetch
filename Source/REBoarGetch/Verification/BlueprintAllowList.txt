@@ -45,3 +45,5 @@
 /Game/BP/Archive/BP_Archive_EncyclopediaTerminal.BP_Archive_EncyclopediaTerminal
 /Game/BP/Archive/BP_Archive_DisplaySelectionTerminal.BP_Archive_DisplaySelectionTerminal
 /Game/BP/Archive/BP_ArchiveBoarDisplay.BP_ArchiveBoarDisplay
+/Game/BP/Presentation/BP_StageClearPresentation.BP_StageClearPresentation
+/Game/BP/Presentation/BP_GameOverPresentation.BP_GameOverPresentation

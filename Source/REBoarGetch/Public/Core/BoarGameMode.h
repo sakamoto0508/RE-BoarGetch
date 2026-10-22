@@ -123,9 +123,6 @@ private:
 	bool bEndPresentationCompleted = false;
 	bool bEndUIShown = false;
 	TSet<TWeakObjectPtr<class ABoarBase>> HandledCapturedBoars;
-	/** Level内のBoarSpawnPointを使用して設定済みBoarを生成します。 */
-	bool SpawnConfiguredBoars();
-	bool SpawnConfiguredSpecialCoins();
 	/** コインの見た目・Overlapを持つ既存BPを指定します。未設定では生成しません。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Spawn")
 	TSubclassOf<class ASpecialCoin> SpecialCoinClass;

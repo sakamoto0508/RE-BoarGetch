@@ -97,10 +97,18 @@ def visuals():
     return out
 
 
+def phase_label(comp):
+    """Component phase; while the presentation BP plays, VICTORY or RETREAT from the director (BP-driven timeline)."""
+    ph = ename(comp.get_phase())
+    if ph == 'PLAYING' and comp.get_director():
+        return 'RETREAT' if comp.get_director().is_retreating() else 'VICTORY'
+    return ph
+
+
 def camera_metrics(comp):
     cm = pc().player_camera_manager
     loc, rot = cm.get_camera_location(), cm.get_camera_rotation()
-    focus = comp.get_victory_focus_point()
+    focus = comp.get_director().get_victory_focus_point()
     d = unreal.Vector(focus.x - loc.x, focus.y - loc.y, focus.z - loc.z)
     dist = math.sqrt(d.x * d.x + d.y * d.y + d.z * d.z)
     fwd = rot.get_forward_vector()
@@ -195,7 +203,7 @@ def clear_cycle(name, coins):
     seen_phases = []
     result = None
     while time.monotonic() - t0 < 20:
-        ph = ename(comp.get_phase())
+        ph = phase_label(comp)
         if not seen_phases or seen_phases[-1] != ph:
             seen_phases.append(ph)
         st = ename(mode().get_stage_state())
