@@ -32,6 +32,7 @@ TConstArrayView<FRetroParameterDescriptor> GetRetroParameterDescriptors()
 		{TEXT("SnapResolutionX"), &P::SnapResolutionX, 0, 1920, MPC, false},
 		{TEXT("SnapResolutionY"), &P::SnapResolutionY, 16, 1080, MPC, false},
 		{TEXT("SnapMaxObjectRadius"), &P::SnapMaxObjectRadius, 0, 100000, MPC, false},
+		{TEXT("SnapFlatRatio"), &P::SnapFlatRatio, 0, 1, MPC, false},
 		{TEXT("AffineAmount"), &P::AffineAmount, 0, 1, MPC, false},
 		{TEXT("TexelSnapStrength"), &P::TexelSnapStrength, 0, 1, MPC, false},
 		{TEXT("TextureResolution"), &P::TextureResolution, 4, 1024, MPC, false},

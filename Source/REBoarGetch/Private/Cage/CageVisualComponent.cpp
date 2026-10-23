@@ -13,6 +13,10 @@
 UCageVisualComponent::UCageVisualComponent()
 {
 	PrimaryComponentTick.bCanEverTick=true; PrimaryComponentTick.TickInterval=.05f;
+	CageMeshComponent=CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CageMesh")); CageMeshComponent->SetupAttachment(this);
+	CageMeshComponent->bUseDefaultCollision=false; CageMeshComponent->SetCollisionProfileName(TEXT("NoCollision")); CageMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	CageMeshComponent->SetCanEverAffectNavigation(false); CageMeshComponent->SetGenerateOverlapEvents(false);
+	// 以下はCageMesh未設定時の仮表示です。専用Meshを設定すると非表示になります。
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> White(TEXT("/Game/Art/Materials/Cage/M_Cage_White"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Navy(TEXT("/Game/Art/Materials/Cage/M_Cage_Navy"));
@@ -53,6 +57,9 @@ void UCageVisualComponent::OnRegister()
 		if(!C->IsRegistered()) C->RegisterComponent();
 		C->UpdateComponentToWorld();
 	}
+	CageMeshComponent->AttachToComponent(this, FAttachmentTransformRules::KeepRelativeTransform);
+	if(!CageMeshComponent->IsRegistered()) CageMeshComponent->RegisterComponent();
+	ApplyVisualSource();
 	Gauge->AttachToComponent(this, FAttachmentTransformRules::KeepRelativeTransform);
 	Gauge->SetRelativeLocation(FVector(0,0,GaugeHeight)); Gauge->SetRelativeScale3D(FVector(GaugeWorldScale));
 	if(!Gauge->IsRegistered()) Gauge->RegisterComponent();
@@ -61,12 +68,22 @@ void UCageVisualComponent::BeginPlay()
 {
 	Super::BeginPlay(); Cage=Cast<ACage>(GetOwner());
 	if(!Cage){SetComponentTickEnabled(false);return;}
-	for(UStaticMeshComponent* C:Shell) if(C->ComponentHasTag(TEXT("CageLamp"))) Lamps.Add(C->CreateDynamicMaterialInstance(0));
+	if(CageMesh) { for(int32 Slot:LampMaterialSlots) if(Slot>=0&&Slot<CageMeshComponent->GetNumMaterials()) Lamps.Add(CageMeshComponent->CreateDynamicMaterialInstance(Slot)); }
+	else for(UStaticMeshComponent* C:Shell) if(C->ComponentHasTag(TEXT("CageLamp"))) Lamps.Add(C->CreateDynamicMaterialInstance(0));
 	Gauge->InitWidget(); Fraction=FMath::Clamp(Cage->GetHP()/FMath::Max(Cage->GetMaxHP(),1.f),0.f,1.f); Trail=Fraction;
 	Cage->OnHealthChanged.AddUniqueDynamic(this,&UCageVisualComponent::HealthChanged);
 	Cage->OnCageDestroyed.AddUniqueDynamic(this,&UCageVisualComponent::Destroyed);
 	Cage->OnRespawned.AddUniqueDynamic(this,&UCageVisualComponent::Respawned);
 	bDestroyed=Cage->GetIsCageDestroyed();
+}
+// 専用Meshが設定されていればそれだけを表示し、未設定なら仮の箱組みを表示します。
+void UCageVisualComponent::ApplyVisualSource()
+{
+	const bool bUseMesh=CageMesh!=nullptr;
+	CageMeshComponent->SetStaticMesh(CageMesh);
+	CageMeshComponent->SetRelativeTransform(CageMeshTransform);
+	CageMeshComponent->SetVisibility(bUseMesh);
+	for(UStaticMeshComponent* C:Shell) if(C) C->SetVisibility(!bUseMesh);
 }
 void UCageVisualComponent::EndPlay(const EEndPlayReason::Type Reason)
 {

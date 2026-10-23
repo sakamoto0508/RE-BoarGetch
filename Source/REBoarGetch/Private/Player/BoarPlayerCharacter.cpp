@@ -14,12 +14,34 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Gadget/NetGadget.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Animation/AnimSequenceBase.h"
+#include "UObject/ConstructorHelpers.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
 
 ABoarPlayerCharacter::ABoarPlayerCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// Tickは空中アミ捕獲中の急降下制御だけに使う（非実行時は即return）。
+	PrimaryActorTick.bCanEverTick = true;
+
+	// 空中アミ捕獲のAnimation既定値。BP_PlayerCharacterのClass Defaultsで差し替え可能。
+	static ConstructorHelpers::FObjectFinder<UAnimSequenceBase> AirAnticipation(
+		TEXT("/Game/Animation/Player/AirNetDrop/A_Player_AirNetDrop_Anticipation"));
+	static ConstructorHelpers::FObjectFinder<UAnimSequenceBase> AirSwing(
+		TEXT("/Game/Animation/Player/AirNetDrop/A_Player_AirNetDrop_Swing"));
+	static ConstructorHelpers::FObjectFinder<UAnimSequenceBase> AirLoop(
+		TEXT("/Game/Animation/Player/AirNetDrop/A_Player_AirNetDrop_DropLoop"));
+	static ConstructorHelpers::FObjectFinder<UAnimSequenceBase> AirRecovery(
+		TEXT("/Game/Animation/Player/AirNetDrop/A_Player_AirNetDrop_Recovery"));
+	static ConstructorHelpers::FObjectFinder<UAnimSequenceBase> AirLand(
+		TEXT("/Game/Animation/Player/AirNetDrop/A_Player_AirNetDrop_Land"));
+	AirNetDropAnticipationAnimation = AirAnticipation.Object;
+	AirNetDropSwingAnimation = AirSwing.Object;
+	AirNetDropLoopAnimation = AirLoop.Object;
+	AirNetDropRecoveryAnimation = AirRecovery.Object;
+	AirNetDropLandAnimation = AirLand.Object;
 
 	//-------------------------------------------------
 	// Components
@@ -98,9 +120,35 @@ bool ABoarPlayerCharacter::InitializeForPlay(const FBoarGadgetLoadoutContext& Co
 	return true;
 }
 
+void ABoarPlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (AirNetDropPhase != EAirNetDropPhase::None)
+	{
+		TickAirNetDrop(DeltaSeconds);
+	}
+}
+
 void ABoarPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
 {
 	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
+	// 空中アミ捕獲中はUseGadget状態を上書きせず、着地だけを専用処理へ渡す。
+	if (AirNetDropPhase != EAirNetDropPhase::None)
+	{
+		const UCharacterMovementComponent* Move = GetCharacterMovement();
+		if (Move && Move->IsMovingOnGround())
+		{
+			HandleAirNetDropLanded();
+		}
+		else if (Move && !Move->IsFalling())
+		{
+			// 地上・空中以外（移動無効化など）へ移った場合は継続させない。
+			EndGadgetUse(true);
+		}
+		return;
+	}
 
 	if (bIsStunned || bIsDowned || CurrentActionState == EPlayerActionState::Capture)
 		return;
@@ -127,7 +175,11 @@ void ABoarPlayerCharacter::Move(const FVector2D& Input)
 	const FVector Right = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
 	const FVector DesiredDirection = Forward * Input.Y + Right * Input.X;
 
-	if (IsActionLocked())
+	// 空中アミ捕獲の空中段階だけは、倍率を掛けたAirControlで操作を受け付ける（倍率0なら従来どおり入力無効）。
+	const bool bAirNetDropSteering = AirNetDropPhase != EAirNetDropPhase::None &&
+		AirNetDropPhase != EAirNetDropPhase::Landing && AirNetDropHorizontalControlMultiplier > 0.0f &&
+		!bIsDowned;
+	if (IsActionLocked() && !bAirNetDropSteering)
 		return;
 
 	if (!FMath::IsNearlyZero(Input.Y))
@@ -206,6 +258,12 @@ void ABoarPlayerCharacter::StartGadgetUse()
 		if (CurrentGadget == nullptr)
 			return;
 
+		// 空中かどうかは使用開始のこの時点で確定させ、途中で上昇→下降に変わっても地上用へ切り替えない。
+		const bool bAirNetDrop = ShouldStartAirNetDrop(CurrentGadget);
+		// 空中のアミはCooldown中なら使わない（地上用Montageと移動停止で空中に静止してしまうのを防ぐ）。
+		if (bAirNetDrop && !CurrentGadget->CanUse())
+			return;
+
 		// 使用開始後にガジェットが切り替わっても判定できるよう、UseStyleをCharacter側へ保存する。
 		CurrentGadgetUseStyle = CurrentGadget->GetUseStyle();
 		if (!GadgetComponent->BeginUseCurrentGadget())
@@ -213,7 +271,15 @@ void ABoarPlayerCharacter::StartGadgetUse()
 
 		bIsGadgetInUse = true;
 
-		if (UCharacterMovementComponent* Move = GetCharacterMovement();
+		if (bAirNetDrop)
+		{
+			// 空中アミは鉛直速度を残したまま急降下へ移るため、StopMovementImmediatelyを通さない。
+			if (UCharacterMovementComponent* Move = GetCharacterMovement())
+			{
+				Move->bOrientRotationToMovement = false;
+			}
+		}
+		else if (UCharacterMovementComponent* Move = GetCharacterMovement();
 				Move && !CurrentGadget->CanMoveWhileUsing())
 		{
 				// ガジェット使用中は移動入力を受けても動かないようにする。
@@ -225,6 +291,16 @@ void ABoarPlayerCharacter::StartGadgetUse()
 		bHadMoveInput = false;
 
 		SetPlayerActionState(EPlayerActionState::UseGadget);
+		if (bAirNetDrop)
+		{
+			// 空中用AnimationはC++側でFullBodyスロットへ再生する（BPの地上用Montageは再生しない）。
+			if (!BeginAirNetDrop())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] Animation could not be played; ending gadget use"));
+				EndGadgetUse(true);
+			}
+			return;
+		}
 		//BPイベントでガジェット使用開始を通知する。
 		OnGadgetUseStarted(CurrentGadgetUseStyle, CurrentGadget);
 
@@ -430,6 +506,10 @@ void ABoarPlayerCharacter::EndGadgetUse(bool bWasInterrupted)
 		NetGadget->EndCaptureWindow();
 	}
 
+	// 空中アミ捕獲の急降下・移動値・Montageをどの終了経路でも必ず元に戻す。
+	const bool bWasAirNetDrop = AirNetDropPhase != EAirNetDropPhase::None;
+	EndAirNetDrop();
+
 	if (GadgetComponent)
 	{
 		GadgetComponent->EndUseCurrentGadget();
@@ -448,6 +528,12 @@ void ABoarPlayerCharacter::EndGadgetUse(bool bWasInterrupted)
 	if (bWasInterrupted)
 	{
 		OnGadgetUseInterrupted();
+	}
+
+	// 空中で引き戻しまで終えた場合は、UseGadgetのまま落下しないよう通常のFallへ戻す。
+	if (bWasAirNetDrop && !bIsStunned && !bIsDowned && GetCharacterMovement() && GetCharacterMovement()->IsFalling())
+	{
+		SetPlayerActionState(EPlayerActionState::Fall);
 	}
 
 	// ガジェットによる入力ロックが解除されたため、現在の移動入力からIdle・Walk・Runへ復帰させる。
@@ -482,4 +568,266 @@ bool ABoarPlayerCharacter::IsActionLocked() const
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
 		if (!Mode->CanAdvanceStage()) return true;
 	return bIsStunned || bIsGadgetInUse || bIsDowned;
+}
+
+//-------------------------------------------------
+// Air Net Drop（空中アミ捕獲）
+//-------------------------------------------------
+
+ANetGadget* ABoarPlayerCharacter::GetEquippedNetGadget() const
+{
+	return GadgetComponent ? Cast<ANetGadget>(GadgetComponent->GetCurrentGadget()) : nullptr;
+}
+
+bool ABoarPlayerCharacter::ShouldStartAirNetDrop(const AGadgetBase* Gadget) const
+{
+	const UCharacterMovementComponent* Move = GetCharacterMovement();
+	// Jump上昇中・二段ジャンプ中・落下中はいずれもFalling。
+	return Cast<ANetGadget>(Gadget) && Move && Move->IsFalling() && AirNetDropAnticipationAnimation &&
+		AirNetDropSwingAnimation && AirNetDropLoopAnimation && AirNetDropRecoveryAnimation && AirNetDropLandAnimation &&
+		GetMesh() && GetMesh()->GetAnimInstance();
+}
+
+bool ABoarPlayerCharacter::BeginAirNetDrop()
+{
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	if (Move == nullptr)
+		return false;
+
+	// 押しっぱなしのジャンプ入力で上昇が再加算されないようにする（ジャンプ回数は変更しない）。
+	StopJumping();
+
+	SavedAirNetDropGravityScale = Move->GravityScale;
+	SavedAirNetDropAirControl = Move->AirControl;
+	bAirNetDropMovementOverridden = true;
+	Move->AirControl = SavedAirNetDropAirControl * AirNetDropHorizontalControlMultiplier;
+	// 予備動作：上昇を止め、重力を弱めて一瞬ためる。
+	Move->Velocity.Z = FMath::Min(Move->Velocity.Z, AirNetDropAnticipationMaxRiseSpeed);
+	Move->GravityScale = SavedAirNetDropGravityScale * AirNetDropAnticipationGravityMultiplier;
+
+	AirNetDropDiveElapsed = 0.0f;
+	return EnterAirNetDropPhase(EAirNetDropPhase::Anticipation);
+}
+
+void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
+{
+	AirNetDropPhaseElapsed += DeltaSeconds;
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+
+	// 網が1フレームで大きく動くため、判定窓が開いている間は移動量を掃引して取りこぼしを防ぐ。
+	if (ANetGadget* NetGadget = GetEquippedNetGadget())
+	{
+		NetGadget->SweepCaptureWindow();
+	}
+
+	if (Move == nullptr || !Move->IsFalling())
+		return;
+
+	switch (AirNetDropPhase)
+	{
+	case EAirNetDropPhase::Anticipation:
+	{
+		Move->Velocity.Z = FMath::Min(Move->Velocity.Z, AirNetDropAnticipationMaxRiseSpeed);
+		// 次のAnimationへクロスフェードできるよう、ブレンド時間ぶん早めに切り替える。
+		if (AirNetDropPhaseElapsed >= FMath::Max(0.0f, AirNetDropAnticipationDuration - AirNetDropBlendTime))
+		{
+			BeginAirNetDropDive();
+			if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing)) EndGadgetUse(true);
+		}
+		break;
+	}
+	case EAirNetDropPhase::Swing:
+	case EAirNetDropPhase::Drop:
+	{
+		AirNetDropDiveElapsed += DeltaSeconds;
+		// 急降下：通常重力の代わりに設定加速度で加速し、最大落下速度で止める。
+		Move->Velocity.Z = FMath::Max(Move->Velocity.Z - AirNetDropDownAcceleration * DeltaSeconds, -AirNetDropMaxFallSpeed);
+
+		if (AirNetDropPhase == EAirNetDropPhase::Swing)
+		{
+			const float SwingDuration = AirNetDropSwingAnimation->GetPlayLength() / FMath::Max(0.1f, AirNetDropSwingPlayRate);
+			if (AirNetDropPhaseElapsed >= FMath::Max(0.0f, SwingDuration - AirNetDropBlendTime))
+			{
+				if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) EndGadgetUse(true);
+			}
+		}
+		else if (AirNetDropDiveElapsed >= AirNetDropMaxDiveDuration)
+		{
+			// 高所では急降下を打ち切り、引き戻してから通常の重力落下へ戻す。
+			RestoreAirNetDropMovement();
+			if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery)) EndGadgetUse(true);
+		}
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+void ABoarPlayerCharacter::BeginAirNetDropDive()
+{
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	if (Move == nullptr)
+		return;
+
+	// 急降下中の加速は設定値で管理するため、通常重力は止める（終了時にRestoreで戻す）。
+	Move->GravityScale = 0.0f;
+	Move->Velocity.Z = FMath::Min(Move->Velocity.Z, -AirNetDropInitialDownSpeed);
+	Move->Velocity.X *= AirNetDropHorizontalVelocityScale;
+	Move->Velocity.Y *= AirNetDropHorizontalVelocityScale;
+	AirNetDropDiveElapsed = 0.0f;
+}
+
+bool ABoarPlayerCharacter::EnterAirNetDropPhase(EAirNetDropPhase NewPhase)
+{
+	AirNetDropPhase = NewPhase;
+	AirNetDropPhaseElapsed = 0.0f;
+
+	switch (NewPhase)
+	{
+	case EAirNetDropPhase::Anticipation:
+	{
+		// 予備動作Animationは設定秒数に合わせて再生速度を変える。
+		const float Length = AirNetDropAnticipationAnimation->GetPlayLength();
+		return PlayAirNetDropAnimation(AirNetDropAnticipationAnimation, Length / FMath::Max(0.02f, AirNetDropAnticipationDuration), 1, 0.0f);
+	}
+	case EAirNetDropPhase::Swing:
+		return PlayAirNetDropAnimation(AirNetDropSwingAnimation, AirNetDropSwingPlayRate, 1, 0.0f);
+	case EAirNetDropPhase::Drop:
+		// 着地か最大急降下時間まで構えを保持する（ループ回数は十分大きく取る）。
+		return PlayAirNetDropAnimation(AirNetDropLoopAnimation, 1.0f, 1000, 0.0f);
+	case EAirNetDropPhase::Recovery:
+		return PlayAirNetDropAnimation(AirNetDropRecoveryAnimation, 1.0f, 1, 0.0f);
+	default:
+		return false;
+	}
+}
+
+void ABoarPlayerCharacter::HandleAirNetDropLanded()
+{
+	if (AirNetDropPhase == EAirNetDropPhase::None || AirNetDropPhase == EAirNetDropPhase::Landing)
+		return;
+
+	// 着地後に急降下の速度制御が残らないよう、先に移動値を戻す。
+	RestoreAirNetDropMovement();
+
+	// 振り下ろし前・振り下ろし中・急降下中の着地はアミを地面へ叩き付ける（冒頭のNotifyで判定窓ON→OFF）。
+	// 引き戻し中は判定窓が閉じているため、叩き付けNotifyより後ろから再生して再び開かない。
+	const bool bSlam = AirNetDropPhase != EAirNetDropPhase::Recovery;
+	if (!bSlam)
+	{
+		if (ANetGadget* NetGadget = GetEquippedNetGadget())
+		{
+			NetGadget->EndCaptureWindow();
+		}
+	}
+
+	AirNetDropPhase = EAirNetDropPhase::Landing;
+	AirNetDropPhaseElapsed = 0.0f;
+	const float Length = AirNetDropLandAnimation->GetPlayLength();
+	const float StartTime = bSlam ? 0.0f : FMath::Min(AirNetDropLandingSkipCaptureTime, Length);
+	const float PlayRate = Length / FMath::Max(0.05f, AirNetDropLandingRecoveryDuration);
+	if (!PlayAirNetDropAnimation(AirNetDropLandAnimation, PlayRate, 1, StartTime))
+	{
+		EndGadgetUse(true);
+	}
+}
+
+void ABoarPlayerCharacter::RestoreAirNetDropMovement()
+{
+	if (!bAirNetDropMovementOverridden)
+		return;
+
+	bAirNetDropMovementOverridden = false;
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+	{
+		Move->GravityScale = SavedAirNetDropGravityScale;
+		Move->AirControl = SavedAirNetDropAirControl;
+	}
+}
+
+void ABoarPlayerCharacter::EndAirNetDrop()
+{
+	RestoreAirNetDropMovement();
+	if (AirNetDropPhase == EAirNetDropPhase::None)
+		return;
+
+	AirNetDropPhase = EAirNetDropPhase::None;
+	AirNetDropPhaseElapsed = 0.0f;
+	AirNetDropDiveElapsed = 0.0f;
+
+	// 中断時（被弾・Stage終了など）は再生中のAnimationを止める。完了済みなら何もしない。
+	UAnimMontage* Montage = AirNetDropMontage;
+	ClearAirNetDropMontageDelegate();
+	AirNetDropMontage = nullptr;
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (AnimInstance && Montage && AnimInstance->Montage_IsPlaying(Montage))
+	{
+		AnimInstance->Montage_Stop(AirNetDropBlendTime, Montage);
+	}
+}
+
+bool ABoarPlayerCharacter::PlayAirNetDropAnimation(UAnimSequenceBase* Animation, float PlayRate, int32 LoopCount, float StartTime)
+{
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (AnimInstance == nullptr || Animation == nullptr)
+		return false;
+
+	// 前段階のMontageは次の再生で割り込み終了するため、中断扱いにならないよう先に通知を外す。
+	ClearAirNetDropMontageDelegate();
+	UAnimMontage* Montage = AnimInstance->PlaySlotAnimationAsDynamicMontage(Animation, AirNetDropSlotName,
+		AirNetDropBlendTime, AirNetDropBlendTime, PlayRate, LoopCount, -1.0f, StartTime);
+	AirNetDropMontage = Montage;
+	if (Montage == nullptr)
+		return false;
+
+	FOnMontageEnded EndedDelegate;
+	EndedDelegate.BindUObject(this, &ABoarPlayerCharacter::OnAirNetDropMontageEnded);
+	AnimInstance->Montage_SetEndDelegate(EndedDelegate, Montage);
+	return true;
+}
+
+void ABoarPlayerCharacter::ClearAirNetDropMontageDelegate()
+{
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	// ブレンドアウト中のインスタンスにも届くよう、再生中かどうかに関わらず外す。
+	if (AnimInstance && AirNetDropMontage)
+	{
+		FOnMontageEnded Unbound;
+		AnimInstance->Montage_SetEndDelegate(Unbound, AirNetDropMontage);
+	}
+}
+
+void ABoarPlayerCharacter::OnAirNetDropMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage != AirNetDropMontage || AirNetDropPhase == EAirNetDropPhase::None)
+		return;
+
+	AirNetDropMontage = nullptr;
+	if (bInterrupted)
+	{
+		// GameOver・Clear演出など外部のMontageに割り込まれた場合は中断終了する。
+		EndGadgetUse(true);
+		return;
+	}
+
+	switch (AirNetDropPhase)
+	{
+	case EAirNetDropPhase::Anticipation:
+		// 通常はTick側が先に切り替えるが、低FPSでAnimationが先に終わった場合もここで進める。
+		BeginAirNetDropDive();
+		if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing)) EndGadgetUse(true);
+		break;
+	case EAirNetDropPhase::Swing:
+		if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) EndGadgetUse(true);
+		break;
+	case EAirNetDropPhase::Drop:
+		RestoreAirNetDropMovement();
+		if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery)) EndGadgetUse(true);
+		break;
+	default:
+		// 引き戻し・着地の完了で空中アミ捕獲を終える。
+		FinishGadgetUseAnimation(false);
+		break;
+	}
 }

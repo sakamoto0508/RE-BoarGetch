@@ -13,11 +13,26 @@ class REBOARGETCH_API UBoarArchiveSelectionWidget : public UUserWidget
 public:
 	UBoarArchiveSelectionWidget(const FObjectInitializer& ObjectInitializer);
     UPROPERTY(BlueprintAssignable) FOnArchiveSelectionClosed OnClosed;
+    /** 旧設定です。GameInstanceのStageCatalogが未設定の間だけ使います。設定後は空にしてください。 */
     UPROPERTY(EditDefaultsOnly,Category="Archive") TArray<TObjectPtr<class UStageConfig>> StageCatalog;
     UPROPERTY(EditDefaultsOnly,Category="Archive") TSubclassOf<UBoarLoadoutEntry> EntryClass;
+    /** 通常メッセージの文字色です。 */
+    UPROPERTY(EditDefaultsOnly,Category="Archive|Style") FLinearColor StatusColor=FLinearColor(0.12f,0.74f,0.93f);
+    /** 保存失敗時の文字色です。 */
+    UPROPERTY(EditDefaultsOnly,Category="Archive|Style") FLinearColor ErrorColor=FLinearColor(1,0.24f,0.2f);
     void FocusInitialChoice();
 	bool IsReadyForDisplay() const { return BackButton && SlotsPanel && Grid && Status; }
 protected:
+	// レイアウトはWBPで作成します。WBPにRootWidgetが無い場合だけ、C++の仮レイアウトを構築します。
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> Status;
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UHorizontalBox> SlotsPanel;
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UUniformGridPanel> Grid;
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UScrollBox> GridScroll;
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UButton> BackButton;
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UButton> SetButton;
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UButton> RemoveButton;
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> DetailText;
+	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UImage> DetailPhoto;
 	virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& Geometry, float DeltaTime) override;
@@ -35,6 +50,8 @@ private:
 	void MoveGridFocus(int32 Offset);
 	void AssignBoar(FName Id);
 	void UpdatePortrait(UBoarLoadoutEntry* Card,FName Id,const FText& Badge,bool bActive);
+	void BuildFallbackLayout();
+	void SetStatus(const FText& Message,bool bError=false);
     FText LabelFor(FName Id) const;
     // 未保存の一括編集ではなく、保存済み展示枠を表示するためのコピーです。変更成功時に読み直します。
     TArray<FName> PendingIds;
@@ -46,12 +63,4 @@ private:
 	double NextAnalogNavigation=0;
     UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> SlotRows;
     UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> CandidateRows;
-    UPROPERTY(Transient) TObjectPtr<UTextBlock> Status;
-	UPROPERTY(Transient) TObjectPtr<class UHorizontalBox> SlotsPanel;
-	UPROPERTY(Transient) TObjectPtr<class UUniformGridPanel> Grid;
-	UPROPERTY(Transient) TObjectPtr<class UScrollBox> GridScroll;
-	UPROPERTY(Transient) TObjectPtr<class UButton> BackButton;
-	UPROPERTY(Transient) TObjectPtr<class UButton> SetButton;
-	UPROPERTY(Transient) TObjectPtr<UTextBlock> DetailText;
-	UPROPERTY(Transient) TObjectPtr<class UImage> DetailPhoto;
 };

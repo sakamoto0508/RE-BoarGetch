@@ -77,7 +77,7 @@ private:
 	/** UI表示内容、クリア条件、遷移先Levelを持つステージ設定です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStageConfig> StageConfig;
-	/** 表示順のStage一覧。空なら既存StageConfigだけを使用します。 */
+	/** 旧設定です。GameInstanceのStageCatalogが未設定の間だけ使います。どちらも空なら既存StageConfigだけを使用します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))
 	TArray<TObjectPtr<UStageConfig>> StageCatalog;
 

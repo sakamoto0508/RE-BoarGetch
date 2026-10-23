@@ -14,14 +14,15 @@ public:
     virtual void OnConstruction(const FTransform& Transform) override;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<USceneComponent> SceneRoot;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<class USkeletalMeshComponent> BoarVisual;
-    /** Saveの展示枠。左から0・1・2です。 */
+    /** Saveの展示枠。左から0始まりで、UBoarSaveGame::ArchiveDisplaySlotCount未満です（ClampMaxはmeta指定のため直書き）。 */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Archive", meta=(ClampMin="0",ClampMax="2")) int32 SlotIndex=0;
     /** BoarVisualだけのYaw回転速度。12度/秒なら30秒で一周します。 */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Archive", meta=(Units="deg/s")) float RotationSpeed=12.f;
-    /** 個体IDから本編Boar Classを解決する既存StageConfig一覧です。 */
+    /** 旧設定です。GameInstanceのStageCatalogが未設定の間だけ使います。設定後は空にしてください。 */
     UPROPERTY(EditAnywhere, Category="Archive") TArray<TObjectPtr<class UStageConfig>> StageCatalog;
     /** 本編Visualを取得できない場合のEditor表示用Mesh。Runtimeの未捕獲枠は埋めません。 */
     UPROPERTY(EditAnywhere, Category="Archive|Visual") TObjectPtr<class USkeletalMesh> PreviewMesh;
+    /** Editorプレビュー用のMaterial。Runtimeでは本編Boar Class側のMaterialを優先し、未設定スロットの補完だけに使います。 */
     UPROPERTY(EditAnywhere, Category="Archive|Visual") TArray<TObjectPtr<class UMaterialInterface>> VisualMaterials;
     /** Idleだけをループ再生します。未設定なら静止Pose。歩行・攻撃AnimBPは使いません。 */
     UPROPERTY(EditAnywhere, Category="Archive|Visual") TObjectPtr<class UAnimSequence> IdleAnimation;

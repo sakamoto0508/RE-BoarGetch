@@ -11,9 +11,30 @@ class UCaptureComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UPrimitiveComponent;
+class UAnimSequenceBase;
+class UAnimMontage;
 class ABoarBase;
+class ANetGadget;
 struct FBoarGadgetLoadoutContext;
 struct FHitResult;
+
+/** 空中アミ捕獲（Air Net Drop）の進行段階です。AnimBPや演出側から参照できます。 */
+UENUM(BlueprintType)
+enum class EAirNetDropPhase : uint8
+{
+	/** 空中アミ捕獲を実行していない状態です。 */
+	None,
+	/** 空中で一瞬ためる予備動作です。上昇を止めます。 */
+	Anticipation,
+	/** アミを前下へ振り下ろしながら急降下を開始する段階です。 */
+	Swing,
+	/** アミを前下へ構えたまま急降下している段階です。 */
+	Drop,
+	/** アミを引き戻して通常落下へ戻る段階です。急降下は終了済みです。 */
+	Recovery,
+	/** 着地の衝撃を受け止めて地上へ復帰する段階です。 */
+	Landing
+};
 
 /** アニメーションや入力可否の判断に使用するプレイヤーの行動状態です。 */
 UENUM(BlueprintType)
@@ -75,6 +96,8 @@ protected:
 
 	/** HPイベントと接触判定を登録し、ゲーム開始時の状態を初期化します。 */
 	virtual void BeginPlay() override;
+	/** 空中アミ捕獲中だけ急降下の速度制御と網のSwept判定を更新します。 */
+	virtual void Tick(float DeltaSeconds) override;
 	/** 地上・上昇・落下への遷移に合わせてプレイヤー行動状態を更新します。 */
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
 
@@ -183,6 +206,14 @@ public:
 		return CurrentGadgetUseStyle;
 	}
 
+	/** 空中アミ捕獲の進行段階を返します。使用開始時に空中だった場合だけNone以外になります。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Gadget|AirNetDrop")
+	EAirNetDropPhase GetAirNetDropPhase() const { return AirNetDropPhase; }
+
+	/** 空中アミ捕獲を実行中かを返します。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Gadget|AirNetDrop")
+	bool IsAirNetDropActive() const { return AirNetDropPhase != EAirNetDropPhase::None; }
+
 private:
 	bool bMenuOpen = false;
 	/** 被弾判定用。イノシシ接触時にダメージ/スタン/無敵を開始します。 */
@@ -225,6 +256,141 @@ private:
 	
 	/** プレイヤーの行動入力を禁止する状態か確認します。 */
 	bool IsActionLocked() const;
+
+	//-------------------------------------------------
+	// Air Net Drop（空中アミ捕獲）
+	//-------------------------------------------------
+
+	/** 使用開始時点で空中アミ捕獲として扱えるか（アミ装備・落下中・Animation設定済み）を判定します。 */
+	bool ShouldStartAirNetDrop(const AGadgetBase* Gadget) const;
+
+	/** 空中アミ捕獲の移動制御を開始し、予備動作を再生します。再生できない場合はfalseです。 */
+	bool BeginAirNetDrop();
+
+	/** 予備動作→振り下ろし→急降下→引き戻しの時間経過による段階遷移と、急降下の速度制御を行います。 */
+	void TickAirNetDrop(float DeltaSeconds);
+
+	/** 段階を切り替え、その段階のAnimationを再生します。再生できない場合はfalseです。 */
+	bool EnterAirNetDropPhase(EAirNetDropPhase NewPhase);
+
+	/** 急降下を開始します（上昇速度を打ち消し、初速を下向きに与えます）。 */
+	void BeginAirNetDropDive();
+
+	/** 着地時に急降下を止め、着地Animationへ切り替えます。 */
+	void HandleAirNetDropLanded();
+
+	/** 空中アミ捕獲で変更したCharacterMovementの値を元に戻します。複数回呼んでも安全です。 */
+	void RestoreAirNetDropMovement();
+
+	/** 空中アミ捕獲を終了します（移動値の復元・Montage停止）。EndGadgetUseの全経路から呼ばれ、複数回呼んでも安全です。 */
+	void EndAirNetDrop();
+
+	/** 空中アミ捕獲のAnimationをFullBodyスロットで再生し、終了通知を登録します。 */
+	bool PlayAirNetDropAnimation(UAnimSequenceBase* Animation, float PlayRate, int32 LoopCount, float StartTime);
+
+	/** 再生中の空中アミ捕獲Montageの終了通知を外します。段階切替時の割り込みを中断扱いにしないためです。 */
+	void ClearAirNetDropMontageDelegate();
+
+	/** 空中アミ捕獲Montageの終了通知です。引き戻し・着地の完了でガジェット使用を終了し、外部からの割り込みでは中断終了します。 */
+	void OnAirNetDropMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	/** 現在装備中の網ガジェットを返します。網以外ならnullptrです。 */
+	ANetGadget* GetEquippedNetGadget() const;
+
+	/** 空中アミ捕獲：予備動作のAnimationです。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop|Animation", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimSequenceBase> AirNetDropAnticipationAnimation;
+
+	/** 空中アミ捕獲：前下への振り下ろしAnimationです。Capture ON NotifyはこのAnimation上にあります。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop|Animation", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimSequenceBase> AirNetDropSwingAnimation;
+
+	/** 空中アミ捕獲：急降下中にループする構えAnimationです。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop|Animation", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimSequenceBase> AirNetDropLoopAnimation;
+
+	/** 空中アミ捕獲：アミを引き戻して通常落下へ戻るAnimationです。Capture OFF Notifyを含みます。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop|Animation", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimSequenceBase> AirNetDropRecoveryAnimation;
+
+	/** 空中アミ捕獲：着地Animationです。冒頭にアミを地面へ叩き付けるCapture ON/OFF Notifyを含みます。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop|Animation", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimSequenceBase> AirNetDropLandAnimation;
+
+	/** 空中アミ捕獲のAnimationを再生するスロット名です（ABP_PlayerのSlotノード）。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop|Animation", meta = (AllowPrivateAccess = "true"))
+	FName AirNetDropSlotName = TEXT("FullBody");
+
+	/** 段階間・開始終了時のブレンド秒数です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop|Animation", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AirNetDropBlendTime = 0.08f;
+
+	/** 予備動作の秒数です。予備動作Animationはこの秒数に合わせて再生速度を変えます。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.02"))
+	float AirNetDropAnticipationDuration = 0.12f;
+
+	/** 予備動作中の上昇速度の上限(cm/s)です。ジャンプ上昇中に発動しても上昇が続かないようにします。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AirNetDropAnticipationMaxRiseSpeed = 120.0f;
+
+	/** 予備動作中の重力倍率（元のGravityScaleに乗算）です。小さいほど一瞬ためる感じが強くなります。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AirNetDropAnticipationGravityMultiplier = 0.35f;
+
+	/** 振り下ろしAnimationの再生速度です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.1"))
+	float AirNetDropSwingPlayRate = 1.15f;
+
+	/** 急降下開始時の下向き初速(cm/s)です。すでにこれより速く落下している場合はその速度を維持します。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AirNetDropInitialDownSpeed = 900.0f;
+
+	/** 急降下中の下向き加速度(cm/s^2)です。急降下中は通常重力の代わりにこの値で加速します。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AirNetDropDownAcceleration = 5200.0f;
+
+	/** 急降下中の最大落下速度(cm/s)です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AirNetDropMaxFallSpeed = 2400.0f;
+
+	/** 急降下を続ける最大秒数（振り下ろし開始から）です。高所では経過後に引き戻して通常落下へ戻ります。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.05"))
+	float AirNetDropMaxDiveDuration = 0.65f;
+
+	/** 空中アミ捕獲中のAirControl倍率です（元のAirControlに乗算）。0で空中の操作入力を受け付けません。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AirNetDropHorizontalControlMultiplier = 0.4f;
+
+	/** 急降下開始時に水平速度へ掛ける倍率です。1で発動時の水平移動をそのまま維持します。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+	float AirNetDropHorizontalVelocityScale = 0.75f;
+
+	/** 着地Animationを何秒で終えるかです。着地Animationはこの秒数に合わせて再生速度を変えます。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.05"))
+	float AirNetDropLandingRecoveryDuration = 0.35f;
+
+	/**
+	 * 捕獲判定窓が閉じた後（引き戻し中）に着地した場合の、着地Animationの開始位置（秒）です。
+	 * 冒頭の叩き付けNotify(ON/OFF)より後ろから始め、閉じた判定窓を再び開かないようにします。
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float AirNetDropLandingSkipCaptureTime = 0.15f;
+
+	/** 現在の空中アミ捕獲の段階です。 */
+	EAirNetDropPhase AirNetDropPhase = EAirNetDropPhase::None;
+	/** 現在の段階に入ってからの経過秒数です。 */
+	float AirNetDropPhaseElapsed = 0.0f;
+	/** 急降下（振り下ろし開始）からの経過秒数です。 */
+	float AirNetDropDiveElapsed = 0.0f;
+	/** 空中アミ捕獲で変更したCharacterMovementの値を保持中かです。 */
+	bool bAirNetDropMovementOverridden = false;
+	/** 開始前のGravityScaleです。 */
+	float SavedAirNetDropGravityScale = 1.0f;
+	/** 開始前のAirControlです。 */
+	float SavedAirNetDropAirControl = 0.0f;
+	/** 現在の段階で再生しているMontageです。段階切替や外部の割り込みを識別します。 */
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimMontage> AirNetDropMontage;
 
 	//-------------------------------------------------
 	// Components

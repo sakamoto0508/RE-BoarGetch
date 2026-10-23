@@ -42,6 +42,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progress")
 	TArray<TSubclassOf<AGadgetBase>> GadgetCatalog;
 	TSubclassOf<AGadgetBase> FindGadgetClass(FName Id) const;
+	/** 全Stageの表示順一覧です。図鑑・展示・ステージ選択はこの一覧を正本として参照します。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progress")
+	TArray<TObjectPtr<UStageConfig>> StageCatalog;
+	/** GameInstanceのStageCatalogを返します。未設定の間だけ呼び出し元の旧設定を使い、移行を促す警告を出します。 */
+	static const TArray<TObjectPtr<UStageConfig>>& ResolveStageCatalog(const UObject* WorldContext, const TArray<TObjectPtr<UStageConfig>>& LegacyCatalog);
 	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnTestGadgetChanged;
 	UFUNCTION(BlueprintPure) int32 GetSpecialCoinCount() const;
 	UFUNCTION(BlueprintPure) bool CanUnlockGadget(FName Id) const;

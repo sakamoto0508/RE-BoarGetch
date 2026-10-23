@@ -74,57 +74,84 @@ public:
 
 	/** 視認距離です。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
-	float GetSightRange() const { return SightRange; }
+	float GetSightRange() const { return ActiveSettings.SightRange; }
 
 	/** 追跡目安距離です。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
-	float GetChaseRange() const { return ChaseRange; }
+	float GetChaseRange() const { return ActiveSettings.ChaseRange; }
 
 	/** 逃走目安距離です。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
-	float GetEscapeRange() const { return EscapeRange; }
+	float GetEscapeRange() const { return ActiveSettings.EscapeRange; }
 
 	/** 檻優先度係数です。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
-	float GetCagePriorityWeight() const { return CagePriorityWeight; }
+	float GetCagePriorityWeight() const { return ActiveSettings.CagePriorityWeight; }
 
 	/** プレイヤー優先度係数です。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
-	float GetPlayerPriorityWeight() const { return PlayerPriorityWeight; }
+	float GetPlayerPriorityWeight() const { return ActiveSettings.PlayerPriorityWeight; }
 
 	/** 逃走優先度係数です。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
-	float GetEscapePriorityWeight() const { return EscapePriorityWeight; }
+	float GetEscapePriorityWeight() const { return ActiveSettings.EscapePriorityWeight; }
 
 	/** 檻攻撃可能か返します。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
-	bool CanAttackCage() const { return bCanAttackCage; }
+	bool CanAttackCage() const { return ActiveSettings.bCanAttackCage; }
 
 	/** 現在の種類が檻へ与えるダメージです。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
-	float GetCageAttackDamage() const { return CageAttackDamage; }
+	float GetCageAttackDamage() const { return ActiveSettings.CageAttackDamage; }
 
 	/** 現在の予兆アニメーションまたは仮設定から攻撃予兆時間を返します。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI|Attack")
 	float GetAttackTelegraphDuration() const;
 
 	/** 攻撃予兆アニメーションの再生速度を返します。 */
-	float GetAttackTelegraphPlayRate() const { return AttackTelegraphPlayRate; }
+	float GetAttackTelegraphPlayRate() const { return ActiveSettings.AttackTelegraphPlayRate; }
 
 	/** 突進速度を返します。 */
-	float GetChargeSpeed() const { return ChargeSpeed; }
+	float GetChargeSpeed() const { return ActiveSettings.ChargeSpeed; }
 
 	/** 突進の着弾距離を返します。 */
-	float GetChargeImpactDistance() const { return ChargeImpactDistance; }
+	float GetChargeImpactDistance() const { return ActiveSettings.ChargeImpactDistance; }
 
 	/** 突進の最大継続時間を返します。 */
-	float GetChargeMaxDuration() const { return ChargeMaxDuration; }
+	float GetChargeMaxDuration() const { return ActiveSettings.ChargeMaxDuration; }
 
 	/** 着弾後の後退距離を返します。 */
-	float GetAttackRetreatDistance() const { return AttackRetreatDistance; }
+	float GetAttackRetreatDistance() const { return ActiveSettings.AttackRetreatDistance; }
 
 	/** 着弾後の後退速度を返します。 */
-	float GetAttackRetreatSpeed() const { return AttackRetreatSpeed; }
+	float GetAttackRetreatSpeed() const { return ActiveSettings.AttackRetreatSpeed; }
+
+	/** プレイヤーへの攻撃予兆を開始する距離を返します。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|AI|Attack")
+	float GetPlayerAttackRange() const { return ActiveSettings.PlayerAttackRange; }
+
+	/** プレイヤーへの突進後の硬直時間を返します。 */
+	float GetAttackRecoveryDuration() const { return ActiveSettings.AttackRecoveryDuration; }
+
+	/** プレイヤーへの攻撃クールダウンが終わっているか返します。 */
+	bool IsPlayerAttackReady() const;
+
+	/** プレイヤーへの攻撃終了時に呼び、次の攻撃までのクールダウンを開始します。 */
+	void StartPlayerAttackCooldown();
+
+	/** 突進中の接触記録を初期化し、NotifyHitからの記録を開始します。 */
+	void BeginChargeHitTracking();
+
+	/** 突進中の接触記録を停止します。 */
+	void EndChargeHitTracking();
+
+	/** 突進中に歩行不可面（プレイヤー・壁など）と接触したか返します。 */
+	bool HasChargeBlockingHit() const { return bChargeBlockingHit; }
+
+	/** 突進の接触記録に使用します。ダメージ処理はプレイヤー側の既存接触処理が担当します。 */
+	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp,
+		bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse,
+		const FHitResult& Hit) override;
 
 	/** 攻撃予兆開始をアニメーションBlueprintへ通知します。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Boar|Animation")
@@ -146,6 +173,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boar|AI")
 	void SetBoarArchetype(EBoarArchetype NewArchetype);
 
+	/**
+	 * 現在の認識結果と種別から、プレイヤー・檻・逃走のどれを優先するかを判定します。
+	 * Sense TaskとStateTree Conditionの両方から同じ判定を使うための共通処理です。
+	 */
+	void GetTargetPreference(bool& bOutPreferPlayer, bool& bOutPreferCage, bool& bOutPreferEscape) const;
+
 	/** 種別ロジックとして逃走を優先するか返します。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool ShouldPreferEscape() const;
@@ -158,9 +191,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|AI")
 	bool IsStaminaRecovering() const { return bIsRecoveringStamina; }
 
+	/** スタミナ切れ中に移動を止める種別か返します。StateTreeの回復State判定に使用します。 */
+	bool ShouldStopWhileRecoveringStamina() const { return ActiveSettings.bUseStamina && ActiveSettings.bStopWhileRecoveringStamina; }
+
+	/** 逃走Stateで移動中か返します。アニメーションの走行判定にも使用できます。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|AI")
+	bool IsEscaping() const { return bIsEscaping; }
+
+	/** StateTreeの逃走タスクから呼び、逃走速度とスタミナ消費対象を切り替えます。 */
+	void SetEscaping(bool bNewEscaping);
+
 	/** DataAssetから適用された通常時の移動速度を返します。アニメーションの速度正規化に使用します。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
-	float GetBaseWalkSpeed() const { return BaseWalkSpeed; }
+	float GetBaseWalkSpeed() const { return ActiveSettings.BaseWalkSpeed; }
 
 	/** 旧来の固定巡回ルートを返します。現在のランダムNavMesh巡回では未使用です。 */
 	UFUNCTION(BlueprintPure)
@@ -184,6 +227,12 @@ private:
 	/** 種別に応じたスタミナ更新を行います。 */
 	void UpdateStamina(float DeltaSeconds);
 
+	/** 逃走・スタミナ状態からMaxWalkSpeedを決定します。速度変更はこの関数に集約します。 */
+	void ApplyMovementSpeed();
+
+	/** スタミナ切れになった瞬間に、AIの移動要求と現在の慣性を止めます。 */
+	void StopForStaminaRecovery();
+
 	/**
 	 * 捕獲状態を管理するコンポーネントです。
 	 */
@@ -205,122 +254,33 @@ private:
 		meta = (AllowPrivateAccess = "true"))
 	bool bIsLeavingCage = false;
 
-	/** AIステートと目的地のPrint String表示を有効にするかです。 */
 	/** イノシシ種別です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	EBoarArchetype BoarArchetype = EBoarArchetype::Normal;
 
-	/** 種別ごとのAI・スタミナ・移動設定です。未設定時は従来の既定値を使用します。 */
+	/** 種別ごとのAI・スタミナ・移動設定です。未設定時はコード上の既定値を使用します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UBoarDataAsset> BoarDataAsset;
 
-	/** 視認距離です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float SightRange = 1200.0f;
+	/** DataAssetから適用した現在の種別設定です。値の調整はBoarDataAsset側で行い、ここでは確認だけできます。 */
+	UPROPERTY(VisibleInstanceOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
+	FBoarArchetypeSettings ActiveSettings;
 
-	/** 正面を中心とした視界全体の角度です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Perception",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "360.0"))
-	float SightAngleDegrees = 120.0f;
+	/** 次にプレイヤーへの攻撃を開始できるワールド時刻です。 */
+	double NextPlayerAttackTime = 0.0;
 
-	/** 視野角の外でも対象を必ず発見する距離です。遮蔽物は無視しません。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Perception",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float AbsoluteDetectionRange = 200.0f;
+	/** 突進中の接触を記録しているかです。 */
+	bool bTrackingChargeHit = false;
 
-	/** 追跡に入る目安距離です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float ChaseRange = 900.0f;
-
-	/** 逃走を優先する目安距離です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float EscapeRange = 500.0f;
-
-	/** 檻を狙う優先度係数です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float CagePriorityWeight = 1.0f;
-
-	/** プレイヤーを狙う優先度係数です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float PlayerPriorityWeight = 1.0f;
-
-	/** 逃走を選ぶ優先度係数です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float EscapePriorityWeight = 1.0f;
-
-	/** 檻を攻撃対象に含めるかです。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
-	bool bCanAttackCage = true;
-
-	/** 檻への1回分の攻撃力です。DataAssetの設定から適用されます。 */
-	float CageAttackDamage = 10.0f;
-
-	/** 攻撃予兆に使用するアニメーションです。 */
-	TObjectPtr<UAnimSequenceBase> AttackTelegraphAnimation;
-
-	/** 予兆アニメーション未指定時に使用する仮の待機秒数です。 */
-	float AttackTelegraphDuration = 1.0f;
-
-	/** 予兆アニメーションの再生速度です。 */
-	float AttackTelegraphPlayRate = 1.0f;
-
-	/** 突進中の移動速度です。 */
-	float ChargeSpeed = 1000.0f;
-
-	/** 檻への着弾と判定する表面距離です。 */
-	float ChargeImpactDistance = 30.0f;
-
-	/** 突進の最大継続時間です。 */
-	float ChargeMaxDuration = 2.0f;
-
-	/** 着弾後に後退する距離です。 */
-	float AttackRetreatDistance = 200.0f;
-
-	/** 着弾後に後退する速度です。 */
-	float AttackRetreatSpeed = 300.0f;
-
-	/** スタミナ制御を使う種別かです。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina", meta = (AllowPrivateAccess = "true"))
-	bool bUseStamina = false;
-
-	/** 最大スタミナです。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float MaxStamina = 100.0f;
-
-	/** 走行時のスタミナ消費速度です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float StaminaDrainPerSecond = 20.0f;
-
-	/** 停止時のスタミナ回復速度です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float StaminaRecoveryPerSecond = 25.0f;
-
-	/** スタミナ0から回復復帰する比率です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",
-		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
-	float StaminaRecoverExitRatio = 0.4f;
-
-	/** 通常時の移動速度です。DataAssetの設定から適用されます。 */
-	float BaseWalkSpeed = 450.0f;
-
-	/** スタミナ回復待機中の移動速度倍率です。 */
-	float StaminaRecoverySpeedMultiplier = 0.35f;
-
-	/** 移動中と判定する速度のしきい値です。 */
-	float MovingSpeedThreshold = 10.0f;
+	/** 突進中に歩行不可面と接触したかです。 */
+	bool bChargeBlockingHit = false;
 
 	/** 認識中のプレイヤーです。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<APawn> PerceivedPlayer;
+
+	/** 最後に視認したプレイヤーです。ThreatMemoryRange内にいる間は視界外でも認識を継続します。 */
+	TWeakObjectPtr<APawn> RememberedThreatPlayer;
 
 	/** 認識中の檻です。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
@@ -341,6 +301,10 @@ private:
 	/** スタミナ回復待機中かです。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI|Stamina",meta = (AllowPrivateAccess = "true"))
 	bool bIsRecoveringStamina = false;
+
+	/** 逃走State中かです。StateTreeの逃走タスクが切り替えます。 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
+	bool bIsEscaping = false;
 
 	/** 固定巡回を再導入する場合に使う予約参照です。現在のStateTree Patrol Taskからは未使用です。 */
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Boar|AI", meta=(AllowPrivateAccess="true"))

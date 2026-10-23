@@ -89,7 +89,7 @@ void AStageEntrance::HandleTriggerEndOverlap(
 void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 {
 	// 必須設定不足や遷移開始後は、Widgetの生成・再表示を行わない。
-	if (!PlayerController || (!StageConfig && StageCatalog.IsEmpty()) || !LobbyWidgetClass || bTravelRequested)
+	if (!PlayerController || (!StageConfig && UBoarGameInstance::ResolveStageCatalog(this, StageCatalog).IsEmpty()) || !LobbyWidgetClass || bTravelRequested)
 	{
 		return;
 	}
@@ -111,8 +111,9 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 
 	// 表示内容を現在のStageConfigで更新してから、Game入力とUI入力を両立させる。
 	TArray<UStageConfig*> Stages;
-	if (StageCatalog.IsEmpty()) Stages.Add(StageConfig);
-	else for (UStageConfig* Stage : StageCatalog) Stages.Add(Stage);
+	const auto& Catalog = UBoarGameInstance::ResolveStageCatalog(this, StageCatalog);
+	if (Catalog.IsEmpty()) Stages.Add(StageConfig);
+	else for (UStageConfig* Stage : Catalog) Stages.Add(Stage);
 	LobbyWidget->ShowStageCatalog(Stages, StageConfig);
     if(auto* PC=Cast<ABoarPlayerController>(PlayerController))PC->SetStageInputBlocked(true);
 	FInputModeGameAndUI InputMode;
@@ -147,7 +148,8 @@ void AStageEntrance::CloseStageSelection()
 void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfig)
 {
 	// この入口の一覧に含まれるStageだけを受理し、直接呼び出しでもLockを検証する。
-	const bool bListed = StageCatalog.IsEmpty() ? RequestedStageConfig == StageConfig : StageCatalog.Contains(RequestedStageConfig);
+	const auto& Catalog = UBoarGameInstance::ResolveStageCatalog(this, StageCatalog);
+	const bool bListed = Catalog.IsEmpty() ? RequestedStageConfig == StageConfig : Catalog.Contains(RequestedStageConfig);
 	if (bTravelRequested || !RequestedStageConfig || !bListed || RequestedStageConfig->Level.IsNull())
 	{
 		return;

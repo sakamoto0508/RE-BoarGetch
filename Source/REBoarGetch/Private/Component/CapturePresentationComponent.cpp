@@ -46,7 +46,7 @@ void UCapturePresentationComponent::BeginPlay()
 void UCapturePresentationComponent::EndPlay(const EEndPlayReason::Type Reason)
 {
  FWorldDelegates::OnWorldTickStart.Remove(TickHandle);
- CancelPresentation();
+ CancelPresentation(false);
  Super::EndPlay(Reason);
 }
 bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bSharedFeedback)
@@ -72,7 +72,7 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
   T.VFX = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this,CaptureVFX,Boar->GetActorLocation()-FVector(0,0,35),FRotator::ZeroRotator,FVector(VFXScale),false,false);
   if (T.VFX)
   {
-   T.VFX->SetVariableLinearColor(TEXT("User.Color"),FLinearColor(.01f,.75f,1.f,.82f));
+   T.VFX->SetVariableLinearColor(TEXT("User.Color"),FLinearColor(CaptureColor.R,CaptureColor.G,CaptureColor.B,.82f));
    T.VFX->SetAgeUpdateMode(ENiagaraAgeUpdateMode::DesiredAge);
    T.VFX->SetCanRenderWhileSeeking(true);
    T.VFX->Activate(true);
@@ -115,13 +115,21 @@ void UCapturePresentationComponent::RestoreTarget(FCaptureVisualTarget& T)
  if (IsValid(T.VFX)) T.VFX->DestroyComponent();
  if (T.Boar.IsValid()) T.Boar->OnDestroyed.RemoveDynamic(this,&ThisClass::OnTargetDestroyed);
 }
-void UCapturePresentationComponent::CancelPresentation()
+void UCapturePresentationComponent::CancelPresentation(bool bCommitCaptures)
 {
  RestoreSharedState(); bSharedActive=false;
- for (auto& T:Targets) RestoreTarget(T);
+ TArray<TWeakObjectPtr<ABoarBase>> Pending;
+ for (auto& T:Targets) { Pending.Add(T.Boar); RestoreTarget(T); }
  Targets.Reset();
  for (auto& R:Receptions) if (IsValid(R.VFX)) R.VFX->DestroyComponent();
  Receptions.Reset();
+ // 演出を省略しても捕獲（Cage収容・記録）は確定させる。Level破棄時は確定しない。
+ auto* Mode = bCommitCaptures && GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
+ if (!Mode || Pending.IsEmpty()) return;
+ bCommittingCaptures = true;
+ for (auto Boar:Pending) if (Boar.IsValid() && Boar->IsCaptured()) Mode->HandleBoarCaptured(Boar.Get());
+ bCommittingCaptures = false;
+ Mode->RefreshHousedBoarCount();
 }
 void UCapturePresentationComponent::OnTargetDestroyed(AActor* Actor)
 {
@@ -148,7 +156,7 @@ void UCapturePresentationComponent::StartDataConversion(FCaptureVisualTarget& T)
   Proxy->SetCanEverAffectNavigation(false);
   Proxy->SetCastShadow(false);
   T.DataMaterial = UMaterialInstanceDynamic::Create(DataMaterial, this);
-  T.DataMaterial->SetVectorParameterValue(TEXT("GlowColor"), FLinearColor(.01f,.72f,1.f));
+  T.DataMaterial->SetVectorParameterValue(TEXT("GlowColor"), CaptureColor);
   T.DataMaterial->SetScalarParameterValue(TEXT("CaptureMinZ"),T.CaptureMinZ);
   T.DataMaterial->SetScalarParameterValue(TEXT("CaptureHeight"),T.CaptureHeight);
   T.DataMaterial->SetScalarParameterValue(TEXT("DissolveProgress"),0.f);
@@ -161,7 +169,7 @@ void UCapturePresentationComponent::StartDataConversion(FCaptureVisualTarget& T)
  UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
  if (!Cube || !GlowMaterial) return;
  T.FragmentMaterial = UMaterialInstanceDynamic::Create(GlowMaterial,this);
- T.FragmentMaterial->SetVectorParameterValue(TEXT("GlowColor"),FLinearColor(.01f,.75f,1.f));
+ T.FragmentMaterial->SetVectorParameterValue(TEXT("GlowColor"),CaptureColor);
  T.FragmentMaterial->SetScalarParameterValue(TEXT("GlowStrength"),8.f);
  FRandomStream Random(Boar->GetUniqueID());
  for (int32 I=0;I<FMath::Clamp(FragmentCount,0,32);++I)
@@ -193,7 +201,7 @@ void UCapturePresentationComponent::StartCageReception(const FVector& Location)
  R.VFX=UNiagaraFunctionLibrary::SpawnSystemAtLocation(this,System,Location-FVector(0,0,35),FRotator::ZeroRotator,FVector(VFXScale*.65f),false,false);
  if (R.VFX)
  {
-  R.VFX->SetVariableLinearColor(TEXT("User.Color"),FLinearColor(.02f,.9f,1.f,.9f));
+  R.VFX->SetVariableLinearColor(TEXT("User.Color"),FLinearColor(ReceptionColor.R,ReceptionColor.G,ReceptionColor.B,.9f));
   R.VFX->SetAgeUpdateMode(ENiagaraAgeUpdateMode::DesiredAge);
   R.VFX->SetCanRenderWhileSeeking(true);
   R.VFX->Activate(true);
@@ -242,14 +250,14 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World,ELevelTick TickTyp
   {
    const float Envelope=FMath::Lerp(.15f,1.f,FMath::SmoothStep(0.f,1.f,P));
    T.Glow->SetScalarParameterValue(TEXT("GlowAmount"),Envelope);
-   T.Glow->SetVectorParameterValue(TEXT("GlowColor"),FMath::Lerp(FLinearColor(.01f,.52f,.9f),FLinearColor(.04f,.88f,1.f),P));
+   T.Glow->SetVectorParameterValue(TEXT("GlowColor"),FMath::Lerp(GlowStartColor,GlowPeakColor,P));
   }
   if (IsValid(T.VFX))
   {
    T.VFX->SetDesiredAge(T.Age);
    const float RingEnvelope=FMath::Clamp((GetTotalDuration()-T.Age)/FMath::Max(.01f,TransferFinishDuration),0.f,1.f);
    T.VFX->SetWorldScale3D(FVector(VFXScale*FMath::Lerp(.45f,1.25f,FMath::Clamp(T.Age/.22f,0.f,1.f))));
-   T.VFX->SetVariableLinearColor(TEXT("User.Color"),FLinearColor(.01f,.75f,1.f,.8f*RingEnvelope));
+   T.VFX->SetVariableLinearColor(TEXT("User.Color"),FLinearColor(CaptureColor.R,CaptureColor.G,CaptureColor.B,.8f*RingEnvelope));
   }
   if (T.Age>=DataStart && !T.bDataStarted) StartDataConversion(T);
   if (T.bDataStarted)
@@ -295,7 +303,7 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World,ELevelTick TickTyp
   {
    R.VFX->SetDesiredAge(R.Age);
    const float Fade=1.f-FMath::Clamp(R.Age/FMath::Max(.01f,CageReceptionDuration),0.f,1.f);
-   R.VFX->SetVariableLinearColor(TEXT("User.Color"),FLinearColor(.02f,.9f,1.f,.9f*Fade));
+   R.VFX->SetVariableLinearColor(TEXT("User.Color"),FLinearColor(ReceptionColor.R,ReceptionColor.G,ReceptionColor.B,.9f*Fade));
    R.VFX->SetWorldScale3D(FVector(VFXScale*FMath::Lerp(.3f,.85f,1.f-Fade)));
   }
   if (R.Age>=CageReceptionDuration || !IsValid(R.VFX))

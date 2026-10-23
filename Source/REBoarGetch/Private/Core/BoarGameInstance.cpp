@@ -66,6 +66,20 @@ bool UBoarGameInstance::SaveGadgetLoadout(const TArray<FName>& Ids)
 	return SaveCandidate(Candidate);
 }
 
+const TArray<TObjectPtr<UStageConfig>>& UBoarGameInstance::ResolveStageCatalog(const UObject* WorldContext, const TArray<TObjectPtr<UStageConfig>>& LegacyCatalog)
+{
+	const UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
+	const auto* Instance = World ? World->GetGameInstance<UBoarGameInstance>() : nullptr;
+	if (Instance && !Instance->StageCatalog.IsEmpty()) return Instance->StageCatalog;
+	static bool bWarned = false;
+	if (!LegacyCatalog.IsEmpty() && !bWarned)
+	{
+		bWarned = true;
+		UE_LOG(LogTemp, Warning, TEXT("[Stage] GameInstanceのStageCatalogが未設定のため、%sの個別StageCatalogを使用します。BP_BoarGameInstanceへ移してください。"), *GetNameSafe(WorldContext));
+	}
+	return LegacyCatalog;
+}
+
 bool UBoarGameInstance::IsStageUnlocked(const UStageConfig* Config) const
 {
 	return Config && (Config->UnlockCondition.RequiredClearedStageId.IsNone()
@@ -85,7 +99,7 @@ bool UBoarGameInstance::SaveArchiveDisplays(const TArray<FName>& Ids)
 TArray<FName> UBoarGameInstance::GetArchiveDisplayIds() const
 {
 	if (Progress) return Progress->ResolveArchiveDisplays();
-	TArray<FName> Empty; Empty.SetNum(3); return Empty;
+	TArray<FName> Empty; Empty.SetNum(UBoarSaveGame::ArchiveDisplaySlotCount); return Empty;
 }
 
 bool UBoarGameInstance::AssignArchiveDisplay(int32 Slot, FName Id)

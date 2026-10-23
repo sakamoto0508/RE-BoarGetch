@@ -30,8 +30,10 @@ MarkdownとNotionが矛盾する場合はNotionを優先する。実装との差
 
 以下はC++と既存記録の要約。アセット接続・PIE済みという意味ではない。作業対象は開始時に再確認する。
 
-- プレイヤー：移動、ダッシュ、二段ジャンプ、HP・被弾・行動ロック、アミMontageと捕獲判定窓。基本動作のPIE確認記録あり。
+- プレイヤー：移動、ダッシュ、二段ジャンプ、HP・被弾・行動ロック、アミMontageと捕獲判定窓。基本動作のPIE確認記録あり。空中アミ捕獲・急降下（Air_Net_Drop.md）はC++/Animation実装済み・PIE未確認。
 - イノシシ・檻：StateTreeの巡回・逃走・檻攻撃、捕獲・収容、檻破壊・解放・AI復帰・Respawn。PIE確認記録あり。
+- 青ボア（BP_BlueBoar／EscapeSpecialist）：BP_NormalBoarの子BP＋MI_Boar_Blue。逃走中のみスタミナ消費・高速化し、0でST_Boar_NormalのStaminaRecovery Stateで停止回復。PIE未確認、StageConfig未配置。
+- ボアAnimation：共通Skeleton・ABP_NormalBoar（BS_BoarLocomotion_V2＋Charge/Tiredループ＋DefaultSlot Montage）。予兆・突進・復帰はBoarBaseのAnimationイベント→BP_NormalBoar→ABP関数で切替。原本と再生成手順は `SourceArt/Boar/`。PIE未確認。
 - HUD：HP・捕獲数・ガジェット4枠をイベント更新。空枠・装備画像・初期選択枠の確認記録あり。
 - StageConfig／BoarSpawnPoint：固定個体ID・SpawnPoint IDによる新生成方式と旧Class/Count方式を併存。出現数と現在収容数のクリア目標は独立。コイン定義・解放条件も追加。
 - GameMode／StageRunData：最寄り正常Cageへの収容、全破壊時の即解放、現在収容数更新、フレーム終端のClear優先判定、終了時停止をC++実装。
