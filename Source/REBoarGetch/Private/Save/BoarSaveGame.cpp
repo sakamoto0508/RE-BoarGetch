@@ -28,7 +28,7 @@ bool UBoarSaveGame::MergeClearedRun(const FStageRunData& Run)
 
 bool UBoarSaveGame::SetArchiveDisplays(const TArray<FName>& Ids)
 {
-	if (Ids.Num() != 3) return false;
+	if (Ids.Num() != ArchiveDisplaySlotCount) return false;
 	TSet<FName> Seen;
 	for (FName Id : Ids) if (!Id.IsNone() && !CapturedBoarUniqueIds.Contains(Id)) return false;
 	for (FName Id : Ids) if (!Id.IsNone()) { if (Seen.Contains(Id)) return false; Seen.Add(Id); }
@@ -39,7 +39,7 @@ bool UBoarSaveGame::SetArchiveDisplays(const TArray<FName>& Ids)
 
 bool UBoarSaveGame::AssignArchiveDisplay(int32 Slot, FName Id)
 {
-	if (Slot < 0 || Slot >= 3 || (!Id.IsNone() && !CapturedBoarUniqueIds.Contains(Id))) return false;
+	if (Slot < 0 || Slot >= ArchiveDisplaySlotCount || (!Id.IsNone() && !CapturedBoarUniqueIds.Contains(Id))) return false;
 	TArray<FName> Ids = ResolveArchiveDisplays();
 	const int32 Other = Id.IsNone() ? INDEX_NONE : Ids.Find(Id);
 	if (Other != INDEX_NONE && Other != Slot) Swap(Ids[Slot], Ids[Other]);
@@ -50,16 +50,16 @@ bool UBoarSaveGame::AssignArchiveDisplay(int32 Slot, FName Id)
 TArray<FName> UBoarSaveGame::ResolveArchiveDisplays() const
 {
 	TArray<FName> Result;
-	Result.SetNum(3);
+	Result.SetNum(ArchiveDisplaySlotCount);
 	if (bHasSavedArchiveDisplays)
 	{
-		for (int32 I = 0; I < 3; ++I)
+		for (int32 I = 0; I < ArchiveDisplaySlotCount; ++I)
 			if (ArchiveDisplayBoarIds.IsValidIndex(I) && CapturedBoarUniqueIds.Contains(ArchiveDisplayBoarIds[I]))
 				Result[I] = ArchiveDisplayBoarIds[I];
 		return Result;
 	}
 	int32 Slot = 0;
-	for (int32 I = CapturedBoarHistory.Num() - 1; I >= 0 && Slot < 3; --I)
+	for (int32 I = CapturedBoarHistory.Num() - 1; I >= 0 && Slot < ArchiveDisplaySlotCount; --I)
 		if (CapturedBoarUniqueIds.Contains(CapturedBoarHistory[I]) && !Result.Contains(CapturedBoarHistory[I]))
 			Result[Slot++] = CapturedBoarHistory[I];
 	return Result;

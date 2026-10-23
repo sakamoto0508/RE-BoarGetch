@@ -75,7 +75,7 @@ def main():
     # ---------------------------------------------------------------- MPC
     SCALARS = {'VertexSnapStrength': 0.0, 'SnapResolutionX': 160.0, 'SnapResolutionY': 120.0, 'AffineAmount': 0.0,
                'TexelSnapStrength': 0.0, 'TextureResolution': 64.0, 'TextureMipBias': 0.0,
-               'SnapMaxObjectRadius': 1500.0}
+               'SnapMaxObjectRadius': 1500.0, 'SnapFlatRatio': 0.0}
     def ensure_scalars(collection_asset, names):
         existing = {str(p.get_editor_property('parameter_name')) for p in collection_asset.get_editor_property('scalar_parameters')}
         params = list(collection_asset.get_editor_property('scalar_parameters'))
@@ -96,7 +96,7 @@ def main():
     ensure_scalars(mpc, list(SCALARS))
     # The LowPoly pack's materials already use 2 collections (UE limit). Its MPC_UnlitStrength (used by all of
     # them) also carries the vertex-snap scalars so MF_RetroVertexSnap_LP stays within the limit. Defaults: no effect.
-    snap_scalars = ['VertexSnapStrength', 'SnapResolutionX', 'SnapResolutionY', 'SnapMaxObjectRadius']
+    snap_scalars = ['VertexSnapStrength', 'SnapResolutionX', 'SnapResolutionY', 'SnapMaxObjectRadius', 'SnapFlatRatio']
     lp_mpc = unreal.load_asset(LP_MPC) if lib.does_asset_exist(LP_MPC) else None
     if lp_mpc:
         _backup_package(LP_MPC)  # git-ignored pack: keep the untouched file once (Saved/RetroRender/MaterialBackup)
@@ -177,6 +177,9 @@ def main():
     # ---------------------------------------------------------------- MF_RetroVertexSnap
     SNAP_CODE = r'''
     float s = saturate(Strength) * (MaxRadius > 0.0 ? 1.0 - smoothstep(MaxRadius * 0.75, MaxRadius, Radius) : 1.0);
+    // Flat floor-like objects (plazas, paths, water) keep their shape: height/width of the object bounds.
+    float flatness = Bounds.z / max(max(Bounds.x, Bounds.y), 1.0);
+    s *= FlatRatio > 0.0 ? smoothstep(FlatRatio * 0.75, FlatRatio, flatness) : 1.0;
     if (s <= 0.0) return WPO;
     float3 p = TWP + WPO;
     float4 c = mul(float4(p, 1.0), ResolvedView.TranslatedWorldToClip);
@@ -196,11 +199,13 @@ def main():
         mf, create = new_function(name, 'PS1 vertex snapping: quantises clip-space XY of every vertex to a SnapResolution grid (%s). Chain the existing WPO through WPO. Shadow depth uses the unsnapped WPO.' % source.get_name())
         wpo_in = fn_input(create, 'WPO', IN_V3, -900, 0)
         twp = camera_relative_position(create, -900, 150)
-        snap = custom_node(create, SNAP_CODE, ['WPO', 'TWP', 'Strength', 'ResX', 'ResY', 'Radius', 'MaxRadius'], FLOAT3, -400, 0, 'RetroRender vertex snap')
+        snap = custom_node(create, SNAP_CODE, ['WPO', 'TWP', 'Strength', 'ResX', 'ResY', 'Radius', 'MaxRadius', 'Bounds', 'FlatRatio'], FLOAT3, -400, 0, 'RetroRender vertex snap')
         connect(wpo_in, '', snap, 'WPO')
         connect(twp, '', snap, 'TWP')
         connect(create(unreal.MaterialExpressionObjectRadius, -900, 700), '', snap, 'Radius')
         connect(collection(create, 'SnapMaxObjectRadius', -900, 800, source), '', snap, 'MaxRadius')
+        connect(create(unreal.MaterialExpressionObjectBounds, -900, 900), '', snap, 'Bounds')
+        connect(collection(create, 'SnapFlatRatio', -900, 1000, source), '', snap, 'FlatRatio')
         for i, (pin, param) in enumerate([('Strength', 'VertexSnapStrength'), ('ResX', 'SnapResolutionX'), ('ResY', 'SnapResolutionY')]):
             connect(collection(create, param, -900, 300 + i * 120, source), '', snap, pin)
         shadow = create(unreal.MaterialExpressionShadowReplace, -100, 0)

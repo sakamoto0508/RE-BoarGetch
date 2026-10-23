@@ -13,7 +13,7 @@ import unreal
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent.parent.parent
-LEVEL = '/Game/Art/Rendering/Retro/L_RetroCompare'
+LEVEL = next((t.split('=',1)[1] for t in unreal.SystemLibrary.get_command_line().split() if t.startswith('-RetroLevel=')), '/Game/Art/Rendering/Retro/L_RetroCompare')
 args = unreal.SystemLibrary.get_command_line()
 SETS = 'presets,breakdown,closeup,motion,lowres,hud'
 BAKED = '/Game/Art/Rendering/Retro/Baked'
@@ -94,6 +94,15 @@ def restore_final():
 def shot(harness, label):
     yield from wait_shaders()
     name = '%s_%s' % (STAMP, label)
+    if harness is None:
+        # Level without a compare actor (project default auto-applied): plain high-res shot, no UI.
+        world = worlds.get_game_world()
+        unreal.SystemLibrary.execute_console_command(world, 'HighResShot 1920x1080 filename=%s/Screenshots/Retro/%s.png'
+                                                     % (unreal.Paths.project_saved_dir().rstrip('/'), name))
+        yield 40
+        results['shots'].append(name + '.png')
+        log('shot ' + name)
+        return
     while not harness.request_labeled_screenshot(name):
         yield 1
     yield 2
@@ -136,9 +145,12 @@ def run():
         if pc and pc.get_controlled_pawn():
             break
         yield 1
-    harness = unreal.GameplayStatics.get_all_actors_of_class(world, unreal.RetroCompareActor)[0]
-    renderer = harness.get_editor_property('renderer')
-    harness.set_debug_viewport_size(1920, 1080)
+    harnesses = unreal.GameplayStatics.get_all_actors_of_class(world, unreal.RetroCompareActor)
+    harness = harnesses[0] if harnesses else None
+    owner = harness or unreal.GameplayStatics.get_all_actors_of_class(world, unreal.RetroRenderActor)[0]
+    renderer = owner.get_editor_property('renderer')
+    if harness:
+        harness.set_debug_viewport_size(1920, 1080)
     results['checks']['renderer_ready'] = renderer.is_ready()
     # Warm every preset once so patched-material shader permutations compile before the first shot.
     for preset in [P.PS1, P.N64, P.PS2, P.CRT, P.OFF]:
@@ -178,6 +190,33 @@ def run():
                 yield from shot(harness, 'ground_%s_%s' % (view, label))
         renderer.set_crt_overlay(False)
         renderer.reset_current_preset()
+
+    if 'plaza' in SETS:
+        # Close-ups of the Stage1 cage plaza (SM_S01R_CagePlaza) from two heights.
+        plaza = [a for a in unreal.GameplayStatics.get_all_actors_of_class(world, unreal.StaticMeshActor)
+                 if a.get_component_by_class(unreal.StaticMeshComponent).get_editor_property('static_mesh')
+                 and 'CagePlaza' in a.get_component_by_class(unreal.StaticMeshComponent).get_editor_property('static_mesh').get_name()]
+        if plaza:
+            center = plaza[0].get_actor_location()
+            pawn = pc.get_controlled_pawn()
+            unreal.GameplayStatics.set_game_paused(world, False)
+            pawn.set_actor_location(unreal.Vector(center.x - 900, center.y, center.z + 120), False, True)
+            for pitch, view in ((-18.0, 'mid'), (-40.0, 'high')):
+                look(pc, pitch, 0.0)
+                yield 40
+                unreal.GameplayStatics.set_game_paused(world, True)
+                yield 20
+                for label, preset, changes in [('off', P.OFF, {}), ('ps1', P.PS1, {}), ('ps1_nosnap', P.PS1, {'vertex_snap_strength': 0.0}),
+                                               ('ps1_noaffine_notexel', P.PS1, {'affine_amount': 0.0, 'texel_snap_strength': 0.0})]:
+                    p = params_of(renderer, preset)
+                    set_fields(p, **changes)
+                    renderer.set_preset(preset)
+                    renderer.set_preset_parameters(p)
+                    renderer.set_crt_overlay(False)
+                    yield 30
+                    yield from shot(harness, 'plaza_%s_%s' % (view, label))
+                unreal.GameplayStatics.set_game_paused(world, False)
+            renderer.reset_current_preset()
 
     if 'presets' in SETS:
         for preset, label in [(P.OFF, 'Original'), (P.PS1, 'PS1'), (P.N64, 'N64'), (P.PS2, 'PS2'), (P.CRT, 'CRT')]:
@@ -299,7 +338,8 @@ def run():
     yield 10
     results['checks']['aa_restored'] = unreal.SystemLibrary.get_console_variable_float_value('r.AntiAliasingMethod')
     unreal.GameplayStatics.set_game_paused(world, False)
-    harness.set_debug_viewport_size(0, 0)
+    if harness:
+        harness.set_debug_viewport_size(0, 0)
 
 
 def finish(error=None):

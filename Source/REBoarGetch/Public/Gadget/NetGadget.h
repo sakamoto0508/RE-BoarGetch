@@ -36,7 +36,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Gadget|Net")
 	void EndCaptureWindow();
 
+	/** 捕獲判定窓が開いているかを返します。 */
+	UFUNCTION(BlueprintPure, Category = "Gadget|Net")
+	bool IsCaptureWindowActive() const { return bCaptureWindowActive; }
+
+	/**
+	 * 判定窓が開いている間、前回呼び出し時の位置から現在位置まで捕獲Sphereを掃引して捕獲します。
+	 * 空中アミ捕獲の急降下のように1フレームの移動量が大きい場合の取りこぼし対策です。
+	 * Sphereの半径・対象チャンネル・一振り中の重複防止は通常のOverlap判定と同じです。
+	 */
+	void SweepCaptureWindow();
+
 private:
+	/** 前回Sweepした捕獲Sphereの位置です。判定窓の開始時に初期化します。 */
+	FVector LastCaptureSweepLocation = FVector::ZeroVector;
+	/** LastCaptureSweepLocationが今回の判定窓で有効かです。 */
+	bool bHasCaptureSweepLocation = false;
+
 	/** 捕獲判定窓の開始後に侵入したActorをイノシシとして捕獲できるか判定します。 */
 	UFUNCTION()
 	void OnCaptureCollisionBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,

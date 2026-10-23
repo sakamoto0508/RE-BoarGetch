@@ -52,12 +52,13 @@ void ABoarArchiveDisplay::RefreshDisplay()
     const FName Id=Ids.IsValidIndex(SlotIndex)?Ids[SlotIndex]:NAME_None;
     const FBoarSpawnDefinition* Match=nullptr;
     int32 Matches=0;
-    if(!Id.IsNone())for(const auto& Stage:StageCatalog)if(Stage)for(const auto& Def:Stage->BoarSpawnDefinitions)
+    if(!Id.IsNone())for(const auto& Stage:UBoarGameInstance::ResolveStageCatalog(this,StageCatalog))if(Stage)for(const auto& Def:Stage->BoarSpawnDefinitions)
         if(Def.BoarUniqueId==Id){Match=&Def;++Matches;}
     const ABoarBase* Default=Matches==1 && Match->BoarClass?Match->BoarClass.GetDefaultObject():nullptr;
     const auto* Source=Default?Default->GetMesh():nullptr;
     TArray<UMaterialInterface*> Mats=Source?Source->GetMaterials():TArray<UMaterialInterface*>();
-    if(!VisualMaterials.IsEmpty()) {Mats.Reset();for(auto& M:VisualMaterials)Mats.Add(M);}
+    // 種類ごとの色を展示へ反映するためBoarClass側を優先し、VisualMaterialsは未設定スロットの補完だけに使う。
+    for(int32 I=0;I<Mats.Num();++I) if(!Mats[I] && VisualMaterials.IsValidIndex(I))Mats[I]=VisualMaterials[I];
     ConfigureVisual(Source?Source->GetSkeletalMeshAsset():nullptr,Mats,
         Match && Matches==1 && !Match->ArchiveIdleAnimation.IsNull()?Match->ArchiveIdleAnimation.LoadSynchronous():IdleAnimation.Get());
     BoarVisual->SetRelativeRotation(FRotator::ZeroRotator);

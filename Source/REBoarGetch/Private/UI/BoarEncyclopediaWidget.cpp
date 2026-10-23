@@ -50,15 +50,16 @@ void UBoarEncyclopediaWidget::BuildEntries()
 	if (List) List->ClearChildren();
 	const UBoarGameInstance* GI = GetGameInstance<UBoarGameInstance>();
 	const UBoarSaveGame* Save = GI ? GI->GetProgress() : nullptr;
+	const auto& Catalog = UBoarGameInstance::ResolveStageCatalog(this, StageCatalog);
 	TMap<FName, int32> IdCounts;
-	for (const UStageConfig* Stage : StageCatalog)
+	for (const UStageConfig* Stage : Catalog)
 		if (Stage) for (const auto& Def : Stage->BoarSpawnDefinitions)
 			if (!Def.BoarUniqueId.IsNone()) ++IdCounts.FindOrAdd(Def.BoarUniqueId);
 	int32 Captured = 0;
 	TMap<EBoarArchetype, FIntPoint> TypeCounts;
-	for (int32 S = 0; S < StageCatalog.Num(); ++S)
+	for (int32 S = 0; S < Catalog.Num(); ++S)
 	{
-		const UStageConfig* Stage = StageCatalog[S];
+		const UStageConfig* Stage = Catalog[S];
 		if (!Stage || Stage->StageId.IsNone()) continue;
 		for (int32 D = 0; D < Stage->BoarSpawnDefinitions.Num(); ++D)
 		{
@@ -106,7 +107,9 @@ void UBoarEncyclopediaWidget::SelectEntry(int32 Index)
 {
 	if (!Definitions.IsValidIndex(Index)) return;
 	const FIntPoint Location = Definitions[Index];
-	const UStageConfig* Stage = StageCatalog[Location.X];
+	const auto& Catalog = UBoarGameInstance::ResolveStageCatalog(this, StageCatalog);
+	if (!Catalog.IsValidIndex(Location.X) || !Catalog[Location.X]) return;
+	const UStageConfig* Stage = Catalog[Location.X];
 	const auto& Def = Stage->BoarSpawnDefinitions[Location.Y];
 	const UBoarGameInstance* GI = GetGameInstance<UBoarGameInstance>();
 	const UBoarSaveGame* Save = GI ? GI->GetProgress() : nullptr;
