@@ -90,6 +90,7 @@ public:
 	bool IsReadyForPlay() const { return bStageInitialized; }
 
 private:
+	friend class FBoarGameplayRegressionTest;
 	bool bStageInitialized = false;
 
 protected:
@@ -261,8 +262,11 @@ private:
 	// Air Net Drop（空中アミ捕獲）
 	//-------------------------------------------------
 
-	/** 使用開始時点で空中アミ捕獲として扱えるか（アミ装備・落下中・Animation設定済み）を判定します。 */
+	/** 装備と移動状態だけから使用方式を決定します。演出欠落で地上用へ切り替えません。 */
 	bool ShouldStartAirNetDrop(const AGadgetBase* Gadget) const;
+
+	/** 使用開始前にNotifyを持つ必須Animationと再生先を検証します。副作用はありません。 */
+	bool HasAirNetDropPresentation() const;
 
 	/** 空中アミ捕獲の移動制御を開始し、予備動作を再生します。再生できない場合はfalseです。 */
 	bool BeginAirNetDrop();
@@ -275,6 +279,9 @@ private:
 
 	/** 急降下を開始します（上昇速度を打ち消し、初速を下向きに与えます）。 */
 	void BeginAirNetDropDive();
+
+	/** 急降下の時間上限で判定窓を閉じ、移動設定を戻して引き戻しへ進みます。 */
+	void BeginAirNetDropRecovery();
 
 	/** 着地時に急降下を止め、着地Animationへ切り替えます。 */
 	void HandleAirNetDropLanded();

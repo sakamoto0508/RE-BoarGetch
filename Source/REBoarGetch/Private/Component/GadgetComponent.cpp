@@ -22,6 +22,7 @@ UGadgetComponent::UGadgetComponent()
 bool UGadgetComponent::InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots,
     UBoarGadgetSubsystem* Progress, bool bTemporary)
 {
+	// 成功後の再呼び出しは装備を作り直さず、失敗時だけ原因修正後の再試行を許可する。
     if (bStageInitialized) return true;
     if (Slots.Num() != MaxGadgetSlots || !Cast<APawn>(GetOwner())) return false;
     GadgetProgress = Progress;

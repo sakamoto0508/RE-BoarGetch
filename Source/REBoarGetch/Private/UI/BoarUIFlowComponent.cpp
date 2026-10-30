@@ -20,6 +20,7 @@ ABoarPlayerController *UBoarUIFlowComponent::GetController() const
 }
 bool UBoarUIFlowComponent::BlocksGameplayInput() const
 {
+	// 画面の寿命に入力抑制を結び付け、子画面を閉じても親メニューの抑制は残す。
 	return bFacilityMenuOpen || PauseWidget || SettingsWidget || EncyclopediaWidget || ArchiveSelectionWidget;
 }
 // 子画面を閉じてからPauseを解除し、メニューに伴う入力状態を片付けます。

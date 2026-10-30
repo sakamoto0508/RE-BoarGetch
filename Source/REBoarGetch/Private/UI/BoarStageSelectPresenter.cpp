@@ -52,6 +52,7 @@ bool UBoarStageSelectPresenter::IsUnlocked(const UStageConfig* Stage) const
 
 FBoarStageSelectViewData UBoarStageSelectPresenter::GetStage(int32 Index) const
 {
+	// 表示用データは最新の正本から導出する。Widgetへ進捗や解放フラグの所有権を渡さない。
 	FBoarStageSelectViewData Data;
 	Data.Status = NSLOCTEXT("StageSelect", "NoStage", "選択できるステージがありません");
 	if (!Stages.IsValidIndex(Index)) return Data;

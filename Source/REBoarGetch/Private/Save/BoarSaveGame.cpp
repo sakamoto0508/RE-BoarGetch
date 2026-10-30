@@ -39,6 +39,7 @@ bool UBoarSaveGame::SetArchiveDisplays(const TArray<FName>& Ids)
 
 bool UBoarSaveGame::AssignArchiveDisplay(int32 Slot, FName Id)
 {
+	// 重複展示をWidget側で調整せず、保存候補側でSwapと検証を一括して行う。
 	if (Slot < 0 || Slot >= ArchiveDisplaySlotCount || (!Id.IsNone() && !CapturedBoarUniqueIds.Contains(Id))) return false;
 	TArray<FName> Ids = ResolveArchiveDisplays();
 	const int32 Other = Id.IsNone() ? INDEX_NONE : Ids.Find(Id);

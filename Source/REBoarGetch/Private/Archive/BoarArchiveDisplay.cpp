@@ -47,6 +47,7 @@ void ABoarArchiveDisplay::EndPlay(const EEndPlayReason::Type Reason)
 }
 void ABoarArchiveDisplay::RefreshDisplay()
 {
+	// 展示は保存済み個体IDを本編定義へ解決した表示専用Mesh。Gameplay用BoarのAIは生成しない。
     auto* GI=GetGameInstance<UBoarGameInstance>();
     const TArray<FName> Ids=GI?GI->GetArchiveDisplayIds():TArray<FName>();
     const FName Id=Ids.IsValidIndex(SlotIndex)?Ids[SlotIndex]:NAME_None;

@@ -457,6 +457,7 @@ void ABoarPlayerController::ReturnToLobby()
 
 void ABoarPlayerController::SetStageInputBlocked(bool bBlocked)
 {
+	// Stageの進行可否を入力へ反映する窓口。メニュー独自のロックまで一括解除しない。
 	if (bBlocked) ResumeFromPause();
 	// Ignore入力は加算式なので、状態が変わるときだけ1回設定します。
 	if (bGameplayInputBlocked == bBlocked) return;

@@ -18,7 +18,8 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::EnterState(FStateTreeExecuti
 
 	// Global Senseが同フレームで更新した認識結果から攻撃対象を確定する。
 	InstanceData.TargetPlayer = Boar->GetPerceivedPlayer();
-	if (InstanceData.TargetPlayer == nullptr)
+	// StateTreeから直接このStateへ入っても、追跡側と同じ射程・Cooldown条件を守る。
+	if (!Boar->CanStartPlayerAttack())
 		return EStateTreeRunStatus::Failed;
 
 	InstanceData.ChargeDirection = Boar->GetActorForwardVector().GetSafeNormal2D();
@@ -45,7 +46,12 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::EnterState(FStateTreeExecuti
 EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::Tick(
 	FStateTreeExecutionContext& Context, float DeltaTime) const
 {
-	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
+	return TickAttack(Context.GetInstanceData(*this), DeltaTime);
+}
+
+EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::TickAttack(
+	FInstanceDataType& InstanceData, float DeltaTime) const
+{
 	ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get());
 	if (Boar == nullptr || Boar->IsCaptured())
 	{
@@ -145,15 +151,8 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::Tick(
 			Movement->MaxWalkSpeed = InstanceData.OriginalWalkSpeed;
 		}
 
-		// 檻攻撃と同じく、プレイヤーを認識し続けていれば再び予兆から突進する。
-		if (Player != nullptr)
-		{
-			InstanceData.TargetPlayer = Player;
-			BeginTelegraph(InstanceData, Boar);
-			return EStateTreeRunStatus::Running;
-		}
-
-		// 見失った場合は短く硬直してから、StateTreeで檻・巡回を再判断させる。
+		// 認識が続いていても必ず硬直を挟む。ここから直接予兆へ戻すと
+		// Chase側の射程・Cooldown判定を迂回するため、完了後はStateTreeへ判断を返す。
 		BeginRecovery(InstanceData, Boar);
 		return EStateTreeRunStatus::Running;
 	}

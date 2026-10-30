@@ -7,7 +7,7 @@
 
 void ABoarFacilityGameMode::StartPlay()
 {
-	// Facilities have no stage progression; only their player loadout policy differs.
+	// 施設はStageの勝敗管理へ依存せず、自分のModeでPlayerの準備を統括する。
 	const auto Context = BoarGadgetLoadoutInitializer::ResolveContext(GetWorld());
 	bool bReady = !bGadgetTest || TestGadgetClass != nullptr;
 	for (TActorIterator<ABoarPlayerCharacter> It(GetWorld()); It; ++It)

@@ -23,6 +23,7 @@ void UHealthComponent::BeginPlay()
 
 bool UHealthComponent::InitializeHealth()
 {
+	// 初期化の再実行を回復処理として使わない。明示的な回復・Resetとは責務を分ける。
 	if (bHealthInitialized) return true;
 	if (!FMath::IsFinite(MaxHealth) || MaxHealth <= 0.f) return false;
 	ResetHealth();

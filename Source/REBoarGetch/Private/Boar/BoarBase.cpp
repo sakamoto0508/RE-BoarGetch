@@ -283,6 +283,12 @@ bool ABoarBase::IsPlayerAttackReady() const
 	return World != nullptr && World->GetTimeSeconds() >= NextPlayerAttackTime;
 }
 
+bool ABoarBase::CanStartPlayerAttack() const
+{
+	return !IsCaptured() && IsValid(PerceivedPlayer)
+		&& PerceivedPlayerDistance <= ActiveSettings.PlayerAttackRange && IsPlayerAttackReady();
+}
+
 void ABoarBase::StartPlayerAttackCooldown()
 {
 	if (const UWorld* World = GetWorld())
@@ -457,6 +463,23 @@ void ABoarBase::ApplyArchetypeDefaults()
 		: UBoarDataAsset::GetDefaultSettings(BoarArchetype);
 
 	ActiveSettings = Settings;
+
+	// 古いBPの読み取り参照を残しつつ、AIロジックはActiveSettingsだけを使う。
+	// 旧プロパティに保存された値を逆流させないことで、設定元の二重化を防ぐ。
+	SightRange = ActiveSettings.SightRange;
+	SightAngleDegrees = ActiveSettings.SightAngleDegrees;
+	AbsoluteDetectionRange = ActiveSettings.AbsoluteDetectionRange;
+	ChaseRange = ActiveSettings.ChaseRange;
+	EscapeRange = ActiveSettings.EscapeRange;
+	CagePriorityWeight = ActiveSettings.CagePriorityWeight;
+	PlayerPriorityWeight = ActiveSettings.PlayerPriorityWeight;
+	EscapePriorityWeight = ActiveSettings.EscapePriorityWeight;
+	bCanAttackCage = ActiveSettings.bCanAttackCage;
+	bUseStamina = ActiveSettings.bUseStamina;
+	MaxStamina = ActiveSettings.MaxStamina;
+	StaminaDrainPerSecond = ActiveSettings.StaminaDrainPerSecond;
+	StaminaRecoveryPerSecond = ActiveSettings.StaminaRecoveryPerSecond;
+	StaminaRecoverExitRatio = ActiveSettings.StaminaRecoverExitRatio;
 
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{

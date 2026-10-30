@@ -51,7 +51,7 @@ EStateTreeRunStatus FStateTreeBoarChasePlayerTask::UpdateChase(FInstanceDataType
 		return EStateTreeRunStatus::Failed;
 
 	// 射程内かつクールダウン終了済みなら、攻撃予兆へ移るため成功終了する。
-	if (Boar->GetPerceivedPlayerDistance() <= Boar->GetPlayerAttackRange() && Boar->IsPlayerAttackReady())
+	if (Boar->CanStartPlayerAttack())
 		return EStateTreeRunStatus::Succeeded;
 
 	// 対象が変わった場合や前回の移動要求が終了した場合だけ、NavMesh経路の移動要求を出し直す。

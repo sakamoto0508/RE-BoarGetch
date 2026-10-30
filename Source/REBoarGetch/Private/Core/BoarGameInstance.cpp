@@ -22,6 +22,7 @@ void UBoarGameInstance::Init()
 
 bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
 {
+	// ディスク保存が成功してから正本と購読者へ公開する。失敗した候補は現在の進行へ混ぜない。
 	if (!Candidate || bSaveLoadFailed || !UGameplayStatics::SaveGameToSlot(Candidate, SaveSlotName, SaveUserIndex))
 	{
 		UE_LOG(LogTemp, Error, TEXT("[Save] Progress could not be saved."));
@@ -40,6 +41,7 @@ bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
 
 bool UBoarGameInstance::CommitClearedRun(FStageRunData& Run)
 {
+	// NEW判定は保存前の履歴で固定し、同じRunの保存再試行でも結果表示を変えない。
 	if (!Progress || Run.StageId.IsNone()) return false;
 	Progress->FreezeRunResult(Run);
 	UBoarSaveGame* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);

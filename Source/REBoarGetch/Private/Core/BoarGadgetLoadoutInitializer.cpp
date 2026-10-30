@@ -8,6 +8,7 @@
 
 FBoarGadgetLoadoutContext BoarGadgetLoadoutInitializer::ResolveContext(UWorld* World)
 {
+	// Stageと施設の違いはここでContextへ変換し、装備ComponentへMode依存を持ち込まない。
 	FBoarGadgetLoadoutContext Context;
 	if (!World) return Context;
 	const auto* Instance = World->GetGameInstance<UBoarGameInstance>();
@@ -20,6 +21,7 @@ FBoarGadgetLoadoutContext BoarGadgetLoadoutInitializer::ResolveContext(UWorld* W
 
 bool BoarGadgetLoadoutInitializer::Initialize(UGadgetComponent* Component, const FBoarGadgetLoadoutContext& Context)
 {
+	// テスト施設の強制装備は一時配列だけを上書きし、通常の保存済みLoadoutは変更しない。
 	if (!Component) return false;
 	if (Component->IsLoadoutInitialized()) return true;
 	TArray<TSubclassOf<AGadgetBase>> Slots = Component->GetDefaultGadgetSlots();

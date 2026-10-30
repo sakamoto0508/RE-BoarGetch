@@ -218,6 +218,7 @@ int32 ACage::GetCapturedBoarCount() const
 
 void ACage::NotifyHousedCountChanged()
 {
+	// 檻は自分の収容個体だけを保持し、全檻の合計とClear判定はGameModeへ委譲する。
 	if (ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
 		Mode->RefreshHousedBoarCount();
 }

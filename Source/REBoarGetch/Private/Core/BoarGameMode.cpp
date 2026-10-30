@@ -52,11 +52,11 @@ void ABoarGameMode::StartPlay()
 	StageRunData = FStageRunData();
 	StageRunData.StageId = StageConfig ? StageConfig->StageId : NAME_None;
 
-	// All required actors and player dependencies are prepared before UE
-	// dispatches BeginPlay. Actor/component BeginPlay only completes local setup.
+	// UEがActorへBeginPlayを配る前に必須依存を準備する。
+	// 各ActorのBeginPlay順ではなく、この処理の成否をGameplay開始の根拠にする。
 	const bool bPrepared = PrepareStage();
 	Super::StartPlay();
-	// BeginPlay can create presentation/gadget actors; keep them stopped too.
+	// BeginPlayで追加された装備・演出Actorも含め、開始可否が確定するまで停止を維持する。
 	SetStageActorsStopped(true);
 	if (!bPrepared)
 	{
@@ -106,6 +106,7 @@ bool ABoarGameMode::ValidateStageSetup()
 
 bool ABoarGameMode::InitializeStageActors()
 {
+	// 個々の設定方法は担当APIへ委譲し、この関数は必須Actorの準備結果を集約する。
 	int32 CageCount = 0, BoarCount = 0, PlayerCount = 0;
 	for (TActorIterator<ACage> It(GetWorld()); It; ++It)
 	{
@@ -201,6 +202,7 @@ void ABoarGameMode::HandleWorldTickEnd(UWorld* World, ELevelTick TickType, float
 
 void ABoarGameMode::ResolveStageEnd()
 {
+	// 要求の到着順で勝敗を決めず、フレーム終端でClear優先を一度だけ適用する。
 	const EBoarStageState Next = ResolveBoarStageEnd(StageState, bStageClearRequested, bGameOverRequested);
 	if (Next == StageState) return;
 	StageState = Next;
@@ -233,6 +235,7 @@ void ABoarGameMode::ResolveStageEnd()
 
 bool ABoarGameMode::RetryClearSave()
 {
+	// 保存と演出は別の完了条件。再試行で成功した場合もResultは一度だけ表示する。
 	if (StageState != EBoarStageState::Cleared) return false;
 	if (!bClearSaveSucceeded)
 	{
@@ -246,6 +249,7 @@ bool ABoarGameMode::RetryClearSave()
 
 void ABoarGameMode::CompleteStageIntroduction()
 {
+	// BPから早期・重複通知が来ても、準備失敗や終了済み状態をPlayingへ戻さない。
 	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing) return;
 	StageState = EBoarStageState::Playing;
 	SetStageActorsStopped(false);

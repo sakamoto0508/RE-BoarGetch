@@ -260,6 +260,13 @@ void ABoarPlayerCharacter::StartGadgetUse()
 
 		// 空中かどうかは使用開始のこの時点で確定させ、途中で上昇→下降に変わっても地上用へ切り替えない。
 		const bool bAirNetDrop = ShouldStartAirNetDrop(CurrentGadget);
+		// Notifyが捕獲窓を管理する現行仕様では、素材欠落時に別の判定を代用しない。
+		// 使用開始・Cooldown・速度変更より前に拒否し、通常の空中移動をそのまま保つ。
+		if (bAirNetDrop && !HasAirNetDropPresentation())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] Required animation or AnimInstance is missing; use rejected without changing movement or cooldown."));
+			return;
+		}
 		// 空中のアミはCooldown中なら使わない（地上用Montageと移動停止で空中に静止してしまうのを防ぐ）。
 		if (bAirNetDrop && !CurrentGadget->CanUse())
 			return;
@@ -583,7 +590,12 @@ bool ABoarPlayerCharacter::ShouldStartAirNetDrop(const AGadgetBase* Gadget) cons
 {
 	const UCharacterMovementComponent* Move = GetCharacterMovement();
 	// Jump上昇中・二段ジャンプ中・落下中はいずれもFalling。
-	return Cast<ANetGadget>(Gadget) && Move && Move->IsFalling() && AirNetDropAnticipationAnimation &&
+	return Cast<ANetGadget>(Gadget) && Move && Move->IsFalling();
+}
+
+bool ABoarPlayerCharacter::HasAirNetDropPresentation() const
+{
+	return AirNetDropAnticipationAnimation &&
 		AirNetDropSwingAnimation && AirNetDropLoopAnimation && AirNetDropRecoveryAnimation && AirNetDropLandAnimation &&
 		GetMesh() && GetMesh()->GetAnimInstance();
 }
@@ -613,6 +625,18 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 {
 	AirNetDropPhaseElapsed += DeltaSeconds;
 	UCharacterMovementComponent* Move = GetCharacterMovement();
+	if (Move && Move->IsFalling() &&
+		(AirNetDropPhase == EAirNetDropPhase::Swing || AirNetDropPhase == EAirNetDropPhase::Drop))
+	{
+		// Swingも急降下中として数える。見た目の再生速度・長さにかかわらず、
+		// Gameplayの上限に達したフレームでは追加加速・掃引より先に終了する。
+		AirNetDropDiveElapsed += FMath::Max(DeltaSeconds, 0.0f);
+		if (AirNetDropDiveElapsed >= FMath::Max(0.0f, AirNetDropMaxDiveDuration))
+		{
+			BeginAirNetDropRecovery();
+			return;
+		}
+	}
 
 	// 網が1フレームで大きく動くため、判定窓が開いている間は移動量を掃引して取りこぼしを防ぐ。
 	if (ANetGadget* NetGadget = GetEquippedNetGadget())
@@ -639,7 +663,6 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 	case EAirNetDropPhase::Swing:
 	case EAirNetDropPhase::Drop:
 	{
-		AirNetDropDiveElapsed += DeltaSeconds;
 		// 急降下：通常重力の代わりに設定加速度で加速し、最大落下速度で止める。
 		Move->Velocity.Z = FMath::Max(Move->Velocity.Z - AirNetDropDownAcceleration * DeltaSeconds, -AirNetDropMaxFallSpeed);
 
@@ -651,17 +674,19 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 				if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) EndGadgetUse(true);
 			}
 		}
-		else if (AirNetDropDiveElapsed >= AirNetDropMaxDiveDuration)
-		{
-			// 高所では急降下を打ち切り、引き戻してから通常の重力落下へ戻す。
-			RestoreAirNetDropMovement();
-			if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery)) EndGadgetUse(true);
-		}
 		break;
 	}
 	default:
 		break;
 	}
+}
+
+void ABoarPlayerCharacter::BeginAirNetDropRecovery()
+{
+	// Capture OFF Notifyが未到達でも、時間上限を過ぎて捕獲性能を延長しない。
+	if (ANetGadget* NetGadget = GetEquippedNetGadget()) NetGadget->EndCaptureWindow();
+	RestoreAirNetDropMovement();
+	if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery)) EndGadgetUse(true);
 }
 
 void ABoarPlayerCharacter::BeginAirNetDropDive()
@@ -822,8 +847,7 @@ void ABoarPlayerCharacter::OnAirNetDropMontageEnded(UAnimMontage* Montage, bool 
 		if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) EndGadgetUse(true);
 		break;
 	case EAirNetDropPhase::Drop:
-		RestoreAirNetDropMovement();
-		if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery)) EndGadgetUse(true);
+		BeginAirNetDropRecovery();
 		break;
 	default:
 		// 引き戻し・着地の完了で空中アミ捕獲を終える。

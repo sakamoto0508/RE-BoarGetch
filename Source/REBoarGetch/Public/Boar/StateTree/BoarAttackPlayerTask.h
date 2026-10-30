@@ -24,7 +24,7 @@ struct FBoarAttackPlayerTaskInstanceData
 
 	/**
 	 * 現在の突進攻撃フェーズです。Telegraph → Charge → Retreat と進み、
-	 * プレイヤーを認識し続けていればTelegraphへ戻り、見失えばRecoveryを経て終了します。
+	 * 認識の有無にかかわらずRecoveryを経て終了し、次の攻撃条件はStateTreeで再評価します。
 	 */
 	EBoarChargeAttackPhase Phase = EBoarChargeAttackPhase::Telegraph;
 
@@ -50,7 +50,7 @@ struct FBoarAttackPlayerTaskInstanceData
 	bool bChargeFinishedNotified = false;
 
 	/** 終了処理の重複実行を防ぎます。 */
-	bool bCleanupCompleted = false;
+	bool bCleanupCompleted = true;
 };
 
 /** 予兆・直線突進・後退・硬直の順でプレイヤーへの攻撃を制御するStateTreeタスクです。 */
@@ -85,16 +85,19 @@ struct FStateTreeBoarAttackPlayerTask : public FStateTreeTaskCommonBase
 		const FStateTreeTransitionResult& Transition) const override;
 
 private:
+	friend class FBoarGameplayRegressionTest;
+	/** StateTreeの進行データを更新します。復元と状態遷移はこの処理へ集約します。 */
+	EStateTreeRunStatus TickAttack(FInstanceDataType& InstanceData, float DeltaTime) const;
 	/** 突進を終了して後退へ移ります。 */
 	void BeginRetreat(FInstanceDataType& InstanceData, ABoarBase* Boar) const;
 
-	/** 攻撃予兆を開始します。タスク開始時と、後退後に再び突進する時に使います。 */
+	/** 共通の開始条件を満たしたタスクの攻撃予兆を開始します。 */
 	void BeginTelegraph(FInstanceDataType& InstanceData, ABoarBase* Boar) const;
 
 	/** 後退中に変更した自動回転の設定を元へ戻します。 */
 	void RestoreRotationSettings(const FInstanceDataType& InstanceData, ABoarBase* Boar) const;
 
-	/** プレイヤーを見失った後、硬直へ移ります。 */
+	/** 後退終了後、対象の認識状態にかかわらず硬直へ移ります。 */
 	void BeginRecovery(FInstanceDataType& InstanceData, ABoarBase* Boar) const;
 
 	/** タスク終了時の共通復元処理です。 */

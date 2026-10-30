@@ -117,6 +117,7 @@ void UCapturePresentationComponent::RestoreTarget(FCaptureVisualTarget& T)
 }
 void UCapturePresentationComponent::CancelPresentation(bool bCommitCaptures)
 {
+	// 先に演出リストと時間倍率を片付け、Gameplayへの通知が再入しても同じ対象を確定しない。
  RestoreSharedState(); bSharedActive=false;
  TArray<TWeakObjectPtr<ABoarBase>> Pending;
  for (auto& T:Targets) { Pending.Add(T.Boar); RestoreTarget(T); }

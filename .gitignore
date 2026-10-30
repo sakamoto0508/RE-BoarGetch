@@ -88,3 +88,4 @@ SourceArt/**/UEExport/
 SourceArt/**/__pycache__/
 SourceArt/**/*.log
 *.blend1
+Source/REBoarGetch/Verification/
