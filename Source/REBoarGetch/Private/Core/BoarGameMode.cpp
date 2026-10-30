@@ -26,6 +26,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Stage/SpecialCoin.h"
 #include "BoarSaveGame.h"
+#include "TimerManager.h"
 
 ABoarGameMode::ABoarGameMode()
 {
@@ -70,6 +71,9 @@ void ABoarGameMode::StartPlay()
 	WorldTickEndHandle = FWorldDelegates::OnWorldTickEnd.AddUObject(this, &ABoarGameMode::HandleWorldTickEnd);
 	if (bWaitForStageIntroduction && StageConfig)
 	{
+		// 完了通知が同期で返る場合にも解除できるよう、BPイベントより先に監視を開始する。
+		GetWorldTimerManager().SetTimer(IntroductionTimeoutHandle, this,
+			&ABoarGameMode::HandleIntroductionTimeout, FMath::Max(0.1f, StageIntroductionTimeoutSeconds), false);
 		OnStageIntroductionRequested();
 	}
 	else CompleteStageIntroduction();
@@ -180,10 +184,7 @@ void ABoarGameMode::RefreshHousedBoarCount()
 
 void ABoarGameMode::RequestStageClear()
 {
-	// StageClearの演出が残っている場合は、演出完了までクリアを保留します。
-	if (auto* PC = GetWorld()->GetFirstPlayerController())
-		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
-			if (Presentation->HasPendingCaptures()) return;
+	// 勝敗は収容数で確定する。残っている受信演出は終了遷移時に打ち切り、死亡要求よりClearを優先する。
 	if (StageState == EBoarStageState::Playing && StageConfig && StageConfig->TargetCaptureCount > 0
 		&& CapturedBoarCount >= StageConfig->TargetCaptureCount) bStageClearRequested = true;
 }
@@ -206,6 +207,11 @@ void ABoarGameMode::ResolveStageEnd()
 	const EBoarStageState Next = ResolveBoarStageEnd(StageState, bStageClearRequested, bGameOverRequested);
 	if (Next == StageState) return;
 	StageState = Next;
+	if (bWaitForStageEndPresentation)
+	{
+		GetWorldTimerManager().SetTimer(EndPresentationTimeoutHandle, this,
+			&ABoarGameMode::HandleEndPresentationTimeout, FMath::Max(0.1f, StageEndPresentationTimeoutSeconds), false);
+	}
 	if (auto* PC = GetWorld()->GetFirstPlayerController())
 		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>()) Presentation->CancelPresentation();
 	SetStageActorsStopped(true);
@@ -251,6 +257,7 @@ void ABoarGameMode::CompleteStageIntroduction()
 {
 	// BPから早期・重複通知が来ても、準備失敗や終了済み状態をPlayingへ戻さない。
 	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing) return;
+	GetWorldTimerManager().ClearTimer(IntroductionTimeoutHandle);
 	StageState = EBoarStageState::Playing;
 	SetStageActorsStopped(false);
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] Playing: stage progression enabled"));
@@ -260,6 +267,7 @@ void ABoarGameMode::CompleteStageIntroduction()
 void ABoarGameMode::CompleteStageEndPresentation()
 {
 	if (StageState != EBoarStageState::Cleared && StageState != EBoarStageState::GameOver) return;
+	GetWorldTimerManager().ClearTimer(EndPresentationTimeoutHandle);
 	bEndPresentationCompleted = true;
 	if (bEndUIShown || (StageState == EBoarStageState::Cleared && !bClearSaveSucceeded)) return;
 	ABoarPlayerController* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController());
@@ -269,6 +277,22 @@ void ABoarGameMode::CompleteStageEndPresentation()
 		PC->HandleStageCleared(StageRunData, StageConfig->TargetCaptureCount);
 	else 
 		PC->HandleStageGameOver();
+}
+
+void ABoarGameMode::HandleIntroductionTimeout()
+{
+	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing) return;
+	UE_LOG(LogTemp, Warning, TEXT("[Stage] Introduction timed out; continuing gameplay."));
+	OnStagePresentationTimedOut(true);
+	CompleteStageIntroduction();
+}
+
+void ABoarGameMode::HandleEndPresentationTimeout()
+{
+	if (bEndPresentationCompleted || (StageState != EBoarStageState::Cleared && StageState != EBoarStageState::GameOver)) return;
+	UE_LOG(LogTemp, Warning, TEXT("[Stage] End presentation timed out; continuing to end UI."));
+	OnStagePresentationTimedOut(false);
+	CompleteStageEndPresentation();
 }
 
 void ABoarGameMode::SetStageActorsStopped(bool bStopped)
@@ -317,6 +341,8 @@ bool ABoarGameMode::RecordSpecialCoin(FName CoinId)
 
 void ABoarGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	GetWorldTimerManager().ClearTimer(IntroductionTimeoutHandle);
+	GetWorldTimerManager().ClearTimer(EndPresentationTimeoutHandle);
 	FWorldDelegates::OnWorldTickEnd.Remove(WorldTickEndHandle);
 	Super::EndPlay(EndPlayReason);
 }

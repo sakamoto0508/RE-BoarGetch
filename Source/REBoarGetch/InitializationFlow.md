@@ -16,6 +16,10 @@
 
 初期化に失敗した場合もUEのBeginPlayは実行するが、ステージの準備完了フラグは立てない。エラー理由を公開し、標準の再読込／ロビー復帰画面を表示する。開始演出の完了通知で失敗を飛び越えることはできない。
 
+開始演出の通知欠落時は `StageIntroductionTimeoutSeconds`（既定30秒）で開始する。独自の終了演出も `StageEndPresentationTimeoutSeconds`（既定30秒）で待機を終える。通常完了・レベル終了時は監視を解除する。BPは `OnStagePresentationTimedOut(bIntroduction)` で独自のカメラ・Widgetを片付けられる。ClearのResult表示には、演出完了とは別に保存成功が必要。
+
+目標収容数に達した時点でClear要求を確定し、被弾と檻解放を遮断する。捕獲の受信エフェクトが残っていても同フレームのGameOverよりClearを優先し、終了遷移時に残った演出を解除する。
+
 ## 施設・ロビー・追加生成
 
 - `ABoarFacilityGameMode::StartPlay()` はBeginPlay前にプレイヤーを準備する。Testでは専用ガジェットと一時装備方針を渡す。
@@ -40,7 +44,7 @@
 ### 実行結果（2026-10-21）
 
 - UE 5.8.3 / Win64 Development EditorのC++ビルド成功。
-- `REBoarGetch.Spec` 全10件成功（警告付き成功3件を含む）。結果は `Verification/InitializationAutomation/index.json`。
+- `REBoarGetch.Spec` 全10件成功（警告付き成功3件を含む）。当時の生成レポートは整理済み。再検証時にローカルへ出力する。
 - 既存のPlayer BlueprintとNet Blueprintを使い、BeginPlay前の装備生成・ソケット接続に成功。
 - 関連Blueprint 10件はメモリ上のコンパイルですべて `BS_UP_TO_DATE`。`Verification/InitializationCompatibility.json` の個別結果を参照。
 - Blueprint検証前後のSaveGames内のファイルハッシュは一致。保存形式とStageConfigのソースに変更なし。

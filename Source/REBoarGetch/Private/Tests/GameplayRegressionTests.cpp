@@ -4,6 +4,8 @@
 #include "Boar/BoarBase.h"
 #include "Boar/StateTree/BoarAttackPlayerTask.h"
 #include "Component/GadgetComponent.h"
+#include "Component/HealthComponent.h"
+#include "Component/CaptureComponent.h"
 #include "Gadget/NetGadget.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Player/BoarPlayerCharacter.h"
@@ -122,6 +124,26 @@ bool FBoarGameplayRegressionTest::RunTest(const FString& Parameters)
 		Player->InterruptGadgetUse();
 		TestFalse(TEXT("中断後は操作ロックを残さない"), Player->bIsGadgetInUse);
 	}
+
+	// 地上でもCooldown拒否をPlayerへ返し、演出・移動停止を開始しない。
+	Move->SetMovementMode(MOVE_Walking);
+	Move->Velocity = FVector(123, 45, 0);
+	Net->Use(Player);
+	TestFalse(TEXT("地上拒否検証のCooldownを開始"), Net->CanUse());
+	TestFalse(TEXT("Componentは使用拒否を返す"), Player->GetGadgetComponent()->BeginUseCurrentGadget());
+	Player->StartGadgetUse();
+	TestFalse(TEXT("地上Cooldown中は操作ロックを開始しない"), Player->bIsGadgetInUse);
+	TestTrue(TEXT("地上Cooldown中は移動速度を消さない"), Move->Velocity.Equals(FVector(123, 45, 0)));
+
+	// 同じBoarでも捕獲中は接触無害、解放後は通常のダメージ対象へ戻る。
+	const float HealthBeforeContact = Player->GetHealthComponent()->GetCurrentHealth();
+	TestTrue(TEXT("接触検証Boarを捕獲"), Boar->CaptureComponent->Capture(nullptr));
+	Player->HandleBoarContact(Boar);
+	TestEqual(TEXT("捕獲中の接触ではHPを減らさない"), Player->GetHealthComponent()->GetCurrentHealth(), HealthBeforeContact);
+	TestFalse(TEXT("捕獲中の接触ではStunを開始しない"), Player->bIsStunned);
+	TestTrue(TEXT("接触検証Boarを解放"), Boar->CaptureComponent->Release());
+	Player->HandleBoarContact(Boar);
+	TestTrue(TEXT("解放後の接触はダメージを与える"), Player->GetHealthComponent()->GetCurrentHealth() < HealthBeforeContact);
 	return true;
 }
 #endif

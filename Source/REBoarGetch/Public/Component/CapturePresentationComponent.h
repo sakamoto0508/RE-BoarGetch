@@ -65,6 +65,7 @@ struct FCaptureReception
 UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent, ToolTip="捕獲成功演出の調整用Component。捕獲地点の演出時間はHit Stop、Slow、Dissolve、Transfer Finishの合計です。Cage受信演出はその後に再生します。"))
 class REBOARGETCH_API UCapturePresentationComponent : public UActorComponent
 {
+ friend class FBoarStageEndRegressionTest;
  GENERATED_BODY()
 public:
  UCapturePresentationComponent();

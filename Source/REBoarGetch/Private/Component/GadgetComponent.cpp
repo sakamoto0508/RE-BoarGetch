@@ -126,6 +126,10 @@ bool UGadgetComponent::BeginUseCurrentGadget()
 		return false;
 	}
 
+	// Playerが演出や操作制限を始める前に、地上・空中共通の使用拒否を返す。
+	// BeginUseはOneShotでは直ちにIsUsingを戻すため、開始後の値を成功判定には使わない。
+	if (!CurrentGadget->CanUse() || CurrentGadget->IsUsing()) return false;
+
 	UE_LOG(LogTemp, Log, TEXT("[Gadget] BeginUse: %s"), *GetNameSafe(CurrentGadget.Get()));
 	CurrentGadget->BeginUse(OwningPawn.Get());
 	return true;

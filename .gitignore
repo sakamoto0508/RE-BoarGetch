@@ -89,3 +89,6 @@ SourceArt/**/__pycache__/
 SourceArt/**/*.log
 *.blend1
 Source/REBoarGetch/Verification/
+
+# Local asset snapshots; published revisions are preserved in Git history.
+SourceArt/Boar/Backup_20261023/

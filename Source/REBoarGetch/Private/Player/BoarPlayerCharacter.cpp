@@ -267,10 +267,6 @@ void ABoarPlayerCharacter::StartGadgetUse()
 			UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] Required animation or AnimInstance is missing; use rejected without changing movement or cooldown."));
 			return;
 		}
-		// 空中のアミはCooldown中なら使わない（地上用Montageと移動停止で空中に静止してしまうのを防ぐ）。
-		if (bAirNetDrop && !CurrentGadget->CanUse())
-			return;
-
 		// 使用開始後にガジェットが切り替わっても判定できるよう、UseStyleをCharacter側へ保存する。
 		CurrentGadgetUseStyle = CurrentGadget->GetUseStyle();
 		if (!GadgetComponent->BeginUseCurrentGadget())
@@ -414,7 +410,9 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 	if (bIsInvincible || bIsStunned || bIsDowned || HealthComponent == nullptr || OtherActor == nullptr || OtherActor == this)
 		return;
 
-	if (Cast<ABoarBase>(OtherActor) == nullptr)
+	// 捕獲後も演出・檻収容のためActorは残るが、接触ダメージの対象からは即時除外する。
+	const ABoarBase* Boar = Cast<ABoarBase>(OtherActor);
+	if (!IsValid(Boar) || Boar->IsCaptured())
 		return;
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
 		if (!Mode->CanAdvanceStage()) return;

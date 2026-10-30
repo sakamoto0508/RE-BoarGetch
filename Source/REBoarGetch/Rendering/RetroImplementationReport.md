@@ -72,7 +72,7 @@ PNGの実寸も確認済みです。4:3と16:9の画像を開き、UVの位置�
 HUDを含む画面も別途保存し、HP・捕獲数・ガジェットアイコンが表示されることを確認しました。
 動作中の全捕獲演出、特にNiagaraの細い粒子や発光の視認性は未検証です。
 
-比較一覧: [RetroComparison.png](../Verification/RetroComparison.png)
+比較一覧の生成画像はGit追跡対象外。ローカルの `Verification/BuildRetroComparison.py` で `Verification/RetroComparison.png` を再生成する（検証スクリプトもローカル保管）。
 
 元画像は `C:/UnrealGames/REBoarGetch/Saved/Screenshots/Retro/` にあります。
 1280×720の比較は `20261016_153111_CE5E04C7_*.png`、4:3は `20261016_153149_CE0DAD5A_*.png`、

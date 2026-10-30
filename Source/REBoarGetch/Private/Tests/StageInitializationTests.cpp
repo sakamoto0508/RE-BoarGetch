@@ -5,6 +5,9 @@
 #include "Core/BoarGadgetLoadoutInitializer.h"
 #include "Component/HealthComponent.h"
 #include "Component/GadgetComponent.h"
+#include "Component/CapturePresentationComponent.h"
+#include "Player/BoarPlayerController.h"
+#include "TimerManager.h"
 #include "Gadget/GadgetBase.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Boar/BoarBase.h"
@@ -90,6 +93,7 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Equipment prepared before introduction"), Player->GetGadgetComponent()->IsLoadoutInitialized());
 		TestTrue(TEXT("Introduction still blocks gameplay"), !Mode->CanAdvanceStage());
 		TestTrue(TEXT("Preparing until explicit introduction completion"), Mode->GetStageState() == EBoarStageState::Preparing);
+		TestTrue(TEXT("開始演出の通知欠落を監視する"), Fixture.World->GetTimerManager().IsTimerActive(Mode->IntroductionTimeoutHandle));
 		int32 Count = 0;
 		for (TActorIterator<ABoarBase> It(Fixture.World); It; ++It)
 		{
@@ -99,6 +103,7 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 		}
 		TestEqual(TEXT("Configured boar created once"), Count, 1);
 		Mode->CompleteStageIntroduction();
+		TestFalse(TEXT("通常完了で開始演出の監視を解除"), Fixture.World->GetTimerManager().IsTimerActive(Mode->IntroductionTimeoutHandle));
 		TestTrue(TEXT("Ready stage may start"), Mode->CanAdvanceStage());
 		auto* Health = Player->GetHealthComponent();
 		Health->TakeDamage(1.f);
@@ -137,6 +142,55 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 		Fixture.World->BeginPlay();
 		TestFalse(TEXT("Missing spawn dependency blocks startup"), Mode->bStageInitializationComplete);
 		TestFalse(TEXT("Partial spawn does not enter gameplay"), Mode->CanAdvanceStage());
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarStageEndRegressionTest, "REBoarGetch.Spec.StageEndRegression",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FBoarStageEndRegressionTest::RunTest(const FString& Parameters)
+{
+	{
+		FStartupWorld Fixture;
+		auto* Mode = Fixture.CreateStage();
+		auto* PC = Fixture.World->SpawnActor<ABoarPlayerController>();
+		if (!TestNotNull(TEXT("捕獲演出を持つController"), PC)) return false;
+		PC->CapturePresentation->Receptions.AddDefaulted();
+		Mode->StageConfig = NewObject<UStageConfig>(Mode);
+		Mode->StageConfig->TargetCaptureCount = 1;
+		Mode->CapturedBoarCount = 1;
+		Mode->StageState = EBoarStageState::Playing;
+		Mode->bWaitForStageEndPresentation = true;
+		// 実セーブとUI生成を避け、勝敗と演出待機の制御だけを検証する。
+		Mode->bClearSaveSucceeded = true;
+		Mode->bEndUIShown = true;
+		Mode->RequestGameOver();
+		Mode->RequestStageClear();
+		TestTrue(TEXT("受信演出中でもClear要求は成立"), Mode->bStageClearRequested);
+		TestFalse(TEXT("Clear要求で被弾・檻解放を即時遮断"), Mode->CanAdvanceStage());
+		Mode->ResolveStageEnd();
+		TestTrue(TEXT("同フレーム死亡よりClearを優先"), Mode->StageState == EBoarStageState::Cleared);
+		TestFalse(TEXT("勝敗確定時に残った捕獲演出を解除"), PC->CapturePresentation->HasPendingCaptures());
+		TestTrue(TEXT("独自終了演出の待機に上限がある"), Fixture.World->GetTimerManager().IsTimerActive(Mode->EndPresentationTimeoutHandle));
+		Mode->HandleEndPresentationTimeout();
+		TestTrue(TEXT("終了通知欠落時にも演出待ちを抜ける"), Mode->bEndPresentationCompleted);
+		TestFalse(TEXT("終了後は監視を解除"), Fixture.World->GetTimerManager().IsTimerActive(Mode->EndPresentationTimeoutHandle));
+		Mode->HandleEndPresentationTimeout();
+		TestTrue(TEXT("重複Timeoutでも勝敗を維持"), Mode->StageState == EBoarStageState::Cleared);
+	}
+	{
+		FStartupWorld Fixture;
+		auto* Mode = Fixture.CreateStage();
+		Mode->bStageInitializationComplete = true;
+		Mode->HandleIntroductionTimeout();
+		TestTrue(TEXT("開始通知欠落時にもPlayingへ進む"), Mode->CanAdvanceStage());
+		Mode->RequestGameOver();
+		Mode->bWaitForStageEndPresentation = true;
+		Mode->ResolveStageEnd();
+		Mode->HandleEndPresentationTimeout();
+		TestTrue(TEXT("GameOverも終了通知欠落で待ち続けない"), Mode->bEndPresentationCompleted);
+		Mode->CompleteStageIntroduction();
+		TestTrue(TEXT("遅延した開始完了で終了状態を戻さない"), Mode->StageState == EBoarStageState::GameOver);
 	}
 	return true;
 }

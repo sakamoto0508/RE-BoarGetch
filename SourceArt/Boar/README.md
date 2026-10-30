@@ -11,7 +11,7 @@ Mesh・Skeletonは作り直さず、`UEExport/` にUEから書き出したIdle�
 | `Scripts/build_*.py` | 各アニメーションの生成 |
 | `Blend/` `FBX/` | 生成結果（FBXをUEの `/Game/Animation/Boar/` へImport） |
 | `Preview/` | コンタクトシートと検証レポート（貫通・接地浮き・足滑り速度） |
-| `Backup_20261023/` | 接続作業前の ABP_NormalBoar / BP_NormalBoar / BS_BoarLocomotion |
+| `Backup_20261023/` | 接続作業前のローカルバックアップ（Git追跡対象外）。共有用の旧版はGit履歴を参照 |
 
 再生成：
 

@@ -78,6 +78,9 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStageIntroductionRequested();
+	/** 独自演出の通知欠落時に呼びます。BPは自身のカメラ・Widget等を解除できます。進行再開はC++が保証します。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
+	void OnStagePresentationTimedOut(bool bIntroduction);
 	/** Native recovery UI is also available if the stage cannot be prepared. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStageInitializationFailed(const FText& Reason);
@@ -92,6 +95,7 @@ protected:
 
 private:
 	friend class FBoarStageInitializationTest;
+	friend class FBoarStageEndRegressionTest;
 	/** Validate -> spawn -> initialize -> check readiness; BeginPlay follows this sequence. */
 	bool PrepareStage();
 	bool ValidateStageSetup();
@@ -112,6 +116,15 @@ private:
 	bool bWaitForStageIntroduction = false;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bWaitForStageEndPresentation = false;
+	/** 独自BP演出の最大待機時間です。完了通知が欠落しても進行を再開します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation", meta = (ClampMin = "0.1", Units = "s"))
+	float StageIntroductionTimeoutSeconds = 30.f;
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation", meta = (ClampMin = "0.1", Units = "s"))
+	float StageEndPresentationTimeoutSeconds = 30.f;
+	FTimerHandle IntroductionTimeoutHandle;
+	FTimerHandle EndPresentationTimeoutHandle;
+	void HandleIntroductionTimeout();
+	void HandleEndPresentationTimeout();
 	/** Clear時にPlayerControllerのStageClearPresentation（勝利カメラ・消失・暗転）を再生してからResultへ進みます。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bUseStageClearPresentation = true;
