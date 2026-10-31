@@ -11,22 +11,21 @@ void UAnimNotify_NetCaptureWindow::Notify(USkeletalMeshComponent* MeshComp, UAni
 	(void)Animation;
 	(void)EventReference;
 
-	if (MeshComp == nullptr)
-	{
+	if (MeshComp == nullptr;
 		return;
-	}
+	
 
 	ABoarPlayerCharacter* PlayerCharacter = Cast<ABoarPlayerCharacter>(MeshComp->GetOwner());
 	if (PlayerCharacter == nullptr)
-	{
 		return;
-	}
+	
 
 	// Notify時点で装備中のガジェットがネットなら捕獲判定窓を切り替える。
 	UGadgetComponent* GadgetComponent = PlayerCharacter->GetGadgetComponent();
 	ANetGadget* NetGadget = GadgetComponent ? Cast<ANetGadget>(GadgetComponent->GetCurrentGadget()) : nullptr;
 	
-	if (NetGadget == nullptr)	return;
+	if (NetGadget == nullptr)	
+		return;
 	
 	if (bEnableCaptureWindow)
 	{

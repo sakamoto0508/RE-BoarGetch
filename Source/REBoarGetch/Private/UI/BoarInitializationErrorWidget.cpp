@@ -41,7 +41,8 @@ void UBoarInitializationErrorWidget::NativeOnInitialized()
 
 void UBoarInitializationErrorWidget::ShowError(const FText& Reason)
 {
-	if (Message) Message->SetText(FText::Format(
-		NSLOCTEXT("WorldInit", "Failure", "ゲームを開始できませんでした。\n\n{0}\n"), Reason));
+	if (Message)
+		Message->SetText(FText::Format(
+			NSLOCTEXT("WorldInit", "Failure", "ゲームを開始できませんでした。\n\n{0}\n"), Reason));
 	if (RetryButton) RetryButton->SetUserFocus(GetOwningPlayer());
 }

@@ -22,7 +22,8 @@ void ABoarPresentationDirector::BeginPresentation(ABoarPlayerController* InContr
 
 void ABoarPresentationDirector::FinishPresentation()
 {
-	if (bFinished) return;
+	if (bFinished) 
+		return;
 	bFinished = true;
 	UE_LOG(LogTemp, Log, TEXT("[Presentation] %s finished after %.2fs"), *GetClass()->GetName(), Age);
 	OnFinished.ExecuteIfBound();
@@ -41,13 +42,15 @@ ABoarPlayerCharacter* ABoarPresentationDirector::GetPresentationPlayer() const
 void ABoarPresentationDirector::PlayPresentationSound(USoundBase* Sound, float Pitch)
 {
 	if (Sound && GetGameInstance())
-		if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()) Audio->PlaySoundEffect2D(this, Sound, 1.f, Pitch);
+		if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()) Audio->PlaySoundEffect2D(
+			this, Sound, 1.f, Pitch);
 }
 
 void ABoarPresentationDirector::PlayPresentationBGM(USoundBase* Music, float FadeInTime)
 {
 	if (Music && GetGameInstance())
-		if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()) Audio->PlayBGM(this, Music, FadeInTime, true);
+		if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()) Audio->PlayBGM(
+			this, Music, FadeInTime, true);
 }
 
 void ABoarPresentationDirector::StopStageBGM(float FadeOutTime)
@@ -58,7 +61,8 @@ void ABoarPresentationDirector::StopStageBGM(float FadeOutTime)
 
 void ABoarPresentationDirector::SetPlayerHUDHidden(bool bHideHUD)
 {
-	if (Controller.IsValid()) Controller->SetPlayerHUDHidden(bHideHUD);
+	if (Controller.IsValid()) 
+		Controller->SetPlayerHUDHidden(bHideHUD);
 }
 
 void ABoarPresentationDirector::Tick(float DeltaSeconds)

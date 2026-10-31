@@ -12,7 +12,8 @@ APatrolPath::APatrolPath()
 // クラッシュ防止用。
 FVector APatrolPath::GetPatrolPoint(int32 Index) const
 {
-	if (!PatrolPoints.IsValidIndex(Index)) return GetActorLocation();
+	if (!PatrolPoints.IsValidIndex(Index)) 
+		return GetActorLocation();
 	
 	return PatrolPoints[Index]->GetComponentLocation();
 }

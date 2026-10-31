@@ -9,13 +9,15 @@
 #include "Player/BoarPlayerController.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStageInputLockTest, "REBoarGetch.Spec.StageInputLockOwnership",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FStageInputLockTest::RunTest(const FString& Parameters)
 {
 	const auto Initialization = UWorld::InitializationValues().AllowAudioPlayback(false)
-		.CreatePhysicsScene(false).CreateNavigation(false).CreateAISystem(false);
+	                                                          .CreatePhysicsScene(false).CreateNavigation(false).
+	                                                          CreateAISystem(false);
 	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true,
-		ERHIFeatureLevel::Num, &Initialization);
+	                                    ERHIFeatureLevel::Num, &Initialization);
 	if (!TestNotNull(TEXT("入力検証World"), World)) return false;
 	ABoarPlayerController* PC = World->SpawnActor<ABoarPlayerController>();
 	if (TestNotNull(TEXT("Controller"), PC))
@@ -38,20 +40,30 @@ bool FStageInputLockTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStageEndPriorityTest, "REBoarGetch.Spec.StageEndPriority",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FStageEndPriorityTest::RunTest(const FString& Parameters)
 {
-	TestTrue(TEXT("同時要求はClear優先"), ResolveBoarStageEnd(EBoarStageState::Playing, true, true) == EBoarStageState::Cleared);
-	TestTrue(TEXT("死亡のみはGameOver"), ResolveBoarStageEnd(EBoarStageState::Playing, false, true) == EBoarStageState::GameOver);
+	TestTrue(
+		TEXT("同時要求はClear優先"), ResolveBoarStageEnd(EBoarStageState::Playing, true, true) == EBoarStageState::Cleared);
+	TestTrue(
+		TEXT("死亡のみはGameOver"), ResolveBoarStageEnd(EBoarStageState::Playing, false, true) == EBoarStageState::GameOver);
 	TestTrue(TEXT("要求なしは継続"), ResolveBoarStageEnd(EBoarStageState::Playing, false, false) == EBoarStageState::Playing);
-	TestTrue(TEXT("Clear後に死亡へ遷移しない"), ResolveBoarStageEnd(EBoarStageState::Cleared, false, true) == EBoarStageState::Cleared);
-	TestTrue(TEXT("GameOver確定後の要求は無効"), ResolveBoarStageEnd(EBoarStageState::GameOver, true, false) == EBoarStageState::GameOver);
-	TestTrue(TEXT("開始演出中は終了要求無効"), ResolveBoarStageEnd(EBoarStageState::Preparing, true, true) == EBoarStageState::Preparing);
+	TestTrue(
+		TEXT("Clear後に死亡へ遷移しない"),
+		ResolveBoarStageEnd(EBoarStageState::Cleared, false, true) == EBoarStageState::Cleared);
+	TestTrue(
+		TEXT("GameOver確定後の要求は無効"),
+		ResolveBoarStageEnd(EBoarStageState::GameOver, true, false) == EBoarStageState::GameOver);
+	TestTrue(
+		TEXT("開始演出中は終了要求無効"),
+		ResolveBoarStageEnd(EBoarStageState::Preparing, true, true) == EBoarStageState::Preparing);
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRunProgressTest, "REBoarGetch.Spec.RunProgressAndSerialization",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FRunProgressTest::RunTest(const FString& Parameters)
 {
 	UBoarSaveGame* Save = NewObject<UBoarSaveGame>();
@@ -93,23 +105,22 @@ bool FRunProgressTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStageSpawnDefinitionTest, "REBoarGetch.Spec.SpawnDefinitions",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FStageSpawnDefinitionTest::RunTest(const FString& Parameters)
 {
 	UStageConfig* Config = NewObject<UStageConfig>();
-	FBoarSpawnEntry Legacy;
-	Legacy.BoarClass = ABoarBase::StaticClass();
-	Legacy.Count = 5;
-	Config->BoarSpawnEntries.Add(Legacy);
 	Config->TargetCaptureCount = 3;
-	TestEqual(TEXT("出現5/目標3は独立"), Config->GetTotalBoarSpawnCount(), 5);
 	FBoarSpawnDefinition Individual;
 	Individual.BoarClass = ABoarBase::StaticClass();
 	Individual.BoarUniqueId = TEXT("S1_B01");
 	Individual.SpawnPointId = TEXT("P1");
 	Config->BoarSpawnDefinitions.Add(Individual);
-	TestEqual(TEXT("個体定義は旧方式より優先"), Config->GetTotalBoarSpawnCount(), 1);
-	TestEqual(TEXT("旧定義を消去しない"), Config->BoarSpawnEntries[0].Count, 5);
+	FBoarSpawnDefinition MissingPoint = Individual;
+	MissingPoint.BoarUniqueId = TEXT("S1_B02");
+	MissingPoint.SpawnPointId = NAME_None;
+	Config->BoarSpawnDefinitions.Add(MissingPoint);
+	TestEqual(TEXT("出現数は目標数と独立し、有効な個体定義だけ数える"), Config->GetTotalBoarSpawnCount(), 1);
 	return true;
 }
 #endif

@@ -20,23 +20,26 @@ UGadgetComponent::UGadgetComponent()
 
 
 bool UGadgetComponent::InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots,
-    UBoarGadgetSubsystem* Progress, bool bTemporary)
+                                                 UBoarGadgetSubsystem* Progress, bool bTemporary)
 {
 	// 成功後の再呼び出しは装備を作り直さず、失敗時だけ原因修正後の再試行を許可する。
-    if (bStageInitialized) return true;
-    if (Slots.Num() != MaxGadgetSlots || !Cast<APawn>(GetOwner())) return false;
-    GadgetProgress = Progress;
-    bTemporaryLoadout = bTemporary;
-    OwningPawn = Cast<APawn>(GetOwner());
-    EquippedGadgetSlots = Slots;
+	if (bStageInitialized)
+		return true;
+	if (Slots.Num() != MaxGadgetSlots || !Cast<APawn>(GetOwner()))
+		return false;
+	GadgetProgress = Progress;
+	bTemporaryLoadout = bTemporary;
+	OwningPawn = Cast<APawn>(GetOwner());
+	EquippedGadgetSlots = Slots;
 	// スロット0から順番に確認し最初にガジェットが登録されているスロットを初期装備にする。
 	const int32 FirstSlot = FindFirstValidSlot();
 	if (FirstSlot != INDEX_NONE)
 	{
 		const bool bEquipped = SwitchGadgetBySlot(FirstSlot);
 		UE_LOG(LogTemp, Log, TEXT("[Gadget] Initial slot %d equip: %s"),
-			FirstSlot, bEquipped ? TEXT("success") : TEXT("failed"));
-		if (!bEquipped) return false;
+		       FirstSlot, bEquipped ? TEXT("success") : TEXT("failed"));
+		if (!bEquipped)
+			return false;
 	}
 	else
 	{
@@ -51,10 +54,10 @@ bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 {
 	if (GadgetClass == nullptr || !IsValid(OwningPawn))
 		return false;
-	
+
 	UWorld* World = GetWorld();
-	
-	if (World == nullptr) 
+
+	if (World == nullptr)
 		return false;
 
 	FActorSpawnParameters SpawnParams;
@@ -67,7 +70,7 @@ bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 	AGadgetBase* NewGadget = World->SpawnActor<AGadgetBase>
 		(GadgetClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 
-	if (NewGadget == nullptr) 
+	if (NewGadget == nullptr)
 		return false;
 
 	// ガジェットはCharacterのSkeletalMeshにあるSocketへ装備するため、所有者PawnをACharacterへ変換してMeshを取得する。
@@ -75,21 +78,21 @@ bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 	USkeletalMeshComponent* CharacterMesh = OwningCharacter ? OwningCharacter->GetMesh() : nullptr;
 	// 装備先のSocket名はガジェット側に持たせる。これにより、ガジェットごとに異なるSocketへ装備できる。
 	const FName EquipSocketName = NewGadget->GetEquipSocketName();
-	
+
 	// CharacterのMesh、Socket名、実際のSocketの存在を確認する。
 	if (CharacterMesh == nullptr || EquipSocketName.IsNone() || !CharacterMesh->DoesSocketExist(EquipSocketName))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Equip failed: Socket '%s' was not found on '%s'"),
-			*EquipSocketName.ToString(), *GetNameSafe(CharacterMesh));
+		       *EquipSocketName.ToString(), *GetNameSafe(CharacterMesh));
 		NewGadget->Destroy();
 		return false;
 	}
 
-	if (!NewGadget->AttachToComponent(CharacterMesh,FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-			EquipSocketName))
+	if (!NewGadget->AttachToComponent(CharacterMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+	                                  EquipSocketName))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Equip failed: Could not attach '%s' to Socket '%s'"),
-			*GetNameSafe(NewGadget), *EquipSocketName.ToString());
+		       *GetNameSafe(NewGadget), *EquipSocketName.ToString());
 		NewGadget->Destroy();
 		return false;
 	}
@@ -156,8 +159,9 @@ bool UGadgetComponent::EndUseCurrentGadget()
  */
 bool UGadgetComponent::SwitchGadget(TSubclassOf<AGadgetBase> NewGadgetClass)
 {
-	if (NewGadgetClass == nullptr) return false;
-	
+	if (NewGadgetClass == nullptr) 
+		return false;
+
 	return EquipGadget(NewGadgetClass);
 }
 
@@ -176,7 +180,8 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 		bLastLoadoutSaveSuccessful = SaveCurrentLoadout();
 		return true;
 	}
-	if (GadgetProgress && !GadgetProgress->CanEquipGadgetClass(GadgetClass)) return false;
+	if (GadgetProgress && !GadgetProgress->CanEquipGadgetClass(GadgetClass)) 
+		return false;
 	TArray<TSubclassOf<AGadgetBase>> NewSlots = EquippedGadgetSlots;
 	// 同じガジェットを選ぶと元の枠を空にして移動します。
 	for (int32 Index = 0; Index < MaxGadgetSlots; ++Index)
@@ -187,7 +192,8 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 	{
 		if (NewSlots[PreviousSlot])
 		{
-			if (!EquipGadget(NewSlots[PreviousSlot])) return false;
+			if (!EquipGadget(NewSlots[PreviousSlot])) 
+				return false;
 			CurrentGadgetSlotIndex = PreviousSlot;
 		}
 		else
@@ -206,7 +212,7 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 
 bool UGadgetComponent::SaveCurrentLoadout()
 {
-    return bTemporaryLoadout || (GadgetProgress && GadgetProgress->SaveLoadoutClasses(EquippedGadgetSlots));
+	return bTemporaryLoadout || (GadgetProgress && GadgetProgress->SaveLoadoutClasses(EquippedGadgetSlots));
 }
 
 bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
@@ -219,7 +225,8 @@ bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
 	}
 
 	TSubclassOf<AGadgetBase> SlotClass = EquippedGadgetSlots[SlotIndex];
-	if (CurrentGadgetSlotIndex == SlotIndex && IsValid(CurrentGadget)) return true;
+	if (CurrentGadgetSlotIndex == SlotIndex && IsValid(CurrentGadget)) 
+		return true;
 	if (SlotClass == nullptr)
 	{
 		UnequipGadget();

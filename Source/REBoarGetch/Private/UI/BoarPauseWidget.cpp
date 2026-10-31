@@ -34,18 +34,33 @@ void UBoarPauseWidget::NativeConstruct()
 }
 
 void UBoarPauseWidget::FocusInitialChoice() { FocusResume(); }
-void UBoarPauseWidget::FocusLobbyChoice() { if (LobbyButton) FocusLobby(); else FocusResume(); }
+
+void UBoarPauseWidget::FocusLobbyChoice()
+{
+	if (LobbyButton) FocusLobby();
+	else FocusResume();
+}
+
 void UBoarPauseWidget::FocusSettings() { if (SettingsButton) SettingsButton->SetKeyboardFocus(); }
+
 void UBoarPauseWidget::OpenSettings()
 {
 	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->OpenSettingsMenu(this, SettingsButton);
 }
-void UBoarPauseWidget::FocusLoadoutChoice() { if (LoadoutButton) FocusLoadout(); else FocusResume(); }
+
+void UBoarPauseWidget::FocusLoadoutChoice()
+{
+	if (LoadoutButton) FocusLoadout();
+	else FocusResume();
+}
+
 void UBoarPauseWidget::FocusLoadout() { if (LoadoutButton) LoadoutButton->SetKeyboardFocus(); }
+
 void UBoarPauseWidget::OpenLoadout()
 {
 	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->OpenLoadoutMenu();
 }
+
 void UBoarPauseWidget::FocusResume() { if (ResumeButton) ResumeButton->SetKeyboardFocus(); }
 void UBoarPauseWidget::FocusLobby() { if (LobbyButton) LobbyButton->SetKeyboardFocus(); }
 // 時間停止と入力復帰の処理はController経由でUIFlowへ依頼します。
@@ -53,6 +68,7 @@ void UBoarPauseWidget::Resume()
 {
 	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->ResumeFromPause();
 }
+
 // 途中退出の確認画面を要求します。このボタンの処理では直接レベル遷移しません。
 void UBoarPauseWidget::LeaveStage()
 {

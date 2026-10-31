@@ -19,13 +19,19 @@
 
 UBoarGameOverEffectWidget* AGameOverPresentationDirector::EnsureEffectWidget()
 {
-	if (EffectWidget) return EffectWidget;
+	if (EffectWidget)
+		return EffectWidget;
 	ABoarPlayerController* PC = GetPresentationController();
-	if (!PC) return nullptr;
+	if (!PC)
+		return nullptr;
 	// 画面効果Widget（HUDより前、GameOver UIより後ろ）。
-	const TSubclassOf<UBoarGameOverEffectWidget> WidgetClass = EffectWidgetClass ? EffectWidgetClass : TSubclassOf<UBoarGameOverEffectWidget>(UBoarGameOverEffectWidget::StaticClass());
+	const TSubclassOf<UBoarGameOverEffectWidget> WidgetClass = EffectWidgetClass
+		                                                           ? EffectWidgetClass
+		                                                           : TSubclassOf<UBoarGameOverEffectWidget>(
+			                                                           UBoarGameOverEffectWidget::StaticClass());
 	EffectWidget = CreateWidget<UBoarGameOverEffectWidget>(PC, WidgetClass);
-	if (EffectWidget) EffectWidget->AddToViewport(50);
+	if (EffectWidget)
+		EffectWidget->AddToViewport(50);
 	return EffectWidget;
 }
 
@@ -34,12 +40,14 @@ void AGameOverPresentationDirector::BeginRedFlash(float PeakAlpha, float Duratio
 	FlashPeak = PeakAlpha;
 	FlashDuration = FMath::Max(.02f, Duration);
 	FlashAge = 0.f;
-	if (UBoarGameOverEffectWidget* W = EnsureEffectWidget()) W->SetFlashAlpha(FlashPeak);
+	if (UBoarGameOverEffectWidget* W = EnsureEffectWidget())
+		W->SetFlashAlpha(FlashPeak);
 }
 
 void AGameOverPresentationDirector::BeginHitStop(float Duration, float TimeScale)
 {
-	if (Duration <= 0.f || bHitStopActive) return;
+	if (Duration <= 0.f || bHitStopActive)
+		return;
 	OriginalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(this);
 	const float Scale = FMath::Clamp(TimeScale, .01f, 1.f);
 	UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeDilation * Scale);
@@ -51,17 +59,22 @@ void AGameOverPresentationDirector::BeginHitStop(float Duration, float TimeScale
 
 void AGameOverPresentationDirector::EndHitStop()
 {
-	if (!bHitStopActive) return;
+	if (!bHitStopActive)
+		return;
 	bHitStopActive = false;
-	if (GetWorld()) UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeDilation);
+	if (GetWorld())
+		UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeDilation);
 }
 
 void AGameOverPresentationDirector::SettlePlayerOnGround()
 {
 	ABoarPlayerCharacter* Player = GetPresentationPlayer();
 	UCharacterMovementComponent* Move = Player ? Player->GetCharacterMovement() : nullptr;
-	if (!Move) return;
-	const float Half = Player->GetCapsuleComponent() ? Player->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.f;
+	if (!Move)
+		return;
+	const float Half = Player->GetCapsuleComponent()
+		                   ? Player->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
+		                   : 90.f;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(GameOverGround), false, Player);
 	const FVector From = Player->GetActorLocation();
 	if (!GetWorld()->LineTraceTestByChannel(From, From - FVector(0, 0, Half + 12.f), ECC_Visibility, Params))
@@ -80,35 +93,43 @@ void AGameOverPresentationDirector::KnockBackNearbyBoars(float Radius, float Dis
 	KnockHop = HopHeight;
 	ABoarPlayerCharacter* Player = GetPresentationPlayer();
 	const APlayerController* PC = GetPresentationController();
-	if (!Player || Radius <= 0.f || Distance <= 0.f) return;
+	if (!Player || Radius <= 0.f || Distance <= 0.f)
+		return;
 	const FVector P = Player->GetActorLocation();
-	const FVector ToCamera = (PC && PC->PlayerCameraManager) ? (PC->PlayerCameraManager->GetCameraLocation() - P).GetSafeNormal2D() : FVector::ZeroVector;
+	const FVector ToCamera = (PC && PC->PlayerCameraManager)
+		                         ? (PC->PlayerCameraManager->GetCameraLocation() - P).GetSafeNormal2D()
+		                         : FVector::ZeroVector;
 	for (TActorIterator<ABoarBase> It(GetWorld()); It; ++It)
 	{
-		if (It->IsCaptured() || FVector::Dist2D(It->GetActorLocation(), P) > Radius) continue;
+		if (It->IsCaptured() || FVector::Dist2D(It->GetActorLocation(), P) > Radius)
+			continue;
 		FVector Dir = (It->GetActorLocation() - P).GetSafeNormal2D();
-		if (Dir.IsNearlyZero()) Dir = -Player->GetActorForwardVector().GetSafeNormal2D();
+		if (Dir.IsNearlyZero())
+			Dir = -Player->GetActorForwardVector().GetSafeNormal2D();
 		// カメラとプレイヤーの間にいるBoarは横へ逃がし、ダウンの見え方を遮らないようにします。
 		if (!ToCamera.IsNearlyZero() && FVector::DotProduct(Dir, ToCamera) > .3f)
 		{
 			const FVector Side = FVector::CrossProduct(FVector::UpVector, ToCamera);
 			Dir = (Side * (FVector::DotProduct(Dir, Side) >= 0.f ? 1.f : -1.f) - ToCamera * .3f).GetSafeNormal2D();
 		}
-		Knockbacks.Add({ *It, It->GetActorLocation(), Dir * Distance });
+		Knockbacks.Add({*It, It->GetActorLocation(), Dir * Distance});
 	}
 }
 
 float AGameOverPresentationDirector::PlayDownAnimation()
 {
 	ABoarPlayerCharacter* Player = GetPresentationPlayer();
-	if (bDownStarted || !Player) return 0.f;
+	if (bDownStarted || !Player)
+		return 0.f;
 	bDownStarted = true;
 	USkeletalMeshComponent* Mesh = Player->GetMesh();
 	UAnimInstance* Anim = Mesh ? Mesh->GetAnimInstance() : nullptr;
 	const float Rate = FMath::Max(.1f, DownPlayRate);
 	// 被弾時の再生中Montage（ガジェット等）を止めてから、FullBody Slotでダウンを再生します。
-	if (Anim) Anim->Montage_Stop(.08f);
-	if (Anim && DownMontage && Anim->Montage_Play(DownMontage, Rate) > 0.f) return DownMontage->GetPlayLength() / Rate;
+	if (Anim)
+		Anim->Montage_Stop(.08f);
+	if (Anim && DownMontage && Anim->Montage_Play(DownMontage, Rate) > 0.f)
+		return DownMontage->GetPlayLength() / Rate;
 	if (Mesh && DownAnimation && bAllowSingleNodeFallback)
 	{
 		Mesh->PlayAnimation(DownAnimation, false);
@@ -123,15 +144,18 @@ float AGameOverPresentationDirector::PlayDownAnimation()
 void AGameOverPresentationDirector::UpdateDown()
 {
 	ABoarPlayerCharacter* Player = GetPresentationPlayer();
-	if (!Player || !DownMontage || bSingleNode) return;
+	if (!Player || !DownMontage || bSingleNode)
+		return;
 	UAnimInstance* Anim = Player->GetMesh()->GetAnimInstance();
-	if (!Anim) return;
+	if (!Anim)
+		return;
 	if (bAllowSingleNodeFallback && ++MontageCheckFrames == 2)
 	{
 		// Slotが現在のAnimGraph経路に無いとMontageは見た目に反映されません。その場合は同じアニメをSingle Nodeで再生します。
 		const FName Slot = DownMontage->SlotAnimTracks.IsEmpty() ? NAME_None : DownMontage->SlotAnimTracks[0].SlotName;
 		UAnimSequenceBase* Sequence = DownAnimation.Get();
-		if (!Sequence && !DownMontage->SlotAnimTracks.IsEmpty() && !DownMontage->SlotAnimTracks[0].AnimTrack.AnimSegments.IsEmpty())
+		if (!Sequence && !DownMontage->SlotAnimTracks.IsEmpty() && !DownMontage->SlotAnimTracks[0].AnimTrack.
+			AnimSegments.IsEmpty())
 			Sequence = DownMontage->SlotAnimTracks[0].AnimTrack.AnimSegments[0].GetAnimReference();
 		if (Sequence && Anim->GetSlotNodeGlobalWeight(Slot) <= KINDA_SMALL_NUMBER)
 		{
@@ -141,7 +165,9 @@ void AGameOverPresentationDirector::UpdateDown()
 			Player->GetMesh()->SetPosition(Position, false);
 			Player->GetMesh()->SetPlayRate(FMath::Max(.1f, DownPlayRate));
 			bSingleNode = bDownHeld = true;
-			UE_LOG(LogTemp, Log, TEXT("[GameOver] Slot '%s' is not active in the AnimGraph; playing %s as single node."), *Slot.ToString(), *GetNameSafe(Sequence));
+			UE_LOG(LogTemp, Log,
+			       TEXT("[GameOver] Slot '%s' is not active in the AnimGraph; playing %s as single node."),
+			       *Slot.ToString(), *GetNameSafe(Sequence));
 			return;
 		}
 	}
@@ -149,14 +175,19 @@ void AGameOverPresentationDirector::UpdateDown()
 	{
 		// 倒れた最終姿勢で止め、UI表示後もAnimBP（Idle等）へ戻しません。
 		const float HoldAt = DownMontage->GetPlayLength() - .04f;
-		if (Anim->Montage_IsActive(DownMontage) && Anim->Montage_GetPosition(DownMontage) >= HoldAt) { Anim->Montage_Pause(DownMontage); bDownHeld = true; }
+		if (Anim->Montage_IsActive(DownMontage) && Anim->Montage_GetPosition(DownMontage) >= HoldAt)
+		{
+			Anim->Montage_Pause(DownMontage);
+			bDownHeld = true;
+		}
 	}
 }
 
 void AGameOverPresentationDirector::BeginGadgetGlowDecay(float DecayTime)
 {
 	ABoarPlayerCharacter* Player = GetPresentationPlayer();
-	if (bGlowActive || !Player || !GadgetGlowMaterial) return;
+	if (bGlowActive || !Player || !GadgetGlowMaterial)
+		return;
 	bGlowActive = true;
 	GlowAge = 0.f;
 	GlowDecay = FMath::Max(.05f, DecayTime);
@@ -171,8 +202,9 @@ void AGameOverPresentationDirector::BeginGadgetGlowDecay(float DecayTime)
 		A->GetComponents<UMeshComponent>(Meshes);
 		for (UMeshComponent* Mesh : Meshes)
 		{
-			if (!Mesh->IsRegistered() || !Mesh->IsVisible() || Mesh->bHiddenInGame) continue;
-			GadgetMeshes.Add({ Mesh, Mesh->GetOverlayMaterial() });
+			if (!Mesh->IsRegistered() || !Mesh->IsVisible() || Mesh->bHiddenInGame)
+				continue;
+			GadgetMeshes.Add({Mesh, Mesh->GetOverlayMaterial()});
 			Mesh->SetOverlayMaterial(GadgetGlowMID);
 		}
 	}
@@ -180,7 +212,8 @@ void AGameOverPresentationDirector::BeginGadgetGlowDecay(float DecayTime)
 
 void AGameOverPresentationDirector::UpdateGadgetGlow(float Dt)
 {
-	if (!GadgetGlowMID) return;
+	if (!GadgetGlowMID)
+		return;
 	GlowAge += Dt;
 	const float Rise = .07f;
 	if (GlowAge > Rise + GlowDecay)
@@ -197,7 +230,11 @@ void AGameOverPresentationDirector::UpdateGadgetGlow(float Dt)
 
 void AGameOverPresentationDirector::RestoreGadgetGlow()
 {
-	for (const FGameOverGadgetMesh& M : GadgetMeshes) if (M.Mesh.IsValid()) M.Mesh->SetOverlayMaterial(M.OriginalOverlay);
+	for (const FGameOverGadgetMesh& M : GadgetMeshes)
+		if (M.Mesh.IsValid())
+		{
+			M.Mesh->SetOverlayMaterial(M.OriginalOverlay);
+		}
 	GadgetMeshes.Reset();
 	GadgetGlowMID = nullptr;
 }
@@ -242,7 +279,8 @@ void AGameOverPresentationDirector::SetWarningAlphaForUI(float Alpha)
 FVector AGameOverPresentationDirector::ComputeBodyFocus() const
 {
 	const ABoarPlayerCharacter* Player = GetPresentationPlayer();
-	if (!Player) return Focus;
+	if (!Player) 
+		return Focus;
 	const USkeletalMeshComponent* Mesh = Player->GetMesh();
 	static const FName Pelvis(TEXT("pelvis")), Head(TEXT("head"));
 	if (Mesh && Mesh->GetBoneIndex(Pelvis) != INDEX_NONE && Mesh->GetBoneIndex(Head) != INDEX_NONE)
@@ -254,14 +292,19 @@ void AGameOverPresentationDirector::BeginCameraPullBack(float Duration, float Ri
 {
 	ABoarPlayerCharacter* Player = GetPresentationPlayer();
 	APlayerController* PC = GetPresentationController();
-	if (bCameraStarted || !Player || !PC) return;
+	if (bCameraStarted || !Player || !PC) 
+		return;
 	bCameraStarted = true;
 	CameraAge = 0.f;
 	CameraDuration = FMath::Max(.1f, Duration);
 	CameraRiseDuration = FMath::Max(.05f, RiseDuration);
 	Arm = Player->FindComponentByClass<USpringArmComponent>();
 	Camera = Player->FindComponentByClass<UCameraComponent>();
-	if (!Arm.IsValid()) { UE_LOG(LogTemp, Warning, TEXT("[GameOver] Player has no SpringArm; camera stays.")); return; }
+	if (!Arm.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GameOver] Player has no SpringArm; camera stays."));
+		return;
+	}
 	OrigArmLength = Arm->TargetArmLength;
 	OrigTargetOffset = Arm->TargetOffset;
 	OrigSocketOffset = Arm->SocketOffset;
@@ -269,7 +312,8 @@ void AGameOverPresentationDirector::BeginCameraPullBack(float Duration, float Ri
 	// 接触したBoarがCameraをBlockしてカメラが寄り切らないよう、演出中だけ判定Channelを替えます。
 	OrigProbeChannel = Arm->ProbeChannel;
 	Arm->ProbeChannel = CameraProbeChannel;
-	if (Camera.IsValid()) OrigFOV = Camera->FieldOfView;
+	if (Camera.IsValid()) 
+		OrigFOV = Camera->FieldOfView;
 	StartControlRotation = PC->GetControlRotation();
 	StartControlRotation.Pitch = FRotator::NormalizeAxis(StartControlRotation.Pitch);
 	Focus = Arm->GetComponentLocation() + OrigTargetOffset;
@@ -278,10 +322,13 @@ void AGameOverPresentationDirector::BeginCameraPullBack(float Duration, float Ri
 void AGameOverPresentationDirector::UpdateCamera(float Dt)
 {
 	APlayerController* PC = GetPresentationController();
-	if (!Arm.IsValid() || !PC) return;
+	if (!Arm.IsValid() || !PC) 
+		return;
 	CameraAge += Dt;
 	const float T = FMath::Clamp(CameraAge / CameraDuration, 0.f, 1.f);
-	const float Retreat = CameraCurve ? FMath::Clamp(CameraCurve->GetFloatValue(T), 0.f, 1.f) : FMath::InterpEaseOut(0.f, 1.f, T, CameraEaseExponent);
+	const float Retreat = CameraCurve
+		                      ? FMath::Clamp(CameraCurve->GetFloatValue(T), 0.f, 1.f)
+		                      : FMath::InterpEaseOut(0.f, 1.f, T, CameraEaseExponent);
 	const float Rise = FMath::InterpEaseOut(0.f, 1.f, FMath::Clamp(CameraAge / CameraRiseDuration, 0.f, 1.f), 2.f);
 
 	// 操作入力は遮断済みなので、演出がControl Rotationを直接動かします（急回転を避け、Yawはわずかに回り込むだけ）。
@@ -300,10 +347,13 @@ void AGameOverPresentationDirector::UpdateCamera(float Dt)
 	if (ABoarPlayerCharacter* Player = GetPresentationPlayer())
 	{
 		FCollisionQueryParams Params(SCENE_QUERY_STAT(GameOverCameraFocus), false, Player);
-		TArray<AActor*> Attached; Player->GetAttachedActors(Attached, true);
+		TArray<AActor*> Attached;
+		Player->GetAttachedActors(Attached, true);
 		Params.AddIgnoredActors(Attached);
 		FHitResult Hit;
-		if (!Wanted.IsNearlyZero() && GetWorld()->SweepSingleByChannel(Hit, Origin, Origin + Wanted, FQuat::Identity, CameraProbeChannel, FCollisionShape::MakeSphere(12.f), Params))
+		if (!Wanted.IsNearlyZero() && GetWorld()->SweepSingleByChannel(Hit, Origin, Origin + Wanted, FQuat::Identity,
+		                                                               CameraProbeChannel,
+		                                                               FCollisionShape::MakeSphere(12.f), Params))
 			Wanted *= FMath::Max(0.f, Hit.Time - .05f);
 	}
 	Arm->TargetOffset = Wanted;
@@ -312,7 +362,7 @@ void AGameOverPresentationDirector::UpdateCamera(float Dt)
 
 void AGameOverPresentationDirector::UpdateKnockback(float Dt)
 {
-	if (bHitStopActive) return;  // 跳ね返りはヒットストップ明けから動きます。
+	if (bHitStopActive) return; // 跳ね返りはヒットストップ明けから動きます。
 	KnockAge += Dt;
 	const float T = FMath::Clamp(KnockAge / KnockDuration, 0.f, 1.f);
 	const float Move = FMath::InterpEaseOut(0.f, 1.f, T, 2.f);
@@ -334,10 +384,15 @@ void AGameOverPresentationDirector::UpdateEffects(float Dt)
 		if (ABoarPlayerController* PC = GetPresentationController())
 		{
 			PC->SetPlayerHUDOpacity(Hud);
-			if (Hud <= 0.f) { PC->SetPlayerHUDHidden(true); bHUDFading = false; }
+			if (Hud <= 0.f)
+			{
+				PC->SetPlayerHUDHidden(true);
+				bHUDFading = false;
+			}
 		}
 	}
-	if (!EffectWidget || UIWarningAlpha >= 0.f) return;
+	if (!EffectWidget || UIWarningAlpha >= 0.f)
+		return;
 	FlashAge += Dt;
 	EffectWidget->SetFlashAlpha(FlashPeak * FMath::Square(1.f - FMath::Clamp(FlashAge / FlashDuration, 0.f, 1.f)));
 	if (bWarning)
@@ -353,12 +408,14 @@ void AGameOverPresentationDirector::UpdateEffects(float Dt)
 
 void AGameOverPresentationDirector::TickPresentation(float Dt)
 {
-	if (bHitStopActive && (HitStopRemaining -= Dt) <= 0.f) EndHitStop();
+	if (bHitStopActive && (HitStopRemaining -= Dt) <= 0.f) 
+		EndHitStop();
 	if (bWaitingForLanding)
 	{
 		ABoarPlayerCharacter* Player = GetPresentationPlayer();
 		UCharacterMovementComponent* Move = Player ? Player->GetCharacterMovement() : nullptr;
-		if (!Move) bWaitingForLanding = false;
+		if (!Move) 
+			bWaitingForLanding = false;
 		else if (Move->IsMovingOnGround() || GetPresentationAge() > 3.f)
 		{
 			Move->StopMovementImmediately();
@@ -366,10 +423,15 @@ void AGameOverPresentationDirector::TickPresentation(float Dt)
 			bWaitingForLanding = false;
 		}
 	}
-	if (!Knockbacks.IsEmpty()) UpdateKnockback(Dt);
-	if (bDownStarted) UpdateDown();
+	if (!Knockbacks.IsEmpty()) 
+		UpdateKnockback(Dt);
+	if (bDownStarted) 
+		UpdateDown();
+	
 	UpdateGadgetGlow(Dt);
-	if (bCameraStarted) UpdateCamera(Dt);
+	if (bCameraStarted) 
+		UpdateCamera(Dt);
+	
 	UpdateEffects(Dt);
 }
 
@@ -383,15 +445,20 @@ void AGameOverPresentationDirector::EndPlay(const EEndPlayReason::Type Reason)
 		Arm->TargetOffset = OrigTargetOffset;
 		Arm->SocketOffset = OrigSocketOffset;
 		Arm->ProbeChannel = OrigProbeChannel;
-		if (Camera.IsValid()) Camera->SetFieldOfView(OrigFOV);
+		if (Camera.IsValid()) 
+			Camera->SetFieldOfView(OrigFOV);
 	}
 	if (ABoarPlayerCharacter* Player = GetPresentationPlayer())
 	{
-		if (bSingleNode) Player->GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
-		else if (UAnimInstance* Anim = Player->GetMesh()->GetAnimInstance(); Anim && DownMontage && bDownStarted) Anim->Montage_Stop(.1f, DownMontage);
+		if (bSingleNode) 
+			Player->GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+		else if (UAnimInstance* Anim = Player->GetMesh()->GetAnimInstance(); Anim && DownMontage && bDownStarted) Anim->
+			Montage_Stop(.1f, DownMontage);
 	}
-	if (ABoarPlayerController* PC = GetPresentationController()) PC->SetPlayerHUDOpacity(1.f);
-	if (EffectWidget) EffectWidget->RemoveFromParent();
+	if (ABoarPlayerController* PC = GetPresentationController()) 
+		PC->SetPlayerHUDOpacity(1.f);
+	if (EffectWidget)
+		EffectWidget->RemoveFromParent();
 	EffectWidget = nullptr;
 	Super::EndPlay(Reason);
 }

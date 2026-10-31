@@ -167,10 +167,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UBoarResultWidget> ResultWidget;
 
-	/** リザルト終了時に戻るLobby Level名です。 */
-	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
-	FName LobbyLevelName = TEXT("L_Lobby");
-	/** 新規設定はAsset参照を使用。旧BPのLevel名は移行互換用に残します。 */
+	/** リザルト終了時・Pauseから戻るLobby Levelです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
 	TSoftObjectPtr<UWorld> LobbyLevel;
 

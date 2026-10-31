@@ -14,22 +14,26 @@
 #include "UObject/UnrealType.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarGameplayRegressionTest, "REBoarGetch.Spec.GameplayRegression",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FBoarGameplayRegressionTest::RunTest(const FString& Parameters)
 {
 	// PIE・実セーブを使わず、状態遷移と移動値の副作用だけを独立Worldで検証する。
 	const auto Initialization = UWorld::InitializationValues().AllowAudioPlayback(false)
-		.CreatePhysicsScene(false).CreateNavigation(false).CreateAISystem(false);
+	                                                          .CreatePhysicsScene(false).CreateNavigation(false).
+	                                                          CreateAISystem(false);
 	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true,
-		ERHIFeatureLevel::Num, &Initialization);
+	                                    ERHIFeatureLevel::Num, &Initialization);
 	if (!TestNotNull(TEXT("回帰検証World"), World)) return false;
 	ON_SCOPE_EXIT { World->DestroyWorld(false); };
 	FActorSpawnParameters Spawn;
 	Spawn.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	auto* Boar = World->SpawnActor<ABoarBase>(FVector::ZeroVector, FRotator::ZeroRotator, Spawn);
-	const auto PlayerClass = LoadClass<ABoarPlayerCharacter>(nullptr, TEXT("/Game/BP/Player/BP_PlayerCharacter.BP_PlayerCharacter_C"));
+	const auto PlayerClass = LoadClass<ABoarPlayerCharacter>(
+		nullptr, TEXT("/Game/BP/Player/BP_PlayerCharacter.BP_PlayerCharacter_C"));
 	if (!TestNotNull(TEXT("既存Player BP"), PlayerClass)) return false;
-	auto* Player = World->SpawnActor<ABoarPlayerCharacter>(PlayerClass, FVector(500, 0, 100), FRotator::ZeroRotator, Spawn);
+	auto* Player = World->SpawnActor<ABoarPlayerCharacter>(PlayerClass, FVector(500, 0, 100), FRotator::ZeroRotator,
+	                                                       Spawn);
 	if (!TestNotNull(TEXT("Boar"), Boar) || !TestNotNull(TEXT("Player"), Player)) return false;
 	Boar->InitializeForStage();
 	Boar->PerceivedPlayer = Player;
@@ -56,30 +60,6 @@ bool FBoarGameplayRegressionTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("射程内かつCooldown終了なら再攻撃可能"), Boar->CanStartPlayerAttack());
 	Boar->PerceivedPlayerDistance = Boar->GetPlayerAttackRange() + 1.f;
 	TestFalse(TEXT("射程外では再攻撃不可"), Boar->CanStartPlayerAttack());
-
-	// 削除された14個の旧BPプロパティを名前・読み取り可否・正本との一致で確認する。
-	Boar->ApplyArchetypeDefaults();
-	const FName LegacyFloats[] = {TEXT("SightRange"), TEXT("SightAngleDegrees"), TEXT("AbsoluteDetectionRange"),
-		TEXT("ChaseRange"), TEXT("EscapeRange"), TEXT("CagePriorityWeight"), TEXT("PlayerPriorityWeight"),
-		TEXT("EscapePriorityWeight"), TEXT("MaxStamina"), TEXT("StaminaDrainPerSecond"),
-		TEXT("StaminaRecoveryPerSecond"), TEXT("StaminaRecoverExitRatio")};
-	for (FName Name : LegacyFloats)
-	{
-		const auto* Legacy = FindFProperty<FFloatProperty>(ABoarBase::StaticClass(), Name);
-		const auto* Setting = FindFProperty<FFloatProperty>(FBoarArchetypeSettings::StaticStruct(), Name);
-		if (!TestNotNull(*Name.ToString(), Legacy) || !TestNotNull(TEXT("設定元"), Setting)) continue;
-		TestTrue(TEXT("旧BPから読み取り可能"), Legacy->HasAllPropertyFlags(CPF_BlueprintVisible | CPF_BlueprintReadOnly));
-		TestEqual(*Name.ToString(), Legacy->GetPropertyValue_InContainer(Boar), Setting->GetPropertyValue_InContainer(&Boar->ActiveSettings));
-	}
-	for (FName Name : {FName(TEXT("bCanAttackCage")), FName(TEXT("bUseStamina"))})
-	{
-		const auto* Legacy = FindFProperty<FBoolProperty>(ABoarBase::StaticClass(), Name);
-		const auto* Setting = FindFProperty<FBoolProperty>(FBoarArchetypeSettings::StaticStruct(), Name);
-		if (TestNotNull(*Name.ToString(), Legacy) && TestNotNull(TEXT("設定元"), Setting))
-			TestEqual(*Name.ToString(), Legacy->GetPropertyValue_InContainer(Boar), Setting->GetPropertyValue_InContainer(&Boar->ActiveSettings));
-	}
-	Boar->SightRange = 1.f;
-	TestEqual(TEXT("互換コピーはGameplayの正本にしない"), Boar->GetSightRange(), Boar->ActiveSettings.SightRange);
 
 	FBoarGadgetLoadoutContext Context;
 	Context.bTemporary = true;
@@ -116,7 +96,9 @@ bool FBoarGameplayRegressionTest::RunTest(const FString& Parameters)
 		Move->Velocity.Z = -900.f;
 		Net->BeginCaptureWindow();
 		Player->TickAirNetDrop(.1f);
-		TestTrue(TEXT("上限で急降下段階を抜ける"), Player->AirNetDropPhase != EAirNetDropPhase::Swing && Player->AirNetDropPhase != EAirNetDropPhase::Drop);
+		TestTrue(
+			TEXT("上限で急降下段階を抜ける"),
+			Player->AirNetDropPhase != EAirNetDropPhase::Swing && Player->AirNetDropPhase != EAirNetDropPhase::Drop);
 		TestEqual(TEXT("重力を復元"), Move->GravityScale, BeforeGravity);
 		TestEqual(TEXT("空中操作を復元"), Move->AirControl, BeforeControl);
 		TestEqual(TEXT("上限を超えたフレームで追加加速しない"), Move->Velocity.Z, -900.0);

@@ -17,16 +17,14 @@ EStateTreeRunStatus FStateTreeBoarPatrolTask::EnterState(
 	// StateTreeを実行しているイノシシを取得する。
 	ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get());
 	if (Boar == nullptr)
-	{
 		return EStateTreeRunStatus::Failed;
-	}
+	
 
 	// このワールドで経路探索を担当するNavigationSystemを取得する。
 	UNavigationSystemV1* NavigationSystem = UNavigationSystemV1::GetCurrent(Boar->GetWorld());
 	if (NavigationSystem == nullptr)
-	{
 		return EStateTreeRunStatus::Failed;
-	}
+	
 
 	FNavLocation PatrolNavLocation;
 
@@ -34,9 +32,8 @@ EStateTreeRunStatus FStateTreeBoarPatrolTask::EnterState(
 	const bool bFoundPatrolLocation = NavigationSystem->GetRandomReachablePointInRadius(
 			Boar->GetActorLocation(), PatrolRadius, PatrolNavLocation);
 	if (!bFoundPatrolLocation)
-	{
 		return EStateTreeRunStatus::Failed;
-	}
+	
 
 	// 後続のStateTree Move Toタスクが使用する目的地を設定する。
 	InstanceData.PatrolLocation = PatrolNavLocation.Location;

@@ -30,14 +30,20 @@ namespace
 	{
 		if (!Widget) return;
 		Out += FString::ChrN(Depth * 2, TEXT(' ')) + FString::Printf(TEXT("%s [%s] var=%d vis=%d"), *Widget->GetName(),
-			*Widget->GetClass()->GetName(), Widget->bIsVariable ? 1 : 0, int32(Widget->GetVisibility()));
+		                                                             *Widget->GetClass()->GetName(),
+		                                                             Widget->bIsVariable ? 1 : 0,
+		                                                             int32(Widget->GetVisibility()));
 		if (const UTextBlock* Text = Cast<UTextBlock>(Widget))
-			Out += FString::Printf(TEXT(" text=\"%s\" size=%.0f font=%s color=%s"), *Text->GetText().ToString(), Text->GetFont().Size,
+			Out += FString::Printf(
+				TEXT(" text=\"%s\" size=%.0f font=%s color=%s"), *Text->GetText().ToString(), Text->GetFont().Size,
 				*GetNameSafe(Text->GetFont().FontObject), *Text->GetColorAndOpacity().GetSpecifiedColor().ToString());
 		if (Widget->Slot) Out += FString::Printf(TEXT(" slot=%s"), *Widget->Slot->GetClass()->GetName());
 		if (const UCanvasPanelSlot* Canvas = Cast<UCanvasPanelSlot>(Widget->Slot))
-			Out += FString::Printf(TEXT(" pos=%s size=%s auto=%d anchors=%s align=%s"), *Canvas->GetPosition().ToString(), *Canvas->GetSize().ToString(),
-				Canvas->GetAutoSize() ? 1 : 0, *Canvas->GetAnchors().Minimum.ToString(), *Canvas->GetAlignment().ToString());
+			Out += FString::Printf(
+				TEXT(" pos=%s size=%s auto=%d anchors=%s align=%s"), *Canvas->GetPosition().ToString(),
+				*Canvas->GetSize().ToString(),
+				Canvas->GetAutoSize() ? 1 : 0, *Canvas->GetAnchors().Minimum.ToString(),
+				*Canvas->GetAlignment().ToString());
 		Out += TEXT("\n");
 		if (const UPanelWidget* Panel = Cast<UPanelWidget>(Widget))
 			for (int32 I = 0; I < Panel->GetChildrenCount(); ++I) DescribeWidget(Panel->GetChildAt(I), Depth + 1, Out);
@@ -57,15 +63,19 @@ FString UBoarUIAuthoringLibrary::DescribeWidgetBlueprint(UObject* Object)
 	DescribeWidget(WBP->WidgetTree->RootWidget, 0, Out);
 	for (const UWidgetAnimation* Animation : WBP->Animations)
 	{
-		Out += FString::Printf(TEXT("Animation %s end=%.2f bindings="), *GetNameSafe(Animation), Animation ? Animation->GetEndTime() : 0.f);
-		if (Animation) for (const FWidgetAnimationBinding& Binding : Animation->AnimationBindings) Out += Binding.WidgetName.ToString() + TEXT(" ");
+		Out += FString::Printf(TEXT("Animation %s end=%.2f bindings="), *GetNameSafe(Animation),
+		                       Animation ? Animation->GetEndTime() : 0.f);
+		if (Animation) for (const FWidgetAnimationBinding& Binding : Animation->AnimationBindings) Out += Binding.
+			WidgetName.ToString() + TEXT(" ");
 		Out += TEXT("\n");
 	}
 	return Out;
 }
 
-bool UBoarUIAuthoringLibrary::EnsureTextBlock(UObject* Object, FName WidgetName, FName ParentPanelName, int32 InsertIndex,
-	FName StyleSourceName, const FText& Text, int32 FontSize, FLinearColor Color)
+bool UBoarUIAuthoringLibrary::EnsureTextBlock(UObject* Object, FName WidgetName, FName ParentPanelName,
+                                              int32 InsertIndex,
+                                              FName StyleSourceName, const FText& Text, int32 FontSize,
+                                              FLinearColor Color)
 {
 	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
 	if (!WBP || !WBP->WidgetTree || WidgetName.IsNone()) return false;
@@ -76,7 +86,8 @@ bool UBoarUIAuthoringLibrary::EnsureTextBlock(UObject* Object, FName WidgetName,
 		if (!Parent) return false;
 		WBP->Modify();
 		TextBlock = WBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), WidgetName);
-		if (InsertIndex >= 0 && InsertIndex <= Parent->GetChildrenCount()) Parent->InsertChildAt(InsertIndex, TextBlock);
+		if (InsertIndex >= 0 && InsertIndex <= Parent->GetChildrenCount()) Parent->
+			InsertChildAt(InsertIndex, TextBlock);
 		else Parent->AddChild(TextBlock);
 	}
 	TextBlock->Modify();
@@ -98,11 +109,15 @@ bool UBoarUIAuthoringLibrary::EnsureTextBlock(UObject* Object, FName WidgetName,
 	return true;
 }
 
-bool UBoarUIAuthoringLibrary::ConfigureTextBlockStyle(UObject* Object, FName WidgetName, const FText& Text, int32 FontSize, FName Typeface,
-	FLinearColor Color, int32 OutlineSize, FLinearColor OutlineColor, FVector2D ShadowOffset, FLinearColor ShadowColor)
+bool UBoarUIAuthoringLibrary::ConfigureTextBlockStyle(UObject* Object, FName WidgetName, const FText& Text,
+                                                      int32 FontSize, FName Typeface,
+                                                      FLinearColor Color, int32 OutlineSize, FLinearColor OutlineColor,
+                                                      FVector2D ShadowOffset, FLinearColor ShadowColor)
 {
 	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
-	UTextBlock* TextBlock = WBP && WBP->WidgetTree ? Cast<UTextBlock>(WBP->WidgetTree->FindWidget(WidgetName)) : nullptr;
+	UTextBlock* TextBlock = WBP && WBP->WidgetTree
+		                        ? Cast<UTextBlock>(WBP->WidgetTree->FindWidget(WidgetName))
+		                        : nullptr;
 	if (!TextBlock) return false;
 	WBP->Modify();
 	TextBlock->Modify();
@@ -121,7 +136,8 @@ bool UBoarUIAuthoringLibrary::ConfigureTextBlockStyle(UObject* Object, FName Wid
 	return true;
 }
 
-bool UBoarUIAuthoringLibrary::SetCanvasSlotLayout(UObject* Object, FName WidgetName, FVector2D Position, FVector2D Size, bool bAutoSize)
+bool UBoarUIAuthoringLibrary::SetCanvasSlotLayout(UObject* Object, FName WidgetName, FVector2D Position, FVector2D Size,
+                                                  bool bAutoSize)
 {
 	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
 	UWidget* Widget = WBP && WBP->WidgetTree ? WBP->WidgetTree->FindWidget(WidgetName) : nullptr;
@@ -137,10 +153,11 @@ bool UBoarUIAuthoringLibrary::SetCanvasSlotLayout(UObject* Object, FName WidgetN
 }
 
 bool UBoarUIAuthoringLibrary::EnsureRevealAnimation(UObject* Object, FName AnimationName, FName WidgetName,
-	float Duration, float StartScale, float StartOffsetY)
+                                                    float Duration, float StartScale, float StartOffsetY)
 {
 	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
-	if (!WBP || !WBP->WidgetTree || !WBP->WidgetTree->FindWidget(WidgetName) || AnimationName.IsNone() || Duration <= 0.f) return false;
+	if (!WBP || !WBP->WidgetTree || !WBP->WidgetTree->FindWidget(WidgetName) || AnimationName.IsNone() || Duration <=
+		0.f) return false;
 	WBP->Modify();
 	// 同名アニメは作り直し、再実行しても同じ結果になるようにします。
 	for (int32 I = WBP->Animations.Num() - 1; I >= 0; --I)
@@ -248,19 +265,23 @@ void UBoarUIAuthoringLibrary::RestorePIEWindow()
 void UBoarUIAuthoringLibrary::RequestPIEInNewWindow(int32 Width, int32 Height)
 {
 	if (!GEditor) return;
-	ULevelEditorPlaySettings* Settings = DuplicateObject<ULevelEditorPlaySettings>(GetDefault<ULevelEditorPlaySettings>(), GetTransientPackage());
+	ULevelEditorPlaySettings* Settings = DuplicateObject<ULevelEditorPlaySettings>(
+		GetDefault<ULevelEditorPlaySettings>(), GetTransientPackage());
 	Settings->LastExecutedPlayModeType = PlayMode_InEditorFloating;
 	Settings->NewWindowWidth = Width;
 	Settings->NewWindowHeight = Height;
 	FRequestPlaySessionParams Params;
 	Params.WorldType = EPlaySessionWorldType::PlayInEditor;
-	Params.EditorPlaySettings = Settings;  // DestinationSlateViewport unset -> PIE opens its own window
+	Params.EditorPlaySettings = Settings; // DestinationSlateViewport unset -> PIE opens its own window
 	GEditor->RequestPlaySession(Params);
 }
 
-ASpecialCoin* UBoarUIAuthoringLibrary::SpawnVerificationCoin(UObject* WorldContextObject, FName CoinId, FVector Location)
+ASpecialCoin* UBoarUIAuthoringLibrary::SpawnVerificationCoin(UObject* WorldContextObject, FName CoinId,
+                                                             FVector Location)
 {
-	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull) : nullptr;
+	UWorld* World = GEngine
+		                ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull)
+		                : nullptr;
 	if (!World || CoinId.IsNone()) return nullptr;
 	const FTransform Transform(Location);
 	ASpecialCoin* Coin = World->SpawnActorDeferred<ASpecialCoin>(ASpecialCoin::StaticClass(), Transform);

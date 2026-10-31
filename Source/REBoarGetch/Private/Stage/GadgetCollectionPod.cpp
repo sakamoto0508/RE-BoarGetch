@@ -16,12 +16,14 @@ AGadgetCollectionPod::AGadgetCollectionPod()
 void AGadgetCollectionPod::BeginPlay()
 {
     Super::BeginPlay();
-    if(auto* GI=GetGameInstance<UBoarGameInstance>())GI->OnGadgetsUnlocked.AddUniqueDynamic(this,&AGadgetCollectionPod::RefreshDisplay);
+    if(auto* GI=GetGameInstance<UBoarGameInstance>())
+        GI->OnGadgetsUnlocked.AddUniqueDynamic(this,&AGadgetCollectionPod::RefreshDisplay);
     RefreshDisplay();
 }
 void AGadgetCollectionPod::EndPlay(const EEndPlayReason::Type Reason)
 {
-    if(auto* GI=GetGameInstance<UBoarGameInstance>())GI->OnGadgetsUnlocked.RemoveDynamic(this,&AGadgetCollectionPod::RefreshDisplay);
+    if(auto* GI=GetGameInstance<UBoarGameInstance>())
+        GI->OnGadgetsUnlocked.RemoveDynamic(this,&AGadgetCollectionPod::RefreshDisplay);
     Super::EndPlay(Reason);
 }
 void AGadgetCollectionPod::RefreshDisplay()

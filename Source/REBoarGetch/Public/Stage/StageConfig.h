@@ -52,21 +52,6 @@ struct FStageUnlockCondition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName RequiredClearedStageId;
 };
 
-/** 既存アセットとの互換用のClass・体数方式。個体IDを持つ新規設定にはFBoarSpawnDefinitionを使用します。 */
-USTRUCT(BlueprintType)
-struct FBoarSpawnEntry
-{
-	GENERATED_BODY()
-
-	/** 生成するABoarBase派生Classです。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn")
-	TSubclassOf<ABoarBase> BoarClass;
-
-	/** このClassを生成する体数です。0の場合は生成しません。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn", meta = (ClampMin = "0"))
-	int32 Count = 0;
-};
-
 /**
  * Stage固有の静的設定をまとめるDataAssetです。ロビー表示、遷移先、出現個体、コイン、クリア目標、解放条件を設定します。
  * 挑戦中の状態はStageRunData、永続進行はGameInstance / SaveGameが管理します。
@@ -105,11 +90,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Clear", meta = (ClampMin = "0"))
 	int32 TargetCaptureCount = 0;
 
-	/** 互換用の種類・体数設定。BoarSpawnDefinitionsが空の場合だけ使用します。両方が空なら自動生成しません。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn")
-	TArray<FBoarSpawnEntry> BoarSpawnEntries;
-
-	/** 個体ごとの固定ID・Class・出現地点を設定します。1要素が1体。設定時は旧BoarSpawnEntriesより優先します。 */
+	/** 個体ごとの固定ID・Class・出現地点を設定します。1要素が1体。空なら自動生成しません。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn")
 	TArray<FBoarSpawnDefinition> BoarSpawnDefinitions;
 	/** コインごとの固定ID・配置地点。取得済みIDは再出現させません。生成にはGameModeのSpecialCoinClassも設定します。 */
@@ -119,7 +100,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Unlock")
 	FStageUnlockCondition UnlockCondition;
 
-	/** 設定上の出現数を返します。個体定義を優先し、空なら旧方式を集計します。Level上の地点の存在・ID重複は検証しません。 */
+	/** 個体定義から設定上の出現数を返します。Level上の地点の存在・ID重複は検証しません。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage|Spawn")
 	int32 GetTotalBoarSpawnCount() const;
 };

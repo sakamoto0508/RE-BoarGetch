@@ -74,9 +74,8 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::Tick(
 	case EBoarChargeAttackPhase::Telegraph:
 		// 予兆時間中はその場に留まり、終了時点の檻方向を突進方向として固定する。
 		if (InstanceData.PhaseElapsedTime < Boar->GetAttackTelegraphDuration())
-		{
 			return EStateTreeRunStatus::Running;
-		}
+		
 
 		InstanceData.Phase = EBoarChargeAttackPhase::Charge;
 		InstanceData.PhaseElapsedTime = 0.0f;

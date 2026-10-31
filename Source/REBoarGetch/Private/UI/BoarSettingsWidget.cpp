@@ -25,7 +25,7 @@ void UBoarSettingsWidget::NativeConstruct()
 		EncyclopediaButton->OnClicked.AddUniqueDynamic(this, &UBoarSettingsWidget::OpenEncyclopedia);
 		EncyclopediaButton->OnHovered.AddUniqueDynamic(this, &UBoarSettingsWidget::FocusEncyclopedia);
 	}
-	for (USlider* Slider : { BGMSlider.Get(), SESlider.Get() })
+	for (USlider* Slider : {BGMSlider.Get(), SESlider.Get()})
 	{
 		if (!Slider) continue;
 		Slider->SetMinValue(0.0f);
@@ -122,4 +122,5 @@ void UBoarSettingsWidget::OpenEncyclopedia()
 {
 	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->OpenEncyclopedia(this, EncyclopediaButton);
 }
+
 void UBoarSettingsWidget::FocusEncyclopedia() { if (EncyclopediaButton) EncyclopediaButton->SetKeyboardFocus(); }

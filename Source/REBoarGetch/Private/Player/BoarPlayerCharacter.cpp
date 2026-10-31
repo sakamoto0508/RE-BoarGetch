@@ -226,8 +226,10 @@ void ABoarPlayerCharacter::Look(const FVector2D& Input)
 
 void ABoarPlayerCharacter::StartJump()
 {
-	if (IsActionLocked()) return;
-	if (!CanJump()) return;
+	if (IsActionLocked()) 
+		return;
+	if (!CanJump()) 
+		return;
 
 	// 地上ジャンプ前は0、二段ジャンプ前は1
 	const bool bIsDoubleJump = GetCharacterMovement() &&
@@ -466,23 +468,27 @@ void ABoarPlayerCharacter::BeginStun()
 
 void ABoarPlayerCharacter::EnterDowned()
 {
-	if (bIsDowned) return;
+	if (bIsDowned) 
+		return;
 	bIsDowned = true;
 	// 既に開始していたStunのTimerで通常状態へ戻らないようにする。
 	GetWorldTimerManager().ClearTimer(StunTimerHandle);
 	bIsStunned = false;
 	EndGadgetUse(true);
 	StopDash();
-	if (UCharacterMovementComponent* Move = GetCharacterMovement()) Move->StopMovementImmediately();
+	if (UCharacterMovementComponent* Move = GetCharacterMovement()) 
+		Move->StopMovementImmediately();
 	SetPlayerActionState(EPlayerActionState::Down);
 }
 
 void ABoarPlayerCharacter::EndStun()
 {
 	bIsStunned = false;
-	if (bIsDowned) return;
+	if (bIsDowned) 
+		return;
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage()) return;
+		if (!Mode->CanAdvanceStage()) 
+			return;
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
 		Move->SetMovementMode(MOVE_Walking);
@@ -571,7 +577,8 @@ void ABoarPlayerCharacter::SetPlayerActionState(EPlayerActionState NewState)
 bool ABoarPlayerCharacter::IsActionLocked() const
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage()) return true;
+		if (!Mode->CanAdvanceStage()) 
+			return true;
 	return bIsStunned || bIsGadgetInUse || bIsDowned;
 }
 
@@ -654,7 +661,8 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 		if (AirNetDropPhaseElapsed >= FMath::Max(0.0f, AirNetDropAnticipationDuration - AirNetDropBlendTime))
 		{
 			BeginAirNetDropDive();
-			if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing)) EndGadgetUse(true);
+			if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing)) 
+				EndGadgetUse(true);
 		}
 		break;
 	}
@@ -669,7 +677,8 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 			const float SwingDuration = AirNetDropSwingAnimation->GetPlayLength() / FMath::Max(0.1f, AirNetDropSwingPlayRate);
 			if (AirNetDropPhaseElapsed >= FMath::Max(0.0f, SwingDuration - AirNetDropBlendTime))
 			{
-				if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) EndGadgetUse(true);
+				if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) 
+					EndGadgetUse(true);
 			}
 		}
 		break;
@@ -682,9 +691,11 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 void ABoarPlayerCharacter::BeginAirNetDropRecovery()
 {
 	// Capture OFF Notifyが未到達でも、時間上限を過ぎて捕獲性能を延長しない。
-	if (ANetGadget* NetGadget = GetEquippedNetGadget()) NetGadget->EndCaptureWindow();
+	if (ANetGadget* NetGadget = GetEquippedNetGadget()) 
+		NetGadget->EndCaptureWindow();
 	RestoreAirNetDropMovement();
-	if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery)) EndGadgetUse(true);
+	if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery)) 
+		EndGadgetUse(true);
 }
 
 void ABoarPlayerCharacter::BeginAirNetDropDive()
@@ -839,10 +850,12 @@ void ABoarPlayerCharacter::OnAirNetDropMontageEnded(UAnimMontage* Montage, bool 
 	case EAirNetDropPhase::Anticipation:
 		// 通常はTick側が先に切り替えるが、低FPSでAnimationが先に終わった場合もここで進める。
 		BeginAirNetDropDive();
-		if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing)) EndGadgetUse(true);
+		if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing)) 
+			EndGadgetUse(true);
 		break;
 	case EAirNetDropPhase::Swing:
-		if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) EndGadgetUse(true);
+		if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) 
+			EndGadgetUse(true);
 		break;
 	case EAirNetDropPhase::Drop:
 		BeginAirNetDropRecovery();

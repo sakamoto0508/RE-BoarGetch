@@ -112,10 +112,14 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 	// 表示内容を現在のStageConfigで更新してから、Game入力とUI入力を両立させる。
 	TArray<UStageConfig*> Stages;
 	const auto& Catalog = UBoarGameInstance::ResolveStageCatalog(this, StageCatalog);
-	if (Catalog.IsEmpty()) Stages.Add(StageConfig);
-	else for (UStageConfig* Stage : Catalog) Stages.Add(Stage);
+	if (Catalog.IsEmpty()) 
+		Stages.Add(StageConfig);
+	else 
+		for (UStageConfig* Stage : Catalog) 
+			Stages.Add(Stage);
 	LobbyWidget->ShowStageCatalog(Stages, StageConfig);
-    if(auto* PC=Cast<ABoarPlayerController>(PlayerController))PC->SetStageInputBlocked(true);
+    if(auto* PC=Cast<ABoarPlayerController>(PlayerController))
+    	PC->SetStageInputBlocked(true);
 	FInputModeGameAndUI InputMode;
 	InputMode.SetWidgetToFocus(LobbyWidget->TakeWidget());
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -137,7 +141,8 @@ void AStageEntrance::CloseStageSelection()
 	// Level遷移中は入力状態を戻さず、通常のキャンセル／退出時だけGame Onlyへ復帰する。
 	if (InteractingPlayerController && !bTravelRequested)
 	{
-		if(auto* PC=Cast<ABoarPlayerController>(InteractingPlayerController))PC->SetStageInputBlocked(false);
+		if(auto* PC=Cast<ABoarPlayerController>(InteractingPlayerController))
+			PC->SetStageInputBlocked(false);
 		FInputModeGameOnly InputMode;
 		InteractingPlayerController->SetInputMode(InputMode);
 		InteractingPlayerController->SetShowMouseCursor(false);
@@ -158,17 +163,20 @@ void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfi
 	// 最初の要求で即座に再入力を遮断してから、Soft World参照のLevelを開く。
 	if (UBoarGameInstance* Instance = GetGameInstance<UBoarGameInstance>())
 	{
-		if (!Instance->IsStageUnlocked(RequestedStageConfig)) return;
+		if (!Instance->IsStageUnlocked(RequestedStageConfig)) 
+			return;
 		if (!Instance->SaveLastAttemptedStage(RequestedStageConfig->StageId))
 		{
-			if (LobbyWidget) LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "SaveFailed", "保存に失敗しました。出発を選んで再試行してください。"));
+			if (LobbyWidget) 
+				LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "SaveFailed", "保存に失敗しました。出発を選んで再試行してください。"));
 			UE_LOG(LogTemp, Error, TEXT("[StageEntrance] Last stage could not be saved; travel canceled."));
 			return;
 		}
 	}
 	else
 	{
-		if (LobbyWidget) LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "NoProgress", "進行データを取得できません。"));
+		if (LobbyWidget) 
+			LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "NoProgress", "進行データを取得できません。"));
 		return;
 	}
 	bTravelRequested = true;

@@ -14,15 +14,17 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 
-ABoarPlayerController *UBoarUIFlowComponent::GetController() const
+ABoarPlayerController* UBoarUIFlowComponent::GetController() const
 {
 	return Cast<ABoarPlayerController>(GetOwner());
 }
+
 bool UBoarUIFlowComponent::BlocksGameplayInput() const
 {
 	// 画面の寿命に入力抑制を結び付け、子画面を閉じても親メニューの抑制は残す。
 	return bFacilityMenuOpen || PauseWidget || SettingsWidget || EncyclopediaWidget || ArchiveSelectionWidget;
 }
+
 // 子画面を閉じてからPauseを解除し、メニューに伴う入力状態を片付けます。
 void UBoarUIFlowComponent::Shutdown()
 {
@@ -33,9 +35,10 @@ void UBoarUIFlowComponent::Shutdown()
 	CloseSettingsMenu();
 	ResumeFromPause();
 }
+
 void UBoarUIFlowComponent::TogglePauseMenu()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (PauseWidget || SettingsWidget || EncyclopediaWidget || ArchiveSelectionWidget)
@@ -47,7 +50,7 @@ void UBoarUIFlowComponent::TogglePauseMenu()
 // 開いている子画面を優先して戻します。親メニューを一度に閉じないための戻る順序です。
 void UBoarUIFlowComponent::HandleMenuBack()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (ArchiveSelectionWidget)
@@ -69,7 +72,7 @@ void UBoarUIFlowComponent::HandleMenuBack()
 
 void UBoarUIFlowComponent::OpenLoadoutMenu()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!PauseWidget || LoadoutWidget || SettingsWidget || LobbyExitConfirmation || !PC->LoadoutWidgetClass ||
@@ -91,15 +94,16 @@ void UBoarUIFlowComponent::OpenLoadoutMenu()
 }
 
 // 親画面の可視状態と復帰先フォーカスを記録し、図鑑表示中の移動・視点入力を抑えます。
-void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget *ParentMenu, UWidget *ReturnFocus)
+void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* ReturnFocus)
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
-	const auto *ArchiveMode = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
+	const auto* ArchiveMode = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
 	if (!ArchiveMode || !ArchiveMode->bArchive)
 		return;
-	if (!PC->IsLocalController() || !ParentMenu || EncyclopediaWidget || !PC->EncyclopediaWidgetClass || LoadoutWidget ||
+	if (!PC->IsLocalController() || !ParentMenu || EncyclopediaWidget || !PC->EncyclopediaWidgetClass || LoadoutWidget
+		||
 		LobbyExitConfirmation || PC->bLevelTransitionRequested)
 		return;
 	if (ParentMenu != SettingsWidget && !Cast<UBoarLobbyWidget>(ParentMenu))
@@ -116,7 +120,7 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget *ParentMenu, UWidget *Re
 		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
-	if (auto *PlayerCharacter = PC->GetBoarCharacter())
+	if (auto* PlayerCharacter = PC->GetBoarCharacter())
 	{
 		PlayerCharacter->StopDash();
 		PlayerCharacter->StopJump();
@@ -139,7 +143,7 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget *ParentMenu, UWidget *Re
 // 図鑑が追加した入力Contextだけを解除し、親画面の表示・入力モード・フォーカスを復元します。
 void UBoarUIFlowComponent::CloseEncyclopedia()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!EncyclopediaWidget)
@@ -158,7 +162,7 @@ void UBoarUIFlowComponent::CloseEncyclopedia()
 	PC->SetIgnoreMoveInput(false);
 	PC->SetIgnoreLookInput(false);
 	if (!PauseWidget)
-		if (auto *PlayerCharacter = PC->GetBoarCharacter())
+		if (auto* PlayerCharacter = PC->GetBoarCharacter())
 			PlayerCharacter->SetMenuOpen(false);
 	PC->FlushPressedKeys();
 	if (IsValid(EncyclopediaParent) && EncyclopediaParent->IsInViewport())
@@ -186,21 +190,22 @@ void UBoarUIFlowComponent::CloseEncyclopedia()
 	EncyclopediaReturnFocus = nullptr;
 }
 
-void UBoarUIFlowComponent::CloseEncyclopediaFrom(UUserWidget *ParentMenu)
+void UBoarUIFlowComponent::CloseEncyclopediaFrom(UUserWidget* ParentMenu)
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (EncyclopediaParent == ParentMenu)
 		CloseEncyclopedia();
 }
 
-void UBoarUIFlowComponent::OpenSettingsMenu(UUserWidget *ParentMenu, UWidget *ReturnFocus)
+void UBoarUIFlowComponent::OpenSettingsMenu(UUserWidget* ParentMenu, UWidget* ReturnFocus)
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
-	if (!PC->IsLocalController() || !ParentMenu || SettingsWidget || LoadoutWidget || LobbyExitConfirmation || !PC->SettingsWidgetClass ||
+	if (!PC->IsLocalController() || !ParentMenu || SettingsWidget || LoadoutWidget || LobbyExitConfirmation || !PC->
+		SettingsWidgetClass ||
 		PC->bLevelTransitionRequested)
 		return;
 	SettingsWidget = CreateWidget<UBoarSettingsWidget>(PC, PC->SettingsWidgetClass);
@@ -233,7 +238,7 @@ void UBoarUIFlowComponent::OpenSettingsMenu(UUserWidget *ParentMenu, UWidget *Re
 
 void UBoarUIFlowComponent::CloseSettingsMenu()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!SettingsWidget)
@@ -269,7 +274,7 @@ void UBoarUIFlowComponent::CloseSettingsMenu()
 
 void UBoarUIFlowComponent::CloseLoadoutMenu()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!LoadoutWidget)
@@ -291,15 +296,16 @@ void UBoarUIFlowComponent::CloseLoadoutMenu()
 
 void UBoarUIFlowComponent::OpenPauseMenu()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
-	const auto *Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
+	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
 	// Lobby/Title、終了演出、他のPauseとの競合、および多重生成を防ぎます。
-	if (!PC->IsLocalController() || PauseWidget || !PC->PauseWidgetClass || PC->bGameplayInputBlocked || PC->bLevelTransitionRequested ||
+	if (!PC->IsLocalController() || PauseWidget || !PC->PauseWidgetClass || PC->bGameplayInputBlocked || PC->
+		bLevelTransitionRequested ||
 		!Mode || !Mode->CanAdvanceStage() || UGameplayStatics::IsGamePaused(this))
 		return;
-	auto *Widget = CreateWidget<UBoarPauseWidget>(PC, PC->PauseWidgetClass);
+	auto* Widget = CreateWidget<UBoarPauseWidget>(PC, PC->PauseWidgetClass);
 	if (!Widget)
 		return;
 	if (!PC->SetPause(true))
@@ -313,7 +319,7 @@ void UBoarUIFlowComponent::OpenPauseMenu()
 	}
 	// 押下状態を持ち越さず、既存のアクション終了経路を使用します。
 	PC->bIsGadgetModifierHeld = false;
-	if (auto *PlayerCharacter = PC->GetBoarCharacter())
+	if (auto* PlayerCharacter = PC->GetBoarCharacter())
 	{
 		PlayerCharacter->StopDash();
 		PlayerCharacter->StopJump();
@@ -336,7 +342,7 @@ void UBoarUIFlowComponent::OpenPauseMenu()
 // 子画面を閉じた後、時間停止・入力Context・カーソルをゲームプレイ用に戻します。
 void UBoarUIFlowComponent::ResumeFromPause()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!PauseWidget)
@@ -350,7 +356,7 @@ void UBoarUIFlowComponent::ResumeFromPause()
 	PauseWidget = nullptr;
 	PC->RemoveOwnedMappingContext(PC->UIMappingContext);
 	PC->AddOwnedMappingContext(PC->DefaultMappingContext, 0);
-	if (auto *PlayerCharacter = PC->GetBoarCharacter())
+	if (auto* PlayerCharacter = PC->GetBoarCharacter())
 		PlayerCharacter->SetMenuOpen(false);
 	PC->SetIgnoreMoveInput(false);
 	PC->SetIgnoreLookInput(false);
@@ -362,11 +368,11 @@ void UBoarUIFlowComponent::ResumeFromPause()
 
 void UBoarUIFlowComponent::LeaveStageFromPause()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!PauseWidget || SettingsWidget || LoadoutWidget || LobbyExitConfirmation || !PC->LobbyExitConfirmationClass ||
-		(PC->LobbyLevel.IsNull() && PC->LobbyLevelName.IsNone()) || PC->bLevelTransitionRequested)
+		PC->LobbyLevel.IsNull() || PC->bLevelTransitionRequested)
 		return;
 	LobbyExitConfirmation = CreateWidget<UBoarConfirmationWidget>(PC, PC->LobbyExitConfirmationClass);
 	if (!LobbyExitConfirmation)
@@ -384,7 +390,7 @@ void UBoarUIFlowComponent::LeaveStageFromPause()
 
 void UBoarUIFlowComponent::RemoveLobbyExitConfirmation()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!LobbyExitConfirmation)
@@ -396,13 +402,13 @@ void UBoarUIFlowComponent::RemoveLobbyExitConfirmation()
 
 void UBoarUIFlowComponent::ResolveLobbyExit(bool bConfirmed)
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!LobbyExitConfirmation || !PauseWidget || PC->bLevelTransitionRequested)
 		return;
 	RemoveLobbyExitConfirmation();
-	if (!bConfirmed || (PC->LobbyLevel.IsNull() && PC->LobbyLevelName.IsNone()))
+	if (!bConfirmed || PC->LobbyLevel.IsNull())
 	{
 		PauseWidget->SetVisibility(ESlateVisibility::Visible);
 		FInputModeGameAndUI ModeUI;
@@ -421,14 +427,15 @@ void UBoarUIFlowComponent::ResolveLobbyExit(bool bConfirmed)
 // 施設に対応する画面を開きます。施設メニューはPauseせず、移動と進行中のアクションを止めます。
 void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
-	const auto *Facility = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
-	if (!PC->IsLocalController() || !Facility || Facility->bGadgetTest || Facility->bArchive != bArchive || bFacilityMenuOpen ||
+	const auto* Facility = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
+	if (!PC->IsLocalController() || !Facility || Facility->bGadgetTest || Facility->bArchive != bArchive ||
+		bFacilityMenuOpen ||
 		PauseWidget || SettingsWidget || LoadoutWidget || EncyclopediaWidget || PC->bLevelTransitionRequested)
 		return;
-	UUserWidget *Menu = nullptr;
+	UUserWidget* Menu = nullptr;
 	if (bArchive)
 	{
 		if (!PC->EncyclopediaWidgetClass)
@@ -455,7 +462,7 @@ void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 	if (bFacilityAddedUIContext)
 		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
 	PC->bIsGadgetModifierHeld = false;
-	if (auto *FacilityPlayer = PC->GetBoarCharacter())
+	if (auto* FacilityPlayer = PC->GetBoarCharacter())
 	{
 		FacilityPlayer->StopDash();
 		FacilityPlayer->StopJump();
@@ -481,11 +488,12 @@ void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 
 void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
-	const auto *Mode = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
-	if (!PC->IsLocalController() || !Mode || !Mode->bArchive || !PC->CanProcessGameplayInput() || !PC->ArchiveSelectionWidgetClass)
+	const auto* Mode = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
+	if (!PC->IsLocalController() || !Mode || !Mode->bArchive || !PC->CanProcessGameplayInput() || !PC->
+		ArchiveSelectionWidgetClass)
 		return;
 	ArchiveSelectionWidget = CreateWidget<UBoarArchiveSelectionWidget>(PC, PC->ArchiveSelectionWidgetClass);
 	if (!ArchiveSelectionWidget)
@@ -503,7 +511,7 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 	if (bFacilityAddedUIContext)
 		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
 	PC->bIsGadgetModifierHeld = false;
-	if (auto *ArchivePlayer = PC->GetBoarCharacter())
+	if (auto* ArchivePlayer = PC->GetBoarCharacter())
 	{
 		ArchivePlayer->StopDash();
 		ArchivePlayer->StopJump();
@@ -525,7 +533,7 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 
 void UBoarUIFlowComponent::CloseArchiveDisplaySelection()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!ArchiveSelectionWidget)
@@ -539,7 +547,7 @@ void UBoarUIFlowComponent::CloseArchiveDisplaySelection()
 // 施設メニュー用に追加したContextを外し、押下状態をクリアして操作へ復帰します。
 void UBoarUIFlowComponent::CloseFacilityMenuInput()
 {
-	auto *PC = GetController();
+	auto* PC = GetController();
 	if (!PC)
 		return;
 	if (!bFacilityMenuOpen)
@@ -548,7 +556,7 @@ void UBoarUIFlowComponent::CloseFacilityMenuInput()
 	if (bFacilityAddedUIContext)
 		PC->RemoveOwnedMappingContext(PC->UIMappingContext);
 	bFacilityAddedUIContext = false;
-	if (auto *FacilityPlayer = PC->GetBoarCharacter())
+	if (auto* FacilityPlayer = PC->GetBoarCharacter())
 		FacilityPlayer->SetMenuOpen(false);
 	PC->SetIgnoreMoveInput(false);
 	PC->SetIgnoreLookInput(false);

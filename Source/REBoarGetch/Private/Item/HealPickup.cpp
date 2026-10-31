@@ -30,7 +30,8 @@ void AHealPickup::OnPickupBeginOverlap(UPrimitiveComponent* OverlappedComponent,
 	(void)SweepResult;
 
 	ABoarPlayerCharacter* PlayerCharacter = Cast<ABoarPlayerCharacter>(OtherActor);
-	if (PlayerCharacter == nullptr)	return;
+	if (PlayerCharacter == nullptr)	
+		return;
 
 	if (UHealthComponent* Health = PlayerCharacter->GetHealthComponent())
 	{

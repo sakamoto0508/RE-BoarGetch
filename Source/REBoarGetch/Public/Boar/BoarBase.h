@@ -269,66 +269,6 @@ private:
 	UPROPERTY(VisibleInstanceOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	FBoarArchetypeSettings ActiveSettings;
 
-	// 旧BPのGet変数ノード・保存済みプロパティ名を維持する読み取り互換層。
-	// 値はApplyArchetypeDefaultsで正本から一方向に同期する。旧BPの個別既定値は
-	// Gameplay設定として採用せず、調整はBoarDataAssetへ集約する。
-	/** 互換用：視認距離の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float SightRange = 1200.0f;
-
-	/** 互換用：視野角の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float SightAngleDegrees = 120.0f;
-
-	/** 互換用：至近距離での発見範囲の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float AbsoluteDetectionRange = 200.0f;
-
-	/** 互換用：追跡距離の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float ChaseRange = 900.0f;
-
-	/** 互換用：逃走距離の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float EscapeRange = 500.0f;
-
-	/** 互換用：檻の優先度の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float CagePriorityWeight = 1.0f;
-
-	/** 互換用：プレイヤーの優先度の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float PlayerPriorityWeight = 1.0f;
-
-	/** 互換用：逃走の優先度の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float EscapePriorityWeight = 1.0f;
-
-	/** 互換用：檻攻撃の可否の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	bool bCanAttackCage = true;
-
-	/** 互換用：スタミナの使用有無の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	bool bUseStamina = false;
-
-	/** 互換用：最大スタミナの表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float MaxStamina = 100.0f;
-
-	/** 互換用：スタミナ消費速度の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float StaminaDrainPerSecond = 20.0f;
-
-	/** 互換用：スタミナ回復速度の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float StaminaRecoveryPerSecond = 25.0f;
-
-	/** 互換用：スタミナ回復終了割合の表示コピー。新規参照にはGetterまたはDataAssetを使用します。 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|Legacy", meta = (AllowPrivateAccess = "true", DeprecatedProperty, DeprecationMessage = "Use Boar getters / BoarDataAsset; legacy values are read-only copies."))
-	float StaminaRecoverExitRatio = 0.4f;
-
-
 	/** 次にプレイヤーへの攻撃を開始できるワールド時刻です。 */
 	double NextPlayerAttackTime = 0.0;
 

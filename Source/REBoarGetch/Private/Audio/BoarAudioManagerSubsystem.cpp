@@ -12,15 +12,13 @@ void UBoarAudioManagerSubsystem::PlayBGM(
 {
 	// World ContextまたはSound未設定時はSpawn処理へ進まず、安全に無視する。
 	if (!WorldContextObject || !BGM)
-	{
 		return;
-	}
+	
 
 	// 同じBGMが再生中なら、明示的なRestart要求がない限り再生成しない。
 	if (BGMComponent && BGMComponent->IsPlaying() && CurrentBGM == BGM && !bRestartIfAlreadyPlaying)
-	{
 		return;
-	}
+	
 
 	// 曲を切り替える前に旧ComponentのDelegateを外し、終了通知の競合を防ぐ。
 	if (BGMComponent)
@@ -83,9 +81,8 @@ void UBoarAudioManagerSubsystem::PlaySoundEffect2D(
 {
 	// 個別倍率は負数を許可せず、MasterとSEカテゴリ音量を乗算して再生する。
 	if (!WorldContextObject || !Sound)
-	{
 		return;
-	}
+	
 
 	UGameplayStatics::PlaySound2D(
 		WorldContextObject,
@@ -103,9 +100,8 @@ void UBoarAudioManagerSubsystem::PlaySoundEffectAtLocation(
 {
 	// 位置付きSEも2D SEと同じ音量規則を使い、Pitchはゼロ除算を避ける。
 	if (!WorldContextObject || !Sound)
-	{
 		return;
-	}
+	
 
 	UGameplayStatics::PlaySoundAtLocation(
 		WorldContextObject,

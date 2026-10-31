@@ -38,9 +38,11 @@ void ABoarArchiveDisplay::ConfigureVisual(USkeletalMesh* Mesh, const TArray<UMat
 void ABoarArchiveDisplay::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	if (!GetWorld() || GetWorld()->IsGameWorld())return;
+	if (!GetWorld() || GetWorld()->IsGameWorld())
+		return;
 	TArray<UMaterialInterface*> Mats;
-	for (auto& M : VisualMaterials)Mats.Add(M);
+	for (auto& M : VisualMaterials)
+		Mats.Add(M);
 	ConfigureVisual(bPreviewInEditor ? PreviewMesh.Get() : nullptr, Mats, IdleAnimation);
 }
 
@@ -90,6 +92,10 @@ void ABoarArchiveDisplay::RefreshDisplay()
 	if (!Id.IsNone() && !Source)UE_LOG(LogTemp, Warning,
 	                                   TEXT("[Archive] Slot %d: unresolved captured Boar ID %s; left empty."),
 	                                   SlotIndex, *Id.ToString());
+	// 名札は本編定義の図鑑名だけを使い、未登録の名前をIDなどから推測しない。
+	bHasSpecimen = Source && Source->GetSkeletalMeshAsset();
+	DisplayedBoarName = bHasSpecimen ? Match->EncyclopediaName : FText::GetEmpty();
+	OnDisplayRefreshed.Broadcast();
 }
 
 void ABoarArchiveDisplay::Tick(float DeltaSeconds)

@@ -14,7 +14,8 @@ UCaptureComponent::UCaptureComponent()
 bool UCaptureComponent::Capture(AActor* Capturer)
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage()) return false;
+		if (!Mode->CanAdvanceStage()) 
+			return false;
 	if (bIsCaptured || GetOwner() == nullptr)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Capture] Capture failed. Owner=%s IsCaptured=%s"),
@@ -50,7 +51,8 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 bool UCaptureComponent::Release()
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage()) return false;
+		if (!Mode->CanAdvanceStage()) 
+			return false;
 	if (!bIsCaptured || GetOwner() == nullptr)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Capture] Release failed. Owner=%s IsCaptured=%s"),

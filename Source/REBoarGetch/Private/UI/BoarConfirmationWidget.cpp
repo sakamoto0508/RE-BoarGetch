@@ -55,6 +55,7 @@ void UBoarConfirmationWidget::Confirm()
 	bDecisionSent = true;
 	OnDecision.Broadcast(true);
 }
+
 // 承認と共通の送信済みフラグを使い、否定側の決定も一度だけ通知します。
 void UBoarConfirmationWidget::Cancel()
 {

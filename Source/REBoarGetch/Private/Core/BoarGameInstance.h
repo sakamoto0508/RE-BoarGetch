@@ -9,6 +9,7 @@ class UBoarSaveGame;
 class UStageConfig;
 class AGadgetBase;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGadgetsUnlocked);
+
 DECLARE_MULTICAST_DELEGATE(FOnBoarProgressChanged);
 
 /** 永続進行の読み書きを集約します。失敗・中断した挑戦から進行を保存しません。 */
@@ -16,15 +17,19 @@ UCLASS()
 class REBOARGETCH_API UBoarGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
+
 public:
 	/** Read-only UI consumers are notified only after a saved candidate is published. */
 	FOnBoarProgressChanged OnProgressChanged;
-	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnGadgetsUnlocked;
+	UPROPERTY(BlueprintAssignable)
+	FOnGadgetsUnlocked OnGadgetsUnlocked;
 	virtual void Init() override;
 	/** Startup can reject a missing/unreadable progress dependency before spawning. */
 	bool IsProgressReady() const { return Progress && !bSaveLoadFailed; }
 	/** 読み取り用の確定済み進行です。 */
-	UFUNCTION(BlueprintPure) const UBoarSaveGame* GetProgress() const { return Progress; }
+	UFUNCTION(BlueprintPure)
+	const UBoarSaveGame* GetProgress() const { return Progress; }
+
 	/** NEWを確定してから保存します。失敗時は既存の確定データを維持します。 */
 	bool CommitClearedRun(FStageRunData& Run);
 	/** 出発時に最後に挑戦したStageだけを即時保存します。 */
@@ -32,12 +37,18 @@ public:
 	/** 構成済み4スロットのIDを即時保存します。空スロットも保存します。 */
 	bool SaveGadgetLoadout(const TArray<FName>& Ids);
 	/** Archive展示3枠だけを即時保存します。Clear・GameOverとは独立です。 */
-	UFUNCTION(BlueprintCallable) bool SaveArchiveDisplays(const TArray<FName>& Ids);
-	UFUNCTION(BlueprintCallable) bool AssignArchiveDisplay(int32 Slot, FName Id);
-	UFUNCTION(BlueprintPure) TArray<FName> GetArchiveDisplayIds() const;
-	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnArchiveDisplaysChanged;
-	UFUNCTION(BlueprintPure) bool IsStageUnlocked(const UStageConfig* Config) const;
-	UFUNCTION(BlueprintPure) bool IsGadgetUnlocked(FName GadgetId) const;
+	UFUNCTION(BlueprintCallable)
+	bool SaveArchiveDisplays(const TArray<FName>& Ids);
+	UFUNCTION(BlueprintCallable)
+	bool AssignArchiveDisplay(int32 Slot, FName Id);
+	UFUNCTION(BlueprintPure)
+	TArray<FName> GetArchiveDisplayIds() const;
+	UPROPERTY(BlueprintAssignable)
+	FOnGadgetsUnlocked OnArchiveDisplaysChanged;
+	UFUNCTION(BlueprintPure)
+	bool IsStageUnlocked(const UStageConfig* Config) const;
+	UFUNCTION(BlueprintPure)
+	bool IsGadgetUnlocked(FName GadgetId) const;
 	/** UEで順番を指定する実装済みガジェット一覧です。IDからClassを解決します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progress")
 	TArray<TSubclassOf<AGadgetBase>> GadgetCatalog;
@@ -46,24 +57,36 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Progress")
 	TArray<TObjectPtr<UStageConfig>> StageCatalog;
 	/** GameInstanceのStageCatalogを返します。未設定の間だけ呼び出し元の旧設定を使い、移行を促す警告を出します。 */
-	static const TArray<TObjectPtr<UStageConfig>>& ResolveStageCatalog(const UObject* WorldContext, const TArray<TObjectPtr<UStageConfig>>& LegacyCatalog);
-	UPROPERTY(BlueprintAssignable) FOnGadgetsUnlocked OnTestGadgetChanged;
-	UFUNCTION(BlueprintPure) int32 GetSpecialCoinCount() const;
-	UFUNCTION(BlueprintPure) bool CanUnlockGadget(FName Id) const;
-	UFUNCTION(BlueprintCallable) bool UnlockGadgetInLab(FName Id);
-	UFUNCTION(BlueprintCallable) bool SelectTestGadget(FName Id);
-	UFUNCTION(BlueprintPure) FName GetSelectedTestGadget() const;
+	static const TArray<TObjectPtr<UStageConfig>>& ResolveStageCatalog(const UObject* WorldContext,
+	                                                                   const TArray<TObjectPtr<UStageConfig>>&
+	                                                                   LegacyCatalog);
+	UPROPERTY(BlueprintAssignable)
+	FOnGadgetsUnlocked OnTestGadgetChanged;
+	UFUNCTION(BlueprintPure)
+	int32 GetSpecialCoinCount() const;
+	UFUNCTION(BlueprintPure)
+	bool CanUnlockGadget(FName Id) const;
+	UFUNCTION(BlueprintCallable)
+	bool UnlockGadgetInLab(FName Id);
+	UFUNCTION(BlueprintCallable)
+	bool SelectTestGadget(FName Id);
+	UFUNCTION(BlueprintPure)
+	FName GetSelectedTestGadget() const;
 	TSoftObjectPtr<UWorld> GetSelectedTestLevel() const;
 	bool IsInGadgetLab() const;
 	void ClearTestGadget();
+
 private:
 	friend class UBoarGadgetSubsystem;
 	friend class FBoarGadgetProgressTest;
 	bool SaveCandidate(UBoarSaveGame* Candidate);
 	void UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const;
-	UPROPERTY(Transient) TObjectPtr<UBoarSaveGame> Progress;
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarSaveGame> Progress;
 	/** 既存セーブの読込失敗時は上書きを禁止します。 */
 	bool bSaveLoadFailed = false;
-	UPROPERTY(EditDefaultsOnly, Category = "Progress") FString SaveSlotName = TEXT("REBoarGetch_Progress");
-	UPROPERTY(EditDefaultsOnly, Category = "Progress") int32 SaveUserIndex = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Progress")
+	FString SaveSlotName = TEXT("REBoarGetch_Progress");
+	UPROPERTY(EditDefaultsOnly, Category = "Progress")
+	int32 SaveUserIndex = 0;
 };

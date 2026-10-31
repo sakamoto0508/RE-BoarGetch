@@ -29,7 +29,8 @@ bool ASpecialCoin::TryCollect(AActor* Collector)
 {
 	// 演出を隠す前にRunへの登録を確定する。重複IDや終了後の取得を見た目側で判断しない。
 	ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
-	if (bCollected || !Cast<ABoarPlayerCharacter>(Collector) || !Mode || !Mode->RecordSpecialCoin(SpecialCoinId)) return false;
+	if (bCollected || !Cast<ABoarPlayerCharacter>(Collector) || !Mode || !Mode->RecordSpecialCoin(SpecialCoinId)) 
+		return false;
 	bCollected = true;
 	SetActorHiddenInGame(true);
 	SetActorEnableCollision(false);

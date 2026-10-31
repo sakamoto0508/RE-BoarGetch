@@ -14,10 +14,12 @@ namespace
 		return Brush;
 	}
 
-	void Box(FSlateWindowElementList& Out, int32 Layer, const FGeometry& Geo, float X, float Y, float W, float H, const FLinearColor& Color)
+	void Box(FSlateWindowElementList& Out, int32 Layer, const FGeometry& Geo, float X, float Y, float W, float H,
+	         const FLinearColor& Color)
 	{
 		if (W <= 0.f || H <= 0.f || Color.A <= 0.002f) return;
-		FSlateDrawElement::MakeBox(Out, Layer, Geo.ToPaintGeometry(FVector2D(W, H), FSlateLayoutTransform(FVector2D(X, Y))),
+		FSlateDrawElement::MakeBox(
+			Out, Layer, Geo.ToPaintGeometry(FVector2D(W, H), FSlateLayoutTransform(FVector2D(X, Y))),
 			&WhiteBrush(), ESlateDrawEffect::None, Color);
 	}
 
@@ -36,8 +38,10 @@ void UBoarGameOverEffectWidget::NativeOnInitialized()
 	SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
-int32 UBoarGameOverEffectWidget::NativePaint(const FPaintArgs& Args, const FGeometry& G, const FSlateRect& MyCullingRect,
-	FSlateWindowElementList& Out, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
+int32 UBoarGameOverEffectWidget::NativePaint(const FPaintArgs& Args, const FGeometry& G,
+                                             const FSlateRect& MyCullingRect,
+                                             FSlateWindowElementList& Out, int32 LayerId,
+                                             const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
 	int32 Layer = Super::NativePaint(Args, G, MyCullingRect, Out, LayerId, InWidgetStyle, bParentEnabled) + 1;
 	const FVector2D Size = FVector2D(G.GetLocalSize());
@@ -126,12 +130,17 @@ int32 UBoarGameOverEffectWidget::NativePaint(const FPaintArgs& Args, const FGeom
 		{
 			const float Blink = (FMath::Fmod(float(Now), .9f) < .62f) ? 1.f : .45f;
 			const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Bold", 20);
-			FSlateDrawElement::MakeText(Out, Layer, G.ToPaintGeometry(FVector2D(520, 30), FSlateLayoutTransform(FVector2D(In + 18.f, In + 14.f))),
-				FString(TEXT("▲ ")) + WarningLabel.ToString(), Font, ESlateDrawEffect::None, WithAlpha(LineColor, WarningAlpha * Blink));
+			FSlateDrawElement::MakeText(
+				Out, Layer, G.ToPaintGeometry(FVector2D(520, 30),
+				                              FSlateLayoutTransform(FVector2D(In + 18.f, In + 14.f))),
+				FString(TEXT("▲ ")) + WarningLabel.ToString(), Font, ESlateDrawEffect::None,
+				WithAlpha(LineColor, WarningAlpha * Blink));
 			if (!SubLabel.IsEmpty())
 			{
 				const FSlateFontInfo Small = FCoreStyle::GetDefaultFontStyle("Regular", 14);
-				FSlateDrawElement::MakeText(Out, Layer, G.ToPaintGeometry(FVector2D(520, 22), FSlateLayoutTransform(FVector2D(In + 20.f, In + 42.f))),
+				FSlateDrawElement::MakeText(
+					Out, Layer, G.ToPaintGeometry(FVector2D(520, 22),
+					                              FSlateLayoutTransform(FVector2D(In + 20.f, In + 42.f))),
 					SubLabel.ToString(), Small, ESlateDrawEffect::None, CyanTint);
 			}
 		}
@@ -147,7 +156,8 @@ int32 UBoarGameOverEffectWidget::NativePaint(const FPaintArgs& Args, const FGeom
 			const float Y = Rand.FRandRange(0.f, H), BH = Rand.FRandRange(1.5f, 7.f);
 			const float BW = Rand.FRandRange(.08f, .55f) * W, X = Rand.FRandRange(-.1f * W, W);
 			const FLinearColor C = (I % 3 == 0) ? LineColor : CyanColor;
-			Box(Out, Layer, G, FMath::Max(0.f, X), Y, FMath::Min(BW, W - FMath::Max(0.f, X)), BH, WithAlpha(C, NoiseAmount * Rand.FRandRange(.12f, .4f)));
+			Box(Out, Layer, G, FMath::Max(0.f, X), Y, FMath::Min(BW, W - FMath::Max(0.f, X)), BH,
+			    WithAlpha(C, NoiseAmount * Rand.FRandRange(.12f, .4f)));
 		}
 		const FLinearColor Scan = WithAlpha(NavyColor, NoiseAmount * .22f);
 		for (float Y = FMath::Fmod(float(Now) * 120.f, 4.f); Y < H; Y += 4.f) Box(Out, Layer, G, 0, Y, W, 1.f, Scan);

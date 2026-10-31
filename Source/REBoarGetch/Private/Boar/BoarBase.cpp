@@ -48,7 +48,8 @@ void ABoarBase::BeginPlay()
 
 void ABoarBase::InitializeForStage()
 {
-	if (bSettingsInitialized) return;
+	if (bSettingsInitialized)
+		return;
 	ApplyArchetypeDefaults();
 	CurrentStamina = ActiveSettings.MaxStamina;
 	SetActorTickEnabled(ActiveSettings.bUseStamina);
@@ -60,28 +61,33 @@ void ABoarBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage()) return;
+		if (!Mode->CanAdvanceStage())
+			return;
 	UpdateStamina(DeltaSeconds);
 }
 
 // Componentで二重捕獲を拒否してから、GameModeへ檻収容・カウント・ドロップ処理を委譲する。
 void ABoarBase::Capture()
 {
- CaptureWithFeedback(true);
+	CaptureWithFeedback(true);
 }
 
 bool ABoarBase::CaptureWithFeedback(bool bSharedFeedback)
 {
- if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-  if (!Mode->CanAdvanceStage()) return false;
- if (!CaptureComponent || !CaptureComponent->Capture(nullptr)) return false;
- SetActorTickEnabled(false);
- // Keep the successful capture at its original position until presentation completes.
- if (auto* PC = GetWorld()->GetFirstPlayerController())
-  if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
-   if (Presentation->PresentCapturedBoar(this,bSharedFeedback)) return true;
- if (auto* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>()) Mode->HandleBoarCaptured(this);
- return true;
+	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+		if (!Mode->CanAdvanceStage()) 
+			return false;
+	if (!CaptureComponent || !CaptureComponent->Capture(nullptr)) 
+		return false;
+	SetActorTickEnabled(false);
+	// Keep the successful capture at its original position until presentation completes.
+	if (auto* PC = GetWorld()->GetFirstPlayerController())
+		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
+			if (Presentation->PresentCapturedBoar(this, bSharedFeedback)) 
+				return true;
+	if (auto* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>()) 
+		Mode->HandleBoarCaptured(this);
+	return true;
 }
 
 // 捕獲状態を返す。
@@ -107,7 +113,7 @@ bool ABoarBase::RefreshPerceptionTargets()
 	UWorld* World = GetWorld();
 	if (World == nullptr)
 		return false;
-	
+
 	PerceivedPlayer = nullptr;
 	PerceivedCage = nullptr;
 	PerceivedPlayerDistance = BIG_NUMBER;
@@ -119,9 +125,8 @@ bool ABoarBase::RefreshPerceptionTargets()
 	{
 		APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, i);
 		if (PlayerPawn == nullptr)
-		{
 			continue;
-		}
+		
 
 		const float Distance = FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
 		if (Distance < PerceivedPlayerDistance && CanDetectTarget(PlayerPawn, Distance))
@@ -156,17 +161,16 @@ bool ABoarBase::RefreshPerceptionTargets()
 		ACage* Cage = *It;
 		// 破壊済みの檻は認識対象から除外する
 		if (Cage == nullptr || Cage->GetIsCageDestroyed())
-		{
 			continue;
-		}
+		
 
 		FVector ClosestPointOnCage;
 		const float CollisionDistance = Cage->ActorGetDistanceToCollision(
 			GetActorLocation(), ECC_Pawn, ClosestPointOnCage);
-		
+
 		const float Distance = CollisionDistance >= 0.0f
-			? CollisionDistance
-			: FVector::Dist(GetActorLocation(), Cage->GetActorLocation());
+			                       ? CollisionDistance
+			                       : FVector::Dist(GetActorLocation(), Cage->GetActorLocation());
 		if (Distance < PerceivedCageDistance && CanDetectTarget(Cage, Distance))
 		{
 			PerceivedCage = Cage;
@@ -182,7 +186,7 @@ bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 {
 	if (TargetActor == nullptr || Distance > ActiveSettings.SightRange)
 		return false;
-	
+
 	// 水平方向のAIなので、高低差を除いた方向ベクトルで視野角を判定する。
 	const FVector ToTarget = (TargetActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
 	const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
@@ -263,15 +267,17 @@ bool ABoarBase::ShouldPreferEscape() const
 {
 	if (ActiveSettings.bUseStamina && bIsRecoveringStamina)
 		return true;
-	
-	return ActiveSettings.EscapePriorityWeight > FMath::Max(ActiveSettings.PlayerPriorityWeight, ActiveSettings.CagePriorityWeight);
+
+	return ActiveSettings.EscapePriorityWeight > FMath::Max(ActiveSettings.PlayerPriorityWeight,
+	                                                        ActiveSettings.CagePriorityWeight);
 }
 
 float ABoarBase::GetAttackTelegraphDuration() const
 {
 	if (ActiveSettings.AttackTelegraphAnimation)
 	{
-		return ActiveSettings.AttackTelegraphAnimation->GetPlayLength() / FMath::Max(ActiveSettings.AttackTelegraphPlayRate, 0.01f);
+		return ActiveSettings.AttackTelegraphAnimation->GetPlayLength() / FMath::Max(
+			ActiveSettings.AttackTelegraphPlayRate, 0.01f);
 	}
 
 	return FMath::Max(ActiveSettings.AttackTelegraphDuration, 0.0f);
@@ -312,7 +318,8 @@ void ABoarBase::EndChargeHitTracking()
 // 突進中の接触だけを記録する。プレイヤーへのダメージ・スタンは
 // BoarPlayerCharacterが同じBlocking Hitから既存処理で適用するため、ここでは与えない。
 void ABoarBase::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp,
-	bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
+                          bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse,
+                          const FHitResult& Hit)
 {
 	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
 
@@ -333,7 +340,8 @@ void ABoarBase::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitive
 void ABoarBase::ReleaseBoar()
 {
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage()) return;
+		if (!Mode->CanAdvanceStage()) 
+			return;
 	// 捕獲済みの個体だけを解放対象にし、二重解放を防止する。
 	if (CaptureComponent == nullptr || !CaptureComponent->IsCaptured())
 		return;
@@ -395,7 +403,7 @@ void ABoarBase::ReleaseBoar()
 	{
 		FinishReleaseMovement();
 		UE_LOG(LogTemp, Warning, TEXT("[Boar] Released %s without release movement."),
-			*GetNameSafe(this));
+		       *GetNameSafe(this));
 		return;
 	}
 
@@ -413,7 +421,7 @@ void ABoarBase::ReleaseBoar()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[Boar] Released %s. MoveTarget=%s"),
-		*GetNameSafe(this), *ReleaseLocation.ToCompactString());
+	       *GetNameSafe(this), *ReleaseLocation.ToCompactString());
 }
 
 void ABoarBase::HandleReleaseMoveCompleted(
@@ -459,27 +467,10 @@ float ABoarBase::GetStaminaNormalized() const
 void ABoarBase::ApplyArchetypeDefaults()
 {
 	const FBoarArchetypeSettings& Settings = BoarDataAsset
-		? BoarDataAsset->GetSettings(BoarArchetype)
-		: UBoarDataAsset::GetDefaultSettings(BoarArchetype);
+		                                         ? BoarDataAsset->GetSettings(BoarArchetype)
+		                                         : UBoarDataAsset::GetDefaultSettings(BoarArchetype);
 
 	ActiveSettings = Settings;
-
-	// 古いBPの読み取り参照を残しつつ、AIロジックはActiveSettingsだけを使う。
-	// 旧プロパティに保存された値を逆流させないことで、設定元の二重化を防ぐ。
-	SightRange = ActiveSettings.SightRange;
-	SightAngleDegrees = ActiveSettings.SightAngleDegrees;
-	AbsoluteDetectionRange = ActiveSettings.AbsoluteDetectionRange;
-	ChaseRange = ActiveSettings.ChaseRange;
-	EscapeRange = ActiveSettings.EscapeRange;
-	CagePriorityWeight = ActiveSettings.CagePriorityWeight;
-	PlayerPriorityWeight = ActiveSettings.PlayerPriorityWeight;
-	EscapePriorityWeight = ActiveSettings.EscapePriorityWeight;
-	bCanAttackCage = ActiveSettings.bCanAttackCage;
-	bUseStamina = ActiveSettings.bUseStamina;
-	MaxStamina = ActiveSettings.MaxStamina;
-	StaminaDrainPerSecond = ActiveSettings.StaminaDrainPerSecond;
-	StaminaRecoveryPerSecond = ActiveSettings.StaminaRecoveryPerSecond;
-	StaminaRecoverExitRatio = ActiveSettings.StaminaRecoverExitRatio;
 
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
@@ -502,7 +493,7 @@ void ABoarBase::UpdateStamina(float DeltaSeconds)
 {
 	if (!ActiveSettings.bUseStamina || IsCaptured())
 		return;
-	
+
 	if (ActiveSettings.MaxStamina <= KINDA_SMALL_NUMBER)
 	{
 		CurrentStamina = 0.0f;
@@ -568,12 +559,14 @@ void ABoarBase::ApplyMovementSpeed()
 	if (ActiveSettings.bUseStamina && bIsRecoveringStamina)
 	{
 		Move->MaxWalkSpeed = ActiveSettings.bStopWhileRecoveringStamina
-			? 0.0f
-			: ActiveSettings.BaseWalkSpeed * ActiveSettings.StaminaRecoverySpeedMultiplier;
+			                     ? 0.0f
+			                     : ActiveSettings.BaseWalkSpeed * ActiveSettings.StaminaRecoverySpeedMultiplier;
 		return;
 	}
 
-	Move->MaxWalkSpeed = bIsEscaping ? ActiveSettings.BaseWalkSpeed * ActiveSettings.EscapeSpeedMultiplier : ActiveSettings.BaseWalkSpeed;
+	Move->MaxWalkSpeed = bIsEscaping
+		                     ? ActiveSettings.BaseWalkSpeed * ActiveSettings.EscapeSpeedMultiplier
+		                     : ActiveSettings.BaseWalkSpeed;
 }
 
 void ABoarBase::StopForStaminaRecovery()

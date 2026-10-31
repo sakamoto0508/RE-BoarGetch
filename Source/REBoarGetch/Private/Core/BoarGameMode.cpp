@@ -39,7 +39,8 @@ ABoarGameMode::ABoarGameMode()
 
 void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 {
-	if (!IsValid(Boar) || !Boar->IsCaptured() || !CanAdvanceStage() || HandledCapturedBoars.Contains(Boar)) return;
+	if (!IsValid(Boar) || !Boar->IsCaptured() || !CanAdvanceStage() || HandledCapturedBoars.Contains(Boar))
+		return;
 	HandledCapturedBoars.Add(Boar);
 	// 捕獲成立時の演出や報酬付与をBoarCaptureResolutionに委譲する。
 	BoarCaptureResolution::Resolve(GetWorld(), Boar, StageRunData, HealPickupClass, HealItemDropChance);
@@ -48,7 +49,8 @@ void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 
 void ABoarGameMode::StartPlay()
 {
-	if (bStartupAttempted) return;
+	if (bStartupAttempted)
+		return;
 	bStartupAttempted = true;
 	StageRunData = FStageRunData();
 	StageRunData.StageId = StageConfig ? StageConfig->StageId : NAME_None;
@@ -73,7 +75,8 @@ void ABoarGameMode::StartPlay()
 	{
 		// 完了通知が同期で返る場合にも解除できるよう、BPイベントより先に監視を開始する。
 		GetWorldTimerManager().SetTimer(IntroductionTimeoutHandle, this,
-			&ABoarGameMode::HandleIntroductionTimeout, FMath::Max(0.1f, StageIntroductionTimeoutSeconds), false);
+		                                &ABoarGameMode::HandleIntroductionTimeout,
+		                                FMath::Max(0.1f, StageIntroductionTimeoutSeconds), false);
 		OnStageIntroductionRequested();
 	}
 	else CompleteStageIntroduction();
@@ -82,16 +85,19 @@ void ABoarGameMode::StartPlay()
 bool ABoarGameMode::PrepareStage()
 {
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] 1/4 Validate configuration and progress"));
-	if (!ValidateStageSetup()) return false;
+	if (!ValidateStageSetup())
+		return false;
 	SetStageActorsStopped(true);
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] 2/4 Spawn configured actors"));
 	// 生成方法はBoarStageSpawnerへ委譲し、GameModeは順序と成否だけを判断します。
 	const UBoarGameInstance* Instance = GetGameInstance<UBoarGameInstance>();
 	if (!BoarStageSpawner::SpawnConfiguredBoars(GetWorld(), StageConfig)
-		|| !BoarStageSpawner::SpawnConfiguredSpecialCoins(GetWorld(), StageConfig, SpecialCoinClass, Instance ? Instance->GetProgress() : nullptr))
+		|| !BoarStageSpawner::SpawnConfiguredSpecialCoins(GetWorld(), StageConfig, SpecialCoinClass,
+		                                                  Instance ? Instance->GetProgress() : nullptr))
 		return FailInitialization(NSLOCTEXT("StageInit", "SpawnFailed", "ステージの配置を準備できませんでした。"));
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] 3/4 Initialize cages, boars, player health and loadout"));
-	if (!InitializeStageActors()) return false;
+	if (!InitializeStageActors())
+		return false;
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] 4/4 Ready for BeginPlay and introduction"));
 	return true;
 }
@@ -99,7 +105,8 @@ bool ABoarGameMode::PrepareStage()
 bool ABoarGameMode::ValidateStageSetup()
 {
 	// Unconfigured sandbox maps keep supporting placed actors and default equipment.
-	if (!StageConfig) return true;
+	if (!StageConfig)
+		return true;
 	if (StageConfig->StageId.IsNone() || StageConfig->TargetCaptureCount < 0)
 		return FailInitialization(NSLOCTEXT("StageInit", "InvalidConfig", "ステージ設定が正しくありません。"));
 	const auto* Instance = GetGameInstance<UBoarGameInstance>();
@@ -120,7 +127,8 @@ bool ABoarGameMode::InitializeStageActors()
 	for (TActorIterator<ABoarBase> It(GetWorld()); It; ++It)
 	{
 		It->InitializeForStage();
-		if (!It->IsCaptured()) ++BoarCount;
+		if (!It->IsCaptured())
+			++BoarCount;
 	}
 	const auto Context = BoarGadgetLoadoutInitializer::ResolveContext(GetWorld());
 	for (TActorIterator<ABoarPlayerCharacter> It(GetWorld()); It; ++It)
@@ -148,16 +156,12 @@ void ABoarGameMode::EvaluateStageClearCondition()
 {
 	// 通知済み、またはステージ設定未登録の場合はクリア判定を行わない。
 	if (bStageClearRequested || StageConfig == nullptr)
-	{
 		return;
-	}
 
 	const int32 TargetCaptureCount = StageConfig->TargetCaptureCount;
 	// 目標値0以下は判定無効。正数の場合のみ到達数と比較する。
 	if (TargetCaptureCount <= 0 || CapturedBoarCount < TargetCaptureCount)
-	{
 		return;
-	}
 
 	RequestStageClear();
 }
@@ -170,12 +174,14 @@ void ABoarGameMode::HandlePlayerDeath(ABoarPlayerCharacter* PlayerCharacter)
 
 void ABoarGameMode::RefreshHousedBoarCount()
 {
-	if (!CanAdvanceStage()) return;
+	if (!CanAdvanceStage())
+		return;
 	int32 Count = 0;
-	for (TActorIterator<ACage> It(GetWorld()); It; ++It) 
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It)
 		Count += It->GetCapturedBoarCount();
 	for (auto It = HandledCapturedBoars.CreateIterator(); It; ++It)
-		if (!It->IsValid() || !It->Get()->IsCaptured())		It.RemoveCurrent();
+		if (!It->IsValid() || !It->Get()->IsCaptured())
+			It.RemoveCurrent();
 	CapturedBoarCount = Count;
 	StageRunData.CurrentHousedCount = Count;
 	OnCapturedBoarCountChanged.Broadcast(Count, StageConfig ? StageConfig->TargetCaptureCount : 0);
@@ -186,17 +192,20 @@ void ABoarGameMode::RequestStageClear()
 {
 	// 勝敗は収容数で確定する。残っている受信演出は終了遷移時に打ち切り、死亡要求よりClearを優先する。
 	if (StageState == EBoarStageState::Playing && StageConfig && StageConfig->TargetCaptureCount > 0
-		&& CapturedBoarCount >= StageConfig->TargetCaptureCount) bStageClearRequested = true;
+		&& CapturedBoarCount >= StageConfig->TargetCaptureCount)
+		bStageClearRequested = true;
 }
 
 void ABoarGameMode::RequestGameOver()
 {
-	if (StageState == EBoarStageState::Playing) bGameOverRequested = true;
+	if (StageState == EBoarStageState::Playing)
+		bGameOverRequested = true;
 }
 
 void ABoarGameMode::HandleWorldTickEnd(UWorld* World, ELevelTick TickType, float DeltaSeconds)
 {
-	if (World != GetWorld() || TickType == LEVELTICK_PauseTick) return;
+	if (World != GetWorld() || TickType == LEVELTICK_PauseTick)
+		return;
 	if (StageState == EBoarStageState::Playing) StageRunData.ClearTimeSeconds += DeltaSeconds;
 	ResolveStageEnd();
 }
@@ -205,15 +214,19 @@ void ABoarGameMode::ResolveStageEnd()
 {
 	// 要求の到着順で勝敗を決めず、フレーム終端でClear優先を一度だけ適用する。
 	const EBoarStageState Next = ResolveBoarStageEnd(StageState, bStageClearRequested, bGameOverRequested);
-	if (Next == StageState) return;
+	if (Next == StageState)
+		return;
 	StageState = Next;
 	if (bWaitForStageEndPresentation)
 	{
 		GetWorldTimerManager().SetTimer(EndPresentationTimeoutHandle, this,
-			&ABoarGameMode::HandleEndPresentationTimeout, FMath::Max(0.1f, StageEndPresentationTimeoutSeconds), false);
+		                                &ABoarGameMode::HandleEndPresentationTimeout,
+		                                FMath::Max(0.1f, StageEndPresentationTimeoutSeconds), false);
 	}
 	if (auto* PC = GetWorld()->GetFirstPlayerController())
-		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>()) Presentation->CancelPresentation();
+		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
+			Presentation->
+				CancelPresentation();
 	SetStageActorsStopped(true);
 	if (StageState == EBoarStageState::Cleared)
 	{
@@ -223,7 +236,8 @@ void ABoarGameMode::ResolveStageEnd()
 		// BP側で独自演出を待つ設定（bWaitForStageEndPresentation）の場合はそちらを優先します。
 		if (bUseStageClearPresentation && !bWaitForStageEndPresentation)
 			if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
-				if (PC->StageClearPresentation && PC->StageClearPresentation->StartPresentation()) return;
+				if (PC->StageClearPresentation && PC->StageClearPresentation->StartPresentation())
+					return;
 	}
 	else
 	{
@@ -234,29 +248,37 @@ void ABoarGameMode::ResolveStageEnd()
 		// BP側で独自演出を待つ設定（bWaitForStageEndPresentation）の場合はそちらを優先します。
 		if (bUseGameOverPresentation && !bWaitForStageEndPresentation)
 			if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
-				if (PC->GameOverPresentation && PC->GameOverPresentation->StartPresentation()) return;
+				if (PC->GameOverPresentation && PC->GameOverPresentation->StartPresentation())
+					return;
 	}
-	if (!bWaitForStageEndPresentation) CompleteStageEndPresentation();
+	if (!bWaitForStageEndPresentation)
+		CompleteStageEndPresentation();
 }
 
 bool ABoarGameMode::RetryClearSave()
 {
 	// 保存と演出は別の完了条件。再試行で成功した場合もResultは一度だけ表示する。
-	if (StageState != EBoarStageState::Cleared) return false;
+	if (StageState != EBoarStageState::Cleared)
+		return false;
 	if (!bClearSaveSucceeded)
 	{
 		UBoarGameInstance* Instance = GetGameInstance<UBoarGameInstance>();
 		bClearSaveSucceeded = Instance && Instance->CommitClearedRun(StageRunData);
-		if (!bClearSaveSucceeded) UE_LOG(LogTemp, Error, TEXT("[Stage] Clear save pending. Configure BoarGameInstance / StageId or retry saving."));
+		if (!bClearSaveSucceeded) UE_LOG(LogTemp, Error,
+		                                 TEXT(
+			                                 "[Stage] Clear save pending. Configure BoarGameInstance / StageId or retry saving."
+		                                 ));
 	}
-	if (bClearSaveSucceeded && bEndPresentationCompleted) CompleteStageEndPresentation();
+	if (bClearSaveSucceeded && bEndPresentationCompleted)
+		CompleteStageEndPresentation();
 	return bClearSaveSucceeded;
 }
 
 void ABoarGameMode::CompleteStageIntroduction()
 {
 	// BPから早期・重複通知が来ても、準備失敗や終了済み状態をPlayingへ戻さない。
-	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing) return;
+	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing)
+		return;
 	GetWorldTimerManager().ClearTimer(IntroductionTimeoutHandle);
 	StageState = EBoarStageState::Playing;
 	SetStageActorsStopped(false);
@@ -266,22 +288,26 @@ void ABoarGameMode::CompleteStageIntroduction()
 
 void ABoarGameMode::CompleteStageEndPresentation()
 {
-	if (StageState != EBoarStageState::Cleared && StageState != EBoarStageState::GameOver) return;
+	if (StageState != EBoarStageState::Cleared && StageState != EBoarStageState::GameOver)
+		return;
 	GetWorldTimerManager().ClearTimer(EndPresentationTimeoutHandle);
 	bEndPresentationCompleted = true;
-	if (bEndUIShown || (StageState == EBoarStageState::Cleared && !bClearSaveSucceeded)) return;
+	if (bEndUIShown || (StageState == EBoarStageState::Cleared && !bClearSaveSucceeded))
+		return;
 	ABoarPlayerController* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController());
-	if (!PC) return;
+	if (!PC)
+		return;
 	bEndUIShown = true;
-	if (StageState == EBoarStageState::Cleared) 
+	if (StageState == EBoarStageState::Cleared)
 		PC->HandleStageCleared(StageRunData, StageConfig->TargetCaptureCount);
-	else 
+	else
 		PC->HandleStageGameOver();
 }
 
 void ABoarGameMode::HandleIntroductionTimeout()
 {
-	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing) return;
+	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing)
+		return;
 	UE_LOG(LogTemp, Warning, TEXT("[Stage] Introduction timed out; continuing gameplay."));
 	OnStagePresentationTimedOut(true);
 	CompleteStageIntroduction();
@@ -289,7 +315,9 @@ void ABoarGameMode::HandleIntroductionTimeout()
 
 void ABoarGameMode::HandleEndPresentationTimeout()
 {
-	if (bEndPresentationCompleted || (StageState != EBoarStageState::Cleared && StageState != EBoarStageState::GameOver)) return;
+	if (bEndPresentationCompleted || (StageState != EBoarStageState::Cleared && StageState !=
+		EBoarStageState::GameOver))
+		return;
 	UE_LOG(LogTemp, Warning, TEXT("[Stage] End presentation timed out; continuing to end UI."));
 	OnStagePresentationTimedOut(false);
 	CompleteStageEndPresentation();
@@ -308,33 +336,41 @@ void ABoarGameMode::SetStageActorsStopped(bool bStopped)
 			It->GetCharacterMovement()->StopMovementImmediately();
 			It->GetCharacterMovement()->DisableMovement();
 		}
-		else It->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		else
+			It->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 		It->SetCanBeDamaged(!bStopped);
 	}
 	for (TActorIterator<ABoarBase> It(GetWorld()); It; ++It)
 	{
 		if (AAIController* AI = Cast<AAIController>(It->GetController()))
 		{
-			if (bStopped) AI->StopMovement();
+			if (bStopped)
+				AI->StopMovement();
 			if (UBrainComponent* Brain = AI->GetBrainComponent())
 			{
-				if (bStopped) Brain->StopLogic(TEXT("Stage stopped"));
-				else if (!It->IsCaptured()) Brain->RestartLogic();
+				if (bStopped)
+					Brain->StopLogic(TEXT("Stage stopped"));
+				else if
+				(!It->IsCaptured())
+					Brain->RestartLogic();
 			}
 		}
 		It->GetCharacterMovement()->StopMovementImmediately();
-		if (bStopped) It->GetCharacterMovement()->DisableMovement();
-		else if (!It->IsCaptured()) It->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		if (bStopped)
+			It->GetCharacterMovement()->DisableMovement();
+		else if (!It->IsCaptured())
+			It->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	}
-	for (TActorIterator<ACage> It(GetWorld()); It; ++It) 
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It)
 		It->SetStageStopped(bStopped);
-	for (TActorIterator<AGadgetBase> It(GetWorld()); It; ++It) 
+	for (TActorIterator<AGadgetBase> It(GetWorld()); It; ++It)
 		It->SetStageStopped(bStopped);
 }
 
 bool ABoarGameMode::RecordSpecialCoin(FName CoinId)
 {
-	if (!CanAdvanceStage() || CoinId.IsNone() || StageRunData.SpecialCoinIds.Contains(CoinId)) return false;
+	if (!CanAdvanceStage() || CoinId.IsNone() || StageRunData.SpecialCoinIds.Contains(CoinId))
+		return false;
 	StageRunData.SpecialCoinIds.Add(CoinId);
 	return true;
 }
@@ -346,4 +382,3 @@ void ABoarGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	FWorldDelegates::OnWorldTickEnd.Remove(WorldTickEndHandle);
 	Super::EndPlay(EndPlayReason);
 }
-
