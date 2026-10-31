@@ -63,7 +63,7 @@ UCageVisualComponent::UCageVisualComponent()
 	Gauge = CreateDefaultSubobject<UWidgetComponent>(TEXT("CageHPGauge"));
 	Gauge->SetupAttachment(this);
 	Gauge->SetWidgetSpace(EWidgetSpace::World);
-	Gauge->SetDrawSize(FVector2D(640, 100));
+	Gauge->SetDrawSize(GaugeDrawSize);
 	Gauge->SetPivot(FVector2D(.5, .5));
 	Gauge->SetWidgetClass(UCageHealthWidget::StaticClass());
 	Gauge->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -88,6 +88,8 @@ void UCageVisualComponent::OnRegister()
 	if (!CageMeshComponent->IsRegistered()) CageMeshComponent->RegisterComponent();
 	ApplyVisualSource();
 	Gauge->AttachToComponent(this, FAttachmentTransformRules::KeepRelativeTransform);
+	Gauge->SetWidgetClass(GaugeWidgetClass ? GaugeWidgetClass.Get() : UCageHealthWidget::StaticClass());
+	Gauge->SetDrawSize(GaugeDrawSize);
 	Gauge->SetRelativeLocation(FVector(0, 0, GaugeHeight));
 	Gauge->SetRelativeScale3D(FVector(GaugeWorldScale));
 	if (!Gauge->IsRegistered()) Gauge->RegisterComponent();

@@ -181,6 +181,15 @@ bool ABoarBase::RefreshPerceptionTargets()
 	return PerceivedPlayer != nullptr || PerceivedCage != nullptr;
 }
 
+// 視線Traceの終点。Actor原点は檻のように床面(z=0)にあり床メッシュへ刺さるため、当たり判定の中心を狙う。
+// 当たり判定を持つComponentが無い場合だけActor原点を使う。
+static FVector GetSightTargetLocation(const AActor* TargetActor)
+{
+	FVector Origin, Extent;
+	TargetActor->GetActorBounds(true, Origin, Extent);
+	return Extent.IsNearlyZero() ? TargetActor->GetActorLocation() : Origin;
+}
+
 // ターゲットを認識できるか判定する。
 bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 {
@@ -212,7 +221,7 @@ bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 	const bool bHit = World->LineTraceSingleByChannel(
 		HitResult,
 		GetPawnViewLocation(),
-		TargetActor->GetActorLocation(),
+		GetSightTargetLocation(TargetActor),
 		ECC_Visibility,
 		QueryParams);
 

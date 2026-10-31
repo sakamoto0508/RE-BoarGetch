@@ -11,7 +11,7 @@ void UAnimNotify_NetCaptureWindow::Notify(USkeletalMeshComponent* MeshComp, UAni
 	(void)Animation;
 	(void)EventReference;
 
-	if (MeshComp == nullptr;
+	if (MeshComp == nullptr)
 		return;
 	
 

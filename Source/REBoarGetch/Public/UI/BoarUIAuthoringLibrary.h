@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Components/Widget.h"
 #include "BoarUIAuthoringLibrary.generated.h"
 
 class UWidgetBlueprint;
@@ -30,6 +31,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
 	static bool ConfigureTextBlockStyle(UObject* WidgetBlueprint, FName WidgetName, const FText& Text, int32 FontSize, FName Typeface,
 		FLinearColor Color, int32 OutlineSize, FLinearColor OutlineColor, FVector2D ShadowOffset, FLinearColor ShadowColor);
+
+	/** 指定Class・名前のWidgetを取得し、無ければ作成します。ParentPanelNameがNoneで木が空ならRootにします。bIsVariableでC++のBindWidget対象にします。返り値のPropertyはPythonから設定します。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static UWidget* EnsureWidget(UObject* WidgetBlueprint, TSubclassOf<UWidget> WidgetClass, FName WidgetName, FName ParentPanelName, bool bIsVariable);
 
 	/** CanvasPanelSlot上のWidgetの位置・サイズ・AutoSizeを設定します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")

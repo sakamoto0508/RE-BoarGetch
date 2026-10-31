@@ -7,6 +7,7 @@ class UStaticMesh;
 class UStaticMeshComponent;
 class UWidgetComponent;
 class UMaterialInstanceDynamic;
+class UCageHealthWidget;
 UCLASS(ClassGroup=(Visual),meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UCageVisualComponent : public USceneComponent
 {
@@ -19,6 +20,10 @@ public:
 	UPROPERTY(EditAnywhere,Category="Visual") FTransform CageMeshTransform;
 	/** HPに応じて色を変えるランプのMaterial Slot番号です（CageMesh使用時）。Materialには"Tint"と"Intensity"が必要です。 */
 	UPROPERTY(EditAnywhere,Category="Visual") TArray<int32> LampMaterialSlots;
+	/** HPゲージに使うWidget。見た目はこのWBPで編集します。未設定時はC++のFallback描画を使います。 */
+	UPROPERTY(EditAnywhere,Category="Gauge") TSubclassOf<UCageHealthWidget> GaugeWidgetClass;
+	/** World Space WidgetComponentの描画解像度です。WBPのレイアウト基準サイズと合わせます。 */
+	UPROPERTY(EditAnywhere,Category="Gauge") FVector2D GaugeDrawSize=FVector2D(640,100);
 	UPROPERTY(EditAnywhere,Category="Gauge",meta=(ClampMin="0")) float DisplayDistance=12000.f;
 	UPROPERTY(EditAnywhere,Category="Gauge") float GaugeHeight=650.f;
 	UPROPERTY(EditAnywhere,Category="Gauge") float GaugeWorldScale=.9f;

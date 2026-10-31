@@ -109,6 +109,29 @@ bool UBoarUIAuthoringLibrary::EnsureTextBlock(UObject* Object, FName WidgetName,
 	return true;
 }
 
+UWidget* UBoarUIAuthoringLibrary::EnsureWidget(UObject* Object, TSubclassOf<UWidget> WidgetClass, FName WidgetName,
+                                               FName ParentPanelName, bool bIsVariable)
+{
+	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
+	if (!WBP || !WBP->WidgetTree || !WidgetClass || WidgetName.IsNone()) return nullptr;
+	UWidget* Widget = WBP->WidgetTree->FindWidget(WidgetName);
+	if (Widget && !Widget->IsA(WidgetClass)) return nullptr;
+	if (!Widget)
+	{
+		UPanelWidget* Parent = Cast<UPanelWidget>(WBP->WidgetTree->FindWidget(ParentPanelName));
+		if (!Parent && (!ParentPanelName.IsNone() || WBP->WidgetTree->RootWidget)) return nullptr;
+		WBP->Modify();
+		Widget = WBP->WidgetTree->ConstructWidget<UWidget>(WidgetClass, WidgetName);
+		if (Parent) Parent->AddChild(Widget);
+		else WBP->WidgetTree->RootWidget = Widget;
+		WBP->OnVariableAdded(WidgetName);
+	}
+	Widget->Modify();
+	Widget->bIsVariable = bIsVariable;
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
+	return Widget;
+}
+
 bool UBoarUIAuthoringLibrary::ConfigureTextBlockStyle(UObject* Object, FName WidgetName, const FText& Text,
                                                       int32 FontSize, FName Typeface,
                                                       FLinearColor Color, int32 OutlineSize, FLinearColor OutlineColor,
