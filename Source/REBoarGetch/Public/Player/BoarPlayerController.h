@@ -94,10 +94,15 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
-	/** Stage初期化失敗時に表示するWidget Blueprintクラスです。未設定ならErrorを出してLobbyへ戻ります。 */
-	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<class UBoarInitializationErrorWidget> InitializationErrorWidgetClass;
-	UPROPERTY(Transient) TObjectPtr<class UBoarInitializationErrorWidget> InitializationErrorWidget;
+	/** Stage初期化に失敗した状態です。専用画面は出さず、理由はErrorログだけで報告します。 */
 	bool bInitializationFailed = false;
+	/** GameOver画面を表示できなかった（クラス未設定・必須ボタン欠落）状態です。Errorの重複出力を防ぎます。 */
+	bool bGameOverUIUnavailable = false;
+	/** LobbyLevel未設定の報告済みフラグです。 */
+	mutable bool bLobbyLevelFallbackReported = false;
+	/** LobbyLevel、未設定ならプロジェクト設定のGameDefaultMapを返します。どちらも無効なら空です。 */
+	TSoftObjectPtr<UWorld> ResolveLobbyLevel() const;
+	friend class FBoarStageEndErrorHandlingTest;
 	friend class UBoarUIFlowComponent;
 	UPROPERTY(Transient) TObjectPtr<class UBoarUIFlowComponent> UIFlow;
 	UPROPERTY(EditDefaultsOnly,Category="UI") TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;

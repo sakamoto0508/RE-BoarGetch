@@ -16,7 +16,8 @@
 #include "UI/BoarHUDWidget.h"
 #include "UI/BoarResultWidget.h"
 #include "UI/BoarGameOverWidget.h"
-#include "UI/BoarInitializationErrorWidget.h"
+#include "GameMapsSettings.h"
+#include "Misc/PackageName.h"
 #include "UI/BoarUIFlowComponent.h"
 #include "Core/BoarFacilityGameMode.h"
 #include "Stage/HubPortal.h"
@@ -80,6 +81,7 @@ void ABoarPlayerController::RestoreGameplayInputState()
 	bGameplayInputBlocked = false;
 	bLevelTransitionRequested = false;
 	bInitializationFailed = false;
+	bGameOverUIUnavailable = false;
 	bIsGadgetModifierHeld = false;
 
 	// Result表示時に設定した移動・視点ロックを解除する。
@@ -450,9 +452,17 @@ void ABoarPlayerController::SetPlayerHUDOpacity(float Opacity)
 void ABoarPlayerController::ReturnToLobby()
 {
 	// 任意入力の連打中もLobbyを複数回Openしないよう、最初の要求だけ受け付ける。
-	if (bLevelTransitionRequested || LobbyLevel.IsNull())
+	if (bLevelTransitionRequested)
 		return;
+	const TSoftObjectPtr<UWorld> Destination = ResolveLobbyLevel();
+	if (Destination.IsNull())
+	{
+		UE_LOG(LogTemp, Error, TEXT("[Lobby] %s: no valid Lobby level (LobbyLevel and GameDefaultMap are both unset or missing). Lobby transition is cancelled."),
+		       *GetNameSafe(GetClass()));
+		return;
+	}
 
+	// 遷移先が決まってから二重遷移防止を立てる。
 	bLevelTransitionRequested = true;
 	if (ResultWidget)
 	{
@@ -460,7 +470,25 @@ void ABoarPlayerController::ReturnToLobby()
 		ResultWidget->SetIsEnabled(false);
 	}
 
-	UGameplayStatics::OpenLevelBySoftObjectPtr(this, LobbyLevel);
+	UGameplayStatics::OpenLevelBySoftObjectPtr(this, Destination);
+}
+
+TSoftObjectPtr<UWorld> ABoarPlayerController::ResolveLobbyLevel() const
+{
+	if (!LobbyLevel.IsNull())
+		return LobbyLevel;
+	// LobbyLevel未設定時は、ゲーム開始時のMap（Project Settings > Maps & Modes > Game Default Map）をLobbyの正本として使います。
+	const FSoftObjectPath DefaultMap(UGameMapsSettings::GetGameDefaultMap());
+	const bool bValid = DefaultMap.IsValid() && FPackageName::DoesPackageExist(DefaultMap.GetLongPackageName());
+	if (!bLobbyLevelFallbackReported)
+	{
+		bLobbyLevelFallbackReported = true;
+		const FString Detail = bValid
+			                       ? FString::Printf(TEXT("Using GameDefaultMap '%s' instead."), *DefaultMap.ToString())
+			                       : FString(TEXT("GameDefaultMap is also unset or missing."));
+		UE_LOG(LogTemp, Error, TEXT("[Lobby] %s: LobbyLevel is unset. %s"), *GetNameSafe(GetClass()), *Detail);
+	}
+	return bValid ? TSoftObjectPtr<UWorld>(DefaultMap) : TSoftObjectPtr<UWorld>();
 }
 
 void ABoarPlayerController::SetStageInputBlocked(bool bBlocked)
@@ -481,21 +509,29 @@ void ABoarPlayerController::SetStageInputBlocked(bool bBlocked)
 
 void ABoarPlayerController::HandleStageGameOver()
 {
-	if (!IsLocalController() || GameOverWidget)
+	if (!IsLocalController() || GameOverWidget || bGameOverUIUnavailable)
 		return;
 	SetStageInputBlocked(true);
 	if (PlayerHUDWidget)
 		PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
-	if (GameOverWidgetClass)
-		GameOverWidget = CreateWidget<UBoarGameOverWidget>(this, GameOverWidgetClass);
-	if (!GameOverWidget)
+	UBoarGameOverWidget* Widget = GameOverWidgetClass
+		                              ? CreateWidget<UBoarGameOverWidget>(this, GameOverWidgetClass)
+		                              : nullptr;
+	// 必須ボタンが欠けた画面は表示しません。C++で代替画面は作らず、GameOver状態のまま止めます（自動Retry・Level遷移なし）。
+	const TArray<FString> Missing = Widget ? Widget->GetMissingRequiredWidgets() : TArray<FString>();
+	if (!Widget || !Missing.IsEmpty())
 	{
-		// C++で代替画面は作りません。Retry/Lobbyを選べないため、進行が止まらないようLobbyへ戻します。
-		UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: GameOverWidgetClass is unset or could not be created. Skipping GameOver screen and returning to Lobby."),
-		       *GetNameSafe(GetClass()));
-		ReturnToLobby();
+		bGameOverUIUnavailable = true;
+		if (!Widget)
+			UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: GameOverWidgetClass (%s) is unset or could not be created. GameOver screen is not shown."),
+			       *GetNameSafe(GetClass()), *GetNameSafe(GameOverWidgetClass.Get()));
+		else
+			UE_LOG(LogTemp, Error, TEXT("[GameOver] %s (%s.GameOverWidgetClass): missing required widgets: %s. GameOver screen is not shown."),
+			       *GetNameSafe(Widget->GetClass()), *GetNameSafe(GetClass()), *FString::Join(Missing, TEXT(", ")));
+		// Viewport未追加・Delegate未登録なので、参照を持たなければGCで破棄されます。
 		return;
 	}
+	GameOverWidget = Widget;
 	GameOverWidget->OnRetryRequested.AddUniqueDynamic(this, &ABoarPlayerController::RetryStage);
 	GameOverWidget->OnLobbyRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToLobby);
 	GameOverWidget->AddToViewport(100);
@@ -521,30 +557,16 @@ void ABoarPlayerController::RetryStage()
 
 void ABoarPlayerController::HandleStageInitializationFailed(const FText& Reason)
 {
-	if (!IsLocalController() || InitializationErrorWidget)
+	// 失敗理由はErrorログだけで報告します。専用画面・自動Retry・Level遷移は行わず、失敗状態のまま操作を止めます。
+	if (!IsLocalController() || bInitializationFailed)
 		return;
 	bInitializationFailed = true;
 	SetStageInputBlocked(true);
 	if (PlayerHUDWidget)
 		PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
-	if (InitializationErrorWidgetClass)
-		InitializationErrorWidget = CreateWidget<UBoarInitializationErrorWidget>(this, InitializationErrorWidgetClass);
-	if (!InitializationErrorWidget)
-	{
-		// C++で代替画面は作りません。Retry/Lobbyを選べないため、進行が止まらないようLobbyへ戻します。
-		UE_LOG(LogTemp, Error, TEXT("[WorldInit] %s: InitializationErrorWidgetClass is unset or could not be created. Skipping error screen and returning to Lobby. Reason: %s"),
-		       *GetNameSafe(GetClass()), *Reason.ToString());
-		ReturnToLobby();
-		return;
-	}
-	InitializationErrorWidget->OnRetry.AddUniqueDynamic(this, &ThisClass::RetryStage);
-	InitializationErrorWidget->OnLobby.AddUniqueDynamic(this, &ThisClass::ReturnToLobby);
-	InitializationErrorWidget->AddToViewport(200);
-	FInputModeUIOnly Input;
-	Input.SetWidgetToFocus(InitializationErrorWidget->TakeWidget());
-	SetInputMode(Input);
-	SetShowMouseCursor(true);
-	InitializationErrorWidget->ShowError(Reason);
+	// 理由の文言は呼び出し元（GameMode / FacilityGameMode）が直前にErrorで出力済みなので、ここでは状態だけを記録します。
+	UE_LOG(LogTemp, Error, TEXT("[WorldInit] %s: initialization failed. No error screen is shown; gameplay stays stopped (no auto retry or level transition)."),
+	       *GetNameSafe(GetClass()));
 }
 
 

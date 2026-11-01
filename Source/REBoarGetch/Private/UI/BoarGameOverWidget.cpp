@@ -62,6 +62,21 @@ void UBoarGameOverWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
+TArray<FString> UBoarGameOverWidget::GetMissingRequiredWidgets() const
+{
+	TArray<FString> Missing;
+	auto Check = [&](const TCHAR* Property, FName Name)
+	{
+		if (Name.IsNone())
+			Missing.Add(FString::Printf(TEXT("%s (unset)"), Property));
+		else if (!WidgetTree || !Cast<UButton>(WidgetTree->FindWidget(Name)))
+			Missing.Add(FString::Printf(TEXT("%s='%s' (no Button with this name)"), Property, *Name.ToString()));
+	};
+	Check(TEXT("RetryButtonWidgetName"), RetryButtonWidgetName);
+	Check(TEXT("LobbyButtonWidgetName"), LobbyButtonWidgetName);
+	return Missing;
+}
+
 void UBoarGameOverWidget::FocusInitialChoice()
 {
 	if (RetryButton) RetryButton->SetUserFocus(GetOwningPlayer());

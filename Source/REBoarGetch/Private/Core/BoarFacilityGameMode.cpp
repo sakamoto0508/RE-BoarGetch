@@ -15,8 +15,9 @@ void ABoarFacilityGameMode::StartPlay()
 	Super::StartPlay();
 	if (!bReady)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Facility player/loadout preparation failed."));
+		const FText Reason = NSLOCTEXT("WorldInit", "FacilityFailed", "プレイヤーの装備を準備できませんでした。");
+		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Facility player/loadout preparation failed: %s"), *Reason.ToString());
 		if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
-			PC->HandleStageInitializationFailed(NSLOCTEXT("WorldInit", "FacilityFailed", "プレイヤーの装備を準備できませんでした。"));
+			PC->HandleStageInitializationFailed(Reason);
 	}
 }

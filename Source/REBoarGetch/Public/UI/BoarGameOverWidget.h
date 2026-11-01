@@ -18,6 +18,8 @@ public:
 	UFUNCTION(BlueprintCallable) void RequestRetry();
 	UFUNCTION(BlueprintCallable) void RequestLobby();
 	void FocusInitialChoice();
+	/** Retry/Lobbyボタンのうち見つからないもの（名前未設定・不在・Button以外）を返します。WidgetTreeはCreateWidget内で構築済みなので、表示前に検証できます。 */
+	TArray<FString> GetMissingRequiredWidgets() const;
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
