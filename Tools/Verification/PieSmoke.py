@@ -6,6 +6,7 @@ User saves are copied there read-only at start, so checks run against the same p
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import time
 import traceback
@@ -18,6 +19,11 @@ OUT = ROOT / 'Saved' / 'Verification'
 SAVE_DIR = ROOT / 'Saved' / 'SaveGames'
 ISOLATED_SAVED = OUT / 'PieSmokeUser' / 'Saved'
 LEVELS = ['/Game/Level/L_Stage01', '/Game/Level/L_GadgetLab', '/Game/Level/L_GadgetTest_Net', '/Game/Level/L_Archive']
+# run_ue_gui.sh checks that these all passed before treating the run as successful.
+REQUIRED = (['Runtime Save directory is isolated by -UserDir']
+            + [level + ': persistent progress unchanged' for level in LEVELS]
+            + ['Save files unchanged on disk'])
+RUN_ID = (re.search(r'-VerificationRunId="?([^\s"]+)', unreal.SystemLibrary.get_command_line()) or [None, None])[1]
 editor = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 worlds = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 results = []
@@ -135,14 +141,17 @@ def check_level(world, pc):
         record('Archive menu closes and releases input', widget(world, unreal.BoarEncyclopediaWidget) is None and not pc.is_move_input_ignored())
     record(LEVELS[level_index] + ': persistent progress unchanged', before == save_snapshot(instance))
 
-def finish(error=None):
+def finish(error=None, complete=False):
     global handle
     if handle is not None:
         unreal.unregister_slate_post_tick_callback(handle)
         handle = None
     if editor.is_in_play_in_editor():
         editor.editor_request_end_play()
-    data = {'passed': results, 'error': error, 'save_files_unchanged': initial_saves == disk_saves()}
+    unchanged = initial_saves == disk_saves()
+    data = {'run_id': RUN_ID, 'passed': results, 'required': REQUIRED, 'error': error,
+            'complete': complete and error is None, 'save_files_unchanged': unchanged,
+            'user_save_files_unchanged': unchanged}
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / 'PieSmokeResults.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
     if error:
@@ -194,7 +203,7 @@ def tick(delta):
             else:
                 record('Save files unchanged on disk', initial_saves == disk_saves())
                 editor.load_level('/Game/Level/L_Stage01')
-                finish()
+                finish(complete=True)
     except Exception:
         finish(traceback.format_exc())
 

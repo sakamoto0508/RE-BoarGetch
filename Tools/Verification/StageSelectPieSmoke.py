@@ -5,6 +5,7 @@ Requires -UserDir=<project>/Saved/Verification/StageSelectPieUser (checked befor
 import hashlib
 import json
 from pathlib import Path
+import re
 import time
 import traceback
 import unreal
@@ -21,7 +22,11 @@ unreal.EditorPythonScripting.set_keep_python_script_alive(True)
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'Saved' / 'Verification'
 SAVE_DIR = ROOT / 'Saved' / 'SaveGames'
-editor = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+# run_ue_gui.sh checks that these all passed before treating the run as successful.
+REQUIRED = ['Runtime Save directory is isolated by -UserDir', 'Actual lobby controller/player created',
+            'Start travels through existing StageEntrance to Stage1 Playing', 'User save files remain byte-identical']
+RUN_ID = (re.search(r'-VerificationRunId="?([^\s"]+)', unreal.SystemLibrary.get_command_line()) or [None, None])[1]
+editor =unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 worlds = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 passed = []
 state = 'start'
@@ -109,7 +114,7 @@ def synthetic_catalog(first):
     temporary_stages.extend([locked, third])
     return [first, locked, third, first]
 
-def finish(error=None):
+def finish(error=None, complete=False):
     global handle
     if handle is not None:
         unreal.unregister_slate_post_tick_callback(handle)
@@ -120,7 +125,8 @@ def finish(error=None):
         performance_defaults.set_editor_property('bThrottleCPUWhenNotForeground', original_throttle)
     if save_slot is not None and isolated_save_path():
         unreal.GameplayStatics.delete_game_in_slot(save_slot, save_user_index)
-    data = {'passed': passed, 'error': error, 'user_save_files_unchanged': before == hashes(),
+    data = {'run_id': RUN_ID, 'passed': passed, 'required': REQUIRED, 'error': error,
+            'complete': complete and error is None, 'user_save_files_unchanged': before == hashes(),
             'physical_keyboard_gamepad_tested': False}
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / 'StageSelectPieSmokeResults.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -233,7 +239,7 @@ def tick(delta):
             if isolated_save_path():
                 unreal.GameplayStatics.delete_game_in_slot(save_slot, save_user_index)
             record('User save files remain byte-identical', before == hashes())
-            finish()
+            finish(complete=True)
     except Exception:
         finish(traceback.format_exc())
 

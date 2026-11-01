@@ -39,6 +39,8 @@ RE:BoarGetchの回帰確認に使うスクリプトです。回帰テストの�
 | `run_ue_py.sh` | Pythonスクリプトをヘッドレス（NullRHI）のCommandletで実行 | 実行するスクリプト次第 |
 | `run_ue_gui.sh` | Pythonスクリプトを画面外描画のEditorで実行（PIEが必要なスクリプト用） | 実行するスクリプト次第 |
 | `FindEngine.ps1` | エンジンの場所を出力（上記） | なし |
+| `ue_log_checks.sh` | `run_ue_*.sh`が読み込むログ判定（既知エラーの例外、クラッシュ検出） | なし |
+| `check_smoke_result.py` | PIEスモークの結果JSONを検証（`run_ue_gui.sh`がUE同梱Pythonで実行） | なし（読み取りのみ） |
 
 ## 実行例
 
@@ -75,19 +77,29 @@ python Tools/Verification/VerifyPublicApi.py --baseline origin/main --stage-sele
 ## 結果の見方
 
 - **`VerifyPhase.ps1`**：最後まで進めば成功です。失敗時は例外で止まり、ログの場所を表示します。成功とみなす条件は次のとおりです。
-  - 完了したテスト数が期待件数と一致し、すべて`Success`であること
-  - 期待件数は`Private/Tests`の`IMPLEMENT_SIMPLE_AUTOMATION_TEST("REBoarGetch.Spec.…")`の数から自動で求めます。0件ならErrorにします。Complex TestやSpecが追加された場合は自動計算できないため、`-ExpectedTests`で指定するよう求めます。
+  - テスト実行のEditorが終了コード0で終わること（このログには終了時サマリーが無く、既知エラーだけとは証明できないため例外は設けません）
+  - `Automation Test Queue Empty N tests performed`のNが期待件数と一致し、期待するテスト名（`Private/Tests`の`IMPLEMENT_SIMPLE_AUTOMATION_TEST("REBoarGetch.Spec.…")`）がすべて`Result={Success}`で完了していること。0件ならErrorにします。Complex TestやSpecが追加された場合は自動計算できないため、`-ExpectedTests`で件数を指定するよう求めます（その場合は名前ではなく件数で照合します）。
+  - クラッシュ、Assertion、Python例外がログに無いこと
   - AllowListの全アセットが存在すること
   - AllowListにはMaterial・DataAsset・StateTreeも含まれ、`CompileAllBlueprints`はそれらをコンパイルしません。そこで`.uasset`に生成クラス名（`<アセット名>_C`）を持つものだけをBlueprintとして扱います（2026-11-02時点で49件中43件）。
   - ログの`Loading and Compiling: '<パス>'`から求めたコンパイル済みの集合が、このBlueprintの集合と一致すること。漏れも余分もそれぞれ表示し、0件なら失敗にします。あわせて、エラー・警告が0件であること。
   - `.uasset`がGit LFSのポインタのまま（`git lfs pull`をしていない）の場合は、Blueprintかどうか判定できないためErrorで止まります。
-  - Commandletが終了コード1でも、既知の`GameFeatureData`設定エラーだけが原因なら成功として扱います（以前から記録されている既存の問題です）。
-- **PIEスモーク**：結果JSONの`error`が`null`、かつ`save_files_unchanged`（または`user_save_files_unchanged`）が`true`なら成功です。ログには`[RefactorPIE] COMPLETE`または`[StageSelectPIE] COMPLETE`が出ます。`-VerificationQuit`（`run_ue_gui.sh`が付けます）があれば、終了後にEditorを閉じます。
-- **`run_ue_py.sh` / `run_ue_gui.sh`の終了コード**：UEの終了コードをそのまま返します。次の場合は、UEが0で終わっても1を返します。
-  - ログに`Traceback`や`LogPython: Error`がある（GUI版は`Critical error`、`Assertion failed`も含む）
-  - ログが作られていない
-  - GUI版のみ：`Saved/Verification/<スクリプト名>Results.json`があり、`"error": null`でない（古い結果と取り違えないよう、実行前にこのファイルだけを削除します）
-  - 逆に、終了コード1の原因がログ末尾のError一覧にある既知の`GameFeatureData`設定エラーだけなら、`VerifyPhase.ps1`と同じく成功（0）として扱います。
+  - Commandletの終了コードが1のときは、下記「既知エラーの例外」を満たす場合だけ成功として扱います。
+- **既知エラーの例外**（`VerifyPhase.ps1`のBlueprintコンパイルと`run_ue_*.sh`で共通。判定は`ue_log_checks.sh`とVerifyPhase.ps1内の同じ条件）：終了コード1を成功にするのは、次をすべて満たすときだけです。
+  - 終了コードがちょうど1
+  - ログが閉じられ（`Log file closed`）、終了時サマリー（`Warning/Error Summary (Unique only)` … `Failure - N error(s)`）が記録されている
+  - 既知の`GameFeatureData`設定エラーが実際に記録され、ログ中の`: Error:`行がすべてその既知エラーである
+  - サマリーより前のError行数がNと一致する
+  - Python例外、クラッシュ、Assertionが無い
+  - Editor（GUI）実行のログには終了時サマリーが無いため、この例外は事実上Commandletだけに適用されます。判定できない場合は非0のままにします。
+- **PIEスモーク**（`run_ue_gui.sh`から`PieSmoke.py` / `StageSelectPieSmoke.py`を実行した場合）：次をすべて満たすときだけ成功です。判定は`check_smoke_result.py`が行います。
+  - UEが正常終了（0、または上記の例外）し、ログにPython例外・クラッシュが無い
+  - `Saved/Verification/<スクリプト名>Results.json`が今回の実行で作られている（実行前に削除し、`-VerificationRunId`で渡した実行IDとJSONの`run_id`が一致することを確認）
+  - JSONを解析でき、`error`が`null`、`complete`が`true`（最後のステップまで到達）
+  - `required`の必須項目がすべて`passed`に含まれる（セーブの隔離、各Levelで進行が変わらないこと、Start遷移など）
+  - `user_save_files_unchanged`が`true`（通常のセーブが実行前後で同じ）
+  - ログには`[RefactorPIE] COMPLETE`または`[StageSelectPIE] COMPLETE`も出ます。`-VerificationQuit`（`run_ue_gui.sh`が付けます）があれば、終了後にEditorを閉じます。
+- **`run_ue_py.sh` / `run_ue_gui.sh`の終了コード**：UEの終了コードを保存してから返します。ログが作られていない、またはPython例外・クラッシュ・Assertionがある場合は、UEが0で終わっても1を返します。実行前に、そのスクリプトのログ（と結果JSON）だけを削除し、古いファイルと取り違えないようにしています。PIEスモーク以外のGUIスクリプトには、結果JSONを求めません。
 - **`VerifyPublicApi.py`**：変更を見つけると`AssertionError`で止まります。すべて一致すれば各ファイルの`preserved` / `unchanged`を出力します。
 
 ## 安全性
