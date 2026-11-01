@@ -45,6 +45,11 @@ public:
 	static bool EnsureRevealAnimation(UObject* WidgetBlueprint, FName AnimationName, FName WidgetName,
 		float Duration, float StartScale, float StartOffsetY);
 
+	/** Periodごとに不透明度1→OffOpacityを切り替える点滅アニメを作成（既存は作り直し）します。ループ再生はWidget側で行います。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static bool EnsureBlinkAnimation(UObject* WidgetBlueprint, FName AnimationName, FName WidgetName,
+		float Period, float OnDuration, float OffOpacity);
+
 	/** 検証用：Game Viewの次フレームをPNGで保存します（bShowUIでUMGを含めます）。要求中ならfalse。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Verification")
 	static bool RequestVerificationScreenshot(const FString& AbsolutePngPath, bool bShowUI);

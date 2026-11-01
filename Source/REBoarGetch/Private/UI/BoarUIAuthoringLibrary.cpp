@@ -175,6 +175,51 @@ bool UBoarUIAuthoringLibrary::SetCanvasSlotLayout(UObject* Object, FName WidgetN
 	return true;
 }
 
+bool UBoarUIAuthoringLibrary::EnsureBlinkAnimation(UObject* Object, FName AnimationName, FName WidgetName,
+                                                   float Period, float OnDuration, float OffOpacity)
+{
+	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
+	UWidget* Target = WBP && WBP->WidgetTree ? WBP->WidgetTree->FindWidget(WidgetName) : nullptr;
+	if (!Target || AnimationName.IsNone() || Period <= 0.f) return false;
+	WBP->Modify();
+	for (int32 I = WBP->Animations.Num() - 1; I >= 0; --I)
+		if (WBP->Animations[I] && WBP->Animations[I]->GetFName() == AnimationName)
+		{
+			UWidgetAnimation* Old = WBP->Animations[I];
+			WBP->Animations.RemoveAt(I);
+			Old->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
+		}
+	UWidgetAnimation* Animation = NewObject<UWidgetAnimation>(WBP, AnimationName, RF_Transactional);
+	Animation->SetDisplayLabel(AnimationName.ToString());
+	UMovieScene* Scene = NewObject<UMovieScene>(Animation, AnimationName, RF_Transactional);
+	Animation->MovieScene = Scene;
+	Scene->SetDisplayRate(FFrameRate(30, 1));
+	const FFrameNumber End = ToFrame(Scene, Period);
+	Scene->SetPlaybackRange(TRange<FFrameNumber>(FFrameNumber(0), End));
+	Scene->GetEditorData().WorkStart = 0.0;
+	Scene->GetEditorData().WorkEnd = Period;
+
+	const FGuid Guid = Scene->AddPossessable(WidgetName.ToString(), Target->GetClass());
+	FWidgetAnimationBinding Binding;
+	Binding.WidgetName = WidgetName;
+	Binding.AnimationGuid = Guid;
+	Binding.bIsRootWidget = false;
+	Animation->AnimationBindings.Add(Binding);
+
+	UMovieSceneFloatTrack* Opacity = Scene->AddTrack<UMovieSceneFloatTrack>(Guid);
+	Opacity->SetPropertyNameAndPath(TEXT("RenderOpacity"), TEXT("RenderOpacity"));
+	auto* Section = CastChecked<UMovieSceneFloatSection>(Opacity->CreateNewSection());
+	Section->SetRange(TRange<FFrameNumber>(FFrameNumber(0), End));
+	Opacity->AddSection(*Section);
+	FMovieSceneFloatChannel& Alpha = Section->GetChannel();
+	Alpha.AddConstantKey(FFrameNumber(0), 1.f);
+	Alpha.AddConstantKey(ToFrame(Scene, FMath::Clamp(OnDuration, 0.f, Period)), OffOpacity);
+
+	WBP->Animations.Add(Animation);
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
+	return true;
+}
+
 bool UBoarUIAuthoringLibrary::EnsureRevealAnimation(UObject* Object, FName AnimationName, FName WidgetName,
                                                     float Duration, float StartScale, float StartOffsetY)
 {

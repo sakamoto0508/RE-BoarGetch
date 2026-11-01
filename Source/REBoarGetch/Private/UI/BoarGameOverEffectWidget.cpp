@@ -1,5 +1,6 @@
 #include "UI/BoarGameOverEffectWidget.h"
 #include "Blueprint/WidgetTree.h"
+#include "Animation/WidgetAnimation.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Components/CanvasPanel.h"
 #include "HAL/PlatformTime.h"
@@ -38,12 +39,56 @@ void UBoarGameOverEffectWidget::NativeOnInitialized()
 	SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
+void UBoarGameOverEffectWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+	ApplyLayer(VignetteLayer, VignetteAlpha);
+	ApplyLayer(FlashLayer, FlashAlpha);
+	ApplyLayer(WarningLayer, WarningAlpha);
+	ApplyLayer(NoiseLayer, NoiseAmount);
+	if (WarningLoop) PlayAnimation(WarningLoop, 0.f, 0);
+}
+
+// 強さをレイヤーのRender Opacityへ反映します。色・形・動きはWBPとUI Material側の設定です。
+void UBoarGameOverEffectWidget::ApplyLayer(UWidget* Layer, float Alpha)
+{
+	if (!Layer) return;
+	Layer->SetRenderOpacity(FMath::Clamp(Alpha, 0.f, 1.f));
+	Layer->SetVisibility(Alpha > 0.f ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+}
+
+void UBoarGameOverEffectWidget::SetFlashAlpha(float Alpha)
+{
+	FlashAlpha = Alpha;
+	ApplyLayer(FlashLayer, Alpha);
+}
+
+void UBoarGameOverEffectWidget::SetWarningAlpha(float Alpha)
+{
+	WarningAlpha = Alpha;
+	ApplyLayer(WarningLayer, Alpha);
+}
+
+void UBoarGameOverEffectWidget::SetNoiseAmount(float Amount)
+{
+	NoiseAmount = Amount;
+	ApplyLayer(NoiseLayer, Amount);
+}
+
+void UBoarGameOverEffectWidget::SetVignetteAlpha(float Alpha)
+{
+	VignetteAlpha = Alpha;
+	ApplyLayer(VignetteLayer, Alpha);
+}
+
 int32 UBoarGameOverEffectWidget::NativePaint(const FPaintArgs& Args, const FGeometry& G,
                                              const FSlateRect& MyCullingRect,
                                              FSlateWindowElementList& Out, int32 LayerId,
                                              const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
 	int32 Layer = Super::NativePaint(Args, G, MyCullingRect, Out, LayerId, InWidgetStyle, bParentEnabled) + 1;
+	// Fallback：WBPのレイヤーが1つもバインドされていない場合だけ、ここで直接描画します。
+	if (!UsesFallbackPaint()) return Layer;
 	const FVector2D Size = FVector2D(G.GetLocalSize());
 	const float W = Size.X, H = Size.Y;
 	if (W < 4.f || H < 4.f) return Layer;
