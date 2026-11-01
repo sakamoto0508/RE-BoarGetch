@@ -63,6 +63,10 @@ public:
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	void HandleStageGameOver();
 	void HandleStageInitializationFailed(const FText& Reason);
+	/** Lobby復帰先の判定です。設定済みのLobbyLevelを優先し、未設定なら実在するDefaultMapだけを返します。どちらも無効なら空です。 */
+	static TSoftObjectPtr<UWorld> ResolveLobbyLevel(const TSoftObjectPtr<UWorld>& Configured, const FSoftObjectPath& DefaultMap);
+	/** このControllerのLobby復帰先です。LobbyLevel未設定ならGameDefaultMapを使い、設定不足をErrorで1回だけ報告します。 */
+	TSoftObjectPtr<UWorld> GetLobbyLevel() const;
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage") void RetryStage();
 	/** ポーズ画面を開き、ゲーム入力を遮断します。 */
@@ -100,9 +104,6 @@ private:
 	bool bGameOverUIUnavailable = false;
 	/** LobbyLevel未設定の報告済みフラグです。 */
 	mutable bool bLobbyLevelFallbackReported = false;
-	/** LobbyLevel、未設定ならプロジェクト設定のGameDefaultMapを返します。どちらも無効なら空です。 */
-	TSoftObjectPtr<UWorld> ResolveLobbyLevel() const;
-	friend class FBoarStageEndErrorHandlingTest;
 	friend class UBoarUIFlowComponent;
 	UPROPERTY(Transient) TObjectPtr<class UBoarUIFlowComponent> UIFlow;
 	UPROPERTY(EditDefaultsOnly,Category="UI") TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;

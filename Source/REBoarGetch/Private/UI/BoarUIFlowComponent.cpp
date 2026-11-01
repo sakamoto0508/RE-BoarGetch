@@ -432,7 +432,7 @@ void UBoarUIFlowComponent::LeaveStageFromPause()
 	if (!PC)
 		return;
 	if (!PauseWidget || SettingsWidget || LoadoutWidget || LobbyExitConfirmation || !PC->LobbyExitConfirmationClass ||
-		PC->ResolveLobbyLevel().IsNull() || PC->bLevelTransitionRequested)
+		PC->GetLobbyLevel().IsNull() || PC->bLevelTransitionRequested)
 		return;
 	LobbyExitConfirmation = CreateWidget<UBoarConfirmationWidget>(PC, PC->LobbyExitConfirmationClass);
 	if (!LobbyExitConfirmation)
@@ -468,7 +468,7 @@ void UBoarUIFlowComponent::ResolveLobbyExit(bool bConfirmed)
 	if (!LobbyExitConfirmation || !PauseWidget || PC->bLevelTransitionRequested)
 		return;
 	RemoveLobbyExitConfirmation();
-	if (!bConfirmed || PC->ResolveLobbyLevel().IsNull())
+	if (!bConfirmed || PC->GetLobbyLevel().IsNull())
 	{
 		PauseWidget->SetVisibility(ESlateVisibility::Visible);
 		FInputModeGameAndUI ModeUI;

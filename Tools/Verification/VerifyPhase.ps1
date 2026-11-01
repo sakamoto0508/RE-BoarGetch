@@ -37,15 +37,25 @@ if ($testProcess.ExitCode -ne 0 -or $completed -ne $ExpectedTests -or $passed -n
     throw "Automation verification failed; inspect $testLog"
 }
 
-# AllowListの全アセットが存在し、全件がコンパイルされたことを確認します。
+# AllowListの全アセットが存在することを確認します。
+# AllowListにはMaterial・DataAsset・StateTreeも含まれ、CompileAllBlueprintsはそれらをコンパイルしません。
+# そこで生成クラス（<アセット名>_C）を持つアセットだけをBlueprintとして数え、ログと照合します。
 $allowList = Join-Path $PSScriptRoot 'BlueprintAllowList.txt'
 $assets = @(Get-Content -LiteralPath $allowList | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
 if ($assets.Count -eq 0) { throw "BlueprintAllowList.txt is empty: $allowList" }
-$missing = @($assets | Where-Object {
-    $relative = ($_ -replace '^/Game/', '' -replace '\.[^./]+$', '') -replace '/', '\'
-    -not (Test-Path -LiteralPath (Join-Path $projectRoot "Content\$relative.uasset"))
-})
-if ($missing.Count -gt 0) { throw "Allow-listed Blueprints not found: $($missing -join ', ')" }
+$missing = @()
+$blueprints = @()
+foreach ($asset in $assets) {
+    $relative = ($asset -replace '^/Game/', '' -replace '\.[^./]+$', '') -replace '/', '\'
+    $file = Join-Path $projectRoot "Content\$relative.uasset"
+    if (-not (Test-Path -LiteralPath $file)) { $missing += $asset; continue }
+    # バイト列を1文字ずつ対応させて読み、パッケージ内の名前を文字列として探します。
+    $bytes = [System.Text.Encoding]::GetEncoding(28591).GetString([System.IO.File]::ReadAllBytes($file))
+    if ($bytes.StartsWith('version https://git-lfs')) { throw "Git LFS pointer, not the asset: $file (run git lfs pull)" }
+    if ($bytes.Contains(($asset -replace '^.*\.', '') + '_C')) { $blueprints += $asset }
+}
+if ($missing.Count -gt 0) { throw "Allow-listed assets not found: $($missing -join ', ')" }
+if ($blueprints.Count -eq 0) { throw "BlueprintAllowList.txt contains no Blueprints: $allowList" }
 
 $bpProcess = Start-Process -FilePath $engineExecutable -ArgumentList @(
     "`"$projectFile`"", '-run=CompileAllBlueprints',
@@ -53,10 +63,17 @@ $bpProcess = Start-Process -FilePath $engineExecutable -ArgumentList @(
     '-unattended', '-NullRHI', '-nosplash', "`"-abslog=$blueprintLog`""
 ) -WindowStyle Hidden -PassThru -Wait
 $bpContent = Get-Content -LiteralPath $blueprintLog -Raw
-$compiled = ([regex]::Matches($bpContent, 'Loading and Compiling:')).Count
+# ログ形式: "LogCompileAllBlueprintsCommandlet: Display: Loading and Compiling: '/Game/...Name.Name'..."
+$compiled = @([regex]::Matches($bpContent, "Loading and Compiling: '([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+$notCompiled = @($blueprints | Where-Object { $compiled -notcontains $_ })
+$unexpected = @($compiled | Where-Object { $blueprints -notcontains $_ })
 $cleanCompilation = $bpContent.Contains('Compiling Completed with 0 errors and 0 warnings and 0 blueprints that failed to load.')
-Write-Output "Phase $Phase Blueprint: exit=$($bpProcess.ExitCode), listed=$($assets.Count), compiled=$compiled, cleanCompilation=$cleanCompilation"
-if (-not $cleanCompilation -or $compiled -ne $assets.Count) { throw "Blueprint compilation failed; inspect $blueprintLog" }
+Write-Output "Phase $Phase Blueprint: exit=$($bpProcess.ExitCode), listed=$($assets.Count), blueprints=$($blueprints.Count), compiled=$($compiled.Count), cleanCompilation=$cleanCompilation"
+if ($notCompiled.Count -gt 0) { Write-Output "Not compiled: $($notCompiled -join ', ')" }
+if ($unexpected.Count -gt 0) { Write-Output "Compiled but not expected: $($unexpected -join ', ')" }
+if (-not $cleanCompilation -or $compiled.Count -eq 0 -or $notCompiled.Count -gt 0 -or $unexpected.Count -gt 0) {
+    throw "Blueprint compilation failed; inspect $blueprintLog"
+}
 if ($bpProcess.ExitCode -ne 0) {
     # Recorded before edits in REBoarGetch-backup-2026.10.02-08.05.52.log.
     if (-not $bpContent.Contains('Asset Manager settings do not include an entry for assets of type GameFeatureData')) {

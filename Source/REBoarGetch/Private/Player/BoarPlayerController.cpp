@@ -454,7 +454,7 @@ void ABoarPlayerController::ReturnToLobby()
 	// 任意入力の連打中もLobbyを複数回Openしないよう、最初の要求だけ受け付ける。
 	if (bLevelTransitionRequested)
 		return;
-	const TSoftObjectPtr<UWorld> Destination = ResolveLobbyLevel();
+	const TSoftObjectPtr<UWorld> Destination = GetLobbyLevel();
 	if (Destination.IsNull())
 	{
 		UE_LOG(LogTemp, Error, TEXT("[Lobby] %s: no valid Lobby level (LobbyLevel and GameDefaultMap are both unset or missing). Lobby transition is cancelled."),
@@ -473,22 +473,31 @@ void ABoarPlayerController::ReturnToLobby()
 	UGameplayStatics::OpenLevelBySoftObjectPtr(this, Destination);
 }
 
-TSoftObjectPtr<UWorld> ABoarPlayerController::ResolveLobbyLevel() const
+TSoftObjectPtr<UWorld> ABoarPlayerController::ResolveLobbyLevel(const TSoftObjectPtr<UWorld>& Configured,
+                                                                const FSoftObjectPath& DefaultMap)
 {
-	if (!LobbyLevel.IsNull())
-		return LobbyLevel;
+	if (!Configured.IsNull())
+		return Configured;
+	// 未設定時は、実在するDefaultMapだけを代替にします。存在しないMapを推測して開きません。
+	if (DefaultMap.IsValid() && FPackageName::DoesPackageExist(DefaultMap.GetLongPackageName()))
+		return TSoftObjectPtr<UWorld>(DefaultMap);
+	return TSoftObjectPtr<UWorld>();
+}
+
+TSoftObjectPtr<UWorld> ABoarPlayerController::GetLobbyLevel() const
+{
 	// LobbyLevel未設定時は、ゲーム開始時のMap（Project Settings > Maps & Modes > Game Default Map）をLobbyの正本として使います。
-	const FSoftObjectPath DefaultMap(UGameMapsSettings::GetGameDefaultMap());
-	const bool bValid = DefaultMap.IsValid() && FPackageName::DoesPackageExist(DefaultMap.GetLongPackageName());
-	if (!bLobbyLevelFallbackReported)
+	const TSoftObjectPtr<UWorld> Destination =
+		ResolveLobbyLevel(LobbyLevel, FSoftObjectPath(UGameMapsSettings::GetGameDefaultMap()));
+	if (LobbyLevel.IsNull() && !bLobbyLevelFallbackReported)
 	{
 		bLobbyLevelFallbackReported = true;
-		const FString Detail = bValid
-			                       ? FString::Printf(TEXT("Using GameDefaultMap '%s' instead."), *DefaultMap.ToString())
-			                       : FString(TEXT("GameDefaultMap is also unset or missing."));
+		const FString Detail = Destination.IsNull()
+			                       ? FString(TEXT("GameDefaultMap is also unset or missing."))
+			                       : FString::Printf(TEXT("Using GameDefaultMap '%s' instead."), *Destination.ToString());
 		UE_LOG(LogTemp, Error, TEXT("[Lobby] %s: LobbyLevel is unset. %s"), *GetNameSafe(GetClass()), *Detail);
 	}
-	return bValid ? TSoftObjectPtr<UWorld>(DefaultMap) : TSoftObjectPtr<UWorld>();
+	return Destination;
 }
 
 void ABoarPlayerController::SetStageInputBlocked(bool bBlocked)

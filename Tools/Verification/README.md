@@ -77,9 +77,17 @@ python Tools/Verification/VerifyPublicApi.py --baseline origin/main --stage-sele
 - **`VerifyPhase.ps1`**：最後まで進めば成功です。失敗時は例外で止まり、ログの場所を表示します。成功とみなす条件は次のとおりです。
   - 完了したテスト数が期待件数と一致し、すべて`Success`であること
   - 期待件数は`Private/Tests`の`IMPLEMENT_SIMPLE_AUTOMATION_TEST("REBoarGetch.Spec.…")`の数から自動で求めます。0件ならErrorにします。Complex TestやSpecが追加された場合は自動計算できないため、`-ExpectedTests`で指定するよう求めます。
-  - AllowListの全アセットが存在し、AllowListの件数とコンパイル件数が一致し、エラー・警告が0件であること
+  - AllowListの全アセットが存在すること
+  - AllowListにはMaterial・DataAsset・StateTreeも含まれ、`CompileAllBlueprints`はそれらをコンパイルしません。そこで`.uasset`に生成クラス名（`<アセット名>_C`）を持つものだけをBlueprintとして扱います（2026-11-02時点で49件中43件）。
+  - ログの`Loading and Compiling: '<パス>'`から求めたコンパイル済みの集合が、このBlueprintの集合と一致すること。漏れも余分もそれぞれ表示し、0件なら失敗にします。あわせて、エラー・警告が0件であること。
+  - `.uasset`がGit LFSのポインタのまま（`git lfs pull`をしていない）の場合は、Blueprintかどうか判定できないためErrorで止まります。
   - Commandletが終了コード1でも、既知の`GameFeatureData`設定エラーだけが原因なら成功として扱います（以前から記録されている既存の問題です）。
 - **PIEスモーク**：結果JSONの`error`が`null`、かつ`save_files_unchanged`（または`user_save_files_unchanged`）が`true`なら成功です。ログには`[RefactorPIE] COMPLETE`または`[StageSelectPIE] COMPLETE`が出ます。`-VerificationQuit`（`run_ue_gui.sh`が付けます）があれば、終了後にEditorを閉じます。
+- **`run_ue_py.sh` / `run_ue_gui.sh`の終了コード**：UEの終了コードをそのまま返します。次の場合は、UEが0で終わっても1を返します。
+  - ログに`Traceback`や`LogPython: Error`がある（GUI版は`Critical error`、`Assertion failed`も含む）
+  - ログが作られていない
+  - GUI版のみ：`Saved/Verification/<スクリプト名>Results.json`があり、`"error": null`でない（古い結果と取り違えないよう、実行前にこのファイルだけを削除します）
+  - 逆に、終了コード1の原因がログ末尾のError一覧にある既知の`GameFeatureData`設定エラーだけなら、`VerifyPhase.ps1`と同じく成功（0）として扱います。
 - **`VerifyPublicApi.py`**：変更を見つけると`AssertionError`で止まります。すべて一致すれば各ファイルの`preserved` / `unchanged`を出力します。
 
 ## 安全性
