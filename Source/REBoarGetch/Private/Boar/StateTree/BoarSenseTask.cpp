@@ -37,6 +37,7 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 		InstanceData.bPreferPlayer = false;
 		InstanceData.bPreferEscape = false;
 		InstanceData.bCanAttackCage = false;
+		InstanceData.bIsStaminaRecovering = false;
 		return EStateTreeRunStatus::Failed;
 	}
 
@@ -57,31 +58,14 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 	// プレイヤー・檻を認識しているか判定する。
 	const bool bHasPlayer = InstanceData.TargetPlayer != nullptr;
 	const bool bHasCage = InstanceData.TargetCage != nullptr && InstanceData.bCanAttackCage;
-	InstanceData.bPreferPlayer = false;
-	InstanceData.bPreferCage = false;
-	InstanceData.bPreferEscape = false;
 
 	// 種類ごとの仕様に従い、発見した対象への反応を決定する。
-	switch (Boar->GetBoarArchetype())
-	{
-	case EBoarArchetype::Normal:
-		InstanceData.bPreferEscape = bHasPlayer;
-		InstanceData.bPreferCage = !bHasPlayer && bHasCage;
-		break;
-	case EBoarArchetype::PlayerAttacker:
-		InstanceData.bPreferPlayer = bHasPlayer;
-		InstanceData.bPreferCage = !bHasPlayer && bHasCage;
-		break;
-	case EBoarArchetype::EscapeSpecialist:
-		InstanceData.bPreferEscape = bHasPlayer;
-		break;
-	case EBoarArchetype::CageBreaker:
-		InstanceData.bPreferCage = bHasCage;
-		InstanceData.bPreferPlayer = !bHasCage && bHasPlayer;
-		break;
-	default:
-		break;
-	}
+	Boar->GetTargetPreference(InstanceData.bPreferPlayer, InstanceData.bPreferCage, InstanceData.bPreferEscape);
+
+	// 認識中プレイヤーまでの距離を保存する。
+	InstanceData.DistanceToPlayer = Boar->GetPerceivedPlayerDistance();
+	// 回復中も認識は更新し続け、回復State側の遷移条件に停止状態を渡す。
+	InstanceData.bIsStaminaRecovering = Boar->ShouldStopWhileRecoveringStamina() && Boar->IsStaminaRecovering();
 
 	// プレイヤーも檻も見つかっていない場合。
 	if (!bHasPlayer && !bHasCage)

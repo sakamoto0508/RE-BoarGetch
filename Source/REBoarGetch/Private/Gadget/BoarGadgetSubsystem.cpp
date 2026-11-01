@@ -70,6 +70,7 @@ bool UBoarGadgetSubsystem::CanUnlockGadget(FName Id) const
 }
 bool UBoarGadgetSubsystem::UnlockGadgetInLab(FName Id)
 {
+	// 解放条件と永続化はSubsystem/GIが所有する。UIの表示状態を解放済みの根拠にしない。
 	const auto *Owner = GetProgressOwner();
 	const auto *Progress = Owner ? Owner->GetProgress() : nullptr;
 	if (!IsInGadgetLab() || !CanUnlockGadget(Id))

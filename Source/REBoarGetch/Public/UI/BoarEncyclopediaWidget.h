@@ -23,6 +23,7 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry& Geometry, float DeltaTime) override;
+	/** 旧設定です。GameInstanceのStageCatalogが未設定の間だけ使います。設定後は空にしてください。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Encyclopedia") TArray<TObjectPtr<UStageConfig>> StageCatalog;
 	UPROPERTY(EditDefaultsOnly, Category = "Encyclopedia") TSubclassOf<UBoarLoadoutEntry> EntryClass;
 	UPROPERTY(EditDefaultsOnly, Category = "Bindings") FName ListWidgetName;

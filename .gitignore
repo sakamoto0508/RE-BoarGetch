@@ -88,3 +88,15 @@ SourceArt/**/UEExport/
 SourceArt/**/__pycache__/
 SourceArt/**/*.log
 *.blend1
+Source/REBoarGetch/Verification/
+
+# Local asset snapshots; published revisions are preserved in Git history.
+SourceArt/Boar/Backup_20261023/
+
+# Tools/Verification: scripts are tracked. Results belong in Saved/Verification (ignored by Saved/*);
+# these keep accidental outputs next to the scripts out of Git.
+Tools/**/__pycache__/
+Tools/**/*.pyc
+Tools/**/*.log
+Tools/Verification/*.json
+Tools/Verification/*.png

@@ -149,16 +149,16 @@ private:
 	UFUNCTION(BlueprintCallable, Category = "Cage")
 	void RespawnCage();
 
-	/** 檻の現在HPです。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage", meta = (AllowPrivateAccess = "true"))
+	/** 檻の現在HPです。変更はApplyDamage・回復・Respawnを通し、BPからは読み取りのみです。 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Cage", meta = (AllowPrivateAccess = "true"))
 	float CurrentHp = 100.f;
 
-	/** 檻の最大HPです。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage",meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	/** 檻の最大HPです。InitializeForStageで現在HPへ反映します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cage",meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
 	float MaxHp = 100.f;
 
 	/** 檻が破壊されてから再出現するまでの時間です。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cage",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float RespawnDelay = 10.f;
 
 	/** 檻の再出現処理に使用するタイマーハンドルです。 */

@@ -1,6 +1,5 @@
 #include "UI/BoarResultWidget.h"
 
-#include "Components/VerticalBox.h"
 #include "Components/TextBlock.h"
 #include "Blueprint/WidgetTree.h"
 #include "Input/Reply.h"
@@ -21,22 +20,6 @@ namespace
 	}
 }
 
-void UBoarResultWidget::NativeOnInitialized()
-{
-	Super::NativeOnInitialized();
-	// WBP未設定・生成失敗時だけ使用する最小表示。既存WBPのTreeは変更しません。
-	if (GetClass() != StaticClass() || !WidgetTree || WidgetTree->RootWidget) return;
-	auto* Panel = WidgetTree->ConstructWidget<UVerticalBox>();
-	WidgetTree->RootWidget = Panel;
-	auto* Guide = WidgetTree->ConstructWidget<UTextBlock>();
-	Guide->SetText(FText::FromString(TEXT("Stage Clear - Press any button to return to Lobby")));
-	Panel->AddChildToVerticalBox(Guide);
-	CapturedCountTextWidgetName = TEXT("FallbackCapturedCount");
-	TargetCountTextWidgetName = TEXT("FallbackTargetCount");
-	Panel->AddChildToVerticalBox(WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), CapturedCountTextWidgetName));
-	Panel->AddChildToVerticalBox(WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TargetCountTextWidgetName));
-}
-
 void UBoarResultWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -51,12 +34,14 @@ void UBoarResultWidget::ResolveWidgetReferences()
 
 	if (!CapturedCountText)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: CapturedCountTextWidgetName is unset or does not reference a TextBlock."), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("%s: CapturedCountTextWidgetName is unset or does not reference a TextBlock."),
+		       *GetName());
 	}
 
 	if (!TargetCountText)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: TargetCountTextWidgetName is unset or does not reference a TextBlock."), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("%s: TargetCountTextWidgetName is unset or does not reference a TextBlock."),
+		       *GetName());
 	}
 }
 
@@ -92,8 +77,8 @@ void UBoarResultWidget::InitializeResult(const FStageRunData& Run, int32 TargetC
 
 void UBoarResultWidget::StartReveal()
 {
-	UWidgetAnimation* Anims[3] = { Anim_StageClear, Anim_CaptureCount, Anim_SpecialCoin };
-	UTextBlock* Texts[3] = { Text_StageClear, Text_CaptureLine, Text_CoinLine };
+	UWidgetAnimation* Anims[3] = {Anim_StageClear, Anim_CaptureCount, Anim_SpecialCoin};
+	UTextBlock* Texts[3] = {Text_StageClear, Text_CaptureLine, Text_CoinLine};
 	// 各項目は前の項目のアニメ終了から一定間隔後に開始します。項目が無いステップは時間を使いません。
 	float Time = 0.f;
 	RevealUnlockTime = 0.f;
@@ -121,13 +106,14 @@ void UBoarResultWidget::StartReveal()
 
 void UBoarResultWidget::StartRevealStep(int32 Index)
 {
-	UWidgetAnimation* Anims[3] = { Anim_StageClear, Anim_CaptureCount, Anim_SpecialCoin };
-	UTextBlock* Texts[3] = { Text_StageClear, Text_CaptureLine, Text_CoinLine };
-	USoundBase* Sounds[3] = { StageClearSound, CaptureCountSound, SpecialCoinSound };
+	UWidgetAnimation* Anims[3] = {Anim_StageClear, Anim_CaptureCount, Anim_SpecialCoin};
+	UTextBlock* Texts[3] = {Text_StageClear, Text_CaptureLine, Text_CoinLine};
+	USoundBase* Sounds[3] = {StageClearSound, CaptureCountSound, SpecialCoinSound};
 	if (!Anims[Index] && !Texts[Index]) return;
 	if (Anims[Index]) PlayAnimation(Anims[Index]);
 	if (Sounds[Index] && GetGameInstance())
-		if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()) Audio->PlaySoundEffect2D(this, Sounds[Index]);
+		if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()) Audio->PlaySoundEffect2D(
+			this, Sounds[Index]);
 }
 
 void UBoarResultWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -143,13 +129,14 @@ void UBoarResultWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
 	}
 	if (!bRevealRunning) return;
 	RevealAge += InDeltaTime;
-	UTextBlock* Texts[3] = { Text_StageClear, Text_CaptureLine, Text_CoinLine };
-	UWidgetAnimation* Anims[3] = { Anim_StageClear, Anim_CaptureCount, Anim_SpecialCoin };
+	UTextBlock* Texts[3] = {Text_StageClear, Text_CaptureLine, Text_CoinLine};
+	UWidgetAnimation* Anims[3] = {Anim_StageClear, Anim_CaptureCount, Anim_SpecialCoin};
 	while (NextRevealStep < 3 && RevealAge >= RevealStepStart[NextRevealStep]) StartRevealStep(NextRevealStep++);
 	// UMGアニメが無い項目だけ、不透明度でフェードインします。
 	for (int32 I = 0; I < 3; ++I)
 		if (Texts[I] && !Anims[I] && I < NextRevealStep)
-			Texts[I]->SetRenderOpacity(FMath::Clamp((RevealAge - RevealStepStart[I]) / FallbackRevealDuration, 0.f, 1.f));
+			Texts[I]->SetRenderOpacity(
+				FMath::Clamp((RevealAge - RevealStepStart[I]) / FallbackRevealDuration, 0.f, 1.f));
 	if (NextRevealStep >= 3 && RevealAge >= RevealUnlockTime)
 	{
 		bRevealRunning = false;

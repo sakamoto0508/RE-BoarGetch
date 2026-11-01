@@ -9,6 +9,7 @@
 #include "UI/BoarLobbyWidget.h"
 #include "BoarGameInstance.h"
 #include "Player/BoarPlayerController.h"
+#include "UI/BoarUIFlowComponent.h"
 
 AStageEntrance::AStageEntrance()
 {
@@ -31,8 +32,8 @@ AStageEntrance::AStageEntrance()
 
 void AStageEntrance::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// Level終了時にもViewport上のWidgetとDelegate参照を残さない。
-	CloseStageSelection();
+	// Level終了時にもViewport上のWidgetとDelegate参照を残さない。Actor単体のDestroy以外はLevel終了として扱う。
+	CloseStageSelection(EndPlayReason != EEndPlayReason::Destroyed);
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -66,7 +67,8 @@ bool AStageEntrance::CanInteract(const APlayerController* Controller) const
 }
 void AStageEntrance::Interact(APlayerController* Controller)
 {
-    if(CanInteract(Controller))ShowStageSelection(Controller);
+    if(CanInteract(Controller))
+    	ShowStageSelection(Controller);
 }
 void AStageEntrance::HandleTriggerEndOverlap(
 	UPrimitiveComponent* OverlappedComponent,
@@ -89,7 +91,22 @@ void AStageEntrance::HandleTriggerEndOverlap(
 void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 {
 	// 必須設定不足や遷移開始後は、Widgetの生成・再表示を行わない。
-	if (!PlayerController || (!StageConfig && StageCatalog.IsEmpty()) || !LobbyWidgetClass || bTravelRequested)
+	if (!PlayerController || (!StageConfig && UBoarGameInstance::ResolveStageCatalog(this, StageCatalog).IsEmpty()) || !LobbyWidgetClass || bTravelRequested)
+	{
+		return;
+	}
+
+	// 入力状態はUIFlowが所有する。UIFlowが無いControllerでは入力を管理できないため開かない。
+	// 他のメニュー表示中・Level遷移中も新しく開かない。
+	auto* BoarPC = Cast<ABoarPlayerController>(PlayerController);
+	UBoarUIFlowComponent* UIFlow = BoarPC ? BoarPC->GetUIFlow() : nullptr;
+	if (!UIFlow)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[StageEntrance] %s: %s has no UIFlow; stage selection is not opened."),
+		       *GetName(), *GetNameSafe(PlayerController));
+		return;
+	}
+	if (!LobbyWidget && !UIFlow->CanOpenStageSelection())
 	{
 		return;
 	}
@@ -111,35 +128,36 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 
 	// 表示内容を現在のStageConfigで更新してから、Game入力とUI入力を両立させる。
 	TArray<UStageConfig*> Stages;
-	if (StageCatalog.IsEmpty()) Stages.Add(StageConfig);
-	else for (UStageConfig* Stage : StageCatalog) Stages.Add(Stage);
+	const auto& Catalog = UBoarGameInstance::ResolveStageCatalog(this, StageCatalog);
+	if (Catalog.IsEmpty()) 
+		Stages.Add(StageConfig);
+	else 
+		for (UStageConfig* Stage : Catalog) 
+			Stages.Add(Stage);
 	LobbyWidget->ShowStageCatalog(Stages, StageConfig);
-    if(auto* PC=Cast<ABoarPlayerController>(PlayerController))PC->SetStageInputBlocked(true);
-	FInputModeGameAndUI InputMode;
-	InputMode.SetWidgetToFocus(LobbyWidget->TakeWidget());
-	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-	PlayerController->SetInputMode(InputMode);
-	PlayerController->SetShowMouseCursor(true);
+	// Gameplay入力の抑制・フォーカス・カーソルはUIFlowが引き受ける。
+	// 引き受けられなかった場合は、入力を奪わない空の画面を残さないよう、生成したWidgetとDelegateを片付ける。
+	if (!UIFlow->OpenStageSelection(LobbyWidget))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[StageEntrance] %s: UIFlow refused stage selection; closing the widget."), *GetName());
+		CloseStageSelection();
+	}
 }
 
-void AStageEntrance::CloseStageSelection()
+void AStageEntrance::CloseStageSelection(bool bLevelEnding)
 {
 	// 破棄前にDynamic Delegateを解除し、Actor終了後のコールバックを防ぐ。
 	if (LobbyWidget)
 	{
 		LobbyWidget->OnStageStartRequested.RemoveDynamic(this, &AStageEntrance::HandleStageStartRequested);
 		LobbyWidget->OnStageSelectionClosed.RemoveDynamic(this, &AStageEntrance::HandleStageSelectionClosed);
+		// Widgetを外す前に入力状態を解放させる（子画面の復帰先判定にViewport上の親が必要）。
+		// Level遷移を開始した後は入力を戻さず、通常のキャンセル／退出時だけ戻す。
+		const auto* BoarPC = Cast<ABoarPlayerController>(InteractingPlayerController);
+		if (UBoarUIFlowComponent* UIFlow = IsValid(BoarPC) ? BoarPC->GetUIFlow() : nullptr; IsValid(UIFlow))
+			UIFlow->CloseStageSelection(LobbyWidget, bLevelEnding || bTravelRequested);
 		LobbyWidget->RemoveFromParent();
 		LobbyWidget = nullptr;
-	}
-
-	// Level遷移中は入力状態を戻さず、通常のキャンセル／退出時だけGame Onlyへ復帰する。
-	if (InteractingPlayerController && !bTravelRequested)
-	{
-		if(auto* PC=Cast<ABoarPlayerController>(InteractingPlayerController))PC->SetStageInputBlocked(false);
-		FInputModeGameOnly InputMode;
-		InteractingPlayerController->SetInputMode(InputMode);
-		InteractingPlayerController->SetShowMouseCursor(false);
 	}
 	InteractingPlayerController = nullptr;
 }
@@ -147,7 +165,8 @@ void AStageEntrance::CloseStageSelection()
 void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfig)
 {
 	// この入口の一覧に含まれるStageだけを受理し、直接呼び出しでもLockを検証する。
-	const bool bListed = StageCatalog.IsEmpty() ? RequestedStageConfig == StageConfig : StageCatalog.Contains(RequestedStageConfig);
+	const auto& Catalog = UBoarGameInstance::ResolveStageCatalog(this, StageCatalog);
+	const bool bListed = Catalog.IsEmpty() ? RequestedStageConfig == StageConfig : Catalog.Contains(RequestedStageConfig);
 	if (bTravelRequested || !RequestedStageConfig || !bListed || RequestedStageConfig->Level.IsNull())
 	{
 		return;
@@ -156,17 +175,20 @@ void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfi
 	// 最初の要求で即座に再入力を遮断してから、Soft World参照のLevelを開く。
 	if (UBoarGameInstance* Instance = GetGameInstance<UBoarGameInstance>())
 	{
-		if (!Instance->IsStageUnlocked(RequestedStageConfig)) return;
+		if (!Instance->IsStageUnlocked(RequestedStageConfig)) 
+			return;
 		if (!Instance->SaveLastAttemptedStage(RequestedStageConfig->StageId))
 		{
-			if (LobbyWidget) LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "SaveFailed", "保存に失敗しました。出発を選んで再試行してください。"));
+			if (LobbyWidget) 
+				LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "SaveFailed", "保存に失敗しました。出発を選んで再試行してください。"));
 			UE_LOG(LogTemp, Error, TEXT("[StageEntrance] Last stage could not be saved; travel canceled."));
 			return;
 		}
 	}
 	else
 	{
-		if (LobbyWidget) LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "NoProgress", "進行データを取得できません。"));
+		if (LobbyWidget) 
+			LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "NoProgress", "進行データを取得できません。"));
 		return;
 	}
 	bTravelRequested = true;

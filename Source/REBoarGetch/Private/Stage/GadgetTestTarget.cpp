@@ -17,5 +17,11 @@ void AGadgetTestTarget::ActivateByAttack_Implementation(AActor*,AActor*)
     Mesh->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/Cage/M_Cage_Yellow")));
     GetWorldTimerManager().SetTimer(ResetTimer,this,&AGadgetTestTarget::ResetColor,.6f,false);
 }
-void AGadgetTestTarget::ResetColor(){Mesh->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/Cage/M_Cage_Glow")));}
-void AGadgetTestTarget::EndPlay(const EEndPlayReason::Type Reason){GetWorldTimerManager().ClearTimer(ResetTimer);Super::EndPlay(Reason);}
+void AGadgetTestTarget::ResetColor()
+{
+    Mesh->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/Cage/M_Cage_Glow")));
+}
+void AGadgetTestTarget::EndPlay(const EEndPlayReason::Type Reason)
+{
+    GetWorldTimerManager().ClearTimer(ResetTimer);Super::EndPlay(Reason);
+}

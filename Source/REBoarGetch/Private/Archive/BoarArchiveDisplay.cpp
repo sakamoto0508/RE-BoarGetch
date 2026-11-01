@@ -9,63 +9,100 @@
 
 ABoarArchiveDisplay::ABoarArchiveDisplay()
 {
-    PrimaryActorTick.bCanEverTick=true;
-    SceneRoot=CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));SetRootComponent(SceneRoot);
-    BoarVisual=CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BoarVisual"));BoarVisual->SetupAttachment(SceneRoot);
-    BoarVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    BoarVisual->SetGenerateOverlapEvents(false);BoarVisual->SetCanEverAffectNavigation(false);
-    BoarVisual->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	PrimaryActorTick.bCanEverTick = true;
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	SetRootComponent(SceneRoot);
+	BoarVisual = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BoarVisual"));
+	BoarVisual->SetupAttachment(SceneRoot);
+	BoarVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	BoarVisual->SetGenerateOverlapEvents(false);
+	BoarVisual->SetCanEverAffectNavigation(false);
+	BoarVisual->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 }
-void ABoarArchiveDisplay::ConfigureVisual(USkeletalMesh* Mesh,const TArray<UMaterialInterface*>& Materials,UAnimSequence* Idle)
+
+void ABoarArchiveDisplay::ConfigureVisual(USkeletalMesh* Mesh, const TArray<UMaterialInterface*>& Materials,
+                                          UAnimSequence* Idle)
 {
-    BoarVisual->SetSkeletalMesh(Mesh);
-    BoarVisual->EmptyOverrideMaterials();
-    for(int32 I=0;I<Materials.Num();++I) if(Materials[I])BoarVisual->SetMaterial(I,Materials[I]);
-    BoarVisual->SetRelativeLocation(VisualOffset);BoarVisual->SetRelativeScale3D(FVector(DisplayScale));
-    BoarVisual->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-    if(Idle && Mesh && Idle->GetSkeleton()==Mesh->GetSkeleton())BoarVisual->PlayAnimation(Idle,true);
-    else BoarVisual->SetAnimation(nullptr);
-    BoarVisual->SetVisibility(Mesh!=nullptr);BoarVisual->SetHiddenInGame(Mesh==nullptr);
+	BoarVisual->SetSkeletalMesh(Mesh);
+	BoarVisual->EmptyOverrideMaterials();
+	for (int32 I = 0; I < Materials.Num(); ++I) if (Materials[I])BoarVisual->SetMaterial(I, Materials[I]);
+	BoarVisual->SetRelativeLocation(VisualOffset);
+	BoarVisual->SetRelativeScale3D(FVector(DisplayScale));
+	BoarVisual->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	if (Idle && Mesh && Idle->GetSkeleton() == Mesh->GetSkeleton())
+		BoarVisual->PlayAnimation(Idle, true);
+	else 
+		BoarVisual->SetAnimation(nullptr);
+	BoarVisual->SetVisibility(Mesh != nullptr);
+	BoarVisual->SetHiddenInGame(Mesh == nullptr);
 }
+
 void ABoarArchiveDisplay::OnConstruction(const FTransform& Transform)
 {
-    Super::OnConstruction(Transform);
-    if(!GetWorld() || GetWorld()->IsGameWorld())return;
-    TArray<UMaterialInterface*> Mats;for(auto& M:VisualMaterials)Mats.Add(M);
-    ConfigureVisual(bPreviewInEditor?PreviewMesh.Get():nullptr,Mats,IdleAnimation);
+	Super::OnConstruction(Transform);
+	if (!GetWorld() || GetWorld()->IsGameWorld())
+		return;
+	TArray<UMaterialInterface*> Mats;
+	for (auto& M : VisualMaterials)
+		Mats.Add(M);
+	ConfigureVisual(bPreviewInEditor ? PreviewMesh.Get() : nullptr, Mats, IdleAnimation);
 }
+
 void ABoarArchiveDisplay::BeginPlay()
 {
-    Super::BeginPlay();
-    if(auto* GI=GetGameInstance<UBoarGameInstance>())GI->OnArchiveDisplaysChanged.AddUniqueDynamic(this,&ABoarArchiveDisplay::RefreshDisplay);
-    RefreshDisplay();
+	Super::BeginPlay();
+	if (auto* GI = GetGameInstance<UBoarGameInstance>())GI->OnArchiveDisplaysChanged.AddUniqueDynamic(
+		this, &ABoarArchiveDisplay::RefreshDisplay);
+	RefreshDisplay();
 }
+
 void ABoarArchiveDisplay::EndPlay(const EEndPlayReason::Type Reason)
 {
-    if(auto* GI=GetGameInstance<UBoarGameInstance>())GI->OnArchiveDisplaysChanged.RemoveDynamic(this,&ABoarArchiveDisplay::RefreshDisplay);
-    Super::EndPlay(Reason);
+	if (auto* GI = GetGameInstance<UBoarGameInstance>())GI->OnArchiveDisplaysChanged.RemoveDynamic(
+		this, &ABoarArchiveDisplay::RefreshDisplay);
+	Super::EndPlay(Reason);
 }
+
 void ABoarArchiveDisplay::RefreshDisplay()
 {
-    auto* GI=GetGameInstance<UBoarGameInstance>();
-    const TArray<FName> Ids=GI?GI->GetArchiveDisplayIds():TArray<FName>();
-    const FName Id=Ids.IsValidIndex(SlotIndex)?Ids[SlotIndex]:NAME_None;
-    const FBoarSpawnDefinition* Match=nullptr;
-    int32 Matches=0;
-    if(!Id.IsNone())for(const auto& Stage:StageCatalog)if(Stage)for(const auto& Def:Stage->BoarSpawnDefinitions)
-        if(Def.BoarUniqueId==Id){Match=&Def;++Matches;}
-    const ABoarBase* Default=Matches==1 && Match->BoarClass?Match->BoarClass.GetDefaultObject():nullptr;
-    const auto* Source=Default?Default->GetMesh():nullptr;
-    TArray<UMaterialInterface*> Mats=Source?Source->GetMaterials():TArray<UMaterialInterface*>();
-    if(!VisualMaterials.IsEmpty()) {Mats.Reset();for(auto& M:VisualMaterials)Mats.Add(M);}
-    ConfigureVisual(Source?Source->GetSkeletalMeshAsset():nullptr,Mats,
-        Match && Matches==1 && !Match->ArchiveIdleAnimation.IsNull()?Match->ArchiveIdleAnimation.LoadSynchronous():IdleAnimation.Get());
-    BoarVisual->SetRelativeRotation(FRotator::ZeroRotator);
-    SetActorTickEnabled(Source && Source->GetSkeletalMeshAsset());
-    if(!Id.IsNone() && !Source)UE_LOG(LogTemp,Warning,TEXT("[Archive] Slot %d: unresolved captured Boar ID %s; left empty."),SlotIndex,*Id.ToString());
+	// 展示は保存済み個体IDを本編定義へ解決した表示専用Mesh。Gameplay用BoarのAIは生成しない。
+	auto* GI = GetGameInstance<UBoarGameInstance>();
+	const TArray<FName> Ids = GI ? GI->GetArchiveDisplayIds() : TArray<FName>();
+	const FName Id = Ids.IsValidIndex(SlotIndex) ? Ids[SlotIndex] : NAME_None;
+	const FBoarSpawnDefinition* Match = nullptr;
+	int32 Matches = 0;
+	if (!Id.IsNone())
+		for (const auto& Stage : UBoarGameInstance::ResolveStageCatalog(this, StageCatalog))
+			if (Stage)
+				for (const auto& Def : Stage->BoarSpawnDefinitions)
+					if (Def.BoarUniqueId == Id)
+					{
+						Match = &Def;
+						++Matches;
+					}
+	const ABoarBase* Default = Matches == 1 && Match->BoarClass ? Match->BoarClass.GetDefaultObject() : nullptr;
+	const auto* Source = Default ? Default->GetMesh() : nullptr;
+	TArray<UMaterialInterface*> Mats = Source ? Source->GetMaterials() : TArray<UMaterialInterface*>();
+	// 種類ごとの色を展示へ反映するためBoarClass側を優先し、VisualMaterialsは未設定スロットの補完だけに使う。
+	for (int32 I = 0; I < Mats.Num(); ++I) if (!Mats[I] && VisualMaterials.IsValidIndex(I))Mats[I] = VisualMaterials[I];
+	ConfigureVisual(Source ? Source->GetSkeletalMeshAsset() : nullptr, Mats,
+	                Match && Matches == 1 && !Match->ArchiveIdleAnimation.IsNull()
+		                ? Match->ArchiveIdleAnimation.LoadSynchronous()
+		                : IdleAnimation.Get());
+	BoarVisual->SetRelativeRotation(FRotator::ZeroRotator);
+	SetActorTickEnabled(Source && Source->GetSkeletalMeshAsset());
+	if (!Id.IsNone() && !Source)UE_LOG(LogTemp, Warning,
+	                                   TEXT("[Archive] Slot %d: unresolved captured Boar ID %s; left empty."),
+	                                   SlotIndex, *Id.ToString());
+	// 名札は本編定義の図鑑名だけを使い、未登録の名前をIDなどから推測しない。
+	bHasSpecimen = Source && Source->GetSkeletalMeshAsset();
+	DisplayedBoarName = bHasSpecimen ? Match->EncyclopediaName : FText::GetEmpty();
+	OnDisplayRefreshed.Broadcast();
 }
+
 void ABoarArchiveDisplay::Tick(float DeltaSeconds)
 {
-    Super::Tick(DeltaSeconds);
-    if(BoarVisual->IsVisible())BoarVisual->AddLocalRotation(FRotator(0,RotationSpeed*DeltaSeconds,0));
+	Super::Tick(DeltaSeconds);
+	if (BoarVisual->IsVisible())
+		BoarVisual->AddLocalRotation(FRotator(0, RotationSpeed * DeltaSeconds, 0));
 }

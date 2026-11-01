@@ -7,6 +7,6 @@ class UWorld;
 
 namespace BoarGadgetLoadoutInitializer
 {
-FBoarGadgetLoadoutContext ResolveContext(UWorld* World);
-bool Initialize(UGadgetComponent* Component, const FBoarGadgetLoadoutContext& Context);
+	FBoarGadgetLoadoutContext ResolveContext(UWorld* World);
+	bool Initialize(UGadgetComponent* Component, const FBoarGadgetLoadoutContext& Context);
 }

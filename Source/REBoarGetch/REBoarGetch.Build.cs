@@ -13,6 +13,7 @@ public class REBoarGetch : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+			"EngineSettings",
 			"InputCore",
 			"EnhancedInput",
 			"AIModule",

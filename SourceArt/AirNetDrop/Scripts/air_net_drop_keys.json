@@ -1,0 +1,9 @@
+{
+ "wind": {"pitch":-6,"curl":12,"twist":10,"headc":-4,"theta":-55,"nx":-0.15,"hp":-20,"hr":30,"hs":-10,"wl":1,"gl":-14,"tuck":[-6,14],"toe":10},
+ "swing_mid": {"pitch":8,"curl":16,"twist":-24,"headc":-8,"theta":60,"nx":0.3,"hp":45,"hr":33,"hs":-14,"wl":1,"gl":-4,"tuck":[-8,16],"toe":15},
+ "swing_over": {"pitch":32,"curl":20,"twist":-40,"headc":-18,"theta":138,"nx":-0.02,"hp":118,"hr":32,"hs":-11,"wl":1,"gl":3,"tuck":[18,10],"toe":30},
+ "drop": {"pitch":28,"curl":18,"twist":-40,"headc":-18,"theta":128,"nx":-0.06,"hp":112,"hr":31,"hs":-11,"wl":1,"gl":3,"tuck":[26,14],"toe":40},
+ "land_impact": {"ground":1,"pz":-20,"pitch":10,"curl":22,"twist":-36,"headc":-14,"theta":86,"nx":0,"hp":105,"hr":30,"hs":-10,"wl":1,"gl":3},
+ "land_absorb": {"ground":1,"pz":-25,"pitch":12,"curl":25,"twist":-36,"headc":-16,"theta":88,"nx":0,"hp":108,"hr":30,"hs":-10,"wl":1,"gl":3},
+ "land_rise": {"ground":1,"pz":-8,"pitch":4,"curl":8,"twist":-10,"headc":-4,"theta":55,"nx":0.3,"hp":60,"hr":28,"hs":-12,"wl":0.3,"gl":10}
+}

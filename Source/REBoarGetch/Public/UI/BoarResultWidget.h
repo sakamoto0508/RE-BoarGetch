@@ -35,7 +35,6 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Result") void OnRevealFinished();
 
 protected:
-	virtual void NativeOnInitialized() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	/** 「STAGE CLEAR!」見出しの登場アニメ。WBPで同名のアニメを作成すると自動で結び付きます。 */

@@ -39,9 +39,11 @@ void UBoarHUDWidget::ResolveWidgetReferences()
 	for (int32 SlotIndex = 0; SlotIndex < UGadgetComponent::GetGadgetSlotCount(); ++SlotIndex)
 	{
 		const FName IconName = GadgetIconWidgetNames.IsValidIndex(SlotIndex)
-			? GadgetIconWidgetNames[SlotIndex] : NAME_None;
+			                       ? GadgetIconWidgetNames[SlotIndex]
+			                       : NAME_None;
 		const FName SelectionName = GadgetSelectionWidgetNames.IsValidIndex(SlotIndex)
-			? GadgetSelectionWidgetNames[SlotIndex] : NAME_None;
+			                            ? GadgetSelectionWidgetNames[SlotIndex]
+			                            : NAME_None;
 		GadgetIconWidgets.Add(WidgetTree ? Cast<UImage>(WidgetTree->FindWidget(IconName)) : nullptr);
 		GadgetSelectionWidgets.Add(WidgetTree ? WidgetTree->FindWidget(SelectionName) : nullptr);
 	}

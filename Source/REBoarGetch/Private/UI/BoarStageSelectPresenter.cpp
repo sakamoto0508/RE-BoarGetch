@@ -3,13 +3,15 @@
 #include "Save/BoarSaveGame.h"
 #include "Stage/StageConfig.h"
 
-void UBoarStageSelectPresenter::Initialize(UGameInstance* Instance, const TArray<UStageConfig*>& Catalog, UStageConfig* FallbackStage)
+void UBoarStageSelectPresenter::Initialize(UGameInstance* Instance, const TArray<UStageConfig*>& Catalog,
+                                           UStageConfig* FallbackStage)
 {
 	// 再表示時にも購読が重複しないよう、前回の接続を先に解除します。
 	Shutdown();
 	ProgressOwner = Cast<UBoarGameInstance>(Instance);
 	if (ProgressOwner)
-		ProgressChangedHandle = ProgressOwner->OnProgressChanged.AddUObject(this, &UBoarStageSelectPresenter::HandleProgressChanged);
+		ProgressChangedHandle = ProgressOwner->OnProgressChanged.AddUObject(
+			this, &UBoarStageSelectPresenter::HandleProgressChanged);
 	// 無効な定義を除外し、同じStageIdは最初の定義を採用して元の並び順を保ちます。
 	TSet<FName> Seen;
 	for (UStageConfig* Stage : Catalog)
@@ -24,7 +26,11 @@ void UBoarStageSelectPresenter::Initialize(UGameInstance* Instance, const TArray
 		if (Save && Stages[I]->StageId == Save->LastAttemptedStageId && IsUnlocked(Stages[I])) SelectedIndex = I;
 	if (SelectedIndex == INDEX_NONE && IsUnlocked(FallbackStage)) SelectedIndex = Stages.IndexOfByKey(FallbackStage);
 	if (SelectedIndex == INDEX_NONE)
-		for (int32 I = 0; I < Stages.Num(); ++I) if (IsUnlocked(Stages[I])) { SelectedIndex = I; break; }
+		for (int32 I = 0; I < Stages.Num(); ++I) if (IsUnlocked(Stages[I]))
+		{
+			SelectedIndex = I;
+			break;
+		}
 }
 
 void UBoarStageSelectPresenter::Shutdown()
@@ -47,11 +53,14 @@ void UBoarStageSelectPresenter::HandleProgressChanged() { OnViewChanged.Broadcas
 
 bool UBoarStageSelectPresenter::IsUnlocked(const UStageConfig* Stage) const
 {
-	return Stage && (ProgressOwner ? ProgressOwner->IsStageUnlocked(Stage) : Stage->UnlockCondition.RequiredClearedStageId.IsNone());
+	return Stage && (ProgressOwner
+		                 ? ProgressOwner->IsStageUnlocked(Stage)
+		                 : Stage->UnlockCondition.RequiredClearedStageId.IsNone());
 }
 
 FBoarStageSelectViewData UBoarStageSelectPresenter::GetStage(int32 Index) const
 {
+	// 表示用データは最新の正本から導出する。Widgetへ進捗や解放フラグの所有権を渡さない。
 	FBoarStageSelectViewData Data;
 	Data.Status = NSLOCTEXT("StageSelect", "NoStage", "選択できるステージがありません");
 	if (!Stages.IsValidIndex(Index)) return Data;
@@ -70,11 +79,19 @@ FBoarStageSelectViewData UBoarStageSelectPresenter::GetStage(int32 Index) const
 	// スライド中は表示中と移動先が異なるため、確定するまで開始操作を無効にします。
 	Data.bCanStart = Data.bUnlocked && !Stage->Level.IsNull() && !IsTransitionPending();
 	Data.Badge = FText::FromString(!Data.bUnlocked ? TEXT("LOCKED") : Data.bCleared ? TEXT("CLEAR") : TEXT(""));
-	const FText State = FText::FromString(!Data.bUnlocked ? TEXT("LOCKED") : Data.bCleared ? TEXT("CLEAR") : TEXT("未クリア"));
+	const FText State = FText::FromString(!Data.bUnlocked
+		                                      ? TEXT("LOCKED")
+		                                      : Data.bCleared
+		                                      ? TEXT("CLEAR")
+		                                      : TEXT("未クリア"));
 	Data.EntryLabel = FText::Format(NSLOCTEXT("StageSelect", "Entry", "{0}\n{1}"),
-		Stage->DisplayName.IsEmpty() ? FText::FromName(Stage->StageId) : Stage->DisplayName, State);
-	Data.Status = Stage->Level.IsNull() ? NSLOCTEXT("StageSelect", "NoLevel", "出発先未登録")
-		: Data.bCleared ? FText::FromString(TEXT("CLEAR")) : NSLOCTEXT("StageSelect", "NotClear", "未クリア");
+	                                Stage->DisplayName.IsEmpty() ? FText::FromName(Stage->StageId) : Stage->DisplayName,
+	                                State);
+	Data.Status = Stage->Level.IsNull()
+		              ? NSLOCTEXT("StageSelect", "NoLevel", "出発先未登録")
+		              : Data.bCleared
+		              ? FText::FromString(TEXT("CLEAR"))
+		              : NSLOCTEXT("StageSelect", "NotClear", "未クリア");
 	// ステージに定義された有効なIDだけを数え、重複IDや他ステージの取得履歴を集計から除きます。
 	TSet<FName> Coins, Boars;
 	for (const auto& Def : Stage->SpecialCoinDefinitions) if (!Def.SpecialCoinId.IsNone()) Coins.Add(Def.SpecialCoinId);
@@ -82,9 +99,12 @@ FBoarStageSelectViewData UBoarStageSelectPresenter::GetStage(int32 Index) const
 	int32 CoinsFound = 0, BoarsFound = 0;
 	for (FName Id : Coins) if (Save && Save->SpecialCoinIds.Contains(Id)) ++CoinsFound;
 	for (FName Id : Boars) if (Save && Save->CapturedBoarUniqueIds.Contains(Id)) ++BoarsFound;
-	const FText BoarProgress = Boars.IsEmpty() ? NSLOCTEXT("StageSelect", "NoIndividuals", "個体データ未登録")
-		: FText::Format(NSLOCTEXT("StageSelect", "Count", "{0} / {1}"), BoarsFound, Boars.Num());
-	Data.Progress = FText::Format(NSLOCTEXT("StageSelect", "Progress", "特別コイン：{0} / {1}\n図鑑：{2}"), CoinsFound, Coins.Num(), BoarProgress);
+	const FText BoarProgress = Boars.IsEmpty()
+		                           ? NSLOCTEXT("StageSelect", "NoIndividuals", "個体データ未登録")
+		                           : FText::Format(
+			                           NSLOCTEXT("StageSelect", "Count", "{0} / {1}"), BoarsFound, Boars.Num());
+	Data.Progress = FText::Format(
+		NSLOCTEXT("StageSelect", "Progress", "特別コイン：{0} / {1}\n図鑑：{2}"), CoinsFound, Coins.Num(), BoarProgress);
 	return Data;
 }
 

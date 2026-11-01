@@ -30,6 +30,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Game")
 	void HandleBoarCaptured(class ABoarBase* Boar);
 
+	/**
+	 * 捕獲演出の開始時に、捕獲状態になったBoarを「確定待ち」として登録します（演出完了まで檻収容・記録を保留）。
+	 * 確定待ちの正本はこのGameModeです。演出側は見た目だけを持ち、完了・中断をここへ通知します。
+	 */
+	void RegisterPendingCapture(class ABoarBase* Boar);
+	/**
+	 * 確定待ちの捕獲を確定します（HandleBoarCapturedと同じ判定：Stage進行中・捕獲中・未確定のときだけ収容・記録）。
+	 * 渡したBoarは確定できなかった場合も確定待ちから外します。収容数の再集計・通知は確定ごとに1回（1体も確定しなければ最後に1回）です。確定できたBoarを返します。
+	 */
+	TArray<class ABoarBase*> CompletePendingCaptures(const TArray<TWeakObjectPtr<class ABoarBase>>& Boars);
+	/** 確定せずに確定待ちから外します（対象Destroy・Level破棄・見た目だけの片付け）。 */
+	void DiscardPendingCapture(const TWeakObjectPtr<class ABoarBase>& Boar);
+	bool IsCapturePending(const class ABoarBase* Boar) const;
+
 	/** プレイヤー死亡時の終了処理を実行します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Game")
 	void HandlePlayerDeath(class ABoarPlayerCharacter* PlayerCharacter);
@@ -78,6 +92,9 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStageIntroductionRequested();
+	/** 独自演出の通知欠落時に呼びます。BPは自身のカメラ・Widget等を解除できます。進行再開はC++が保証します。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
+	void OnStagePresentationTimedOut(bool bIntroduction);
 	/** Native recovery UI is also available if the stage cannot be prepared. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStageInitializationFailed(const FText& Reason);
@@ -92,6 +109,10 @@ protected:
 
 private:
 	friend class FBoarStageInitializationTest;
+	friend class FBoarStageEndRegressionTest;
+	friend class FBoarPendingCaptureTest;
+	/** 捕獲を確定して収容・記録します。確定できた（今回初めて確定した）場合true。 */
+	bool ConfirmCapture(class ABoarBase* Boar);
 	/** Validate -> spawn -> initialize -> check readiness; BeginPlay follows this sequence. */
 	bool PrepareStage();
 	bool ValidateStageSetup();
@@ -112,6 +133,15 @@ private:
 	bool bWaitForStageIntroduction = false;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bWaitForStageEndPresentation = false;
+	/** 独自BP演出の最大待機時間です。完了通知が欠落しても進行を再開します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation", meta = (ClampMin = "0.1", Units = "s"))
+	float StageIntroductionTimeoutSeconds = 30.f;
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation", meta = (ClampMin = "0.1", Units = "s"))
+	float StageEndPresentationTimeoutSeconds = 30.f;
+	FTimerHandle IntroductionTimeoutHandle;
+	FTimerHandle EndPresentationTimeoutHandle;
+	void HandleIntroductionTimeout();
+	void HandleEndPresentationTimeout();
 	/** Clear時にPlayerControllerのStageClearPresentation（勝利カメラ・消失・暗転）を再生してからResultへ進みます。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bUseStageClearPresentation = true;
@@ -122,7 +152,10 @@ private:
 	bool bClearSaveSucceeded = false;
 	bool bEndPresentationCompleted = false;
 	bool bEndUIShown = false;
+	/** 確定済みの捕獲（二重確定防止）。解放されたBoarは再集計時に外れます。 */
 	TSet<TWeakObjectPtr<class ABoarBase>> HandledCapturedBoars;
+	/** 捕獲状態だが演出完了まで確定を保留しているBoar。HandledCapturedBoarsと同時には入りません。 */
+	TSet<TWeakObjectPtr<class ABoarBase>> PendingCapturedBoars;
 	/** コインの見た目・Overlapを持つ既存BPを指定します。未設定では生成しません。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Spawn")
 	TSubclassOf<class ASpecialCoin> SpecialCoinClass;

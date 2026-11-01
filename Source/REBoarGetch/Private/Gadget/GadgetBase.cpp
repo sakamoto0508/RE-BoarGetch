@@ -21,7 +21,8 @@ AGadgetBase::AGadgetBase()
  */
 void AGadgetBase::Use_Implementation(AActor* TargetActor)
 {
-	if (!CanUse()) return;
+	if (!CanUse()) 
+		return;
 	
 	(void) TargetActor;
 	StartCooldown();
@@ -34,10 +35,8 @@ void AGadgetBase::Use_Implementation(AActor* TargetActor)
 void AGadgetBase::BeginUse_Implementation(AActor* TargetActor)
 {
 	if (!CanUse() || bIsUsing)
-	{
 		return;
-	}
-
+	
 	bIsUsing = true;
 	Use(TargetActor);
 
@@ -56,9 +55,8 @@ void AGadgetBase::EndUse_Implementation(AActor* TargetActor)
 {
 	(void)TargetActor;
 	if (!bIsUsing)
-	{
 		return;
-	}
+	
 
 	bIsUsing = false;
 	if (UseStyle == EGadgetUseStyle::Hold && !bIsOnCooldown)
@@ -72,10 +70,12 @@ void AGadgetBase::EndUse_Implementation(AActor* TargetActor)
  */
 void AGadgetBase::StartCooldown()
 {
-	if (CooldownSeconds <= 0.0f) return;
+	if (CooldownSeconds <= 0.0f) 
+		return;
 	
 	UWorld* World = GetWorld();
-	if (World == nullptr) return;
+	if (World == nullptr) 
+		return;
 	
 	bIsOnCooldown = true;
 	
@@ -103,9 +103,7 @@ void AGadgetBase::FinishCooldown()
 void AGadgetBase::TryActivateByAttack(AActor* HitActor, AActor* AttackInstigator)
 {
 	if (HitActor == nullptr || !HitActor->GetClass()->ImplementsInterface(UAttackActivatable::StaticClass()))
-	{
 		return;
-	}
 
 	IAttackActivatable::Execute_ActivateByAttack(HitActor, AttackInstigator, this);
 }

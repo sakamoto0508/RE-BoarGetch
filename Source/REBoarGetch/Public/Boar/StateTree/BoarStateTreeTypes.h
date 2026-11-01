@@ -54,6 +54,10 @@ struct FBoarStateTreeInstanceData
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bPreferEscape = false;
 
+	/** スタミナ切れで停止回復中かです。減速のみの設定ではfalseです。 */
+	UPROPERTY(VisibleAnywhere, Category="Output")
+	bool bIsStaminaRecovering = false;
+
 	/** 檻を攻撃できるかです。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	bool bCanAttackCage = true;
@@ -61,6 +65,10 @@ struct FBoarStateTreeInstanceData
 	/** 檻までの距離です。 */
 	UPROPERTY(VisibleAnywhere, Category="Output")
 	float DistanceToCage = BIG_NUMBER;
+
+	/** 認識中プレイヤーまでの距離です。 */
+	UPROPERTY(VisibleAnywhere, Category="Output")
+	float DistanceToPlayer = BIG_NUMBER;
 
 	/** 檻攻撃判定のデバッグ表示を最後に行った時刻です。 */
 	/** 巡回地点です。 */

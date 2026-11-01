@@ -7,7 +7,7 @@
 
 void ABoarFacilityGameMode::StartPlay()
 {
-	// Facilities have no stage progression; only their player loadout policy differs.
+	// 施設はStageの勝敗管理へ依存せず、自分のModeでPlayerの準備を統括する。
 	const auto Context = BoarGadgetLoadoutInitializer::ResolveContext(GetWorld());
 	bool bReady = !bGadgetTest || TestGadgetClass != nullptr;
 	for (TActorIterator<ABoarPlayerCharacter> It(GetWorld()); It; ++It)
@@ -15,8 +15,9 @@ void ABoarFacilityGameMode::StartPlay()
 	Super::StartPlay();
 	if (!bReady)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Facility player/loadout preparation failed."));
+		const FText Reason = NSLOCTEXT("WorldInit", "FacilityFailed", "プレイヤーの装備を準備できませんでした。");
+		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Facility player/loadout preparation failed: %s"), *Reason.ToString());
 		if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
-			PC->HandleStageInitializationFailed(NSLOCTEXT("WorldInit", "FacilityFailed", "プレイヤーの装備を準備できませんでした。"));
+			PC->HandleStageInitializationFailed(Reason);
 	}
 }

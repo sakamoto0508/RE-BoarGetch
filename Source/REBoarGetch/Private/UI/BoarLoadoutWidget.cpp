@@ -40,7 +40,7 @@ void UBoarLoadoutWidget::NativeConstruct()
 	LabModeEntries.Reset();
 	for (int32 Index = 0; Index < Presenter->GetSlotCount(); ++Index)
 	{
-		auto *Entry = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
+		auto* Entry = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
 		if (!Entry)
 			continue;
 		Entry->OnChosen.AddUniqueDynamic(this, &UBoarLoadoutWidget::ChooseSlot);
@@ -53,10 +53,10 @@ void UBoarLoadoutWidget::NativeConstruct()
 	Presenter->OnSlotsChanged.AddUniqueDynamic(this, &UBoarLoadoutWidget::RefreshSlots);
 	if (Presenter->IsLabContext())
 	{
-		const TCHAR *Labels[] = {TEXT("装備を変更"), TEXT("ガジェットを解放"), TEXT("Test対象を選択")};
+		const TCHAR* Labels[] = {TEXT("装備を変更"), TEXT("ガジェットを解放"), TEXT("Test対象を選択")};
 		for (int32 I = 0; I < 3; ++I)
 		{
-			auto *E = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
+			auto* E = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
 			if (!E)
 				continue;
 			SlotsPanel->AddChild(E);
@@ -72,6 +72,7 @@ void UBoarLoadoutWidget::NativeConstruct()
 	SetStatus(FText::FromString(TEXT("スロットを決定し、装備候補を選んでください。")));
 	bInitialFocusPending = true;
 }
+
 // 画面破棄時はViewへの通知とPresenterのモデル購読を解除します。
 void UBoarLoadoutWidget::NativeDestruct()
 {
@@ -84,7 +85,8 @@ void UBoarLoadoutWidget::NativeDestruct()
 	}
 	Super::NativeDestruct();
 }
-void UBoarLoadoutWidget::NativeTick(const FGeometry &Geometry, float DeltaTime)
+
+void UBoarLoadoutWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
 	// World TimerはPause中に進まないため、最初のUI描画後に一度だけFocusを補います。
@@ -94,6 +96,7 @@ void UBoarLoadoutWidget::NativeTick(const FGeometry &Geometry, float DeltaTime)
 		FocusInitialChoice();
 	}
 }
+
 void UBoarLoadoutWidget::FocusInitialChoice()
 {
 	if (Presenter && SlotEntries.IsValidIndex(Presenter->GetSelectedSlot()))
@@ -101,6 +104,7 @@ void UBoarLoadoutWidget::FocusInitialChoice()
 	else
 		FocusBack();
 }
+
 void UBoarLoadoutWidget::RefreshSlots()
 {
 	if (!Presenter)
@@ -111,6 +115,7 @@ void UBoarLoadoutWidget::RefreshSlots()
 		SlotEntries[Index]->Setup(Index, Data.Label, Data.bSelected);
 	}
 }
+
 void UBoarLoadoutWidget::RebuildCandidates()
 {
 	if (!Presenter || !CandidatesPanel || !EntryClass)
@@ -120,7 +125,7 @@ void UBoarLoadoutWidget::RebuildCandidates()
 	Presenter->RebuildCatalog();
 	for (int32 Index = 0; Index < Presenter->GetCandidateCount(); ++Index)
 	{
-		auto *Entry = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
+		auto* Entry = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
 		CandidateEntries.Add(Entry);
 		if (!Entry)
 			continue;
@@ -131,6 +136,7 @@ void UBoarLoadoutWidget::RebuildCandidates()
 		CandidatesPanel->AddChild(Entry);
 	}
 }
+
 void UBoarLoadoutWidget::ChooseSlot(int32 Index)
 {
 	if (!Presenter || !SlotEntries.IsValidIndex(Index))
@@ -142,6 +148,7 @@ void UBoarLoadoutWidget::ChooseSlot(int32 Index)
 	if (CandidateEntries.IsValidIndex(CandidateIndex) && CandidateEntries[CandidateIndex])
 		CandidateEntries[CandidateIndex]->FocusEntry();
 }
+
 // 操作結果に従って表示とフォーカスを更新します。解放条件や保存結果の判断はPresenterに任せます。
 void UBoarLoadoutWidget::ChooseCandidate(int32 Index)
 {
@@ -162,11 +169,12 @@ void UBoarLoadoutWidget::ChooseCandidate(int32 Index)
 		if (CandidateEntries.IsValidIndex(Index) && CandidateEntries[Index])
 			CandidateEntries[Index]->FocusEntry();
 }
+
 void UBoarLoadoutWidget::ChooseLabMode(int32 Index)
 {
 	if (!Presenter || !Presenter->ChooseLabMode(Index))
 		return;
-	const TCHAR *Labels[] = {TEXT("装備を変更"), TEXT("ガジェットを解放"), TEXT("Test対象を選択")};
+	const TCHAR* Labels[] = {TEXT("装備を変更"), TEXT("ガジェットを解放"), TEXT("Test対象を選択")};
 	for (int32 I = 0; I < LabModeEntries.Num(); ++I)
 		LabModeEntries[I]->Setup(I, FText::FromString(Labels[I]), I == Index);
 	RebuildCandidates();
@@ -174,22 +182,25 @@ void UBoarLoadoutWidget::ChooseLabMode(int32 Index)
 	if (CandidateEntries.Num() > 1 && CandidateEntries[1])
 		CandidateEntries[1]->FocusEntry();
 }
+
 void UBoarLoadoutWidget::PreviewSlot(int32 Index)
 {
 	if (Presenter)
 		ShowDetails(Presenter->GetSlot(Index));
 }
+
 // フォーカス中の候補を詳細欄へ反映し、スクロール範囲内に収めます。装備変更は決定操作で行います。
 void UBoarLoadoutWidget::PreviewCandidate(int32 Index)
 {
 	if (!Presenter || Index < 0 || Index >= Presenter->GetCandidateCount())
 		return;
 	ShowDetails(Presenter->GetCandidate(Index));
-	if (auto *Scroll = Cast<UScrollBox>(CandidatesPanel))
+	if (auto* Scroll = Cast<UScrollBox>(CandidatesPanel))
 		if (CandidateEntries.IsValidIndex(Index) && CandidateEntries[Index])
 			Scroll->ScrollWidgetIntoView(CandidateEntries[Index]);
 }
-void UBoarLoadoutWidget::ShowDetails(const FBoarLoadoutEntryViewData &Data)
+
+void UBoarLoadoutWidget::ShowDetails(const FBoarLoadoutEntryViewData& Data)
 {
 	if (DetailName)
 		DetailName->SetText(Data.Name);
@@ -203,7 +214,8 @@ void UBoarLoadoutWidget::ShowDetails(const FBoarLoadoutEntryViewData &Data)
 		DetailIcon->SetVisibility(Data.Icon ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
 	}
 }
-void UBoarLoadoutWidget::SetStatus(const FText &Text, bool bError)
+
+void UBoarLoadoutWidget::SetStatus(const FText& Text, bool bError)
 {
 	if (Status)
 	{
@@ -211,10 +223,12 @@ void UBoarLoadoutWidget::SetStatus(const FText &Text, bool bError)
 		Status->SetColorAndOpacity(FSlateColor(bError ? FLinearColor(1.f, .2f, .15f) : FLinearColor(.6f, .9f, 1.f)));
 	}
 }
+
 void UBoarLoadoutWidget::Close()
 {
 	OnClosed.Broadcast();
 }
+
 void UBoarLoadoutWidget::FocusBack()
 {
 	if (BackButton)

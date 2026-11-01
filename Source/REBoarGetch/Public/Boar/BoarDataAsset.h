@@ -78,6 +78,18 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge", meta = (ClampMin = "0.0"))
 	float AttackRetreatSpeed = 300.0f;
 
+	/** 追跡中のプレイヤーに対して攻撃予兆を開始する距離です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|PlayerAttack", meta = (ClampMin = "0.0"))
+	float PlayerAttackRange = 400.0f;
+
+	/** プレイヤーへの突進終了後、次の判断へ移るまで停止する秒数です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|PlayerAttack", meta = (ClampMin = "0.0"))
+	float AttackRecoveryDuration = 0.8f;
+
+	/** プレイヤーへの攻撃終了から、次の攻撃予兆を開始できるまでの秒数です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|PlayerAttack", meta = (ClampMin = "0.0"))
+	float PlayerAttackCooldown = 1.5f;
+
 	/** プレイヤーや檻を視覚認識できる最大距離です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perception", meta = (ClampMin = "0.0"))
 	float SightRange = 1200.0f;
@@ -97,6 +109,13 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 	/** プレイヤーからの逃走を開始する距離条件です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perception", meta = (ClampMin = "0.0"))
 	float EscapeRange = 500.0f;
+
+	/**
+	 * 一度見つけたプレイヤーを、視界から外れてもこの距離内なら脅威として認識し続けます。
+	 * 逃げて背を向けると視野角から外れるため、追われている間の逃走継続に使います。0で無効です。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perception", meta = (ClampMin = "0.0"))
+	float ThreatMemoryRange = 0.0f;
 
 	/** 移動時のスタミナ消費と回復制御を使用するかを表します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
@@ -118,9 +137,21 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float StaminaRecoverExitRatio = 0.4f;
 
+	/** 有効時は逃走Stateでの移動中だけスタミナを消費し、徘徊中の歩行では消費しません。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
+	bool bDrainStaminaOnlyWhileEscaping = true;
+
+	/** 有効時はスタミナ0で移動要求を止め、復帰割合まで回復するまでその場で停止します。無効時は減速のみです。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
+	bool bStopWhileRecoveringStamina = true;
+
 	/** 通常時に使用する歩行速度です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))
 	float BaseWalkSpeed = 450.0f;
+
+	/** 逃走State中に通常速度へ掛ける倍率です。1.0なら徘徊と同じ速度で逃走します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.1"))
+	float EscapeSpeedMultiplier = 1.0f;
 
 	/** 1秒あたりに回転できる最大Yaw角度です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))

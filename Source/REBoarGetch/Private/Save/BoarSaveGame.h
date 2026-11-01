@@ -15,11 +15,13 @@ public:
 	void FreezeRunResult(FStageRunData& Run) const;
 	/** 確定済みClear結果だけを候補データへ併合します。 */
 	bool MergeClearedRun(const FStageRunData& Run);
-	/** 捕獲済みIDまたは空欄の3枠を検証し、展示選択だけを変更します。 */
+	/** Archiveの展示枠数です。展示枠を扱う処理はすべてこの値を使います。 */
+	static constexpr int32 ArchiveDisplaySlotCount = 3;
+	/** 捕獲済みIDまたは空欄の展示枠を検証し、展示選択だけを変更します。 */
 	bool SetArchiveDisplays(const TArray<FName>& Ids);
 	/** 別枠展示中の個体はSwap。空欄も明示選択として保存します。 */
 	bool AssignArchiveDisplay(int32 Slot, FName Id);
-	/** 明示選択を優先し、未選択なら確定捕獲履歴から最新3体を返します。 */
+	/** 明示選択を優先し、未選択なら確定捕獲履歴から最新の展示枠数分を返します。 */
 	TArray<FName> ResolveArchiveDisplays() const;
 	/** 末尾が直近の確定捕獲です。古いセーブのSetから順序を推測しません。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly) TArray<FName> CapturedBoarHistory;

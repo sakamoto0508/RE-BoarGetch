@@ -56,11 +56,17 @@ public:
 	UFUNCTION() void CloseArchiveDisplaySelection();
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
 	void HandleStageCleared(const FStageRunData& Run, int32 TargetCount);
-	/** 終了演出からUIまでゲーム入力を遮断します。 */
+	/** 終了演出からUIまでゲーム入力を遮断します（Stage進行による入力禁止。メニュー表示による禁止はUIFlowが管理します）。 */
 	void SetStageInputBlocked(bool bBlocked);
+	/** ローカルメニューの入力状態を管理するUIFlow。ステージ選択画面などActor側のUIもここへ入力管理を委ねます。 */
+	class UBoarUIFlowComponent* GetUIFlow() const { return UIFlow; }
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	void HandleStageGameOver();
 	void HandleStageInitializationFailed(const FText& Reason);
+	/** Lobby復帰先の判定です。設定済みのLobbyLevelを優先し、未設定なら実在するDefaultMapだけを返します。どちらも無効なら空です。 */
+	static TSoftObjectPtr<UWorld> ResolveLobbyLevel(const TSoftObjectPtr<UWorld>& Configured, const FSoftObjectPath& DefaultMap);
+	/** このControllerのLobby復帰先です。LobbyLevel未設定ならGameDefaultMapを使い、設定不足をErrorで1回だけ報告します。 */
+	TSoftObjectPtr<UWorld> GetLobbyLevel() const;
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage") void RetryStage();
 	/** ポーズ画面を開き、ゲーム入力を遮断します。 */
@@ -92,8 +98,12 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
-	UPROPERTY(Transient) TObjectPtr<class UBoarInitializationErrorWidget> InitializationErrorWidget;
+	/** Stage初期化に失敗した状態です。専用画面は出さず、理由はErrorログだけで報告します。 */
 	bool bInitializationFailed = false;
+	/** GameOver画面を表示できなかった（クラス未設定・必須ボタン欠落）状態です。Errorの重複出力を防ぎます。 */
+	bool bGameOverUIUnavailable = false;
+	/** LobbyLevel未設定の報告済みフラグです。 */
+	mutable bool bLobbyLevelFallbackReported = false;
 	friend class UBoarUIFlowComponent;
 	UPROPERTY(Transient) TObjectPtr<class UBoarUIFlowComponent> UIFlow;
 	UPROPERTY(EditDefaultsOnly,Category="UI") TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;
@@ -167,10 +177,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UBoarResultWidget> ResultWidget;
 
-	/** リザルト終了時に戻るLobby Level名です。 */
-	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
-	FName LobbyLevelName = TEXT("L_Lobby");
-	/** 新規設定はAsset参照を使用。旧BPのLevel名は移行互換用に残します。 */
+	/** リザルト終了時・Pauseから戻るLobby Levelです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")
 	TSoftObjectPtr<UWorld> LobbyLevel;
 

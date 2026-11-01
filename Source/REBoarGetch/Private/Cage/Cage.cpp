@@ -42,7 +42,8 @@ void ACage::BeginPlay()
 
 void ACage::InitializeForStage()
 {
-	if (bStageInitialized) return;
+	if (bStageInitialized)
+		return;
 	bStageInitialized = true;
 	MaxHp = FMath::Max(MaxHp, 1.0f);
 	CurrentHp = MaxHp;
@@ -62,8 +63,10 @@ void ACage::EndPlay(const EEndPlayReason::Type EndPlayReason)
 //捕獲したイノシシを檻に追加する。檻の位置にイノシシを移動させる。
 void ACage::CollectBoar(ABoarBase* Boar)
 {
-	if (Boar == nullptr) return;
-	if (!CanAdvance()) return;
+	if (Boar == nullptr)
+		return;
+	if (!CanAdvance())
+		return;
 	if (bIsDestroyed)
 	{
 		Boar->SetActorLocation(GetCapturedBoarLocation(0, Boar), false, nullptr, ETeleportType::TeleportPhysics);
@@ -71,7 +74,8 @@ void ACage::CollectBoar(ABoarBase* Boar)
 		NotifyHousedCountChanged();
 		return;
 	}
-	if (!Boar->IsCaptured() || CapturedBoars.Contains(Boar)) return;
+	if (!Boar->IsCaptured() || CapturedBoars.Contains(Boar))
+		return;
 
 	// 破棄済みの参照を除外し、新しい個体が空いた収容枠を利用できるようにする。
 	CapturedBoars.RemoveAll([](const TObjectPtr<ABoarBase>& CapturedBoar)
@@ -82,7 +86,7 @@ void ACage::CollectBoar(ABoarBase* Boar)
 	// AddUniqueは同じイノシシが既に配列に存在する場合、重複して追加せず、既存要素のインデックスを返す。
 	const int32 SlotIndex = CapturedBoars.AddUnique(Boar);
 	Boar->OnDestroyed.AddUniqueDynamic(this, &ACage::HandleHousedBoarDestroyed);
-	
+
 	// 配列上の位置に対応する収容座標へイノシシを移動させる。
 	// TeleportPhysicsを指定することで、物理速度による移動ではなく 指定した座標へ即座に配置する。
 	Boar->SetActorLocation(
@@ -117,14 +121,14 @@ FVector ACage::GetCapturedBoarLocation(int32 SlotIndex, const ABoarBase* Boar) c
 
 	const FVector AreaExtent = CapturedBoarArea->GetScaledBoxExtent();
 	const float CapsuleHalfHeight = Boar && Boar->GetCapsuleComponent()
-		? Boar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
-		: 0.0f;
+		                                ? Boar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
+		                                : 0.0f;
 
 	return CapturedBoarArea->GetComponentLocation()
 		+ CapturedBoarArea->GetForwardVector() * SlotOffset.X
 		+ CapturedBoarArea->GetRightVector() * SlotOffset.Y
 		+ CapturedBoarArea->GetUpVector()
-			* (-AreaExtent.Z + CapsuleHalfHeight + CapturedBoarFloorOffset);
+		* (-AreaExtent.Z + CapsuleHalfHeight + CapturedBoarFloorOffset);
 }
 
 //檻へのダメージ。イノシシが呼び出す関数。
@@ -136,7 +140,7 @@ void ACage::ApplyDamage(float Damage)
 
 	CurrentHp = FMath::Clamp(CurrentHp - Damage, 0.0f, MaxHp);
 	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
-	
+
 	if (CurrentHp <= 0.0f)
 	{
 		DestroyCage();
@@ -146,11 +150,12 @@ void ACage::ApplyDamage(float Damage)
 //檻が破壊された時に呼ばれる処理。破壊された檻に捕まっていたイノシシを解放する。
 void ACage::DestroyCage()
 {
-	if (!CanAdvance() || bIsDestroyed) return;
+	if (!CanAdvance() || bIsDestroyed)
+		return;
 	bIsDestroyed = true;
 
 	OnCageDestroyed.Broadcast();
-	
+
 	// Actor自体はDestroyせず、非表示にして当たり判定を停止する。
 	// Destroy()すると、このActor自身から復活処理を呼べなくなる。
 	SetActorHiddenInGame(true);
@@ -193,7 +198,7 @@ void ACage::RespawnCage()
 
 	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
 	OnRespawned.Broadcast();
-	
+
 	//まず、見た目を復活。
 	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
@@ -218,6 +223,7 @@ int32 ACage::GetCapturedBoarCount() const
 
 void ACage::NotifyHousedCountChanged()
 {
+	// 檻は自分の収容個体だけを保持し、全檻の合計とClear判定はGameModeへ委譲する。
 	if (ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
 		Mode->RefreshHousedBoarCount();
 }
@@ -226,7 +232,8 @@ void ACage::ForgetBoar(ABoarBase* Boar)
 {
 	if (CapturedBoars.Remove(Boar) > 0)
 	{
-		if (Boar) Boar->OnDestroyed.RemoveDynamic(this, &ACage::HandleHousedBoarDestroyed);
+		if (Boar) 
+			Boar->OnDestroyed.RemoveDynamic(this, &ACage::HandleHousedBoarDestroyed);
 		NotifyHousedCountChanged();
 	}
 }
@@ -239,14 +246,18 @@ void ACage::HandleHousedBoarDestroyed(AActor* Actor)
 void ACage::SetStageStopped(bool bStopped)
 {
 	bStageStopped = bStopped;
-	if (bStopped) GetWorldTimerManager().PauseTimer(RespawnTimerHandle);
-	else GetWorldTimerManager().UnPauseTimer(RespawnTimerHandle);
+	if
+	(bStopped)
+		GetWorldTimerManager().PauseTimer(RespawnTimerHandle);
+	else
+		GetWorldTimerManager().UnPauseTimer(RespawnTimerHandle);
 }
 
 void ACage::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (!CanAdvance() || bIsDestroyed) return;
+	if (!CanAdvance() || bIsDestroyed)
+		return;
 	const float Previous = SecondsSinceDamage;
 	SecondsSinceDamage += DeltaSeconds;
 	const float RecoveryTime = FMath::Max(0.0f, SecondsSinceDamage - FMath::Max(Previous, RecoveryDelay));

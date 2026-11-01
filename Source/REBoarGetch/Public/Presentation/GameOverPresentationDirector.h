@@ -77,7 +77,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera", meta = (ClampMin = "1")) float CameraEaseExponent = 2.6f;
 
 	// ---- Warning / VFX ----
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning", meta = (ToolTip = "赤フラッシュ・警告ライン・ノイズを描画するWidget。未設定ならネイティブ既定。")) TSubclassOf<UBoarGameOverEffectWidget> EffectWidgetClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning", meta = (ToolTip = "赤フラッシュ・警告ライン・ノイズを描画するWidget（WBP_GameOverEffect）。未設定時はエフェクトを表示しません。")) TSubclassOf<UBoarGameOverEffectWidget> EffectWidgetClass;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning", meta = (ClampMin = "0", ClampMax = "1")) float VignetteAlpha = .45f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning", meta = (ToolTip = "装備に掛ける発光Overlay（GlowAmount / GlowColor）。演出専用MIDを作り元Materialは変更しません。")) TObjectPtr<UMaterialInterface> GadgetGlowMaterial;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning") FLinearColor GadgetGlowColor = FLinearColor(.02f, .8f, 1.f);
@@ -124,4 +124,6 @@ private:
 	FRotator StartControlRotation = FRotator::ZeroRotator;
 	FVector Focus = FVector::ZeroVector;
 	UPROPERTY(Transient) TObjectPtr<UBoarGameOverEffectWidget> EffectWidget;
+	/** EffectWidgetを生成できないと判明済み。毎フレーム同じErrorを出さないために使います。 */
+	bool bEffectWidgetUnavailable = false;
 };

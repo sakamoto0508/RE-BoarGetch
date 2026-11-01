@@ -15,23 +15,24 @@
 #include "Component/GadgetComponent.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarGadgetProgressTest, "REBoarGetch.Spec.GadgetProgressAndLoadout",
-								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-bool FBoarGadgetProgressTest::RunTest(const FString &Parameters)
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 {
 	// An isolated, non-existent slot and write prohibition protect the user's actual save.
-	auto *Instance = NewObject<UBoarGameInstance>(GEngine);
+	auto* Instance = NewObject<UBoarGameInstance>(GEngine);
 	Instance->SaveSlotName = TEXT("REBoarGetch_Automation_") + FGuid::NewGuid().ToString();
 	const auto NetClass = LoadClass<AGadgetBase>(nullptr, TEXT("/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C"));
 	if (!TestNotNull(TEXT("Existing catalog gadget"), NetClass))
 		return false;
-	const auto *Definition = NetClass->GetDefaultObject<AGadgetBase>()->GetGadgetDefinition();
+	const auto* Definition = NetClass->GetDefaultObject<AGadgetBase>()->GetGadgetDefinition();
 	if (!TestNotNull(TEXT("Existing definition"), Definition))
 		return false;
 	Instance->GadgetCatalog = {NetClass};
 	Instance->InitializeStandalone();
 	Instance->bSaveLoadFailed = true;
-	UWorld *World = Instance->GetWorld();
-	auto *Gadgets = Instance->GetSubsystem<UBoarGadgetSubsystem>();
+	UWorld* World = Instance->GetWorld();
+	auto* Gadgets = Instance->GetSubsystem<UBoarGadgetSubsystem>();
 	const FName Id = Definition->GadgetId;
 	TestNotNull(TEXT("Gadget subsystem created before GI initial unlock update"), Gadgets);
 	if (Gadgets)
@@ -41,10 +42,14 @@ bool FBoarGadgetProgressTest::RunTest(const FString &Parameters)
 		TestFalse(TEXT("Already unlocked cannot unlock again"), Gadgets->CanUnlockGadget(Id));
 		TestFalse(TEXT("Unknown ID cannot unlock"), Gadgets->CanUnlockGadget(TEXT("Missing")));
 		TestFalse(TEXT("None is never unlocked"), Gadgets->IsGadgetUnlocked(NAME_None));
-		TestTrue(TEXT("Four slots including empty accepted"), Gadgets->IsLoadoutValid({Id, NAME_None, NAME_None, NAME_None}));
+		TestTrue(TEXT("Four slots including empty accepted"), Gadgets->IsLoadoutValid({
+			         Id, NAME_None, NAME_None, NAME_None
+		         }));
 		TestFalse(TEXT("Wrong slot count rejected"), Gadgets->IsLoadoutValid({Id}));
 		TestFalse(TEXT("Duplicate gadget rejected"), Gadgets->IsLoadoutValid({Id, Id, NAME_None, NAME_None}));
-		TestFalse(TEXT("Unresolved gadget rejected"), Gadgets->IsLoadoutValid({TEXT("Missing"), NAME_None, NAME_None, NAME_None}));
+		TestFalse(TEXT("Unresolved gadget rejected"), Gadgets->IsLoadoutValid({
+			          TEXT("Missing"), NAME_None, NAME_None, NAME_None
+		          }));
 		TArray<TSubclassOf<AGadgetBase>> Defaults = {NetClass, nullptr, nullptr, nullptr};
 		TArray<TSubclassOf<AGadgetBase>> Restored = Defaults;
 		Instance->Progress->bHasSavedLoadout = true;
@@ -56,10 +61,13 @@ bool FBoarGadgetProgressTest::RunTest(const FString &Parameters)
 		AddExpectedError(TEXT("Saved loadout has unresolved IDs"), EAutomationExpectedErrorFlags::Contains, 1);
 		Gadgets->RestoreSavedLoadout(Restored);
 		TestTrue(TEXT("Unknown saved ID keeps full default loadout"), Restored == Defaults);
-		TestEqual(TEXT("Unknown saved ID is not rewritten"), Instance->Progress->GadgetLoadout[0], FName(TEXT("Missing")));
+		TestEqual(TEXT("Unknown saved ID is not rewritten"), Instance->Progress->GadgetLoadout[0],
+		          FName(TEXT("Missing")));
 		Instance->Progress->GadgetLoadout = {NAME_None, NAME_None, NAME_None, NAME_None};
 		Gadgets->RestoreSavedLoadout(Restored);
-		TestTrue(TEXT("All empty saved loadout is intentional"), !Restored[0] && !Restored[1] && !Restored[2] && !Restored[3]);
+		TestTrue(
+			TEXT("All empty saved loadout is intentional"),
+			!Restored[0] && !Restored[1] && !Restored[2] && !Restored[3]);
 		Instance->Progress->GadgetLoadout = {Id};
 		Restored = Defaults;
 		Gadgets->RestoreSavedLoadout(Restored);
@@ -70,18 +78,19 @@ bool FBoarGadgetProgressTest::RunTest(const FString &Parameters)
 		TestFalse(TEXT("Locked loadout rejected"), Gadgets->IsLoadoutValid({Id, NAME_None, NAME_None, NAME_None}));
 		{
 			// Scope restores the in-memory DataAsset field; no package is saved.
-			TGuardValue<int32> RequiredCoins(const_cast<UGadgetDataAsset *>(Definition)->RequiredSpecialCoinCount, 2);
+			TGuardValue<int32> RequiredCoins(const_cast<UGadgetDataAsset*>(Definition)->RequiredSpecialCoinCount, 2);
 			Instance->Progress->SpecialCoinIds = {TEXT("C1")};
 			TestFalse(TEXT("Below coin threshold"), Gadgets->CanUnlockGadget(Id));
 			Instance->Progress->SpecialCoinIds.Add(TEXT("C2"));
 			TestTrue(TEXT("Exact coin threshold"), Gadgets->CanUnlockGadget(Id));
 			TestFalse(TEXT("Manual unlock forbidden outside Lab"), Gadgets->UnlockGadgetInLab(Id));
 			World->SetGameMode(FURL(nullptr, TEXT("?game=/Script/REBoarGetch.BoarFacilityGameMode"), TRAVEL_Absolute));
-			auto *Facility = World->GetAuthGameMode<ABoarFacilityGameMode>();
+			auto* Facility = World->GetAuthGameMode<ABoarFacilityGameMode>();
 			if (TestNotNull(TEXT("Lab coordinator"), Facility))
 			{
 				TestTrue(TEXT("Lab permits coin-qualified unlock"), Gadgets->IsInGadgetLab());
-				AddExpectedError(TEXT("\\[Save\\] Progress could not be saved\\."), EAutomationExpectedErrorFlags::Contains, 1);
+				AddExpectedError(
+					TEXT("\\[Save\\] Progress could not be saved\\."), EAutomationExpectedErrorFlags::Contains, 1);
 				TestFalse(TEXT("Save failure rejects unlock"), Gadgets->UnlockGadgetInLab(Id));
 				TestFalse(TEXT("Failed save does not publish unlock"), Gadgets->IsGadgetUnlocked(Id));
 				TestEqual(TEXT("Unlock does not consume coins"), Gadgets->GetSpecialCoinCount(), 2);
@@ -91,7 +100,9 @@ bool FBoarGadgetProgressTest::RunTest(const FString &Parameters)
 				UGameplayStatics::SaveGameToMemory(Instance->Progress, Before);
 				TestTrue(TEXT("Unlocked gadget selected independently of slots"), Instance->SelectTestGadget(Id));
 				TestEqual(TEXT("Selected test ID through facade"), Instance->GetSelectedTestGadget(), Id);
-				TestTrue(TEXT("Test level resolved from definition"), Instance->GetSelectedTestLevel() == Definition->TestLevel);
+				TestTrue(
+					TEXT("Test level resolved from definition"),
+					Instance->GetSelectedTestLevel() == Definition->TestLevel);
 				UGameplayStatics::SaveGameToMemory(Instance->Progress, After);
 				TestTrue(TEXT("Trial selection leaves persistent save byte-identical"), Before == After);
 				TestTrue(TEXT("None clears trial selection in Lab"), Instance->SelectTestGadget(NAME_None));
@@ -106,31 +117,39 @@ bool FBoarGadgetProgressTest::RunTest(const FString &Parameters)
 				Instance->ClearTestGadget();
 				TestTrue(TEXT("Coordinator can clear test on travel"), Instance->GetSelectedTestGadget().IsNone());
 				Instance->GadgetCatalog = {nullptr, NetClass, NetClass};
-				auto *PC = World->SpawnActor<ABoarPlayerController>();
-				auto *Player = World->SpawnActor<ABoarPlayerCharacter>();
+				auto* PC = World->SpawnActor<ABoarPlayerController>();
+				auto* Player = World->SpawnActor<ABoarPlayerCharacter>();
 				if (PC && Player)
 				{
 					PC->Possess(Player);
 					auto* Component = Player->GetGadgetComponent();
 					const TArray<TSubclassOf<AGadgetBase>> EmptySlots = {nullptr, nullptr, nullptr, nullptr};
 					Component->InitializeResolvedLoadout(EmptySlots, Gadgets, true);
-					TestTrue(TEXT("Temporary persistence policy supplied by coordinator"), Component->IsTemporaryLoadout());
+					TestTrue(
+						TEXT("Temporary persistence policy supplied by coordinator"), Component->IsTemporaryLoadout());
 					Component->InitializeResolvedLoadout(Defaults, Gadgets, false);
-					TestTrue(TEXT("Initialization is idempotent and preserves temporary policy"), Component->IsTemporaryLoadout() && !Component->GetGadgetSlotClass(0));
+					TestTrue(
+						TEXT("Initialization is idempotent and preserves temporary policy"),
+						Component->IsTemporaryLoadout() && !Component->GetGadgetSlotClass(0));
 					TArray<uint8> BeforeLoadout, AfterLoadout;
 					UGameplayStatics::SaveGameToMemory(Instance->Progress, BeforeLoadout);
-					TestTrue(TEXT("Temporary equip succeeds without persistence"), Component->SetGadgetSlot(0, NetClass));
-					TestTrue(TEXT("Temporary equipment save result succeeds"), Component->WasLastLoadoutSaveSuccessful());
+					TestTrue(
+						TEXT("Temporary equip succeeds without persistence"), Component->SetGadgetSlot(0, NetClass));
+					TestTrue(
+						TEXT("Temporary equipment save result succeeds"), Component->WasLastLoadoutSaveSuccessful());
 					TestTrue(TEXT("Duplicate gadget moves to another slot"), Component->SetGadgetSlot(2, NetClass));
-					TestTrue(TEXT("Move clears old slot"), !Component->GetGadgetSlotClass(0) && Component->GetGadgetSlotClass(2) == NetClass);
+					TestTrue(
+						TEXT("Move clears old slot"),
+						!Component->GetGadgetSlotClass(0) && Component->GetGadgetSlotClass(2) == NetClass);
 					TestTrue(TEXT("Empty slot operation retained"), Component->SetGadgetSlot(2, nullptr));
 					UGameplayStatics::SaveGameToMemory(Instance->Progress, AfterLoadout);
-					TestTrue(TEXT("Temporary loadout leaves persistent save byte-identical"), BeforeLoadout == AfterLoadout);
-					auto *Presenter = NewObject<UBoarLoadoutPresenter>();
+					TestTrue(
+						TEXT("Temporary loadout leaves persistent save byte-identical"), BeforeLoadout == AfterLoadout);
+					auto* Presenter = NewObject<UBoarLoadoutPresenter>();
 					TestTrue(TEXT("Presenter connects in Lab"), Presenter->Initialize(PC, true));
 					TestEqual(TEXT("Catalog keeps empty then unique gadget"), Presenter->GetCandidateCount(), 2);
 					TestEqual(TEXT("Catalog display comes from definition"), Presenter->GetCandidate(1).Name.ToString(),
-							  Definition->DisplayName.ToString());
+					          Definition->DisplayName.ToString());
 					TestTrue(TEXT("Lab exposes test intent"), Presenter->ChooseLabMode(2));
 					TestFalse(TEXT("Invalid mode rejected"), Presenter->ChooseLabMode(3));
 					Presenter->ChooseCandidate(1);

@@ -11,7 +11,8 @@
 #include "UObject/UnrealType.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStageSelectPresenterTest, "REBoarGetch.Spec.StageSelectPresenter",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 {
 	auto MakeStage = [](FName Id, FName Required = NAME_None)
@@ -56,7 +57,8 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Rapid previous commits prior request before stepping"), Presenter->RequestStep(-1, true));
 	TestEqual(TEXT("Rapid request commits third as intermediate center"), Presenter->GetSelectedIndex(), 2);
 	Presenter->CommitPendingSelection();
-	Presenter->RequestStep(-1, true); Presenter->CommitPendingSelection();
+	Presenter->RequestStep(-1, true);
+	Presenter->CommitPendingSelection();
 	TestFalse(TEXT("Carousel does not wrap at first"), Presenter->RequestStep(-1, true));
 	TestTrue(TEXT("Visible preview IDs restricted to adjacent cards"), Presenter->IsPreviewVisible(TEXT("S2")));
 	TestFalse(TEXT("Distant preview released"), Presenter->IsPreviewVisible(TEXT("S3")));
@@ -97,12 +99,22 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Unknown last attempted uses first unlocked"), Presenter->GetSelectedIndex(), 0);
 	First->DisplayName = FText::GetEmpty();
 	First->TargetCaptureCount = 4;
-	FSpecialCoinDefinition Coin; Coin.SpecialCoinId = TEXT("C1"); First->SpecialCoinDefinitions.Add(Coin);
-	First->SpecialCoinDefinitions.Add(Coin); Coin.SpecialCoinId = TEXT("C2"); First->SpecialCoinDefinitions.Add(Coin);
-	Coin.SpecialCoinId = NAME_None; First->SpecialCoinDefinitions.Add(Coin);
-	FBoarSpawnDefinition Boar; Boar.BoarUniqueId = TEXT("B1"); First->BoarSpawnDefinitions.Add(Boar);
-	First->BoarSpawnDefinitions.Add(Boar); Boar.BoarUniqueId = TEXT("B2"); First->BoarSpawnDefinitions.Add(Boar);
-	Boar.BoarUniqueId = NAME_None; First->BoarSpawnDefinitions.Add(Boar);
+	FSpecialCoinDefinition Coin;
+	Coin.SpecialCoinId = TEXT("C1");
+	First->SpecialCoinDefinitions.Add(Coin);
+	First->SpecialCoinDefinitions.Add(Coin);
+	Coin.SpecialCoinId = TEXT("C2");
+	First->SpecialCoinDefinitions.Add(Coin);
+	Coin.SpecialCoinId = NAME_None;
+	First->SpecialCoinDefinitions.Add(Coin);
+	FBoarSpawnDefinition Boar;
+	Boar.BoarUniqueId = TEXT("B1");
+	First->BoarSpawnDefinitions.Add(Boar);
+	First->BoarSpawnDefinitions.Add(Boar);
+	Boar.BoarUniqueId = TEXT("B2");
+	First->BoarSpawnDefinitions.Add(Boar);
+	Boar.BoarUniqueId = NAME_None;
+	First->BoarSpawnDefinitions.Add(Boar);
 	Save->SpecialCoinIds = {TEXT("C1"), TEXT("OtherStageCoin")};
 	Save->CapturedBoarUniqueIds = {TEXT("B2"), TEXT("OtherStageBoar")};
 	Save->ClearedStageIds.Add(TEXT("S1"));
@@ -111,7 +123,8 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	const auto Data = Presenter->GetSelectedStage();
 	TestTrue(TEXT("Cleared flag"), Data.bCleared);
 	TestEqual(TEXT("Clear status"), Data.Status.ToString(), FString(TEXT("CLEAR")));
-	TestEqual(TEXT("Deduplicated stage-local coin and boar progress"), Data.Progress.ToString(), FString(TEXT("特別コイン：1 / 2\n図鑑：1 / 2")));
+	TestEqual(TEXT("Deduplicated stage-local coin and boar progress"), Data.Progress.ToString(),
+	          FString(TEXT("特別コイン：1 / 2\n図鑑：1 / 2")));
 	TestTrue(TEXT("Empty entry display name uses stage ID"), Data.EntryLabel.ToString().StartsWith(TEXT("S1\n")));
 	TestTrue(TEXT("Detail display name retains original empty text"), Data.DisplayName.IsEmpty());
 	TestEqual(TEXT("Capture target kept independent of collection count"), Data.TargetCaptureCount, 4);
@@ -119,14 +132,20 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Valid start returns exact catalog object"), Presenter->RequestStart() == Locked);
 	Locked->Level.Reset();
 	TestNull(TEXT("Missing level blocks start"), Presenter->RequestStart());
-	TestEqual(TEXT("Missing level status takes priority"), Presenter->GetSelectedStage().Status.ToString(), FString(TEXT("出発先未登録")));
-	TestEqual(TEXT("Legacy/no-individual stage progress"), Presenter->GetSelectedStage().Progress.ToString(), FString(TEXT("特別コイン：0 / 0\n図鑑：個体データ未登録")));
+	TestEqual(TEXT("Missing level status takes priority"), Presenter->GetSelectedStage().Status.ToString(),
+	          FString(TEXT("出発先未登録")));
+	TestEqual(TEXT("Legacy/no-individual stage progress"), Presenter->GetSelectedStage().Progress.ToString(),
+	          FString(TEXT("特別コイン：0 / 0\n図鑑：個体データ未登録")));
 	UGameplayStatics::SaveGameToMemory(Save, After);
 	TestTrue(TEXT("Selection and view-data reads leave save byte-identical"), Before == After);
 	TestTrue(TEXT("Presenter subscribed to model"), Instance->OnProgressChanged.IsBoundToObject(Presenter));
 	bool bPublishedBeforeNotification = false;
-	const auto Handle = Instance->OnProgressChanged.AddLambda([&] { bPublishedBeforeNotification = Presenter->GetStage(2).bCleared; });
-	FStageRunData Run; Run.StageId = TEXT("S3");
+	const auto Handle = Instance->OnProgressChanged.AddLambda([&]
+	{
+		bPublishedBeforeNotification = Presenter->GetStage(2).bCleared;
+	});
+	FStageRunData Run;
+	Run.StageId = TEXT("S3");
 	TestTrue(TEXT("Isolated save commit succeeds"), Instance->CommitClearedRun(Run));
 	TestTrue(TEXT("Model notification reads published candidate"), bPublishedBeforeNotification);
 	Instance->OnProgressChanged.Remove(Handle);
@@ -141,7 +160,8 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	SlotProperty->SetPropertyValue_InContainer(Instance, Slot);
 	Instance->OnProgressChanged.Remove(FailureHandle);
 	Presenter->Shutdown();
-	TestFalse(TEXT("Closing presenter removes model subscription"), Instance->OnProgressChanged.IsBoundToObject(Presenter));
+	TestFalse(
+		TEXT("Closing presenter removes model subscription"), Instance->OnProgressChanged.IsBoundToObject(Presenter));
 	TestNull(TEXT("Closed presenter cannot start"), Presenter->RequestStart());
 	return true;
 }

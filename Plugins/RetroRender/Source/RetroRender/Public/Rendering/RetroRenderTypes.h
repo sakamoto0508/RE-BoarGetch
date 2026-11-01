@@ -60,6 +60,9 @@ struct RETRORENDER_API FRetroRenderParameters
 	// Objects with a larger bounds radius (cm) fade out of snapping/affine. Huge 2-triangle ground or wall
 	// boxes would otherwise tilt by tens of cm and expose coplanar geometry underneath. 0 = no limit.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Geometry", meta=(ClampMin=0, ClampMax=100000)) float SnapMaxObjectRadius = 1500.f;
+	// Flat, floor-like objects (bounds height / width below this) are not snapped: snapping a finely tessellated
+	// plaza, path or water plane makes its outline zig-zag and opens seams against the ground. 0 = snap everything.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Geometry", meta=(ClampMin=0, ClampMax=1)) float SnapFlatRatio = 0.08f;
 	// Screen-linear (non perspective-correct) texture coordinates per triangle.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Geometry", meta=(ClampMin=0, ClampMax=1)) float AffineAmount = 0.f;
 	// Nearest-texel look on a virtual texel grid, independent of the source texture size.

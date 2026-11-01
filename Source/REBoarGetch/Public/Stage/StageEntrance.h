@@ -55,8 +55,8 @@ protected:
 private:
 	/** @brief 対象StageConfigを渡してLobby Widgetを表示し、UI入力へ切り替えます。 */
 	void ShowStageSelection(class APlayerController* PlayerController);
-	/** @brief Lobby Widgetを破棄し、遷移中でなければゲーム入力へ戻します。 */
-	void CloseStageSelection();
+	/** @brief Lobby Widgetを破棄し、入力状態の解放をUIFlowへ依頼します。bLevelEnding（Level遷移・破棄）では入力を戻しません。 */
+	void CloseStageSelection(bool bLevelEnding = false);
 
 	/** @brief Widgetの決定通知を検証し、設定されたLevelへの遷移を一度だけ開始します。 */
 	UFUNCTION()
@@ -77,7 +77,7 @@ private:
 	/** UI表示内容、クリア条件、遷移先Levelを持つステージ設定です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStageConfig> StageConfig;
-	/** 表示順のStage一覧。空なら既存StageConfigだけを使用します。 */
+	/** 旧設定です。GameInstanceのStageCatalogが未設定の間だけ使います。どちらも空なら既存StageConfigだけを使用します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))
 	TArray<TObjectPtr<UStageConfig>> StageCatalog;
 

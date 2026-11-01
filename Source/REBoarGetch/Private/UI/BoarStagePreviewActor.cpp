@@ -15,7 +15,7 @@ ABoarStagePreviewActor::ABoarStagePreviewActor()
 	Capture->CaptureSource = ESceneCaptureSource::SCS_SceneColorHDR;
 	Capture->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
 	Capture->SetRelativeLocation(FVector(-1100, -1100, 1100));
-	Capture->SetRelativeRotation((FVector(0,0,80) - Capture->GetRelativeLocation()).Rotation());
+	Capture->SetRelativeRotation((FVector(0, 0, 80) - Capture->GetRelativeLocation()).Rotation());
 	Capture->ShowFlags.SetAtmosphere(false);
 	Capture->ShowFlags.SetFog(false);
 	Capture->ShowFlags.SetVolumetricFog(false);
@@ -49,7 +49,7 @@ UTextureRenderTarget2D* ABoarStagePreviewActor::CreatePreview()
 	}
 	if (!ValidParts) return nullptr;
 	Target = NewObject<UTextureRenderTarget2D>(this);
-	Target->ClearColor = FLinearColor(0,0,0,1); // Captureのアルファには不透明度の反転値が入ります。
+	Target->ClearColor = FLinearColor(0, 0, 0, 1); // Captureのアルファには不透明度の反転値が入ります。
 	Target->InitCustomFormat(1024, 768, PF_FloatRGBA, false);
 	Target->UpdateResourceImmediate(true);
 	Capture->TextureTarget = Target;
