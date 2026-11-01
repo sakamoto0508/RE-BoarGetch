@@ -9,7 +9,6 @@ class UCameraComponent;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
 class USkeletalMeshComponent;
-class UStaticMeshComponent;
 class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
@@ -23,16 +22,6 @@ public:
 };
 
 USTRUCT()
-struct FCaptureFragment
-{
- GENERATED_BODY()
- UPROPERTY() TObjectPtr<UStaticMeshComponent> Mesh;
- FVector Start = FVector::ZeroVector;
- FVector Drift = FVector::ZeroVector;
- float Delay = 0.f;
-};
-
-USTRUCT()
 struct FCaptureVisualTarget
 {
  GENERATED_BODY()
@@ -42,9 +31,10 @@ struct FCaptureVisualTarget
  UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> Glow;
  UPROPERTY() TObjectPtr<USkeletalMeshComponent> DataMesh;
  UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> DataMaterial;
- UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> FragmentMaterial;
- UPROPERTY() TArray<FCaptureFragment> Fragments;
+ /** 足元の捕獲リング（CaptureVFX）。 */
  UPROPERTY() TObjectPtr<UNiagaraComponent> VFX;
+ /** データ化中に上昇するデータ粒子（DataFragmentVFX）。捕獲リングとは別に保持します。 */
+ UPROPERTY() TObjectPtr<UNiagaraComponent> DataVFX;
  bool bOriginalVisible = true;
  bool bDataStarted = false;
  FVector CaptureLocation = FVector::ZeroVector;
@@ -84,7 +74,7 @@ public:
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ClampMin="0",ClampMax="20", ToolTip="捕獲時に一時的に狭める視野角（度）。大きいほどPunch Inが強くなります。位置やCamera Actorは切り替えません。")) float CameraZoomAmount = 12.f;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ClampMin="0.01",ClampMax="1", ToolTip="Punch Inして元の視野角へ戻るまでの時間（実時間・秒）。")) float CameraDuration = .38f;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="転送中だけ表示するBoar用Material。下から上へのDissolve、シアンのScan境界、データ線を描きます。元のBoar Materialは変更しません。")) TObjectPtr<UMaterialInterface> DataMaterial;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="転送前のシアン発光と、上昇する小さなデータ片に使うMaterial。未設定だと発光と破片が表示されません。")) TObjectPtr<UMaterialInterface> GlowMaterial;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="転送前のBoarのシアン発光に使うMaterial。未設定だと発光が表示されません。")) TObjectPtr<UMaterialInterface> GlowMaterial;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="捕獲地点のBoar足元に出すシアンリングのNiagara System。拡大してから薄くなります。")) TObjectPtr<UNiagaraSystem> CaptureVFX;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="Cageへの収容直後に出す受信エフェクト。未設定の場合はCapture VFXを再利用します。")) TObjectPtr<UNiagaraSystem> CageReceptionVFX;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Color", meta=(ToolTip="捕獲リング・データ化Material・データ片に使う基本色です。")) FLinearColor CaptureColor = FLinearColor(.01f,.75f,1.f);
@@ -92,8 +82,8 @@ public:
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Color", meta=(ToolTip="データ化直前のBoar発光の色です。")) FLinearColor GlowPeakColor = FLinearColor(.04f,.88f,1.f);
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Color", meta=(ToolTip="Cageへ収容した直後の受信エフェクトの色です。")) FLinearColor ReceptionColor = FLinearColor(.02f,.9f,1.f);
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ClampMin="0.01", ToolTip="捕獲リングとCage受信エフェクトの基準Scale。大きくすると両方のリングが広がります。")) float VFXScale = .55f;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ClampMin="0",ClampMax="32", ToolTip="Boarから上昇するデータ片の数。四角い破片と細い縦方向の光片を含みます。0で破片を非表示にできます。")) int32 FragmentCount = 16;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ClampMin="0",ClampMax="250", ToolTip="転送完了時にBoarのデータ残像と破片が上へ移動する距離（cm）。")) float TransferRiseDistance = 105.f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="データ化開始時に捕獲地点から上昇するデータ粒子（四角い破片と縦長の光片）のNiagara System。粒子数・サイズ・速度・遅延・消失はこのSystemで調整します。未設定なら粒子を表示しません（捕獲処理には影響しません）。")) TObjectPtr<UNiagaraSystem> DataFragmentVFX;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ClampMin="0",ClampMax="250", ToolTip="転送完了時にBoarのデータ残像が上へ移動する距離（cm）。")) float TransferRiseDistance = 105.f;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ToolTip="網が命中した瞬間の効果音。Net 1回につき1回、既存AudioManager経由で再生します。未設定なら無音です。")) TObjectPtr<USoundBase> ImpactSound;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ToolTip="Boarのデータ化が始まる瞬間の転送音。既存AudioManager経由で再生します。未設定なら無音です。")) TObjectPtr<USoundBase> TransferStartSound;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ToolTip="捕獲地点での転送が完了した瞬間の確定音。Net 1回につき1回、既存AudioManager経由で再生します。未設定なら無音です。")) TObjectPtr<USoundBase> CaptureSuccessSound;

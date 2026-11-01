@@ -7,7 +7,7 @@ UFacilitySignWidget::UFacilitySignWidget(const FObjectInitializer& ObjectInitial
     : Super(ObjectInitializer)
 {
     // 既存サインの見た目（旧StyleFor）を初期値にしています。調整はWBP_FacilitySignのClass Defaultsで行います。
-    const FLinearColor White(FColor(244, 248, 252)), Cyan(FColor(64, 212, 240)), Yellow(FColor(255, 204, 51));
+    const FLinearColor SignWhite(FColor(244, 248, 252)), SignCyan(FColor(64, 212, 240)), SignYellow(FColor(255, 204, 51));
     auto Make = [](float Title, float Sub, float Pad, float Intensity, float Depth, FLinearColor TitleColor, FLinearColor SubColor)
     {
         FFacilitySignStyle Style;
@@ -20,10 +20,10 @@ UFacilitySignWidget::UFacilitySignWidget(const FObjectInitializer& ObjectInitial
         Style.SubtitleColor = SubColor;
         return Style;
     };
-    TierStyles.Add(EFacilitySignTier::AreaSign, Make(60.f, 16.f, 36.f, 3.f, 12.f, White, Cyan));
-    TierStyles.Add(EFacilitySignTier::FacilityLabel, Make(14.f, 7.f, 12.f, 1.5f, 4.f, White, Cyan));
-    TierStyles.Add(EFacilitySignTier::Nameplate, Make(9.f, 5.f, 6.f, 1.f, 2.f, White, Cyan));
-    TierStyles.Add(EFacilitySignTier::Prompt, Make(7.f, 5.f, 6.f, 4.f, 1.f, Yellow, Yellow));
+    TierStyles.Add(EFacilitySignTier::AreaSign, Make(60.f, 16.f, 36.f, 3.f, 12.f, SignWhite, SignCyan));
+    TierStyles.Add(EFacilitySignTier::FacilityLabel, Make(14.f, 7.f, 12.f, 1.5f, 4.f, SignWhite, SignCyan));
+    TierStyles.Add(EFacilitySignTier::Nameplate, Make(9.f, 5.f, 6.f, 1.f, 2.f, SignWhite, SignCyan));
+    TierStyles.Add(EFacilitySignTier::Prompt, Make(7.f, 5.f, 6.f, 4.f, 1.f, SignYellow, SignYellow));
 }
 
 FFacilitySignStyle UFacilitySignWidget::GetStyle(EFacilitySignTier Tier) const

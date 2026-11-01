@@ -27,16 +27,6 @@ struct FStageClearHiddenMesh
 	bool bOriginalHiddenInGame = false;
 };
 
-USTRUCT()
-struct FStageClearFragment
-{
-	GENERATED_BODY()
-	UPROPERTY() TObjectPtr<UStaticMeshComponent> Mesh;
-	FVector Start = FVector::ZeroVector;
-	FVector Drift = FVector::ZeroVector;
-	float Delay = 0.f;
-};
-
 /**
  * Stage Clear勝利演出の部品群です。順序とタイミング（Montage開始・星・発光・分解・後退・暗転）、SE、BGMは
  * 派生BP（BP_StageClearPresentation）のEvent Graphで組み立てます。
@@ -100,8 +90,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX") TObjectPtr<UMaterialInterface> GlowMaterial;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX") TObjectPtr<UNiagaraSystem> TransferVFX;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX") FLinearColor DataColor = FLinearColor(.02f, .8f, 1.f);
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX", meta = (ClampMin = "0", ClampMax = "64")) int32 FragmentCount = 28;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX", meta = (ClampMin = "0")) float FragmentRiseSpeed = 120.f;
+	/** 分解時にプレイヤーと網から舞い上がるデータ粒子。粒子数・サイズ・速度・揺らぎ・出現遅延はこのNiagara Systemで調整します。未設定なら粒子を出さずに演出を続けます。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX") TObjectPtr<UNiagaraSystem> DataFragmentVFX;
 
 	AStageClearPresentationDirector();
 protected:
@@ -131,10 +121,10 @@ private:
 	UPROPERTY(Transient) TObjectPtr<ACameraActor> VictoryCamera;
 	UPROPERTY(Transient) TWeakObjectPtr<AActor> OriginalViewTarget;
 	UPROPERTY(Transient) TArray<FStageClearHiddenMesh> HiddenMeshes;
-	UPROPERTY(Transient) TArray<FStageClearFragment> Fragments;
 	UPROPERTY(Transient) TArray<TObjectPtr<UNiagaraComponent>> StarComponents;
 	UPROPERTY(Transient) TObjectPtr<UNiagaraComponent> TransferComponent;
 	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> GlowMID;
 	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> DataMID;
-	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> FragmentMID;
+	/** DataFragmentVFXの生成物。自動破棄せず、DestroyParticles()でだけ破棄します。 */
+	UPROPERTY(Transient) TObjectPtr<UNiagaraComponent> FragmentComponent;
 };

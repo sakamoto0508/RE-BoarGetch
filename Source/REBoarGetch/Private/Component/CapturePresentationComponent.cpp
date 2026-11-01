@@ -5,13 +5,11 @@
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Components/StaticMeshComponent.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "Engine/StaticMesh.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Shakes/PerlinNoiseCameraShakePattern.h"
@@ -142,7 +140,7 @@ void UCapturePresentationComponent::RestoreTarget(FCaptureVisualTarget& T)
 		T.OriginalOverlay);
 	if (T.Mesh.IsValid()) T.Mesh->SetVisibility(T.bOriginalVisible, false);
 	if (IsValid(T.DataMesh)) T.DataMesh->DestroyComponent();
-	for (FCaptureFragment& F : T.Fragments) if (IsValid(F.Mesh)) F.Mesh->DestroyComponent();
+	if (IsValid(T.DataVFX)) T.DataVFX->DestroyComponent();
 	if (IsValid(T.VFX)) T.VFX->DestroyComponent();
 	if (T.Boar.IsValid()) T.Boar->OnDestroyed.RemoveDynamic(this, &ThisClass::OnTargetDestroyed);
 }
@@ -214,38 +212,18 @@ void UCapturePresentationComponent::StartDataConversion(FCaptureVisualTarget& T)
 		T.DataMesh = Proxy;
 		Source->SetVisibility(false, false);
 	}
-	// Small cubes and narrow vertical slivers travel upward with the data silhouette.
-	UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
-	if (!Cube || !GlowMaterial) return;
-	T.FragmentMaterial = UMaterialInstanceDynamic::Create(GlowMaterial, this);
-	T.FragmentMaterial->SetVectorParameterValue(TEXT("GlowColor"), CaptureColor);
-	T.FragmentMaterial->SetScalarParameterValue(TEXT("GlowStrength"), 8.f);
-	FRandomStream Random(Boar->GetUniqueID());
-	for (int32 I = 0; I < FMath::Clamp(FragmentCount, 0, 32); ++I)
-	{
-		UStaticMeshComponent* Piece = NewObject<UStaticMeshComponent>(Boar, NAME_None, RF_Transient);
-		Piece->SetMobility(EComponentMobility::Movable);
-		Piece->SetStaticMesh(Cube);
-		Piece->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		Piece->SetGenerateOverlapEvents(false);
-		Piece->SetCanEverAffectNavigation(false);
-		Piece->SetCastShadow(false);
-		Piece->SetMaterial(0, T.FragmentMaterial);
-		Piece->RegisterComponent();
-		const bool bStreak = I % 4 == 0;
-		Piece->SetWorldScale3D(bStreak
-			                       ? FVector(.012f, .012f, Random.FRandRange(.16f, .3f))
-			                       : FVector(Random.FRandRange(.025f, .065f)));
-		FCaptureFragment F;
-		F.Mesh = Piece;
-		F.Start = T.CaptureLocation + FVector(Random.FRandRange(-65.f, 65.f), Random.FRandRange(-65.f, 65.f),
-		                                      Random.FRandRange(-25.f, 65.f));
-		F.Drift = FVector(Random.FRandRange(-35.f, 35.f), Random.FRandRange(-35.f, 35.f),
-		                  Random.FRandRange(120.f, 260.f));
-		F.Delay = Random.FRandRange(0.f, .17f);
-		Piece->SetWorldLocation(F.Start);
-		T.Fragments.Add(F);
-	}
+	// 上昇するデータ粒子はNiagaraが生成・移動・消失させる。C++は開始と、実時間の進行・終了時刻・色だけを渡す。
+	if (!DataFragmentVFX) return;
+	T.DataVFX = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, DataFragmentVFX, T.CaptureLocation,
+	                                                           FRotator::ZeroRotator, FVector::OneVector, false, false);
+	if (!T.DataVFX) return;
+	T.DataVFX->SetVariableLinearColor(TEXT("User.Color"), CaptureColor);
+	T.DataVFX->SetVariableFloat(TEXT("User.FragmentEndTime"), CaptureDissolveDuration + TransferFinishDuration);
+	T.DataVFX->SetVariableFloat(TEXT("User.FragmentFadeTime"), TransferFinishDuration);
+	// HitStop・SlowMotion中もリングと同じ実時間で進めるため、年齢はOnWorldTickから指定する。
+	T.DataVFX->SetAgeUpdateMode(ENiagaraAgeUpdateMode::DesiredAge);
+	T.DataVFX->SetCanRenderWhileSeeking(true);
+	T.DataVFX->Activate(true);
 }
 
 void UCapturePresentationComponent::StartCageReception(const FVector& Location)
@@ -368,16 +346,7 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 			if (IsValid(T.DataMesh) && T.Mesh.IsValid())
 				T.DataMesh->SetRelativeLocation(
 					T.Mesh->GetRelativeLocation() + FVector(0, 0, TransferRiseDistance * FinishP));
-			for (FCaptureFragment& F : T.Fragments)
-				if (IsValid(F.Mesh))
-				{
-					const float FragmentAge = FMath::Max(0.f, DataAge - F.Delay);
-					F.Mesh->SetVisibility(DataAge >= F.Delay && FinishP < 1.f);
-					F.Mesh->SetWorldLocation(
-						F.Start + F.Drift * FragmentAge + FVector(0, 0, TransferRiseDistance * FinishP));
-				}
-			if (T.FragmentMaterial) T.FragmentMaterial->SetScalarParameterValue(
-				TEXT("GlowAmount"), .9f * (1.f - FinishP));
+			if (IsValid(T.DataVFX)) T.DataVFX->SetDesiredAge(DataAge);
 		}
 		if (!T.Boar.IsValid() || !T.Boar->IsCaptured() || T.Age >= GetTotalDuration())
 		{

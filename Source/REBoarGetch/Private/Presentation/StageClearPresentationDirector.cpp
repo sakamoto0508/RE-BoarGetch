@@ -349,41 +349,21 @@ void AStageClearPresentationDirector::BeginDissolve(float Duration)
 		Source->SetOverlayMaterial(M.OriginalOverlay);
 		Source->SetVisibility(false, false);
 	}
-	// キューブ状のデータ粒子：スキャン線が通過した高さから順に舞い上がります。
-	UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
-	if (Cube && GlowMaterial)
+	// データ粒子：Niagaraが生成・上昇・出現順（スキャン線の高さ順）を担当する。
+	// C++は発生範囲（Player/網のBounds）・分解時間・色を渡し、実時間の経過をDesiredAgeで指定する。
+	if (DataFragmentVFX && !IsValid(FragmentComponent))
 	{
-		FragmentMID = UMaterialInstanceDynamic::Create(GlowMaterial, this);
-		FragmentMID->SetVectorParameterValue(TEXT("GlowColor"), DataColor);
-		FragmentMID->SetScalarParameterValue(TEXT("GlowStrength"), 9.f);
-		FRandomStream Random(int32(VictoryFocusPoint.X * 13.f + VictoryFocusPoint.Y * 7.f));
-		for (int32 I = 0; I < FMath::Clamp(FragmentCount, 0, 64); ++I)
+		FragmentComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			this, DataFragmentVFX, Box.GetCenter(), FRotator::ZeroRotator, FVector::OneVector, false, false);
+		if (FragmentComponent)
 		{
-			auto* Piece = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
-			Piece->SetMobility(EComponentMobility::Movable);
-			Piece->SetStaticMesh(Cube);
-			Piece->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			Piece->SetGenerateOverlapEvents(false);
-			Piece->SetCanEverAffectNavigation(false);
-			Piece->SetCastShadow(false);
-			Piece->SetMaterial(0, FragmentMID);
-			Piece->SetUsingAbsoluteLocation(true);
-			Piece->SetUsingAbsoluteRotation(true);
-			Piece->SetUsingAbsoluteScale(true);
-			Piece->RegisterComponent();
-			const float S = Random.FRandRange(.035f, .09f);
-			Piece->SetWorldScale3D(FVector(S));
-			Piece->SetWorldRotation(FRotator(Random.FRandRange(0, 90), Random.FRandRange(0, 90), 0));
-			FStageClearFragment F;
-			F.Mesh = Piece;
-			F.Start = FVector(Random.FRandRange(Box.Min.X, Box.Max.X), Random.FRandRange(Box.Min.Y, Box.Max.Y),
-			                  Random.FRandRange(Box.Min.Z, Box.Max.Z));
-			F.Drift = FVector(Random.FRandRange(-30.f, 30.f), Random.FRandRange(-30.f, 30.f),
-			                  FragmentRiseSpeed * Random.FRandRange(.6f, 1.4f));
-			F.Delay = DissolveDuration * FMath::Clamp((F.Start.Z - DissolveMinZ) / DissolveHeight, 0.f, 1.f) * .9f;
-			Piece->SetWorldLocation(F.Start);
-			Piece->SetVisibility(false);
-			Fragments.Add(F);
+			FragmentComponent->SetVariableVec3(TEXT("User.SpawnSize"), Box.GetSize());
+			FragmentComponent->SetVariableFloat(TEXT("User.DissolveDuration"), DissolveDuration);
+			FragmentComponent->SetVariableLinearColor(TEXT("User.Color"), DataColor);
+			FragmentComponent->SetVariableFloat(TEXT("User.Fade"), 1.f);
+			FragmentComponent->SetAgeUpdateMode(ENiagaraAgeUpdateMode::DesiredAge);
+			FragmentComponent->SetCanRenderWhileSeeking(true);
+			FragmentComponent->Activate(true);
 		}
 	}
 	if (TransferVFX)
@@ -431,12 +411,9 @@ void AStageClearPresentationDirector::DestroyParticles()
 			C->DestroyComponent();
 	}
 	StarComponents.Reset();
-	for (FStageClearFragment& F : Fragments)
-	{
-		if (IsValid(F.Mesh)) 
-			F.Mesh->DestroyComponent();
-	}
-	Fragments.Reset();
+	if (IsValid(FragmentComponent))
+		FragmentComponent->DestroyComponent();
+	FragmentComponent = nullptr;
 	if (IsValid(TransferComponent)) 
 		TransferComponent->DestroyComponent();
 	TransferComponent = nullptr;
@@ -478,14 +455,9 @@ void AStageClearPresentationDirector::TickPresentation(float Dt)
 			if (P >= 1.f) 
 				FinishDissolve();
 		}
-		// スキャン線が通過した順にデータ粒子が出現し、上昇します。
-		for (FStageClearFragment& F : Fragments)
-			if (IsValid(F.Mesh))
-			{
-				const float A = DissolveAge - F.Delay;
-				F.Mesh->SetVisibility(A >= 0.f);
-				if (A >= 0.f) F.Mesh->SetWorldLocation(F.Start + F.Drift * A);
-			}
+		// データ粒子は分解開始からの実時間で進める（個々の粒子の位置・表示はNiagara側）。
+		if (IsValid(FragmentComponent))
+			FragmentComponent->SetDesiredAge(DissolveAge);
 	}
 	if (bRetreating)
 	{
@@ -493,8 +465,8 @@ void AStageClearPresentationDirector::TickPresentation(float Dt)
 		UpdateCamera(EvaluateRetreat(RetreatAge / RetreatDuration));
 		const float FadeStart = RetreatDuration - ParticleFadeDuration;
 		const float ParticleAlpha = 1.f - FMath::Clamp((RetreatAge - FadeStart) / ParticleFadeDuration, 0.f, 1.f);
-		if (FragmentMID) 
-			FragmentMID->SetScalarParameterValue(TEXT("GlowAmount"), .9f * ParticleAlpha);
+		if (IsValid(FragmentComponent))
+			FragmentComponent->SetVariableFloat(TEXT("User.Fade"), ParticleAlpha);
 		if (RetreatAge >= FadeStart)
 			for (int32 I = 0; I < StarComponents.Num(); ++I)
 				if (IsValid(StarComponents[I]))
