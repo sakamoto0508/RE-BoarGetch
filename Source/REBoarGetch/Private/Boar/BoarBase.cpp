@@ -81,11 +81,16 @@ bool ABoarBase::CaptureWithFeedback(bool bSharedFeedback)
 		return false;
 	SetActorTickEnabled(false);
 	// Keep the successful capture at its original position until presentation completes.
+	// 演出がある場合はGameModeへ確定待ちとして登録し、演出完了時に確定する。無い場合は即時確定。
 	if (auto* PC = GetWorld()->GetFirstPlayerController())
 		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
-			if (Presentation->PresentCapturedBoar(this, bSharedFeedback)) 
+			if (Presentation->PresentCapturedBoar(this, bSharedFeedback))
+			{
+				if (auto* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
+					Mode->RegisterPendingCapture(this);
 				return true;
-	if (auto* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>()) 
+			}
+	if (auto* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
 		Mode->HandleBoarCaptured(this);
 	return true;
 }

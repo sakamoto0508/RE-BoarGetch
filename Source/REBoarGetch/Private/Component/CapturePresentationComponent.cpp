@@ -205,20 +205,28 @@ void UCapturePresentationComponent::CancelPresentation(bool bCommitCaptures)
 	Targets.Reset();
 	for (auto& R : Receptions) if (IsValid(R.VFX)) R.VFX->DestroyComponent();
 	Receptions.Reset();
-	// 演出を省略しても捕獲（Cage収容・記録）は確定させる。Level破棄時は確定しない。
-	auto* Mode = bCommitCaptures && GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
-	if (!Mode || Pending.IsEmpty()) return;
+	// 確定待ちの所有者はGameMode。bCommitCaptures時は確定を依頼し（Stage終了後はGameMode側の判定で確定されない）、
+	// そうでなければ（Level破棄・見た目だけの片付け）確定せずに確定待ちから外す。
+	auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
+	if (!IsValid(Mode) || Pending.IsEmpty()) return;
+	if (!bCommitCaptures)
+	{
+		for (const TWeakObjectPtr<ABoarBase>& Boar : Pending) Mode->DiscardPendingCapture(Boar);
+		return;
+	}
 	bCommittingCaptures = true;
-	for (auto Boar : Pending) if (Boar.IsValid() && Boar->IsCaptured()) Mode->HandleBoarCaptured(Boar.Get());
+	Mode->CompletePendingCaptures(Pending);
 	bCommittingCaptures = false;
-	Mode->RefreshHousedBoarCount();
 }
 
 void UCapturePresentationComponent::OnTargetDestroyed(AActor* Actor)
 {
+	auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
 	for (int32 I = Targets.Num() - 1; I >= 0; --I)
 		if (Targets[I].Boar.Get() == Actor || !Targets[I].Boar.IsValid())
 		{
+			// 消えたBoarの捕獲は確定しない。確定待ちからも外す。
+			if (IsValid(Mode)) Mode->DiscardPendingCapture(Targets[I].Boar);
 			RestoreTarget(Targets[I]);
 			Targets.RemoveAt(I);
 		}
@@ -417,21 +425,28 @@ bool UCapturePresentationComponent::UpdateTarget(FCaptureVisualTarget& T, float 
 	return !T.Boar.IsValid() || !T.Boar->IsCaptured() || T.Age >= GetTotalDuration();
 }
 
-// 演出を終えた対象の捕獲をGameModeへ確定させる（タイミング・再入防止は従来どおり）。
+// 演出を終えた対象をGameModeへ通知し、確定（収容）できたBoarにだけCage受信演出を出す。
+// 確定可否・二重確定防止・収容数の再集計はGameModeが担当する（タイミングは従来どおり）。
 void UCapturePresentationComponent::CommitFinishedCaptures(ABoarGameMode* Mode,
                                                           const TArray<TWeakObjectPtr<ABoarBase>>& Finished)
 {
+	if (!Mode || Finished.IsEmpty()) return;
+	// 確定前の位置を控え、収容で移動したBoarだけを受信演出の対象にする。
+	TMap<TWeakObjectPtr<ABoarBase>, FVector> CaptureLocations;
+	for (const TWeakObjectPtr<ABoarBase>& Boar : Finished)
+		if (Boar.IsValid() && Boar->IsCaptured()) CaptureLocations.Add(Boar, Boar->GetActorLocation());
+	// 確定通知中にClear要求などで状態が変わっても、HasPendingCaptures()は通知中をtrueで返す。
+	const TWeakObjectPtr<UCapturePresentationComponent> Self(this);
 	bCommittingCaptures = true;
-	for (auto Boar : Finished)
-		if (Mode && Boar.IsValid() && Boar->IsCaptured())
-		{
-			const FVector CaptureLocation = Boar->GetActorLocation();
-			Mode->HandleBoarCaptured(Boar.Get());
-			if (Boar.IsValid() && Boar->IsCaptured() && !Boar->GetActorLocation().Equals(CaptureLocation, 1.f))
-				StartCageReception(Boar->GetActorLocation());
-		}
+	const TArray<ABoarBase*> Confirmed = Mode->CompletePendingCaptures(Finished);
+	if (!Self.IsValid()) return;
 	bCommittingCaptures = false;
-	if (Mode && !Finished.IsEmpty()) Mode->RefreshHousedBoarCount();
+	for (ABoarBase* Boar : Confirmed)
+	{
+		const FVector* Before = CaptureLocations.Find(Boar);
+		if (Before && IsValid(Boar) && Boar->IsCaptured() && !Boar->GetActorLocation().Equals(*Before, 1.f))
+			StartCageReception(Boar->GetActorLocation());
+	}
 }
 
 // Cage受信エフェクトを進め、終わったものを破棄する。全演出が終わったら収容数を再通知する。

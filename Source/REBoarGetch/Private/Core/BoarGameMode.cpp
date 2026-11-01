@@ -39,12 +39,49 @@ ABoarGameMode::ABoarGameMode()
 
 void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
 {
+	ConfirmCapture(Boar);
+}
+
+bool ABoarGameMode::ConfirmCapture(ABoarBase* Boar)
+{
 	if (!IsValid(Boar) || !Boar->IsCaptured() || !CanAdvanceStage() || HandledCapturedBoars.Contains(Boar))
-		return;
+		return false;
+	// 確定待ちだった場合も、確定済みへ移す（同じBoarを両方の正本に置かない）。
+	PendingCapturedBoars.Remove(Boar);
 	HandledCapturedBoars.Add(Boar);
 	// 捕獲成立時の演出や報酬付与をBoarCaptureResolutionに委譲する。
 	BoarCaptureResolution::Resolve(GetWorld(), Boar, StageRunData, HealPickupClass, HealItemDropChance);
 	RefreshHousedBoarCount();
+	return true;
+}
+
+void ABoarGameMode::RegisterPendingCapture(ABoarBase* Boar)
+{
+	if (!IsValid(Boar) || !Boar->IsCaptured() || !CanAdvanceStage() || HandledCapturedBoars.Contains(Boar))
+		return;
+	PendingCapturedBoars.Add(Boar);
+}
+
+TArray<ABoarBase*> ABoarGameMode::CompletePendingCaptures(const TArray<TWeakObjectPtr<ABoarBase>>& Boars)
+{
+	TArray<ABoarBase*> Confirmed;
+	for (const TWeakObjectPtr<ABoarBase>& Boar : Boars)
+	{
+		// 確定待ちに無いもの（破棄済み・確定済み・未登録）は確定しない。
+		if (PendingCapturedBoars.Remove(Boar) == 0)
+			continue;
+		// 先に確定した捕獲でClear要求が立つと、以降はCanAdvanceStage()で確定されない（従来どおり）。
+		if (ConfirmCapture(Boar.Get()))
+			Confirmed.Add(Boar.Get());
+	}
+	if (!Boars.IsEmpty())
+		RefreshHousedBoarCount();
+	return Confirmed;
+}
+
+void ABoarGameMode::DiscardPendingCapture(const TWeakObjectPtr<ABoarBase>& Boar)
+{
+	PendingCapturedBoars.Remove(Boar);
 }
 
 void ABoarGameMode::StartPlay()
@@ -227,6 +264,8 @@ void ABoarGameMode::ResolveStageEnd()
 		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
 			Presentation->
 				CancelPresentation();
+	// StageStateを変えた後なので、上の中断で確定されなかった捕獲は確定しないまま破棄する。
+	PendingCapturedBoars.Reset();
 	SetStageActorsStopped(true);
 	if (StageState == EBoarStageState::Cleared)
 	{

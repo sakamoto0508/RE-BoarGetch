@@ -11,6 +11,7 @@
 #include "Gadget/GadgetBase.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Boar/BoarBase.h"
+#include "Component/CaptureComponent.h"
 #include "Cage/Cage.h"
 #include "Stage/StageConfig.h"
 #include "Stage/BoarSpawnPoint.h"
@@ -254,4 +255,68 @@ bool FBoarLoadoutInitializationFailureTest::RunTest(const FString& Parameters)
 		BlueprintPlayer->GetGadgetComponent()->IsTemporaryLoadout());
 	return true;
 }
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarPendingCaptureTest, "REBoarGetch.Spec.PendingCapture",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FBoarPendingCaptureTest::RunTest(const FString& Parameters)
+{
+	FStartupWorld Fixture;
+	auto* Mode = Fixture.CreateStage();
+	if (!TestNotNull(TEXT("Stage game mode"), Mode)) return false;
+	Mode->StageState = EBoarStageState::Playing;
+	FActorSpawnParameters Spawn;
+	Spawn.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	auto* Cage = Fixture.World->SpawnActor<ACage>(FVector(500, 0, 0), FRotator::ZeroRotator, Spawn);
+	if (!TestNotNull(TEXT("収容先のCage"), Cage)) return false;
+	Cage->InitializeForStage();
+	auto SpawnCaptured = [&](FName Id) -> ABoarBase*
+	{
+		auto* Boar = Fixture.World->SpawnActor<ABoarBase>(FVector::ZeroVector, FRotator::ZeroRotator, Spawn);
+		if (!Boar) return nullptr;
+		Boar->BoarUniqueId = Id;
+		auto* Capture = Boar->FindComponentByClass<UCaptureComponent>();
+		return Capture && Capture->Capture(nullptr) ? Boar : nullptr;
+	};
+
+	// 演出完了の通知で、確定待ちの捕獲が一度だけ確定する。
+	ABoarBase* First = SpawnCaptured(TEXT("PendingTest_First"));
+	if (!TestNotNull(TEXT("捕獲状態のBoar"), First)) return false;
+	Mode->RegisterPendingCapture(First);
+	TestTrue(TEXT("演出中は確定待ち"), Mode->IsCapturePending(First));
+	TestFalse(TEXT("演出中は未確定"), Mode->HandledCapturedBoars.Contains(First));
+	TArray<TWeakObjectPtr<ABoarBase>> Batch{First};
+	TestEqual(TEXT("演出完了で確定"), Mode->CompletePendingCaptures(Batch).Num(), 1);
+	TestFalse(TEXT("確定後は確定待ちに残らない"), Mode->IsCapturePending(First));
+	TestTrue(TEXT("確定済みとして記録"), Mode->HandledCapturedBoars.Contains(First));
+	TestEqual(TEXT("同じ通知が重なっても二重確定しない"), Mode->CompletePendingCaptures(Batch).Num(), 0);
+
+	// 見た目だけの片付け（Level破棄・対象Destroy）は確定しない。
+	ABoarBase* Discarded = SpawnCaptured(TEXT("PendingTest_Discarded"));
+	if (!TestNotNull(TEXT("破棄用のBoar"), Discarded)) return false;
+	Mode->RegisterPendingCapture(Discarded);
+	Mode->DiscardPendingCapture(Discarded);
+	TestFalse(TEXT("破棄で確定待ちから外れる"), Mode->IsCapturePending(Discarded));
+	TestEqual(TEXT("破棄後の完了通知では確定しない"),
+	          Mode->CompletePendingCaptures({TWeakObjectPtr<ABoarBase>(Discarded)}).Num(), 0);
+	TestFalse(TEXT("破棄した捕獲は未確定のまま"), Mode->HandledCapturedBoars.Contains(Discarded));
+
+	// Clear要求後（Stage終了処理中）は確定せず、確定待ちにも残さない。
+	ABoarBase* Late = SpawnCaptured(TEXT("PendingTest_Late"));
+	if (!TestNotNull(TEXT("終了直前のBoar"), Late)) return false;
+	Mode->RegisterPendingCapture(Late);
+	Mode->bStageClearRequested = true;
+	TestEqual(TEXT("Clear要求後は確定しない"), Mode->CompletePendingCaptures({TWeakObjectPtr<ABoarBase>(Late)}).Num(), 0);
+	TestFalse(TEXT("確定できなかった捕獲も確定待ちから外す"), Mode->IsCapturePending(Late));
+	TestFalse(TEXT("Clear要求後の捕獲は未確定"), Mode->HandledCapturedBoars.Contains(Late));
+
+	// Stage終了確定時は、残った確定待ちを確定せずに破棄する。
+	Mode->PendingCapturedBoars.Add(Late);
+	Mode->bWaitForStageEndPresentation = true;
+	Mode->bClearSaveSucceeded = true;
+	Mode->bEndUIShown = true;
+	Mode->ResolveStageEnd();
+	TestFalse(TEXT("Stage終了で確定待ちを破棄"), Mode->IsCapturePending(Late));
+	return true;
+}
+
 #endif
