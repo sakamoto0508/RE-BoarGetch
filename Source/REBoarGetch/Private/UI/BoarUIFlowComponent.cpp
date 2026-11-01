@@ -22,7 +22,67 @@ ABoarPlayerController* UBoarUIFlowComponent::GetController() const
 bool UBoarUIFlowComponent::BlocksGameplayInput() const
 {
 	// 画面の寿命に入力抑制を結び付け、子画面を閉じても親メニューの抑制は残す。
-	return bFacilityMenuOpen || PauseWidget || SettingsWidget || EncyclopediaWidget || ArchiveSelectionWidget;
+	return bFacilityMenuOpen || PauseWidget || SettingsWidget || EncyclopediaWidget || ArchiveSelectionWidget ||
+		StageSelectionMenu;
+}
+
+bool UBoarUIFlowComponent::CanOpenStageSelection() const
+{
+	const auto* PC = GetController();
+	return PC && PC->IsLocalController() && !PC->bLevelTransitionRequested && !StageSelectionMenu &&
+		!BlocksGameplayInput() && !LoadoutWidget && !LobbyExitConfirmation;
+}
+
+bool UBoarUIFlowComponent::OpenStageSelection(UUserWidget* Menu)
+{
+	auto* PC = GetController();
+	if (!PC || !Menu)
+		return false;
+	if (StageSelectionMenu != Menu)
+	{
+		if (!CanOpenStageSelection())
+			return false;
+		// 画面の寿命に1回だけ入力抑制を結び付ける（Ignore入力は加算式）。
+		StageSelectionMenu = Menu;
+		PC->bIsGadgetModifierHeld = false;
+		PC->SetIgnoreMoveInput(true);
+		PC->SetIgnoreLookInput(true);
+		PC->FlushPressedKeys();
+	}
+	// Game入力とUI入力を両立させ、マウスとゲームパッドの両方で選択できるようにする。
+	FInputModeGameAndUI ModeUI;
+	ModeUI.SetWidgetToFocus(Menu->TakeWidget());
+	ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	PC->SetInputMode(ModeUI);
+	PC->SetShowMouseCursor(true);
+	return true;
+}
+
+void UBoarUIFlowComponent::CloseStageSelection(UUserWidget* Menu, bool bLevelEnding)
+{
+	if (!Menu || StageSelectionMenu != Menu)
+		return;
+	// 親画面を閉じる前に、そこから開いた子画面（図鑑）を閉じて入力状態を戻させる。
+	CloseEncyclopediaFrom(Menu);
+	StageSelectionMenu = nullptr;
+	auto* PC = GetController();
+	if (!PC)
+		return;
+	PC->SetIgnoreMoveInput(false);
+	PC->SetIgnoreLookInput(false);
+	PC->FlushPressedKeys();
+	if (bLevelEnding)
+	{
+		// Level遷移・破棄中はGameplay入力を止めたままにし、次のLevelのBeginPlayで初期化させる。
+		PC->bLevelTransitionRequested = true;
+		return;
+	}
+	// 他のメニューが入力を必要としている間は、そのメニューの入力状態を上書きしない。
+	if (BlocksGameplayInput())
+		return;
+	FInputModeGameOnly ModeGame;
+	PC->SetInputMode(ModeGame);
+	PC->SetShowMouseCursor(false);
 }
 
 // 子画面を閉じてからPauseを解除し、メニューに伴う入力状態を片付けます。
@@ -301,8 +361,8 @@ void UBoarUIFlowComponent::OpenPauseMenu()
 		return;
 	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
 	// Lobby/Title、終了演出、他のPauseとの競合、および多重生成を防ぎます。
-	if (!PC->IsLocalController() || PauseWidget || !PC->PauseWidgetClass || PC->bGameplayInputBlocked || PC->
-		bLevelTransitionRequested ||
+	if (!PC->IsLocalController() || PauseWidget || !PC->PauseWidgetClass || PC->bGameplayInputBlocked ||
+		StageSelectionMenu || PC->bLevelTransitionRequested ||
 		!Mode || !Mode->CanAdvanceStage() || UGameplayStatics::IsGamePaused(this))
 		return;
 	auto* Widget = CreateWidget<UBoarPauseWidget>(PC, PC->PauseWidgetClass);

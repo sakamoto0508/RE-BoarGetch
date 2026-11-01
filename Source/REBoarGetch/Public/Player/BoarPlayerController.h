@@ -56,8 +56,10 @@ public:
 	UFUNCTION() void CloseArchiveDisplaySelection();
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
 	void HandleStageCleared(const FStageRunData& Run, int32 TargetCount);
-	/** 終了演出からUIまでゲーム入力を遮断します。 */
+	/** 終了演出からUIまでゲーム入力を遮断します（Stage進行による入力禁止。メニュー表示による禁止はUIFlowが管理します）。 */
 	void SetStageInputBlocked(bool bBlocked);
+	/** ローカルメニューの入力状態を管理するUIFlow。ステージ選択画面などActor側のUIもここへ入力管理を委ねます。 */
+	class UBoarUIFlowComponent* GetUIFlow() const { return UIFlow; }
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
 	void HandleStageGameOver();
 	void HandleStageInitializationFailed(const FText& Reason);

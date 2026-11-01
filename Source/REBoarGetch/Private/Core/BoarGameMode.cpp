@@ -79,6 +79,11 @@ TArray<ABoarBase*> ABoarGameMode::CompletePendingCaptures(const TArray<TWeakObje
 	return Confirmed;
 }
 
+bool ABoarGameMode::IsCapturePending(const ABoarBase* Boar) const
+{
+	return PendingCapturedBoars.Contains(TWeakObjectPtr<ABoarBase>(const_cast<ABoarBase*>(Boar)));
+}
+
 void ABoarGameMode::DiscardPendingCapture(const TWeakObjectPtr<ABoarBase>& Boar)
 {
 	PendingCapturedBoars.Remove(Boar);

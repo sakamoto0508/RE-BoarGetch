@@ -42,7 +42,7 @@ public:
 	TArray<class ABoarBase*> CompletePendingCaptures(const TArray<TWeakObjectPtr<class ABoarBase>>& Boars);
 	/** 確定せずに確定待ちから外します（対象Destroy・Level破棄・見た目だけの片付け）。 */
 	void DiscardPendingCapture(const TWeakObjectPtr<class ABoarBase>& Boar);
-	bool IsCapturePending(const class ABoarBase* Boar) const { return PendingCapturedBoars.Contains(Boar); }
+	bool IsCapturePending(const class ABoarBase* Boar) const;
 
 	/** プレイヤー死亡時の終了処理を実行します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Game")

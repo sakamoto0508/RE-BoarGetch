@@ -9,6 +9,7 @@
 #include "UI/BoarLobbyWidget.h"
 #include "BoarGameInstance.h"
 #include "Player/BoarPlayerController.h"
+#include "UI/BoarUIFlowComponent.h"
 
 AStageEntrance::AStageEntrance()
 {
@@ -31,8 +32,8 @@ AStageEntrance::AStageEntrance()
 
 void AStageEntrance::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// Level終了時にもViewport上のWidgetとDelegate参照を残さない。
-	CloseStageSelection();
+	// Level終了時にもViewport上のWidgetとDelegate参照を残さない。Actor単体のDestroy以外はLevel終了として扱う。
+	CloseStageSelection(EndPlayReason != EEndPlayReason::Destroyed);
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -94,6 +95,14 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 		return;
 	}
 
+	// 入力状態はUIFlowが所有する。他のメニュー表示中・Level遷移中は新しく開かない。
+	auto* BoarPC = Cast<ABoarPlayerController>(PlayerController);
+	UBoarUIFlowComponent* UIFlow = BoarPC ? BoarPC->GetUIFlow() : nullptr;
+	if (!LobbyWidget && UIFlow && !UIFlow->CanOpenStageSelection())
+	{
+		return;
+	}
+
 	// 同じOverlap中はWidgetを再利用し、Delegateの重複登録と多重AddToViewportを防ぐ。
 	InteractingPlayerController = PlayerController;
 	if (!LobbyWidget)
@@ -118,34 +127,25 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 		for (UStageConfig* Stage : Catalog) 
 			Stages.Add(Stage);
 	LobbyWidget->ShowStageCatalog(Stages, StageConfig);
-    if(auto* PC=Cast<ABoarPlayerController>(PlayerController))
-    	PC->SetStageInputBlocked(true);
-	FInputModeGameAndUI InputMode;
-	InputMode.SetWidgetToFocus(LobbyWidget->TakeWidget());
-	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-	PlayerController->SetInputMode(InputMode);
-	PlayerController->SetShowMouseCursor(true);
+	// Gameplay入力の抑制・フォーカス・カーソルはUIFlowが引き受ける。
+	if (UIFlow)
+		UIFlow->OpenStageSelection(LobbyWidget);
 }
 
-void AStageEntrance::CloseStageSelection()
+void AStageEntrance::CloseStageSelection(bool bLevelEnding)
 {
 	// 破棄前にDynamic Delegateを解除し、Actor終了後のコールバックを防ぐ。
 	if (LobbyWidget)
 	{
 		LobbyWidget->OnStageStartRequested.RemoveDynamic(this, &AStageEntrance::HandleStageStartRequested);
 		LobbyWidget->OnStageSelectionClosed.RemoveDynamic(this, &AStageEntrance::HandleStageSelectionClosed);
+		// Widgetを外す前に入力状態を解放させる（子画面の復帰先判定にViewport上の親が必要）。
+		// Level遷移を開始した後は入力を戻さず、通常のキャンセル／退出時だけ戻す。
+		const auto* BoarPC = Cast<ABoarPlayerController>(InteractingPlayerController);
+		if (UBoarUIFlowComponent* UIFlow = IsValid(BoarPC) ? BoarPC->GetUIFlow() : nullptr; IsValid(UIFlow))
+			UIFlow->CloseStageSelection(LobbyWidget, bLevelEnding || bTravelRequested);
 		LobbyWidget->RemoveFromParent();
 		LobbyWidget = nullptr;
-	}
-
-	// Level遷移中は入力状態を戻さず、通常のキャンセル／退出時だけGame Onlyへ復帰する。
-	if (InteractingPlayerController && !bTravelRequested)
-	{
-		if(auto* PC=Cast<ABoarPlayerController>(InteractingPlayerController))
-			PC->SetStageInputBlocked(false);
-		FInputModeGameOnly InputMode;
-		InteractingPlayerController->SetInputMode(InputMode);
-		InteractingPlayerController->SetShowMouseCursor(false);
 	}
 	InteractingPlayerController = nullptr;
 }
