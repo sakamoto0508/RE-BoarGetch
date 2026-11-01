@@ -21,6 +21,21 @@ AStageClearPresentationDirector::AStageClearPresentationDirector()
 	StarColors = {FLinearColor(1.f, .82f, .08f), FLinearColor(1.f, 1.f, 1.f), FLinearColor(.05f, .85f, 1.f)};
 }
 
+void AStageClearPresentationDirector::BeginPlay()
+{
+	Super::BeginPlay();
+	// 必須の演出アセットが未設定なら1回だけErrorを出す。欠けた演出は個別に省き、Clear進行とResult表示は継続する。
+	TArray<FString> Missing;
+	if (!StarVFX) Missing.Add(TEXT("StarVFX"));
+	if (!GlowMaterial) Missing.Add(TEXT("GlowMaterial"));
+	if (!DataMaterial) Missing.Add(TEXT("DataMaterial"));
+	if (!TransferVFX) Missing.Add(TEXT("TransferVFX"));
+	if (!DataFragmentVFX) Missing.Add(TEXT("DataFragmentVFX (NS_StageClearDataFragments)"));
+	if (!Missing.IsEmpty())
+		UE_LOG(LogTemp, Error, TEXT("[StageClear] %s: missing %s; those visuals are skipped."), *GetName(),
+		       *FString::Join(Missing, TEXT(", ")));
+}
+
 void AStageClearPresentationDirector::EndPlay(const EEndPlayReason::Type Reason)
 {
 	RestoreVisuals();

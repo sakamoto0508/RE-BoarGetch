@@ -22,6 +22,8 @@ void ABoarArchiveTerminal::Interact(ABoarPlayerController* Controller)
 	if (!Mode || !Mode->bArchive || !Controller || !Controller->IsLocalController() || !Controller->GetPawn() ||
 		!Trigger->IsOverlappingActor(Controller->GetPawn()))
 		return;
-	if (bDisplaySelection)Controller->OpenArchiveDisplaySelection();
-	else Controller->OpenFacilityMenu(true);
+	if (bDisplaySelection)
+		Controller->OpenArchiveDisplaySelection();
+	else 
+		Controller->OpenFacilityMenu(true);
 }

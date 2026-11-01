@@ -34,7 +34,6 @@ UCaptureSuccessCameraShake::UCaptureSuccessCameraShake(const FObjectInitializer&
 UCapturePresentationComponent::UCapturePresentationComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	CameraShake = UCaptureSuccessCameraShake::StaticClass();
 }
 
 float UCapturePresentationComponent::GetTotalDuration() const
@@ -47,6 +46,26 @@ void UCapturePresentationComponent::BeginPlay()
 	Super::BeginPlay();
 	LastRealTime = GetWorld()->GetRealTimeSeconds();
 	TickHandle = FWorldDelegates::OnWorldTickStart.AddUObject(this, &ThisClass::OnWorldTick);
+	ReportMissingVisualAssets();
+}
+
+// 必須の演出アセットが未設定なら開始時に1回だけErrorを出す。欠けた演出は個別に省かれ、捕獲処理は継続する。
+// 演出全体を意図的にOFF（bEnabled=false）にしている場合は報告しない。効果音は任意（未設定なら無音）。
+void UCapturePresentationComponent::ReportMissingVisualAssets() const
+{
+	auto* PC = Cast<APlayerController>(GetOwner());
+	if (!bEnabled || !PC || !PC->IsLocalController())
+		return;
+	TArray<FString> Missing;
+	if (!GlowMaterial) Missing.Add(TEXT("GlowMaterial (Boar glow)"));
+	if (!DataMaterial) Missing.Add(TEXT("DataMaterial (data dissolve)"));
+	if (!CaptureVFX) Missing.Add(TEXT("CaptureVFX (capture ring)"));
+	if (!CageReceptionVFX) Missing.Add(TEXT("CageReceptionVFX (cage reception)"));
+	if (!DataFragmentVFX) Missing.Add(TEXT("DataFragmentVFX (data fragments)"));
+	if (!CameraShake || CameraShake->HasAnyClassFlags(CLASS_Abstract)) Missing.Add(TEXT("CameraShake (BP_CaptureSuccessCameraShake)"));
+	if (!Missing.IsEmpty())
+		UE_LOG(LogTemp, Error, TEXT("[Capture] %s.%s: missing %s; those visuals are skipped (capture keeps working)."),
+		       *GetNameSafe(GetOwner()), *GetName(), *FString::Join(Missing, TEXT(", ")));
 }
 
 void UCapturePresentationComponent::EndPlay(const EEndPlayReason::Type Reason)
@@ -108,7 +127,7 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 			bOwnCamera = true;
 		}
 		ApplyTimeScale(OriginalTimeScale * FMath::Clamp(HitStopDuration > 0 ? HitStopTimeScale : SlowTimeScale, .001f, 1.f));
-		if (PC->PlayerCameraManager && CameraShake) ActiveShake = PC->PlayerCameraManager->
+		if (PC->PlayerCameraManager && CameraShake && !CameraShake->HasAnyClassFlags(CLASS_Abstract)) ActiveShake = PC->PlayerCameraManager->
 		                                                              StartCameraShake(CameraShake);
 		PlaySound(ImpactSound);
 	}
@@ -282,7 +301,8 @@ void UCapturePresentationComponent::StartDataConversion(FCaptureVisualTarget& T)
 
 void UCapturePresentationComponent::StartCageReception(const FVector& Location)
 {
-	UNiagaraSystem* System = CageReceptionVFX ? CageReceptionVFX.Get() : CaptureVFX.Get();
+	// 未設定時は別アセットで代用せずスキップする（BeginPlayでError報告済み）。
+	UNiagaraSystem* System = CageReceptionVFX.Get();
 	if (!System) return;
 	FCaptureReception R;
 	R.VFX = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, System, Location - FVector(0, 0, 35),

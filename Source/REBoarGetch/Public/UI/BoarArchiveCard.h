@@ -22,14 +22,13 @@ protected:
  virtual TSharedRef<SWidget> RebuildWidget() override;
  virtual void NativeOnAddedToFocusPath(const FFocusEvent& Event) override;
  virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& Event) override;
- // レイアウトはWBPで作成します。WBPにRootWidgetが無い場合だけ、C++の仮レイアウトを構築します。
+ // レイアウトはWBPで作成します。C++で代替レイアウトは作らず、RootWidgetが無い場合はErrorを出して表示しません。
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional)) TObjectPtr<class UBorder> Frame;
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional)) TObjectPtr<class UImage> Portrait;
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional)) TObjectPtr<class UImage> FocusFrame;
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional)) TObjectPtr<class UTextBlock> Placeholder;
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional)) TObjectPtr<class UTextBlock> BadgeText;
 private:
- void BuildFallbackLayout();
  void RefreshFrame();
  // 編集対象の展示枠と現在のフォーカスを別々に保持して枠の強調を決めます。
  bool bActiveCard=false, bFocusedCard=false;

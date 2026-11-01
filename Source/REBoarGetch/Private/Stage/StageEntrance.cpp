@@ -95,10 +95,17 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 		return;
 	}
 
-	// 入力状態はUIFlowが所有する。他のメニュー表示中・Level遷移中は新しく開かない。
+	// 入力状態はUIFlowが所有する。UIFlowが無いControllerでは入力を管理できないため開かない。
+	// 他のメニュー表示中・Level遷移中も新しく開かない。
 	auto* BoarPC = Cast<ABoarPlayerController>(PlayerController);
 	UBoarUIFlowComponent* UIFlow = BoarPC ? BoarPC->GetUIFlow() : nullptr;
-	if (!LobbyWidget && UIFlow && !UIFlow->CanOpenStageSelection())
+	if (!UIFlow)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[StageEntrance] %s: %s has no UIFlow; stage selection is not opened."),
+		       *GetName(), *GetNameSafe(PlayerController));
+		return;
+	}
+	if (!LobbyWidget && !UIFlow->CanOpenStageSelection())
 	{
 		return;
 	}
@@ -128,8 +135,12 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 			Stages.Add(Stage);
 	LobbyWidget->ShowStageCatalog(Stages, StageConfig);
 	// Gameplay入力の抑制・フォーカス・カーソルはUIFlowが引き受ける。
-	if (UIFlow)
-		UIFlow->OpenStageSelection(LobbyWidget);
+	// 引き受けられなかった場合は、入力を奪わない空の画面を残さないよう、生成したWidgetとDelegateを片付ける。
+	if (!UIFlow->OpenStageSelection(LobbyWidget))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[StageEntrance] %s: UIFlow refused stage selection; closing the widget."), *GetName());
+		CloseStageSelection();
+	}
 }
 
 void AStageEntrance::CloseStageSelection(bool bLevelEnding)

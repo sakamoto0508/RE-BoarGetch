@@ -23,6 +23,9 @@ public:
 	void SetNoiseAmount(float Amount);
 	/** 0～1。周辺のDark Navy減光の強さです。 */
 	void SetVignetteAlpha(float Alpha);
+	/** Bindingされていないレイヤー名。欠けたレイヤーは描画を省きます。 */
+	TArray<FString> GetMissingLayerNames() const;
+	static constexpr int32 LayerCount = 4;
 
 protected:
 	virtual void NativeOnInitialized() override;

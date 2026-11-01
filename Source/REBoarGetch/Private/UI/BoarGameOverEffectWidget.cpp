@@ -7,6 +7,16 @@ void UBoarGameOverEffectWidget::NativeOnInitialized()
 	SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
+TArray<FString> UBoarGameOverEffectWidget::GetMissingLayerNames() const
+{
+	TArray<FString> Missing;
+	if (!VignetteLayer) Missing.Add(TEXT("VignetteLayer"));
+	if (!FlashLayer) Missing.Add(TEXT("FlashLayer"));
+	if (!WarningLayer) Missing.Add(TEXT("WarningLayer"));
+	if (!NoiseLayer) Missing.Add(TEXT("NoiseLayer"));
+	return Missing;
+}
+
 void UBoarGameOverEffectWidget::NativeConstruct()
 {
 	Super::NativeConstruct();

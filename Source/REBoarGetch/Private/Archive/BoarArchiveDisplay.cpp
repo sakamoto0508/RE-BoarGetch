@@ -29,8 +29,10 @@ void ABoarArchiveDisplay::ConfigureVisual(USkeletalMesh* Mesh, const TArray<UMat
 	BoarVisual->SetRelativeLocation(VisualOffset);
 	BoarVisual->SetRelativeScale3D(FVector(DisplayScale));
 	BoarVisual->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-	if (Idle && Mesh && Idle->GetSkeleton() == Mesh->GetSkeleton())BoarVisual->PlayAnimation(Idle, true);
-	else BoarVisual->SetAnimation(nullptr);
+	if (Idle && Mesh && Idle->GetSkeleton() == Mesh->GetSkeleton())
+		BoarVisual->PlayAnimation(Idle, true);
+	else 
+		BoarVisual->SetAnimation(nullptr);
 	BoarVisual->SetVisibility(Mesh != nullptr);
 	BoarVisual->SetHiddenInGame(Mesh == nullptr);
 }
@@ -101,5 +103,6 @@ void ABoarArchiveDisplay::RefreshDisplay()
 void ABoarArchiveDisplay::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (BoarVisual->IsVisible())BoarVisual->AddLocalRotation(FRotator(0, RotationSpeed * DeltaSeconds, 0));
+	if (BoarVisual->IsVisible())
+		BoarVisual->AddLocalRotation(FRotator(0, RotationSpeed * DeltaSeconds, 0));
 }

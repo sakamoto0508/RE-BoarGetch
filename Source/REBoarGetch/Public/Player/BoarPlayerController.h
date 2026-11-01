@@ -94,6 +94,8 @@ protected:
 	virtual void SetupInputComponent() override;
 
 private:
+	/** Stage初期化失敗時に表示するWidget Blueprintクラスです。未設定ならErrorを出してLobbyへ戻ります。 */
+	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<class UBoarInitializationErrorWidget> InitializationErrorWidgetClass;
 	UPROPERTY(Transient) TObjectPtr<class UBoarInitializationErrorWidget> InitializationErrorWidget;
 	bool bInitializationFailed = false;
 	friend class UBoarUIFlowComponent;

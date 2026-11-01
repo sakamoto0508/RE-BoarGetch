@@ -19,19 +19,34 @@
 
 UBoarGameOverEffectWidget* AGameOverPresentationDirector::EnsureEffectWidget()
 {
-	if (EffectWidget)
+	if (EffectWidget || bEffectWidgetUnavailable)
 		return EffectWidget;
 	ABoarPlayerController* PC = GetPresentationController();
 	if (!PC)
 		return nullptr;
-	// 画面効果Widget（HUDより前、GameOver UIより後ろ）。
-	const TSubclassOf<UBoarGameOverEffectWidget> WidgetClass = EffectWidgetClass
-		                                                           ? EffectWidgetClass
-		                                                           : TSubclassOf<UBoarGameOverEffectWidget>(
-			                                                           UBoarGameOverEffectWidget::StaticClass());
-	EffectWidget = CreateWidget<UBoarGameOverEffectWidget>(PC, WidgetClass);
-	if (EffectWidget)
-		EffectWidget->AddToViewport(50);
+	// 画面効果Widget（HUDより前、GameOver UIより後ろ）。代替Widgetは使わず、使えない場合は画面効果だけを省く。
+	// GameOverの進行・カメラ・Result表示はWidgetの有無に関係なく続行する。
+	auto Skip = [this](const FString& Reason)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: %s; skipping the screen effect."), *GetName(), *Reason);
+		bEffectWidgetUnavailable = true;
+		return nullptr;
+	};
+	if (!EffectWidgetClass || EffectWidgetClass->HasAnyClassFlags(CLASS_Native))
+		return Skip(TEXT("EffectWidgetClass (WBP_GameOverEffect) is not set"));
+	EffectWidget = CreateWidget<UBoarGameOverEffectWidget>(PC, EffectWidgetClass);
+	if (!EffectWidget)
+		return Skip(FString::Printf(TEXT("failed to create %s"), *EffectWidgetClass->GetName()));
+	const TArray<FString> Missing = EffectWidget->GetMissingLayerNames();
+	if (Missing.Num() == UBoarGameOverEffectWidget::LayerCount)
+	{
+		EffectWidget = nullptr;
+		return Skip(FString::Printf(TEXT("%s has no layer bindings"), *EffectWidgetClass->GetName()));
+	}
+	if (!Missing.IsEmpty())
+		UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: %s is missing layer bindings (%s); those layers are skipped."),
+		       *GetName(), *EffectWidgetClass->GetName(), *FString::Join(Missing, TEXT(", ")));
+	EffectWidget->AddToViewport(50);
 	return EffectWidget;
 }
 
@@ -48,6 +63,8 @@ void AGameOverPresentationDirector::BeginHitStop(float Duration, float TimeScale
 {
 	if (Duration <= 0.f || bHitStopActive)
 		return;
+	// 排他の前提：GameOver確定時（ResolveStageEnd）に捕獲演出は中断・復元済みで、以降はCanAdvanceStage()により
+	// 新しい捕獲演出も始まらない。そのためこの間のGlobal Time Dilationの所有者はこの演出だけになる。
 	OriginalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(this);
 	const float Scale = FMath::Clamp(TimeScale, .01f, 1.f);
 	UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeDilation * Scale);

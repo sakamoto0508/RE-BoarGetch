@@ -15,6 +15,8 @@ class REBOARGETCH_API UCageHealthWidget : public UUserWidget
 	GENERATED_BODY()
 public:
 	void SetPresentation(float InFraction, float InTrail, FLinearColor InColor, float InFlash, float InPulse);
+	/** ゲージ表示に必須のBinding（HealthBar）が揃っているか。TrailBar・PulseIndicatorは任意です。 */
+	bool HasRequiredBindings() const { return HealthBar != nullptr; }
 protected:
 	virtual void NativeConstruct() override;
 

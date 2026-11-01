@@ -1,48 +1,33 @@
 #include "UI/BoarInitializationErrorWidget.h"
 #include "Blueprint/WidgetTree.h"
-#include "Components/Border.h"
 #include "Components/Button.h"
-#include "Components/CanvasPanel.h"
-#include "Components/CanvasPanelSlot.h"
 #include "Components/TextBlock.h"
-#include "Components/VerticalBox.h"
 
-void UBoarInitializationErrorWidget::NativeOnInitialized()
+// WBPのMessage/Retry/Lobbyを名前で解決して通知へ接続します。C++で代替レイアウトは作りません。
+void UBoarInitializationErrorWidget::NativeConstruct()
 {
-	Super::NativeOnInitialized();
+	Super::NativeConstruct();
 	SetIsFocusable(true);
-	auto* Root = WidgetTree->ConstructWidget<UCanvasPanel>();
-	WidgetTree->RootWidget = Root;
-	auto* Panel = WidgetTree->ConstructWidget<UBorder>();
-	Panel->SetBrushColor(FLinearColor(.01f, .02f, .04f, .98f));
-	Panel->SetPadding(FMargin(32));
-	auto* CanvasSlot = Root->AddChildToCanvas(Panel);
-	CanvasSlot->SetAnchors(FAnchors(.5f));
-	CanvasSlot->SetAlignment(FVector2D(.5f));
-	CanvasSlot->SetAutoSize(true);
-	auto* Column = WidgetTree->ConstructWidget<UVerticalBox>();
-	Panel->SetContent(Column);
-	Message = WidgetTree->ConstructWidget<UTextBlock>();
-	Message->SetWrapTextAt(640.f);
-	Column->AddChildToVerticalBox(Message);
-	RetryButton = WidgetTree->ConstructWidget<UButton>();
-	auto* RetryLabel = WidgetTree->ConstructWidget<UTextBlock>();
-	RetryLabel->SetText(NSLOCTEXT("WorldInit", "Retry", "もう一度読み込む"));
-	RetryButton->SetContent(RetryLabel);
-	RetryButton->OnClicked.AddUniqueDynamic(this, &ThisClass::Retry);
-	Column->AddChildToVerticalBox(RetryButton);
-	auto* LobbyButton = WidgetTree->ConstructWidget<UButton>();
-	auto* LobbyLabel = WidgetTree->ConstructWidget<UTextBlock>();
-	LobbyLabel->SetText(NSLOCTEXT("WorldInit", "Lobby", "ロビーへ戻る"));
-	LobbyButton->SetContent(LobbyLabel);
-	LobbyButton->OnClicked.AddUniqueDynamic(this, &ThisClass::Lobby);
-	Column->AddChildToVerticalBox(LobbyButton);
+	Message = WidgetTree ? Cast<UTextBlock>(WidgetTree->FindWidget(MessageTextWidgetName)) : nullptr;
+	RetryButton = WidgetTree ? Cast<UButton>(WidgetTree->FindWidget(RetryButtonWidgetName)) : nullptr;
+	LobbyButton = WidgetTree ? Cast<UButton>(WidgetTree->FindWidget(LobbyButtonWidgetName)) : nullptr;
+	if (RetryButton) RetryButton->OnClicked.AddUniqueDynamic(this, &ThisClass::Retry);
+	if (LobbyButton) LobbyButton->OnClicked.AddUniqueDynamic(this, &ThisClass::Lobby);
+	if (!Message || !RetryButton || !LobbyButton)
+		UE_LOG(LogTemp, Error, TEXT("[WorldInit] %s: Configure MessageTextWidgetName / RetryButtonWidgetName / LobbyButtonWidgetName."),
+		       *GetNameSafe(GetClass()));
+}
+
+void UBoarInitializationErrorWidget::NativeDestruct()
+{
+	if (RetryButton) RetryButton->OnClicked.RemoveDynamic(this, &ThisClass::Retry);
+	if (LobbyButton) LobbyButton->OnClicked.RemoveDynamic(this, &ThisClass::Lobby);
+	Super::NativeDestruct();
 }
 
 void UBoarInitializationErrorWidget::ShowError(const FText& Reason)
 {
 	if (Message)
-		Message->SetText(FText::Format(
-			NSLOCTEXT("WorldInit", "Failure", "ゲームを開始できませんでした。\n\n{0}\n"), Reason));
+		Message->SetText(FText::Format(MessageFormat, Reason));
 	if (RetryButton) RetryButton->SetUserFocus(GetOwningPlayer());
 }

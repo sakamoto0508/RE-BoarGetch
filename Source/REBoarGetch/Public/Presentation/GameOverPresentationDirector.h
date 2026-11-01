@@ -124,4 +124,6 @@ private:
 	FRotator StartControlRotation = FRotator::ZeroRotator;
 	FVector Focus = FVector::ZeroVector;
 	UPROPERTY(Transient) TObjectPtr<UBoarGameOverEffectWidget> EffectWidget;
+	/** EffectWidgetを生成できないと判明済み。毎フレーム同じErrorを出さないために使います。 */
+	bool bEffectWidgetUnavailable = false;
 };

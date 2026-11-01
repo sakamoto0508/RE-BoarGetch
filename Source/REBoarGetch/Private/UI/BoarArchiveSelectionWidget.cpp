@@ -1,21 +1,14 @@
 #include "UI/BoarArchiveSelectionWidget.h"
 #include "UI/BoarArchiveCard.h"
 #include "Blueprint/WidgetTree.h"
-#include "Components/CanvasPanel.h"
-#include "Components/CanvasPanelSlot.h"
-#include "Components/Border.h"
-#include "Components/VerticalBox.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
-#include "Components/VerticalBoxSlot.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
 #include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
-#include "Components/SizeBox.h"
-#include "Components/ScaleBox.h"
 #include "Core/BoarGameInstance.h"
 #include "Save/BoarSaveGame.h"
 #include "Stage/StageConfig.h"
@@ -27,10 +20,8 @@
 
 namespace
 {
-	// WBP未作成時の仮レイアウト専用の配色です。WBPのレイアウトには使いません。
 	// 捕獲済み候補グリッドの列数です。展示枠数とは別の値です。
 	constexpr int32 GridColumns = 3;
-	const FLinearColor Cyan(0.12f, 0.74f, 0.93f), Amber(1, 0.68f, 0.08f), Navy(0.006f, 0.018f, 0.042f);
 
 	const FBoarSpawnDefinition* Definition(const TArray<TObjectPtr<UStageConfig>>& Stages, FName Id,
 	                                       const UStageConfig*& FoundStage)
@@ -53,142 +44,11 @@ UBoarArchiveSelectionWidget::UBoarArchiveSelectionWidget(const FObjectInitialize
 
 TSharedRef<SWidget> UBoarArchiveSelectionWidget::RebuildWidget()
 {
-	// WBPでレイアウトを作成済みならBindWidgetOptionalの参照をそのまま使います。
-	if (WidgetTree && !WidgetTree->RootWidget)BuildFallbackLayout();
+	// WBPのレイアウトとBindWidgetOptionalの参照をそのまま使います。C++で代替レイアウトは作りません。
+	if (WidgetTree && !WidgetTree->RootWidget)
+		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: WBP has no layout (RootWidget is empty). Archive Display Selection is not displayed."),
+		       *GetNameSafe(GetClass()));
 	return Super::RebuildWidget();
-}
-
-// WBPにレイアウトが無い場合の仮表示です。SlateがRootWidgetを取り込む前に構築します。
-void UBoarArchiveSelectionWidget::BuildFallbackLayout()
-{
-	auto* Root = WidgetTree->ConstructWidget<UCanvasPanel>();
-	WidgetTree->RootWidget = Root;
-	auto* Backdrop = WidgetTree->ConstructWidget<UBorder>();
-	Backdrop->SetBrushColor(FLinearColor(0.002f, 0.006f, 0.015f, 0.75f));
-	auto* BG = Root->AddChildToCanvas(Backdrop);
-	BG->SetAnchors(FAnchors(0, 0, 1, 1));
-	BG->SetOffsets(FMargin(0));
-	auto* Scale = WidgetTree->ConstructWidget<UScaleBox>();
-	Scale->SetStretch(EStretch::ScaleToFit);
-	auto* View = Root->AddChildToCanvas(Scale);
-	View->SetAnchors(FAnchors(0.04f, 0.06f, 0.96f, 0.94f));
-	View->SetOffsets(FMargin(0));
-	auto* Size = WidgetTree->ConstructWidget<USizeBox>();
-	Size->SetWidthOverride(1700);
-	Size->SetHeightOverride(900);
-	Scale->SetContent(Size);
-	auto* Rim = WidgetTree->ConstructWidget<UBorder>();
-	Rim->SetBrushColor(Cyan);
-	Rim->SetPadding(FMargin(3));
-	Size->SetContent(Rim);
-	auto* Frame = WidgetTree->ConstructWidget<UBorder>();
-	Frame->SetBrushColor(Navy);
-	Frame->SetPadding(FMargin(36));
-	Rim->SetContent(Frame);
-	auto* Column = WidgetTree->ConstructWidget<UVerticalBox>();
-	Frame->SetContent(Column);
-	auto Text = [&](const FText& Value, int32 Size, FLinearColor Color)
-	{
-		auto* T = WidgetTree->ConstructWidget<UTextBlock>();
-		T->SetText(Value);
-		T->SetColorAndOpacity(FSlateColor(Color));
-		auto F = T->GetFont();
-		F.Size = Size;
-		T->SetFont(F);
-		T->SetAutoWrapText(true);
-		return T;
-	};
-	Column->AddChildToVerticalBox(Text(LOCTEXT("Title", "展示ボア選択"), 38, FLinearColor::White));
-	Column->AddChildToVerticalBox(Text(LOCTEXT("Subtitle", "アーカイブに展示するボアを選択してください"), 20, Cyan))->SetPadding(
-		FMargin(0, 6, 0, 26));
-	auto* Main = WidgetTree->ConstructWidget<UHorizontalBox>();
-	Column->AddChildToVerticalBox(Main)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	auto* Left = WidgetTree->ConstructWidget<UVerticalBox>();
-	auto* L = Main->AddChildToHorizontalBox(Left);
-	FSlateChildSize LeftFill(ESlateSizeRule::Fill);
-	LeftFill.Value = 0.44f;
-	L->SetSize(LeftFill);
-	L->SetPadding(FMargin(0, 0, 32, 0));
-	Left->AddChildToVerticalBox(Text(LOCTEXT("SlotsHeader", "DISPLAY SLOTS  /  展示枠"), 23, Cyan))->SetPadding(
-		FMargin(0, 0, 0, 18));
-	SlotsPanel = WidgetTree->ConstructWidget<UHorizontalBox>();
-	Left->AddChildToVerticalBox(SlotsPanel);
-	if (IsDesignTime())
-		for (int32 I = 0; I < UBoarSaveGame::ArchiveDisplaySlotCount; ++I)
-		{
-			// デザイナー用の空枠表示です。捕獲履歴や保存済み展示には登録しません。
-			auto* PreviewSize = WidgetTree->ConstructWidget<USizeBox>();
-			PreviewSize->SetWidthOverride(206);
-			PreviewSize->SetHeightOverride(242);
-			auto* PreviewRim = WidgetTree->ConstructWidget<UBorder>();
-			PreviewRim->SetBrushColor(I == 0 ? Amber : Cyan);
-			PreviewRim->SetPadding(FMargin(4));
-			PreviewSize->SetContent(PreviewRim);
-			auto* PreviewBody = WidgetTree->ConstructWidget<UBorder>();
-			PreviewBody->SetBrushColor(Navy);
-			PreviewBody->SetPadding(FMargin(16));
-			PreviewRim->SetContent(PreviewBody);
-			auto* PreviewColumn = WidgetTree->ConstructWidget<UVerticalBox>();
-			PreviewBody->SetContent(PreviewColumn);
-			PreviewColumn->AddChildToVerticalBox(Text(LOCTEXT("Empty", "EMPTY"), 26, Cyan))->SetSize(
-				FSlateChildSize(ESlateSizeRule::Fill));
-			PreviewColumn->AddChildToVerticalBox(Text(FText::Format(LOCTEXT("SlotBadge", "展示{0}"), I + 1), 22,
-			                                          FLinearColor::White));
-			SlotsPanel->AddChildToHorizontalBox(PreviewSize)->SetPadding(FMargin(0, 0, 8, 0));
-		}
-	Left->AddChildToVerticalBox(
-		Text(LOCTEXT("Steps", "1  展示枠を選ぶ\n2  捕獲済みボアを選ぶ\n3  展示に設定"), 23, FLinearColor(0.75f, 0.88f, 0.95f)))->SetPadding(
-		FMargin(0, 36, 0, 20));
-	Left->AddChildToVerticalBox(Text(LOCTEXT("Notice", "変更はその場で展示へ反映・保存されます。\n別の枠に展示中のボアを選ぶと入れ替わります。"), 19, Cyan));
-	auto* Right = WidgetTree->ConstructWidget<UVerticalBox>();
-	FSlateChildSize RightFill(ESlateSizeRule::Fill);
-	RightFill.Value = 0.56f;
-	Main->AddChildToHorizontalBox(Right)->SetSize(RightFill);
-	Right->AddChildToVerticalBox(Text(LOCTEXT("CandidatesHeader", "CAPTURED BOARS  /  捕獲済み"), 23, Cyan))->SetPadding(
-		FMargin(0, 0, 0, 14));
-	GridScroll = WidgetTree->ConstructWidget<UScrollBox>();
-	GridScroll->SetClipping(EWidgetClipping::ClipToBounds);
-	Right->AddChildToVerticalBox(GridScroll)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	Grid = WidgetTree->ConstructWidget<UUniformGridPanel>();
-	Grid->SetSlotPadding(FMargin(8));
-	GridScroll->AddChild(Grid);
-	auto* Detail = WidgetTree->ConstructWidget<UBorder>();
-	Detail->SetBrushColor(FLinearColor(0.014f, 0.047f, 0.085f));
-	Detail->SetPadding(FMargin(16));
-	Right->AddChildToVerticalBox(Detail)->SetPadding(FMargin(0, 16, 0, 0));
-	auto* DetailRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-	Detail->SetContent(DetailRow);
-	auto* PhotoSize = WidgetTree->ConstructWidget<USizeBox>();
-	PhotoSize->SetWidthOverride(136);
-	PhotoSize->SetHeightOverride(136);
-	DetailPhoto = WidgetTree->ConstructWidget<UImage>();
-	DetailPhoto->SetVisibility(ESlateVisibility::Hidden);
-	PhotoSize->SetContent(DetailPhoto);
-	DetailRow->AddChildToHorizontalBox(PhotoSize)->SetPadding(FMargin(0, 0, 18, 0));
-	DetailText = Text(LOCTEXT("SelectPrompt", "ボアを選択してください"), 20, FLinearColor::White);
-	DetailRow->AddChildToHorizontalBox(DetailText)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	Status = Text(LOCTEXT("NoCandidates", "捕獲済みのボアがいません"), 19, Cyan);
-	Column->AddChildToVerticalBox(Status)->SetPadding(FMargin(0, 18, 0, 14));
-	auto* Footer = WidgetTree->ConstructWidget<UHorizontalBox>();
-	Column->AddChildToVerticalBox(Footer);
-	auto Button = [&](const FText& Label, FLinearColor Color)
-	{
-		auto* B = WidgetTree->ConstructWidget<UButton>();
-		FButtonStyle Style = B->GetStyle();
-		Style.Normal.TintColor = FSlateColor(FLinearColor(0.035f, 0.11f, 0.18f));
-		Style.Hovered.TintColor = FSlateColor(FLinearColor(0.11f, 0.21f, 0.28f));
-		Style.Pressed.TintColor = FSlateColor(FLinearColor(0.2f, 0.25f, 0.18f));
-		B->SetStyle(Style);
-		B->SetContent(Text(Label, 21, Color));
-		Footer->AddChildToHorizontalBox(B)->SetPadding(FMargin(0, 0, 20, 0));
-		return B;
-	};
-	SetButton = Button(LOCTEXT("SetButton", "展示に設定  [E / East]"), Amber);
-	RemoveButton = Button(LOCTEXT("RemoveButton", "外す  [Delete / West]"), Cyan);
-	BackButton = Button(LOCTEXT("BackButton", "戻る  [Esc / South]"), FLinearColor::White);
-	Column->AddChildToVerticalBox(
-		Text(LOCTEXT("InputGuide", "枠切替  1 / 2 / 3・L1 / R1     一覧移動  矢印 / WASD・D-Pad / Stick"), 17, Cyan))->SetPadding(
-		FMargin(0, 16, 0, 0));
 }
 
 // 保存済みの展示枠を表示用に取り込み、最近の捕獲順を優先して候補を並べます。
@@ -226,11 +86,12 @@ void UBoarArchiveSelectionWidget::NativeConstruct()
 		Remaining.Sort([](FName A, FName B) { return A.LexicalLess(B); });
 		for (FName Id : Remaining)if (!Id.IsNone())Candidates.AddUnique(Id);
 	}
-	const TSubclassOf<UBoarLoadoutEntry> CardClass = EntryClass
-		                                                 ? EntryClass
-		                                                 : TSubclassOf<UBoarLoadoutEntry>(
-			                                                 UBoarArchiveCard::StaticClass());
-	for (int32 I = 0; I < UBoarSaveGame::ArchiveDisplaySlotCount; ++I)
+	// カードもWBPで作成します。未設定時はC++のカードで代替せず、Errorを出してカードを並べません。
+	const TSubclassOf<UBoarLoadoutEntry> CardClass = EntryClass;
+	if (!CardClass)
+		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: EntryClass is unset. Archive cards are not displayed."),
+		       *GetNameSafe(GetClass()));
+	for (int32 I = 0; CardClass && I < UBoarSaveGame::ArchiveDisplaySlotCount; ++I)
 	{
 		auto* C = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), CardClass);
 		if (!C)continue;
@@ -238,7 +99,7 @@ void UBoarArchiveSelectionWidget::NativeConstruct()
 		SlotsPanel->AddChildToHorizontalBox(C)->SetPadding(FMargin(0, 0, 8, 0));
 		SlotRows.Add(C);
 	}
-	for (int32 I = 0; I < Candidates.Num(); ++I)
+	for (int32 I = 0; CardClass && I < Candidates.Num(); ++I)
 	{
 		auto* C = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), CardClass);
 		if (!C)continue;

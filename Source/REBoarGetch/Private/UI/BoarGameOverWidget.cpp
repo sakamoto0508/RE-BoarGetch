@@ -1,31 +1,6 @@
 #include "UI/BoarGameOverWidget.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
-#include "Components/TextBlock.h"
-#include "Components/VerticalBox.h"
-#include "Rendering/DrawElements.h"
-
-void UBoarGameOverWidget::NativeOnInitialized()
-{
-	Super::NativeOnInitialized();
-	// 終了後はActor停止を維持し、Retry/Lobbyを選べる最小UIを用意します。
-	if (GetClass() != StaticClass() || !WidgetTree || WidgetTree->RootWidget) return;
-	auto* Panel = WidgetTree->ConstructWidget<UVerticalBox>();
-	WidgetTree->RootWidget = Panel;
-	auto* Title = WidgetTree->ConstructWidget<UTextBlock>();
-	Title->SetText(FText::FromString(TEXT("Game Over")));
-	Panel->AddChildToVerticalBox(Title);
-	RetryButtonWidgetName = TEXT("FallbackRetry");
-	LobbyButtonWidgetName = TEXT("FallbackLobby");
-	for (const FName Name : {RetryButtonWidgetName, LobbyButtonWidgetName})
-	{
-		auto* Button = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		auto* Label = WidgetTree->ConstructWidget<UTextBlock>();
-		Label->SetText(FText::FromString(Name == RetryButtonWidgetName ? TEXT("Retry") : TEXT("Lobby")));
-		Button->AddChild(Label);
-		Panel->AddChildToVerticalBox(Button);
-	}
-}
 
 // RetryとLobbyの選択を通知へ接続します。BPに必要なボタンがない場合は警告します。
 void UBoarGameOverWidget::NativeConstruct()
@@ -40,12 +15,17 @@ void UBoarGameOverWidget::NativeConstruct()
 	// 見出しは少し拡大した状態から落ち着き、パネルは短くフェードインします（操作・フォーカスは最初から有効）。
 	HeadingWidget = (WidgetTree && !HeadingWidgetName.IsNone()) ? WidgetTree->FindWidget(HeadingWidgetName) : nullptr;
 	PanelWidget = (WidgetTree && !PanelWidgetName.IsNone()) ? WidgetTree->FindWidget(PanelWidgetName) : nullptr;
+	// 見出しの枠はWBPのWidgetで描き、C++は見出しと同じ拡大率・不透明度を適用するだけです。
+	HeadingFrameWidget = (WidgetTree && !HeadingFrameWidgetName.IsNone())
+		                     ? WidgetTree->FindWidget(HeadingFrameWidgetName)
+		                     : nullptr;
 	RevealAge = 0.f;
-	if (HeadingWidget)
+	for (UWidget* Widget : {HeadingWidget.Get(), HeadingFrameWidget.Get()})
 	{
-		HeadingWidget->SetRenderTransformPivot(FVector2D(.5f, .5f));
-		HeadingWidget->SetRenderScale(FVector2D(HeadingStartScale));
-		HeadingWidget->SetRenderOpacity(0.f);
+		if (!Widget) continue;
+		Widget->SetRenderTransformPivot(FVector2D(.5f, .5f));
+		Widget->SetRenderScale(FVector2D(HeadingStartScale));
+		Widget->SetRenderOpacity(0.f);
 	}
 	if (UWidget* Fade = PanelWidget ? PanelWidget.Get() : this) Fade->SetRenderOpacity(
 		PanelFadeInTime > 0.f ? 0.f : 1.f);
@@ -67,49 +47,11 @@ void UBoarGameOverWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 		                    : FMath::InterpEaseInOut(Low, 1.f, (T - .65f) / .35f, 2.f);
 	HeadingWidget->SetRenderScale(FVector2D(Scale));
 	HeadingWidget->SetRenderOpacity(FMath::Clamp(T / .3f, 0.f, 1.f));
-}
-
-int32 UBoarGameOverWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
-                                       const FSlateRect& MyCullingRect,
-                                       FSlateWindowElementList& OutDrawElements, int32 LayerId,
-                                       const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
-{
-	int32 Layer = Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle,
-	                                 bParentEnabled);
-	if (!HeadingWidget) return Layer;
-	// 見出しの実表示位置（拡大中を含む）を囲むシアンの細いフレームと、角の短いアクセントを描きます。
-	const FGeometry& Heading = HeadingWidget->GetCachedGeometry();
-	const FVector2D Size = FVector2D(Heading.GetLocalSize());
-	if (Size.X < 1.f || Size.Y < 1.f) return Layer;
-	// Slotより小さい文字そのもの（Desired Size、上寄せ・左右中央）を囲みます。
-	const FVector2D Text = FVector2D(FMath::Min(HeadingWidget->GetDesiredSize().X, Size.X),
-	                                 FMath::Min(HeadingWidget->GetDesiredSize().Y, Size.Y));
-	const float Scale = HeadingWidget->GetRenderTransform().Scale.X;
-	const FVector2D Half = (Text * .5f) * Scale + FramePadding;
-	const FVector2D Center = FVector2D(
-		AllottedGeometry.AbsoluteToLocal(Heading.LocalToAbsolute(FVector2D(Size.X * .5f, Text.Y * .5f))));
-	const float Alpha = FMath::Clamp(RevealAge / FMath::Max(.01f, HeadingRevealTime * .5f), 0.f, 1.f) * HeadingWidget->
-		GetRenderOpacity();
-	if (Alpha <= 0.f) return Layer;
-	FLinearColor Color = FrameColor;
-	Color.A *= Alpha;
-	const FVector2D Min = Center - Half, Max = Center + Half;
-	const FVector2f A(Min), B(Max);
-	TArray<FVector2f> Rect = {A, FVector2f(B.X, A.Y), B, FVector2f(A.X, B.Y), A};
-	FSlateDrawElement::MakeLines(OutDrawElements, Layer + 1, AllottedGeometry.ToPaintGeometry(), Rect,
-	                             ESlateDrawEffect::None, Color, true, FrameThickness);
-	const float L = 14.f;
-	FLinearColor Accent = Color;
-	Accent.A = FMath::Min(1.f, Color.A * 1.2f);
-	for (int32 X = 0; X < 2; ++X)
-		for (int32 Y = 0; Y < 2; ++Y)
-		{
-			const FVector2f P(X ? B.X : A.X, Y ? B.Y : A.Y);
-			TArray<FVector2f> Corner = {P + FVector2f(X ? -L : L, 0.f), P, P + FVector2f(0.f, Y ? -L : L)};
-			FSlateDrawElement::MakeLines(OutDrawElements, Layer + 1, AllottedGeometry.ToPaintGeometry(), Corner,
-			                             ESlateDrawEffect::None, Accent, true, FrameThickness + 1.5f);
-		}
-	return Layer + 1;
+	if (HeadingFrameWidget)
+	{
+		HeadingFrameWidget->SetRenderScale(FVector2D(Scale));
+		HeadingFrameWidget->SetRenderOpacity(HeadingWidget->GetRenderOpacity());
+	}
 }
 
 // 再表示や画面破棄で古いボタン通知が残らないよう解除します。

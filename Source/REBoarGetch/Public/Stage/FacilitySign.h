@@ -92,6 +92,8 @@ private:
     void SetNear(bool bNear);
     void SetHighlight(bool bOn);
     FText ReadMirrorText() const;
+    /** 文字面にWBP（非NativeのUFacilitySignWidget派生）が設定されているか。 */
+    bool HasSignWidgetClass() const;
     void PollMirrorText();
     UFUNCTION() void RefreshSpecimen();
     UFUNCTION() void OnProximityBegin(UPrimitiveComponent* Component,AActor* Other,UPrimitiveComponent* OtherComponent,int32 BodyIndex,bool bSweep,const FHitResult& Hit);

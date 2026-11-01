@@ -552,16 +552,21 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 	if (!PC)
 		return;
 	const auto* Mode = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
-	if (!PC->IsLocalController() || !Mode || !Mode->bArchive || !PC->CanProcessGameplayInput() || !PC->
-		ArchiveSelectionWidgetClass)
+	if (!PC->IsLocalController() || !Mode || !Mode->bArchive || !PC->CanProcessGameplayInput())
 		return;
-	ArchiveSelectionWidget = CreateWidget<UBoarArchiveSelectionWidget>(PC, PC->ArchiveSelectionWidgetClass);
+	if (PC->ArchiveSelectionWidgetClass)
+		ArchiveSelectionWidget = CreateWidget<UBoarArchiveSelectionWidget>(PC, PC->ArchiveSelectionWidgetClass);
 	if (!ArchiveSelectionWidget)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: ArchiveSelectionWidgetClass is unset or could not be created. Skipping Archive Display Selection."),
+		       *GetNameSafe(PC->GetClass()));
 		return;
+	}
 	ArchiveSelectionWidget->TakeWidget();
 	if (!ArchiveSelectionWidget->IsReadyForDisplay())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Archive] Display Selection UI could not build its layout."));
+		UE_LOG(LogTemp, Error, TEXT("[Archive] %s (%s.ArchiveSelectionWidgetClass): Status / SlotsPanel / Grid / BackButton are not bound in the WBP. Skipping Archive Display Selection."),
+		       *GetNameSafe(ArchiveSelectionWidget->GetClass()), *GetNameSafe(PC->GetClass()));
 		ArchiveSelectionWidget = nullptr;
 		return;
 	}

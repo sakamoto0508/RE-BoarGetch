@@ -95,6 +95,7 @@ public:
 
 	AStageClearPresentationDirector();
 protected:
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	virtual void TickPresentation(float Dt) override;
 private:

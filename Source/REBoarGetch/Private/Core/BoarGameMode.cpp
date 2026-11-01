@@ -74,7 +74,8 @@ TArray<ABoarBase*> ABoarGameMode::CompletePendingCaptures(const TArray<TWeakObje
 		if (ConfirmCapture(Boar.Get()))
 			Confirmed.Add(Boar.Get());
 	}
-	if (!Boars.IsEmpty())
+	// 確定できた場合はConfirmCapture内で再集計・通知済み。1体も確定しなかった場合だけ従来どおり再集計する。
+	if (!Boars.IsEmpty() && Confirmed.IsEmpty())
 		RefreshHousedBoarCount();
 	return Confirmed;
 }

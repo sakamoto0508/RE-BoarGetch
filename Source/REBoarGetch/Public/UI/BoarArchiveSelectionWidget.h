@@ -23,7 +23,7 @@ public:
     void FocusInitialChoice();
 	bool IsReadyForDisplay() const { return BackButton && SlotsPanel && Grid && Status; }
 protected:
-	// レイアウトはWBPで作成します。WBPにRootWidgetが無い場合だけ、C++の仮レイアウトを構築します。
+	// レイアウトはWBPで作成します。C++で代替レイアウトは作らず、RootWidgetが無い場合はErrorを出して表示しません。
 	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> Status;
 	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UHorizontalBox> SlotsPanel;
 	UPROPERTY(BlueprintReadOnly,Category="Archive|Bindings",meta=(BindWidgetOptional)) TObjectPtr<class UUniformGridPanel> Grid;
@@ -50,7 +50,6 @@ private:
 	void MoveGridFocus(int32 Offset);
 	void AssignBoar(FName Id);
 	void UpdatePortrait(UBoarLoadoutEntry* Card,FName Id,const FText& Badge,bool bActive);
-	void BuildFallbackLayout();
 	void SetStatus(const FText& Message,bool bError=false);
     FText LabelFor(FName Id) const;
     // 未保存の一括編集ではなく、保存済み展示枠を表示するためのコピーです。変更成功時に読み直します。

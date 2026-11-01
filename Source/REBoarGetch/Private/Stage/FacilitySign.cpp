@@ -85,9 +85,9 @@ AFacilitySign::AFacilitySign()
 	LabelWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("LabelWidget"));
 	LabelWidget->SetupAttachment(SceneRoot);
 	LabelWidget->SetWidgetSpace(EWidgetSpace::World);
-	// 文字面のデザインはWBP_FacilitySign。読込失敗時もクラッシュしないよう、文字を持たない基底クラスにしておく。
+	// 文字面のデザインはWBP_FacilitySign。読込失敗時は代替Widgetを使わず未設定のままにし、BeginPlayでErrorを出す。
 	static ConstructorHelpers::FClassFinder<UFacilitySignWidget> SignWidget(TEXT("/Game/UI/World/WBP_FacilitySign"));
-	LabelWidget->SetWidgetClass(SignWidget.Succeeded() ? SignWidget.Class.Get() : UFacilitySignWidget::StaticClass());
+	LabelWidget->SetWidgetClass(SignWidget.Succeeded() ? SignWidget.Class.Get() : nullptr);
 	LabelWidget->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	LabelWidget->SetCanEverAffectNavigation(false);
 	LabelWidget->SetCastShadow(false);
@@ -115,6 +115,8 @@ void AFacilitySign::ApplyLayout(const FText& NewTitle, bool bDimmed)
 	ShownTitle = NewTitle;
 	bShownDimmed = bDimmed;
 	// 見た目の設定は文字面Widget（WBP_FacilitySign）から読む。Widgetを生成できない環境ではWidget ClassのClass Defaultsを使う。
+	// 基底C++クラスは文字面のレイアウトを持たないため、WBPが無い場合は文字面だけを描画しない。
+	LabelWidget->SetVisibility(HasSignWidgetClass());
 	LabelWidget->InitWidget();
 	UFacilitySignWidget* Widget = Cast<UFacilitySignWidget>(LabelWidget->GetUserWidgetObject());
 	const UFacilitySignWidget* StyleSource = Widget;
@@ -182,9 +184,18 @@ void AFacilitySign::PollMirrorText()
 		ApplyLayout(Current, false);
 }
 
+bool AFacilitySign::HasSignWidgetClass() const
+{
+	const UClass* Class = LabelWidget->GetWidgetClass();
+	return Class && Class->IsChildOf<UFacilitySignWidget>() && !Class->HasAnyClassFlags(CLASS_Native);
+}
+
 void AFacilitySign::BeginPlay()
 {
 	Super::BeginPlay();
+	if (!HasSignWidgetClass())
+		UE_LOG(LogTemp, Error, TEXT("[FacilitySign] %s.%s: WidgetClass (WBP_FacilitySign) is not set; skipping the sign text."),
+		       *GetActorNameOrLabel(), *LabelWidget->GetName());
 	ApplyLayout(ShownTitle, bShownDimmed);
 	if (ProximitySource && ProximitySource->Trigger)
 	{

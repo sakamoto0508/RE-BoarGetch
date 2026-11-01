@@ -409,14 +409,11 @@ void ABoarPlayerController::HandleStageCleared(const FStageRunData& Run, int32 T
 
 	if (ResultWidgetClass)
 		ResultWidget = CreateWidget<UBoarResultWidget>(this, ResultWidgetClass);
-	if (ResultWidget == nullptr)
-	{
-		// Actor停止済みのStageは再開せず、任意入力で戻れる最小画面へ切り替えます。
-		UE_LOG(LogTemp, Warning, TEXT("[Result] Using native fallback widget."));
-		ResultWidget = CreateWidget<UBoarResultWidget>(this, UBoarResultWidget::StaticClass());
-	}
 	if (!ResultWidget)
 	{
+		// C++で代替画面は作りません。Actor停止済みのStageは再開せず、そのままLobbyへ戻します。
+		UE_LOG(LogTemp, Error, TEXT("[Result] %s: ResultWidgetClass is unset or could not be created. Skipping Result screen and returning to Lobby."),
+		       *GetNameSafe(GetClass()));
 		ReturnToLobby();
 		return;
 	}
@@ -493,11 +490,9 @@ void ABoarPlayerController::HandleStageGameOver()
 		GameOverWidget = CreateWidget<UBoarGameOverWidget>(this, GameOverWidgetClass);
 	if (!GameOverWidget)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GameOver] Using native Retry/Lobby fallback widget."));
-		GameOverWidget = CreateWidget<UBoarGameOverWidget>(this, UBoarGameOverWidget::StaticClass());
-	}
-	if (!GameOverWidget)
-	{
+		// C++で代替画面は作りません。Retry/Lobbyを選べないため、進行が止まらないようLobbyへ戻します。
+		UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: GameOverWidgetClass is unset or could not be created. Skipping GameOver screen and returning to Lobby."),
+		       *GetNameSafe(GetClass()));
 		ReturnToLobby();
 		return;
 	}
@@ -532,9 +527,16 @@ void ABoarPlayerController::HandleStageInitializationFailed(const FText& Reason)
 	SetStageInputBlocked(true);
 	if (PlayerHUDWidget)
 		PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
-	InitializationErrorWidget = CreateWidget<UBoarInitializationErrorWidget>(this);
+	if (InitializationErrorWidgetClass)
+		InitializationErrorWidget = CreateWidget<UBoarInitializationErrorWidget>(this, InitializationErrorWidgetClass);
 	if (!InitializationErrorWidget)
+	{
+		// C++で代替画面は作りません。Retry/Lobbyを選べないため、進行が止まらないようLobbyへ戻します。
+		UE_LOG(LogTemp, Error, TEXT("[WorldInit] %s: InitializationErrorWidgetClass is unset or could not be created. Skipping error screen and returning to Lobby. Reason: %s"),
+		       *GetNameSafe(GetClass()), *Reason.ToString());
+		ReturnToLobby();
 		return;
+	}
 	InitializationErrorWidget->OnRetry.AddUniqueDynamic(this, &ThisClass::RetryStage);
 	InitializationErrorWidget->OnLobby.AddUniqueDynamic(this, &ThisClass::ReturnToLobby);
 	InitializationErrorWidget->AddToViewport(200);

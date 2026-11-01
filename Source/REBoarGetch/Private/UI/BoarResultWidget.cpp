@@ -1,6 +1,5 @@
 #include "UI/BoarResultWidget.h"
 
-#include "Components/VerticalBox.h"
 #include "Components/TextBlock.h"
 #include "Blueprint/WidgetTree.h"
 #include "Input/Reply.h"
@@ -19,24 +18,6 @@ namespace
 
 		return Cast<WidgetType>(WidgetTree->FindWidget(WidgetName));
 	}
-}
-
-void UBoarResultWidget::NativeOnInitialized()
-{
-	Super::NativeOnInitialized();
-	// WBP未設定・生成失敗時だけ使用する最小表示。既存WBPのTreeは変更しません。
-	if (GetClass() != StaticClass() || !WidgetTree || WidgetTree->RootWidget) return;
-	auto* Panel = WidgetTree->ConstructWidget<UVerticalBox>();
-	WidgetTree->RootWidget = Panel;
-	auto* Guide = WidgetTree->ConstructWidget<UTextBlock>();
-	Guide->SetText(FText::FromString(TEXT("Stage Clear - Press any button to return to Lobby")));
-	Panel->AddChildToVerticalBox(Guide);
-	CapturedCountTextWidgetName = TEXT("FallbackCapturedCount");
-	TargetCountTextWidgetName = TEXT("FallbackTargetCount");
-	Panel->AddChildToVerticalBox(
-		WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), CapturedCountTextWidgetName));
-	Panel->AddChildToVerticalBox(
-		WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TargetCountTextWidgetName));
 }
 
 void UBoarResultWidget::NativeConstruct()

@@ -14,7 +14,7 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
 
-UCLASS()
+UCLASS(Abstract)
 class REBOARGETCH_API UCaptureSuccessCameraShake : public UCameraShakeBase
 {
  GENERATED_BODY()
@@ -79,7 +79,7 @@ public:
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="転送中だけ表示するBoar用Material。下から上へのDissolve、シアンのScan境界、データ線を描きます。元のBoar Materialは変更しません。")) TObjectPtr<UMaterialInterface> DataMaterial;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="転送前のBoarのシアン発光に使うMaterial。未設定だと発光が表示されません。")) TObjectPtr<UMaterialInterface> GlowMaterial;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="捕獲地点のBoar足元に出すシアンリングのNiagara System。拡大してから薄くなります。")) TObjectPtr<UNiagaraSystem> CaptureVFX;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="Cageへの収容直後に出す受信エフェクト。未設定の場合はCapture VFXを再利用します。")) TObjectPtr<UNiagaraSystem> CageReceptionVFX;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ToolTip="Cageへの収容直後に出す受信エフェクト。未設定の場合は受信エフェクトを表示しません（Errorを出します）。")) TObjectPtr<UNiagaraSystem> CageReceptionVFX;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Color", meta=(ToolTip="捕獲リング・データ化Material・データ片に使う基本色です。")) FLinearColor CaptureColor = FLinearColor(.01f,.75f,1.f);
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Color", meta=(ToolTip="命中直後のBoar発光の開始色です。データ化開始までにGlow Peak Colorへ変化します。")) FLinearColor GlowStartColor = FLinearColor(.01f,.52f,.9f);
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Color", meta=(ToolTip="データ化直前のBoar発光の色です。")) FLinearColor GlowPeakColor = FLinearColor(.04f,.88f,1.f);
@@ -110,6 +110,7 @@ private:
  void ReleaseCamera();
  void ReleaseCameraShake();
  void RestoreSharedState();
+ void ReportMissingVisualAssets() const;
  void RestoreTarget(FCaptureVisualTarget& Target);
  void StartDataConversion(FCaptureVisualTarget& Target);
  void StartCageReception(const FVector& Location);

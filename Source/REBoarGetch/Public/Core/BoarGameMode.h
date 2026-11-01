@@ -37,7 +37,7 @@ public:
 	void RegisterPendingCapture(class ABoarBase* Boar);
 	/**
 	 * 確定待ちの捕獲を確定します（HandleBoarCapturedと同じ判定：Stage進行中・捕獲中・未確定のときだけ収容・記録）。
-	 * 渡したBoarは確定できなかった場合も確定待ちから外し、最後に収容数を再集計します。確定できたBoarを返します。
+	 * 渡したBoarは確定できなかった場合も確定待ちから外します。収容数の再集計・通知は確定ごとに1回（1体も確定しなければ最後に1回）です。確定できたBoarを返します。
 	 */
 	TArray<class ABoarBase*> CompletePendingCaptures(const TArray<TWeakObjectPtr<class ABoarBase>>& Boars);
 	/** 確定せずに確定待ちから外します（対象Destroy・Level破棄・見た目だけの片付け）。 */
