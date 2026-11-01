@@ -79,6 +79,7 @@ public:
 private:
 	friend class UBoarGadgetSubsystem;
 	friend class FBoarGadgetProgressTest;
+	friend class FBoarHubPortalGadgetLabelTest;
 	bool SaveCandidate(UBoarSaveGame* Candidate);
 	void UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const;
 	UPROPERTY(Transient)

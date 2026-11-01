@@ -10,6 +10,9 @@
 #include "GadgetDataAsset.h"
 #include "Engine/TextRenderActor.h"
 #include "Components/TextRenderComponent.h"
+#if WITH_EDITOR
+#include "Misc/DataValidation.h"
+#endif
 
 AHubPortal::AHubPortal()
 {
@@ -70,6 +73,9 @@ void AHubPortal::BeginPlay()
 	{
 		if (auto* GI = GetGameInstance<UBoarGameInstance>())
 		{
+			// 不正な看板設定はクラッシュさせず、該当看板を非表示にしたうえで原因をログへ出す。
+			for (const FString& Problem : FindGadgetLabelProblems(GadgetLabels, GI))
+				UE_LOG(LogTemp, Warning, TEXT("[HubPortal] %s GadgetLabels: %s"), *GetActorNameOrLabel(), *Problem);
 			GI->OnTestGadgetChanged.AddUniqueDynamic(this, &AHubPortal::RefreshTestTarget);
 			GI->OnGadgetsUnlocked.AddUniqueDynamic(this, &AHubPortal::RefreshTestTarget);
 		}
@@ -101,12 +107,13 @@ void AHubPortal::EndPlay(const EEndPlayReason::Type Reason)
 void AHubPortal::RefreshTestTarget()
 {
 	auto* GI = GetGameInstance<UBoarGameInstance>();
-	for (int32 I = 0; I < CollectionLabels.Num(); ++I)
+	for (const FGadgetCollectionLabel& Entry : GadgetLabels)
 	{
-		auto* Label = CollectionLabels[I].Get();
+		auto* Label = Entry.Label.Get();
 		if (!Label)
 			continue;
-		const auto Class = GI && GI->GadgetCatalog.IsValidIndex(I) ? GI->GadgetCatalog[I] : nullptr;
+		// 配列Indexではなく、看板に設定したGadgetIdからGadgetを解決する。
+		const auto Class = GI ? GI->FindGadgetClass(Entry.GadgetId) : nullptr;
 		const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
 		Label->SetActorHiddenInGame(!Def);
 		if (Def)Label->GetTextRender()->SetText(FText::Format(FText::FromString(TEXT("{0}  {1}")),
@@ -141,3 +148,52 @@ void AHubPortal::RefreshTestTarget()
 			                                    : FText::FromString(TEXT("SELECT GADGET TO TEST")));
 	}
 }
+
+TArray<FString> AHubPortal::FindGadgetLabelProblems(const TArray<FGadgetCollectionLabel>& Labels,
+                                                    const UBoarGameInstance* GI)
+{
+	TArray<FString> Problems;
+	TSet<FName> SeenIds;
+	TSet<const ATextRenderActor*> SeenLabels;
+	for (int32 I = 0; I < Labels.Num(); ++I)
+	{
+		const FGadgetCollectionLabel& Entry = Labels[I];
+		if (Entry.GadgetId.IsNone())
+			Problems.Add(FString::Printf(TEXT("[%d] GadgetIdが未設定です"), I));
+		else
+		{
+			if (GI && !GI->FindGadgetClass(Entry.GadgetId))
+				Problems.Add(FString::Printf(TEXT("[%d] GadgetId '%s' がGadgetCatalogに存在しません"), I,
+				                             *Entry.GadgetId.ToString()));
+			bool bDuplicateId = false;
+			SeenIds.Add(Entry.GadgetId, &bDuplicateId);
+			if (bDuplicateId)
+				Problems.Add(FString::Printf(TEXT("[%d] GadgetId '%s' が重複しています"), I, *Entry.GadgetId.ToString()));
+		}
+		if (!Entry.Label)
+			Problems.Add(FString::Printf(TEXT("[%d] Label Actorが未設定です"), I));
+		else
+		{
+			bool bDuplicateLabel = false;
+			SeenLabels.Add(Entry.Label.Get(), &bDuplicateLabel);
+			if (bDuplicateLabel)
+				Problems.Add(FString::Printf(TEXT("[%d] Label Actor '%s' が複数の要素に設定されています"), I,
+				                             *Entry.Label->GetActorNameOrLabel()));
+		}
+	}
+	return Problems;
+}
+
+#if WITH_EDITOR
+EDataValidationResult AHubPortal::IsDataValid(FDataValidationContext& Context) const
+{
+	EDataValidationResult Result = Super::IsDataValid(Context);
+	// EditorではGameInstanceが無いため、未登録IDの判定はPIE開始時のログで行う。
+	for (const FString& Problem : FindGadgetLabelProblems(GadgetLabels, nullptr))
+	{
+		Context.AddError(FText::FromString(FString::Printf(TEXT("%s GadgetLabels: %s"), *GetActorNameOrLabel(), *Problem)));
+		Result = EDataValidationResult::Invalid;
+	}
+	return Result;
+}
+#endif

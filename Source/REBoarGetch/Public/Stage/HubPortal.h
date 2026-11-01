@@ -5,6 +5,15 @@
 class UBoxComponent;
 UENUM(BlueprintType)
 enum class EHubPortalAction : uint8 { Travel, Loadout, Archive, GadgetTest };
+/** Gadget Labの看板1枚分の設定。表示するGadgetはGadgetIdで解決し、配列の順番やGadgetCatalogの並びに依存しません。 */
+USTRUCT()
+struct FGadgetCollectionLabel
+{
+    GENERATED_BODY()
+    /** 表示するGadgetのID（UGadgetDataAsset::GadgetId）。 */
+    UPROPERTY(EditAnywhere, Category="Portal") FName GadgetId;
+    UPROPERTY(EditAnywhere, Category="Portal") TObjectPtr<class ATextRenderActor> Label;
+};
 /** A local-player-only portal or terminal. Stage Select retains its own entrance class. */
 UCLASS()
 class REBOARGETCH_API AHubPortal : public AActor
@@ -22,11 +31,18 @@ public:
     UPROPERTY(EditInstanceOnly, Category="Portal") bool bRequiresInteraction=true;
     virtual void Interact(class ABoarPlayerController* Controller);
     UPROPERTY(EditInstanceOnly, Category="Portal") TObjectPtr<class ATextRenderActor> TestLabel;
-    UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<class ATextRenderActor>> CollectionLabels;
+    /** GadgetTest用の看板一覧。READY / LOCKEDと表示名を、各要素のGadgetIdから解決して表示します。 */
+    UPROPERTY(EditInstanceOnly, Category="Portal", meta=(TitleProperty="GadgetId")) TArray<FGadgetCollectionLabel> GadgetLabels;
+    /** 看板設定の不正（ID未設定・未登録ID・Label未設定・IDやLabelの重複）を列挙します。GIが無い場合は未登録IDを判定しません。 */
+    static TArray<FString> FindGadgetLabelProblems(const TArray<FGadgetCollectionLabel>& Labels, const class UBoarGameInstance* GI);
+#if WITH_EDITOR
+    virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
+#endif
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 private:
+    friend class FBoarHubPortalGadgetLabelTest;
     UFUNCTION() void RefreshTestTarget();
     bool bTravelRequested=false;
     void Activate(class ABoarPlayerController* Controller);
