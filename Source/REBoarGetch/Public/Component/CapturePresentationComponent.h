@@ -5,6 +5,7 @@
 #include "CapturePresentationComponent.generated.h"
 
 class ABoarBase;
+class ABoarGameMode;
 class UCameraComponent;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
@@ -37,6 +38,8 @@ struct FCaptureVisualTarget
  UPROPERTY() TObjectPtr<UNiagaraComponent> DataVFX;
  bool bOriginalVisible = true;
  bool bDataStarted = false;
+ /** RestoreTarget済み。復元は一度だけ行い、後から別処理が変えた見た目を戻さない。 */
+ bool bRestored = false;
  FVector CaptureLocation = FVector::ZeroVector;
  float CaptureMinZ = 0.f;
  float CaptureHeight = 150.f;
@@ -87,12 +90,25 @@ public:
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ToolTip="網が命中した瞬間の効果音。Net 1回につき1回、既存AudioManager経由で再生します。未設定なら無音です。")) TObjectPtr<USoundBase> ImpactSound;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ToolTip="Boarのデータ化が始まる瞬間の転送音。既存AudioManager経由で再生します。未設定なら無音です。")) TObjectPtr<USoundBase> TransferStartSound;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ToolTip="捕獲地点での転送が完了した瞬間の確定音。Net 1回につき1回、既存AudioManager経由で再生します。未設定なら無音です。")) TObjectPtr<USoundBase> CaptureSuccessSound;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ToolTip="網の命中時に再生する小さなCamera Shake。Net 1回につき1回だけ再生します。未設定なら揺れません。")) TSubclassOf<UCameraShakeBase> CameraShake;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ToolTip="網の命中時に再生する小さなCamera Shake。Net 1回につき1回だけ再生します。振幅・周波数・Blend時間はBP_CaptureSuccessCameraShakeのClass Defaults（Root Shake Pattern）で調整します。未設定なら揺れません。")) TSubclassOf<UCameraShakeBase> CameraShake;
 protected:
  virtual void BeginPlay() override;
  virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 private:
  void OnWorldTick(UWorld* World, ELevelTick TickType, float DeltaSeconds);
+ // OnWorldTickの各段階（この順で実行します）。
+ void UpdateSharedFeedback(float RealDelta);
+ void UpdateTargets(float RealDelta, TArray<TWeakObjectPtr<ABoarBase>>& OutFinished);
+ bool UpdateTarget(FCaptureVisualTarget& Target, float RealDelta);
+ void CommitFinishedCaptures(ABoarGameMode* Mode, const TArray<TWeakObjectPtr<ABoarBase>>& Finished);
+ void UpdateReceptions(float RealDelta, ABoarGameMode* Mode);
+ // 共有状態（Global Time Dilation・Camera FOV・Camera Shake）の取得と解放。解放は冪等で、
+ // このComponentが最後に設定した値のまま残っている場合だけ元の値へ戻します（他の演出が上書きした値は戻しません）。
+ void ApplyTimeScale(float Scale);
+ void ReleaseTimeScale();
+ void ApplyFieldOfView(float FOV);
+ void ReleaseCamera();
+ void ReleaseCameraShake();
  void RestoreSharedState();
  void RestoreTarget(FCaptureVisualTarget& Target);
  void StartDataConversion(FCaptureVisualTarget& Target);
@@ -107,6 +123,8 @@ private:
  FDelegateHandle TickHandle;
  double LastRealTime = 0.;
  float SharedAge = 0.f, OriginalTimeScale = 1.f, OriginalFOV = 90.f;
+ /** このComponentが最後に設定したGlobal Time Dilation / FOV。解放時の所有確認に使います。 */
+ float AppliedTimeScale = 1.f, AppliedFOV = 90.f;
  bool bCommittingCaptures = false;
  bool bSharedActive = false, bOwnTimeScale = false, bOwnCamera = false, bConfirmed = false, bTransferSoundPlayed = false;
 };

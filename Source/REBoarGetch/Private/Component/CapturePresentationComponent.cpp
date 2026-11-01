@@ -99,16 +99,15 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 		SharedAge = 0.f;
 		bConfirmed = false;
 		bTransferSoundPlayed = false;
+		// 変更前の値を保存してから時間倍率とCameraを取得する。復元はRestoreSharedState()が担当する。
 		OriginalTimeScale = UGameplayStatics::GetGlobalTimeDilation(this);
 		Camera = PC->GetPawn() ? PC->GetPawn()->FindComponentByClass<UCameraComponent>() : nullptr;
 		if (Camera.IsValid())
 		{
-			OriginalFOV = Camera->FieldOfView;
+			OriginalFOV = AppliedFOV = Camera->FieldOfView;
 			bOwnCamera = true;
 		}
-		bOwnTimeScale = true;
-		UGameplayStatics::SetGlobalTimeDilation(
-			this, OriginalTimeScale * FMath::Clamp(HitStopDuration > 0 ? HitStopTimeScale : SlowTimeScale, .001f, 1.f));
+		ApplyTimeScale(OriginalTimeScale * FMath::Clamp(HitStopDuration > 0 ? HitStopTimeScale : SlowTimeScale, .001f, 1.f));
 		if (PC->PlayerCameraManager && CameraShake) ActiveShake = PC->PlayerCameraManager->
 		                                                              StartCameraShake(CameraShake);
 		PlaySound(ImpactSound);
@@ -123,25 +122,72 @@ void UCapturePresentationComponent::PlaySound(USoundBase* Sound)
 			PlaySoundEffect2D(this, Sound);
 }
 
-void UCapturePresentationComponent::RestoreSharedState()
+void UCapturePresentationComponent::ApplyTimeScale(float Scale)
 {
-	if (bOwnTimeScale && GetWorld()) UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeScale);
-	if (bOwnCamera && Camera.IsValid()) Camera->SetFieldOfView(OriginalFOV);
-	if (auto* PC = Cast<APlayerController>(GetOwner()))
-		if (ActiveShake && PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraShake(ActiveShake, true);
-	ActiveShake = nullptr;
-	bOwnTimeScale = false;
-	bOwnCamera = false;
+	UGameplayStatics::SetGlobalTimeDilation(this, Scale);
+	// World Settings側でClampされた実際の値を所有の目印として記録する。
+	AppliedTimeScale = UGameplayStatics::GetGlobalTimeDilation(this);
+	bOwnTimeScale = true;
 }
 
+void UCapturePresentationComponent::ReleaseTimeScale()
+{
+	if (!bOwnTimeScale) return;
+	bOwnTimeScale = false;
+	if (!GetWorld()) return;
+	// 自分が設定した値のままなら元へ戻す。別の演出が上書きしていれば、その演出の所有として触らない。
+	if (FMath::IsNearlyEqual(UGameplayStatics::GetGlobalTimeDilation(this), AppliedTimeScale))
+		UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeScale);
+	else
+		UE_LOG(LogTemp, Warning, TEXT("[Capture] Global Time Dilation was changed by another owner; leaving it as is."));
+}
+
+void UCapturePresentationComponent::ApplyFieldOfView(float FOV)
+{
+	if (!Camera.IsValid()) return;
+	Camera->SetFieldOfView(FOV);
+	AppliedFOV = Camera->FieldOfView;
+	bOwnCamera = true;
+}
+
+void UCapturePresentationComponent::ReleaseCamera()
+{
+	if (!bOwnCamera) return;
+	bOwnCamera = false;
+	if (Camera.IsValid() && FMath::IsNearlyEqual(Camera->FieldOfView, AppliedFOV))
+		Camera->SetFieldOfView(OriginalFOV);
+}
+
+void UCapturePresentationComponent::ReleaseCameraShake()
+{
+	if (!ActiveShake) return;
+	if (auto* PC = Cast<APlayerController>(GetOwner()))
+		if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraShake(ActiveShake, true);
+	ActiveShake = nullptr;
+}
+
+// 共有状態の解放。正常終了・キャンセル・対象Destroy・Pause・EndPlayのどこから何度呼ばれても安全。
+void UCapturePresentationComponent::RestoreSharedState()
+{
+	ReleaseTimeScale();
+	ReleaseCamera();
+	ReleaseCameraShake();
+}
+
+// 対象ごとの見た目の復元とVFX破棄。一度だけ実行し、生成物の参照も手放す。
 void UCapturePresentationComponent::RestoreTarget(FCaptureVisualTarget& T)
 {
+	if (T.bRestored) return;
+	T.bRestored = true;
 	if (T.Mesh.IsValid() && T.Glow && T.Mesh->GetOverlayMaterial() == T.Glow) T.Mesh->SetOverlayMaterial(
 		T.OriginalOverlay);
 	if (T.Mesh.IsValid()) T.Mesh->SetVisibility(T.bOriginalVisible, false);
 	if (IsValid(T.DataMesh)) T.DataMesh->DestroyComponent();
 	if (IsValid(T.DataVFX)) T.DataVFX->DestroyComponent();
 	if (IsValid(T.VFX)) T.VFX->DestroyComponent();
+	T.DataMesh = nullptr;
+	T.DataVFX = nullptr;
+	T.VFX = nullptr;
 	if (T.Boar.IsValid()) T.Boar->OnDestroyed.RemoveDynamic(this, &ThisClass::OnTargetDestroyed);
 }
 
@@ -270,97 +316,111 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 		CancelPresentation();
 		return;
 	}
-	if (bSharedActive)
-	{
-		SharedAge += RealDelta;
-		if (SharedAge < HitStopDuration + SlowDuration)
-		{
-			bOwnTimeScale = true;
-			UGameplayStatics::SetGlobalTimeDilation(
-				this, OriginalTimeScale * FMath::Clamp(SharedAge < HitStopDuration ? HitStopTimeScale : SlowTimeScale,
-				                                       .001f, 1.f));
-		}
-		else if (bOwnTimeScale)
-		{
-			UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeScale);
-			bOwnTimeScale = false;
-		}
-		if (Camera.IsValid())
-		{
-			bOwnCamera = true;
-			float P = FMath::Clamp(SharedAge / FMath::Max(.01f, CameraDuration), 0.f, 1.f);
-			Camera->SetFieldOfView(FMath::Clamp(OriginalFOV - CameraZoomAmount * FMath::Sin(P * PI), 5.f, 170.f));
-		}
-		const float DataStart = HitStopDuration + SlowDuration;
-		if (!bTransferSoundPlayed && SharedAge >= DataStart)
-		{
-			PlaySound(TransferStartSound);
-			bTransferSoundPlayed = true;
-		}
-		if (!bConfirmed && SharedAge >= GetTotalDuration())
-		{
-			PlaySound(CaptureSuccessSound);
-			bConfirmed = true;
-		}
-		if (SharedAge >= FMath::Max(GetTotalDuration(), CameraDuration))
-		{
-			RestoreSharedState();
-			bSharedActive = false;
-		}
-	}
+	// 実行順：共有演出 → 個別対象 → 共有状態の解放 → 捕獲確定 → Cage受信。順序は従来どおり。
+	if (bSharedActive) UpdateSharedFeedback(RealDelta);
 	TArray<TWeakObjectPtr<ABoarBase>> Finished;
-	for (int32 I = Targets.Num() - 1; I >= 0; --I)
-	{
-		auto& T = Targets[I];
-		T.Age += RealDelta;
-		const float DataStart = HitStopDuration + SlowDuration;
-		const float P = FMath::Clamp(T.Age / FMath::Max(.01f, DataStart), 0.f, 1.f);
-		if (T.Glow)
-		{
-			const float Envelope = FMath::Lerp(.15f, 1.f, FMath::SmoothStep(0.f, 1.f, P));
-			T.Glow->SetScalarParameterValue(TEXT("GlowAmount"), Envelope);
-			T.Glow->SetVectorParameterValue(TEXT("GlowColor"), FMath::Lerp(GlowStartColor, GlowPeakColor, P));
-		}
-		if (IsValid(T.VFX))
-		{
-			T.VFX->SetDesiredAge(T.Age);
-			const float RingEnvelope = FMath::Clamp(
-				(GetTotalDuration() - T.Age) / FMath::Max(.01f, TransferFinishDuration), 0.f, 1.f);
-			T.VFX->SetWorldScale3D(FVector(VFXScale * FMath::Lerp(.45f, 1.25f, FMath::Clamp(T.Age / .22f, 0.f, 1.f))));
-			T.VFX->SetVariableLinearColor(
-				TEXT("User.Color"), FLinearColor(CaptureColor.R, CaptureColor.G, CaptureColor.B, .8f * RingEnvelope));
-		}
-		if (T.Age >= DataStart && !T.bDataStarted) StartDataConversion(T);
-		if (T.bDataStarted)
-		{
-			const float DataAge = FMath::Max(0.f, T.Age - DataStart);
-			const float DissolveP = FMath::Clamp(DataAge / FMath::Max(.01f, CaptureDissolveDuration), 0.f, 1.f);
-			const float FinishP = FMath::Clamp(
-				(DataAge - CaptureDissolveDuration) / FMath::Max(.01f, TransferFinishDuration), 0.f, 1.f);
-			if (T.DataMaterial)
-			{
-				T.DataMaterial->SetScalarParameterValue(
-					TEXT("DissolveProgress"), FMath::Lerp(0.f, .84f, DissolveP) + .17f * FinishP);
-				T.DataMaterial->SetScalarParameterValue(TEXT("GlowAmount"), 1.f + .45f * (1.f - DissolveP));
-			}
-			if (IsValid(T.DataMesh) && T.Mesh.IsValid())
-				T.DataMesh->SetRelativeLocation(
-					T.Mesh->GetRelativeLocation() + FVector(0, 0, TransferRiseDistance * FinishP));
-			if (IsValid(T.DataVFX)) T.DataVFX->SetDesiredAge(DataAge);
-		}
-		if (!T.Boar.IsValid() || !T.Boar->IsCaptured() || T.Age >= GetTotalDuration())
-		{
-			Finished.Insert(T.Boar, 0);
-			RestoreTarget(T);
-			Targets.RemoveAt(I);
-		}
-	}
+	UpdateTargets(RealDelta, Finished);
 	// Restore globals before invoking gameplay: this call can trigger the existing clear sequence.
 	if (Targets.IsEmpty())
 	{
 		RestoreSharedState();
 		bSharedActive = false;
 	}
+	CommitFinishedCaptures(Mode, Finished);
+	UpdateReceptions(RealDelta, Mode);
+}
+
+// Hit Stop・Slow・Camera Punch In・効果音（Net 1回につき1組）。
+void UCapturePresentationComponent::UpdateSharedFeedback(float RealDelta)
+{
+	SharedAge += RealDelta;
+	if (SharedAge < HitStopDuration + SlowDuration)
+		ApplyTimeScale(OriginalTimeScale * FMath::Clamp(SharedAge < HitStopDuration ? HitStopTimeScale : SlowTimeScale,
+		                                                .001f, 1.f));
+	else
+		ReleaseTimeScale();
+	if (Camera.IsValid())
+	{
+		const float P = FMath::Clamp(SharedAge / FMath::Max(.01f, CameraDuration), 0.f, 1.f);
+		ApplyFieldOfView(FMath::Clamp(OriginalFOV - CameraZoomAmount * FMath::Sin(P * PI), 5.f, 170.f));
+	}
+	const float DataStart = HitStopDuration + SlowDuration;
+	if (!bTransferSoundPlayed && SharedAge >= DataStart)
+	{
+		PlaySound(TransferStartSound);
+		bTransferSoundPlayed = true;
+	}
+	if (!bConfirmed && SharedAge >= GetTotalDuration())
+	{
+		PlaySound(CaptureSuccessSound);
+		bConfirmed = true;
+	}
+	if (SharedAge >= FMath::Max(GetTotalDuration(), CameraDuration))
+	{
+		RestoreSharedState();
+		bSharedActive = false;
+	}
+}
+
+// 全対象を更新し、演出を終えた対象を後片付けしてOutFinishedへ（捕獲順を保って）入れる。
+void UCapturePresentationComponent::UpdateTargets(float RealDelta, TArray<TWeakObjectPtr<ABoarBase>>& OutFinished)
+{
+	for (int32 I = Targets.Num() - 1; I >= 0; --I)
+	{
+		auto& T = Targets[I];
+		if (!UpdateTarget(T, RealDelta)) continue;
+		OutFinished.Insert(T.Boar, 0);
+		RestoreTarget(T);
+		Targets.RemoveAt(I);
+	}
+}
+
+// 1体分の発光・リング・データ化・データ粒子を進める。演出が終わった（または対象が無効になった）らtrue。
+bool UCapturePresentationComponent::UpdateTarget(FCaptureVisualTarget& T, float RealDelta)
+{
+	T.Age += RealDelta;
+	const float DataStart = HitStopDuration + SlowDuration;
+	const float P = FMath::Clamp(T.Age / FMath::Max(.01f, DataStart), 0.f, 1.f);
+	if (T.Glow)
+	{
+		const float Envelope = FMath::Lerp(.15f, 1.f, FMath::SmoothStep(0.f, 1.f, P));
+		T.Glow->SetScalarParameterValue(TEXT("GlowAmount"), Envelope);
+		T.Glow->SetVectorParameterValue(TEXT("GlowColor"), FMath::Lerp(GlowStartColor, GlowPeakColor, P));
+	}
+	if (IsValid(T.VFX))
+	{
+		T.VFX->SetDesiredAge(T.Age);
+		const float RingEnvelope = FMath::Clamp(
+			(GetTotalDuration() - T.Age) / FMath::Max(.01f, TransferFinishDuration), 0.f, 1.f);
+		T.VFX->SetWorldScale3D(FVector(VFXScale * FMath::Lerp(.45f, 1.25f, FMath::Clamp(T.Age / .22f, 0.f, 1.f))));
+		T.VFX->SetVariableLinearColor(
+			TEXT("User.Color"), FLinearColor(CaptureColor.R, CaptureColor.G, CaptureColor.B, .8f * RingEnvelope));
+	}
+	if (T.Age >= DataStart && !T.bDataStarted) StartDataConversion(T);
+	if (T.bDataStarted)
+	{
+		const float DataAge = FMath::Max(0.f, T.Age - DataStart);
+		const float DissolveP = FMath::Clamp(DataAge / FMath::Max(.01f, CaptureDissolveDuration), 0.f, 1.f);
+		const float FinishP = FMath::Clamp(
+			(DataAge - CaptureDissolveDuration) / FMath::Max(.01f, TransferFinishDuration), 0.f, 1.f);
+		if (T.DataMaterial)
+		{
+			T.DataMaterial->SetScalarParameterValue(
+				TEXT("DissolveProgress"), FMath::Lerp(0.f, .84f, DissolveP) + .17f * FinishP);
+			T.DataMaterial->SetScalarParameterValue(TEXT("GlowAmount"), 1.f + .45f * (1.f - DissolveP));
+		}
+		if (IsValid(T.DataMesh) && T.Mesh.IsValid())
+			T.DataMesh->SetRelativeLocation(
+				T.Mesh->GetRelativeLocation() + FVector(0, 0, TransferRiseDistance * FinishP));
+		if (IsValid(T.DataVFX)) T.DataVFX->SetDesiredAge(DataAge);
+	}
+	return !T.Boar.IsValid() || !T.Boar->IsCaptured() || T.Age >= GetTotalDuration();
+}
+
+// 演出を終えた対象の捕獲をGameModeへ確定させる（タイミング・再入防止は従来どおり）。
+void UCapturePresentationComponent::CommitFinishedCaptures(ABoarGameMode* Mode,
+                                                          const TArray<TWeakObjectPtr<ABoarBase>>& Finished)
+{
 	bCommittingCaptures = true;
 	for (auto Boar : Finished)
 		if (Mode && Boar.IsValid() && Boar->IsCaptured())
@@ -372,6 +432,11 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 		}
 	bCommittingCaptures = false;
 	if (Mode && !Finished.IsEmpty()) Mode->RefreshHousedBoarCount();
+}
+
+// Cage受信エフェクトを進め、終わったものを破棄する。全演出が終わったら収容数を再通知する。
+void UCapturePresentationComponent::UpdateReceptions(float RealDelta, ABoarGameMode* Mode)
+{
 	const bool bHadReceptions = !Receptions.IsEmpty();
 	for (int32 I = Receptions.Num() - 1; I >= 0; --I)
 	{
