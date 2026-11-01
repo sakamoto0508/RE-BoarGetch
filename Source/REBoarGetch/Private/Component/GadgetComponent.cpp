@@ -110,7 +110,8 @@ void UGadgetComponent::UnequipGadget()
 {
 	if (IsValid(CurrentGadget))
 	{
-		if (ABoarPlayerCharacter* Player = Cast<ABoarPlayerCharacter>(OwningPawn)) Player->InterruptGadgetUse();
+		if (ABoarPlayerCharacter* Player = Cast<ABoarPlayerCharacter>(OwningPawn)) 
+			Player->InterruptGadgetUse();
 		CurrentGadget->EndUse(OwningPawn);
 		CurrentGadget->Destroy();
 	}
@@ -131,7 +132,8 @@ bool UGadgetComponent::BeginUseCurrentGadget()
 
 	// Playerが演出や操作制限を始める前に、地上・空中共通の使用拒否を返す。
 	// BeginUseはOneShotでは直ちにIsUsingを戻すため、開始後の値を成功判定には使わない。
-	if (!CurrentGadget->CanUse() || CurrentGadget->IsUsing()) return false;
+	if (!CurrentGadget->CanUse() || CurrentGadget->IsUsing()) 
+		return false;
 
 	UE_LOG(LogTemp, Log, TEXT("[Gadget] BeginUse: %s"), *GetNameSafe(CurrentGadget.Get()));
 	CurrentGadget->BeginUse(OwningPawn.Get());
@@ -185,7 +187,8 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 	TArray<TSubclassOf<AGadgetBase>> NewSlots = EquippedGadgetSlots;
 	// 同じガジェットを選ぶと元の枠を空にして移動します。
 	for (int32 Index = 0; Index < MaxGadgetSlots; ++Index)
-		if (GadgetClass && NewSlots[Index] == GadgetClass) NewSlots[Index] = nullptr;
+		if (GadgetClass && NewSlots[Index] == GadgetClass) 
+			NewSlots[Index] = nullptr;
 	NewSlots[SlotIndex] = GadgetClass;
 	const int32 PreviousSlot = CurrentGadgetSlotIndex;
 	if (IsValidSlotIndex(PreviousSlot) && NewSlots[PreviousSlot] != EquippedGadgetSlots[PreviousSlot])

@@ -187,10 +187,12 @@ bool UBoarGameInstance::SelectTestGadget(FName Id)
 
 void UBoarGameInstance::ClearTestGadget()
 {
-	if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) Gadgets->ClearTestGadget();
+	if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) 
+		Gadgets->ClearTestGadget();
 }
 
 void UBoarGameInstance::UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const
 {
-	if (const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) Gadgets->UpdateInitialUnlocks(Candidate);
+	if (const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) 
+		Gadgets->UpdateInitialUnlocks(Candidate);
 }

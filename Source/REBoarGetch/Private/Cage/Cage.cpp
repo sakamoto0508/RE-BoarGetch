@@ -232,7 +232,8 @@ void ACage::ForgetBoar(ABoarBase* Boar)
 {
 	if (CapturedBoars.Remove(Boar) > 0)
 	{
-		if (Boar) Boar->OnDestroyed.RemoveDynamic(this, &ACage::HandleHousedBoarDestroyed);
+		if (Boar) 
+			Boar->OnDestroyed.RemoveDynamic(this, &ACage::HandleHousedBoarDestroyed);
 		NotifyHousedCountChanged();
 	}
 }

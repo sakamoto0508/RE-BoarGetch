@@ -16,7 +16,8 @@ FBoarGadgetLoadoutContext BoarGadgetLoadoutInitializer::ResolveContext(UWorld* W
 	Context.Progress = Instance ? Instance->GetSubsystem<UBoarGadgetSubsystem>() : nullptr;
 	const auto* Facility = World->GetAuthGameMode<ABoarFacilityGameMode>();
 	Context.bTemporary = Facility && Facility->bGadgetTest;
-	if (Context.bTemporary) Context.TestGadgetClass = Facility->TestGadgetClass;
+	if (Context.bTemporary) 
+		Context.TestGadgetClass = Facility->TestGadgetClass;
 	return Context;
 }
 
@@ -29,7 +30,8 @@ bool BoarGadgetLoadoutInitializer::Initialize(UGadgetComponent* Component, const
 		return true;
 	TArray<TSubclassOf<AGadgetBase>> Slots = Component->GetDefaultGadgetSlots();
 	Slots.SetNum(UGadgetComponent::GetGadgetSlotCount());
-	if (Context.Progress) Context.Progress->RestoreSavedLoadout(Slots);
+	if (Context.Progress) 
+		Context.Progress->RestoreSavedLoadout(Slots);
 	if (Context.bTemporary && Context.TestGadgetClass)
 	{
 		Slots.Init(nullptr, UGadgetComponent::GetGadgetSlotCount());

@@ -71,8 +71,10 @@ void UStageClearPresentationComponent::TickComponent(float DeltaTime, ELevelTick
 	{
 		const auto* PC = Cast<ABoarPlayerController>(GetOwner());
 		UCapturePresentationComponent* Capture = PC ? PC->CapturePresentation.Get() : nullptr;
-		if (Capture && Capture->HasPendingCaptures() && PhaseAge < CaptureWaitTimeout) return;
-		if (Capture && Capture->HasPendingCaptures()) Capture->CancelPresentation();
+		if (Capture && Capture->HasPendingCaptures() && PhaseAge < CaptureWaitTimeout) 
+			return;
+		if (Capture && Capture->HasPendingCaptures()) 
+			Capture->CancelPresentation();
 		BeginDirector();
 		return;
 	}

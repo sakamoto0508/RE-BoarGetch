@@ -57,15 +57,21 @@ void UCapturePresentationComponent::ReportMissingVisualAssets() const
 	if (!bEnabled || !PC || !PC->IsLocalController())
 		return;
 	TArray<FString> Missing;
-	if (!GlowMaterial) Missing.Add(TEXT("GlowMaterial (Boar glow)"));
-	if (!DataMaterial) Missing.Add(TEXT("DataMaterial (data dissolve)"));
-	if (!CaptureVFX) Missing.Add(TEXT("CaptureVFX (capture ring)"));
-	if (!CageReceptionVFX) Missing.Add(TEXT("CageReceptionVFX (cage reception)"));
-	if (!DataFragmentVFX) Missing.Add(TEXT("DataFragmentVFX (data fragments)"));
-	if (!CameraShake || CameraShake->HasAnyClassFlags(CLASS_Abstract)) Missing.Add(TEXT("CameraShake (BP_CaptureSuccessCameraShake)"));
+	if (!GlowMaterial)
+		Missing.Add(TEXT("GlowMaterial (Boar glow)"));
+	if (!DataMaterial)
+		Missing.Add(TEXT("DataMaterial (data dissolve)"));
+	if (!CaptureVFX)
+		Missing.Add(TEXT("CaptureVFX (capture ring)"));
+	if (!CageReceptionVFX)
+		Missing.Add(TEXT("CageReceptionVFX (cage reception)"));
+	if (!DataFragmentVFX)
+		Missing.Add(TEXT("DataFragmentVFX (data fragments)"));
+	if (!CameraShake || CameraShake->HasAnyClassFlags(CLASS_Abstract))
+		Missing.Add(TEXT("CameraShake (BP_CaptureSuccessCameraShake)"));
 	if (!Missing.IsEmpty())
 		UE_LOG(LogTemp, Error, TEXT("[Capture] %s.%s: missing %s; those visuals are skipped (capture keeps working)."),
-		       *GetNameSafe(GetOwner()), *GetName(), *FString::Join(Missing, TEXT(", ")));
+	       *GetNameSafe(GetOwner()), *GetName(), *FString::Join(Missing, TEXT(", ")));
 }
 
 void UCapturePresentationComponent::EndPlay(const EEndPlayReason::Type Reason)
@@ -78,14 +84,18 @@ void UCapturePresentationComponent::EndPlay(const EEndPlayReason::Type Reason)
 bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bSharedFeedback)
 {
 	auto* PC = Cast<APlayerController>(GetOwner());
-	if (!bEnabled || !PC || !PC->IsLocalController() || !IsValid(Boar) || !Boar->IsCaptured()) return false;
-	if (Targets.ContainsByPredicate([Boar](const FCaptureVisualTarget& T) { return T.Boar == Boar; })) return true;
-	if (Targets.IsEmpty()) LastRealTime = GetWorld()->GetRealTimeSeconds();
+	if (!bEnabled || !PC || !PC->IsLocalController() || !IsValid(Boar) || !Boar->IsCaptured())
+		return false;
+	if (Targets.ContainsByPredicate([Boar](const FCaptureVisualTarget& T) { return T.Boar == Boar; }))
+		return true;
+	if (Targets.IsEmpty())
+		LastRealTime = GetWorld()->GetRealTimeSeconds();
 	FCaptureVisualTarget T;
 	T.Boar = Boar;
 	T.Mesh = Boar->GetMesh();
 	T.CaptureLocation = Boar->GetActorLocation();
-	if (T.Mesh.IsValid()) T.bOriginalVisible = T.Mesh->IsVisible();
+	if (T.Mesh.IsValid())
+		T.bOriginalVisible = T.Mesh->IsVisible();
 	if (T.Mesh.IsValid() && GlowMaterial)
 	{
 		const FBoxSphereBounds Bounds = T.Mesh->Bounds;
@@ -126,9 +136,11 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 			OriginalFOV = AppliedFOV = Camera->FieldOfView;
 			bOwnCamera = true;
 		}
-		ApplyTimeScale(OriginalTimeScale * FMath::Clamp(HitStopDuration > 0 ? HitStopTimeScale : SlowTimeScale, .001f, 1.f));
-		if (PC->PlayerCameraManager && CameraShake && !CameraShake->HasAnyClassFlags(CLASS_Abstract)) ActiveShake = PC->PlayerCameraManager->
-		                                                              StartCameraShake(CameraShake);
+		ApplyTimeScale(
+			OriginalTimeScale * FMath::Clamp(HitStopDuration > 0 ? HitStopTimeScale : SlowTimeScale, .001f, 1.f));
+		if (PC->PlayerCameraManager && CameraShake && !CameraShake->HasAnyClassFlags(CLASS_Abstract))
+			ActiveShake = PC->PlayerCameraManager->
+			                  StartCameraShake(CameraShake);
 		PlaySound(ImpactSound);
 	}
 	return true;
@@ -137,8 +149,8 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 void UCapturePresentationComponent::PlaySound(USoundBase* Sound)
 {
 	if (Sound && GetWorld() && GetWorld()->GetGameInstance())
-		if (auto* Audio = GetWorld()->GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()) Audio->
-			PlaySoundEffect2D(this, Sound);
+		if (auto* Audio = GetWorld()->GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>())
+			Audio->PlaySoundEffect2D(this, Sound);
 }
 
 void UCapturePresentationComponent::ApplyTimeScale(float Scale)
@@ -151,9 +163,11 @@ void UCapturePresentationComponent::ApplyTimeScale(float Scale)
 
 void UCapturePresentationComponent::ReleaseTimeScale()
 {
-	if (!bOwnTimeScale) return;
+	if (!bOwnTimeScale)
+		return;
 	bOwnTimeScale = false;
-	if (!GetWorld()) return;
+	if (!GetWorld())
+		return;
 	// 自分が設定した値のままなら元へ戻す。別の演出が上書きしていれば、その演出の所有として触らない。
 	if (FMath::IsNearlyEqual(UGameplayStatics::GetGlobalTimeDilation(this), AppliedTimeScale))
 		UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeScale);
@@ -163,7 +177,8 @@ void UCapturePresentationComponent::ReleaseTimeScale()
 
 void UCapturePresentationComponent::ApplyFieldOfView(float FOV)
 {
-	if (!Camera.IsValid()) return;
+	if (!Camera.IsValid())
+		return;
 	Camera->SetFieldOfView(FOV);
 	AppliedFOV = Camera->FieldOfView;
 	bOwnCamera = true;
@@ -171,7 +186,8 @@ void UCapturePresentationComponent::ApplyFieldOfView(float FOV)
 
 void UCapturePresentationComponent::ReleaseCamera()
 {
-	if (!bOwnCamera) return;
+	if (!bOwnCamera)
+		return;
 	bOwnCamera = false;
 	if (Camera.IsValid() && FMath::IsNearlyEqual(Camera->FieldOfView, AppliedFOV))
 		Camera->SetFieldOfView(OriginalFOV);
@@ -179,7 +195,8 @@ void UCapturePresentationComponent::ReleaseCamera()
 
 void UCapturePresentationComponent::ReleaseCameraShake()
 {
-	if (!ActiveShake) return;
+	if (!ActiveShake)
+		return;
 	if (auto* PC = Cast<APlayerController>(GetOwner()))
 		if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraShake(ActiveShake, true);
 	ActiveShake = nullptr;
@@ -196,18 +213,25 @@ void UCapturePresentationComponent::RestoreSharedState()
 // 対象ごとの見た目の復元とVFX破棄。一度だけ実行し、生成物の参照も手放す。
 void UCapturePresentationComponent::RestoreTarget(FCaptureVisualTarget& T)
 {
-	if (T.bRestored) return;
+	if (T.bRestored)
+		return;
 	T.bRestored = true;
-	if (T.Mesh.IsValid() && T.Glow && T.Mesh->GetOverlayMaterial() == T.Glow) T.Mesh->SetOverlayMaterial(
-		T.OriginalOverlay);
-	if (T.Mesh.IsValid()) T.Mesh->SetVisibility(T.bOriginalVisible, false);
-	if (IsValid(T.DataMesh)) T.DataMesh->DestroyComponent();
-	if (IsValid(T.DataVFX)) T.DataVFX->DestroyComponent();
-	if (IsValid(T.VFX)) T.VFX->DestroyComponent();
+	if (T.Mesh.IsValid() && T.Glow && T.Mesh->GetOverlayMaterial() == T.Glow)
+		T.Mesh->SetOverlayMaterial(
+			T.OriginalOverlay);
+	if (T.Mesh.IsValid())
+		T.Mesh->SetVisibility(T.bOriginalVisible, false);
+	if (IsValid(T.DataMesh))
+		T.DataMesh->DestroyComponent();
+	if (IsValid(T.DataVFX))
+		T.DataVFX->DestroyComponent();
+	if (IsValid(T.VFX))
+		T.VFX->DestroyComponent();
 	T.DataMesh = nullptr;
 	T.DataVFX = nullptr;
 	T.VFX = nullptr;
-	if (T.Boar.IsValid()) T.Boar->OnDestroyed.RemoveDynamic(this, &ThisClass::OnTargetDestroyed);
+	if (T.Boar.IsValid())
+		T.Boar->OnDestroyed.RemoveDynamic(this, &ThisClass::OnTargetDestroyed);
 }
 
 void UCapturePresentationComponent::CancelPresentation(bool bCommitCaptures)
@@ -222,15 +246,23 @@ void UCapturePresentationComponent::CancelPresentation(bool bCommitCaptures)
 		RestoreTarget(T);
 	}
 	Targets.Reset();
-	for (auto& R : Receptions) if (IsValid(R.VFX)) R.VFX->DestroyComponent();
+	for (auto& R : Receptions)
+	{
+		if (IsValid(R.VFX))
+			R.VFX->DestroyComponent();
+	}
 	Receptions.Reset();
 	// 確定待ちの所有者はGameMode。bCommitCaptures時は確定を依頼し（Stage終了後はGameMode側の判定で確定されない）、
 	// そうでなければ（Level破棄・見た目だけの片付け）確定せずに確定待ちから外す。
 	auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
-	if (!IsValid(Mode) || Pending.IsEmpty()) return;
+	if (!IsValid(Mode) || Pending.IsEmpty())
+		return;
 	if (!bCommitCaptures)
 	{
-		for (const TWeakObjectPtr<ABoarBase>& Boar : Pending) Mode->DiscardPendingCapture(Boar);
+		for (const TWeakObjectPtr<ABoarBase>& Boar : Pending)
+		{
+			Mode->DiscardPendingCapture(Boar);
+		}
 		return;
 	}
 	bCommittingCaptures = true;
@@ -245,7 +277,8 @@ void UCapturePresentationComponent::OnTargetDestroyed(AActor* Actor)
 		if (Targets[I].Boar.Get() == Actor || !Targets[I].Boar.IsValid())
 		{
 			// 消えたBoarの捕獲は確定しない。確定待ちからも外す。
-			if (IsValid(Mode)) Mode->DiscardPendingCapture(Targets[I].Boar);
+			if (IsValid(Mode))
+				Mode->DiscardPendingCapture(Targets[I].Boar);
 			RestoreTarget(Targets[I]);
 			Targets.RemoveAt(I);
 		}
@@ -261,7 +294,8 @@ void UCapturePresentationComponent::StartDataConversion(FCaptureVisualTarget& T)
 	T.bDataStarted = true;
 	ABoarBase* Boar = T.Boar.Get();
 	USkeletalMeshComponent* Source = T.Mesh.Get();
-	if (!Boar || !Source) return;
+	if (!Boar || !Source)
+		return;
 	if (DataMaterial && Source->GetSkeletalMeshAsset())
 	{
 		USkeletalMeshComponent* Proxy = NewObject<USkeletalMeshComponent>(Boar, NAME_None, RF_Transient);
@@ -279,17 +313,21 @@ void UCapturePresentationComponent::StartDataConversion(FCaptureVisualTarget& T)
 		T.DataMaterial->SetScalarParameterValue(TEXT("CaptureMinZ"), T.CaptureMinZ);
 		T.DataMaterial->SetScalarParameterValue(TEXT("CaptureHeight"), T.CaptureHeight);
 		T.DataMaterial->SetScalarParameterValue(TEXT("DissolveProgress"), 0.f);
-		for (int32 Slot = 0; Slot < FMath::Max(1, Proxy->GetNumMaterials()); ++Slot) Proxy->SetMaterial(
-			Slot, T.DataMaterial);
+		for (int32 Slot = 0; Slot < FMath::Max(1, Proxy->GetNumMaterials()); ++Slot)
+		{
+			Proxy->SetMaterial(Slot, T.DataMaterial);
+		}
 		Proxy->RegisterComponent();
 		T.DataMesh = Proxy;
 		Source->SetVisibility(false, false);
 	}
 	// 上昇するデータ粒子はNiagaraが生成・移動・消失させる。C++は開始と、実時間の進行・終了時刻・色だけを渡す。
-	if (!DataFragmentVFX) return;
+	if (!DataFragmentVFX) 
+		return;
 	T.DataVFX = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, DataFragmentVFX, T.CaptureLocation,
 	                                                           FRotator::ZeroRotator, FVector::OneVector, false, false);
-	if (!T.DataVFX) return;
+	if (!T.DataVFX) 
+		return;
 	T.DataVFX->SetVariableLinearColor(TEXT("User.Color"), CaptureColor);
 	T.DataVFX->SetVariableFloat(TEXT("User.FragmentEndTime"), CaptureDissolveDuration + TransferFinishDuration);
 	T.DataVFX->SetVariableFloat(TEXT("User.FragmentFadeTime"), TransferFinishDuration);
@@ -303,7 +341,8 @@ void UCapturePresentationComponent::StartCageReception(const FVector& Location)
 {
 	// 未設定時は別アセットで代用せずスキップする（BeginPlayでError報告済み）。
 	UNiagaraSystem* System = CageReceptionVFX.Get();
-	if (!System) return;
+	if (!System)
+		return;
 	FCaptureReception R;
 	R.VFX = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, System, Location - FVector(0, 0, 35),
 	                                                       FRotator::ZeroRotator, FVector(VFXScale * .65f), false,
@@ -321,11 +360,13 @@ void UCapturePresentationComponent::StartCageReception(const FVector& Location)
 
 void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickType, float DeltaSeconds)
 {
-	if (World != GetWorld()) return;
+	if (World != GetWorld()) 
+		return;
 	const double Now = World->GetRealTimeSeconds();
 	const float RealDelta = FMath::Max(0.f, float(Now - LastRealTime));
 	LastRealTime = Now;
-	if (Targets.IsEmpty() && Receptions.IsEmpty()) return;
+	if (Targets.IsEmpty() && Receptions.IsEmpty())
+		return;
 	auto* Mode = World->GetAuthGameMode<ABoarGameMode>();
 	if (Mode && Mode->GetStageState() != EBoarStageState::Playing)
 	{
@@ -345,7 +386,8 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 		return;
 	}
 	// 実行順：共有演出 → 個別対象 → 共有状態の解放 → 捕獲確定 → Cage受信。順序は従来どおり。
-	if (bSharedActive) UpdateSharedFeedback(RealDelta);
+	if (bSharedActive)
+		UpdateSharedFeedback(RealDelta);
 	TArray<TWeakObjectPtr<ABoarBase>> Finished;
 	UpdateTargets(RealDelta, Finished);
 	// Restore globals before invoking gameplay: this call can trigger the existing clear sequence.
@@ -396,7 +438,8 @@ void UCapturePresentationComponent::UpdateTargets(float RealDelta, TArray<TWeakO
 	for (int32 I = Targets.Num() - 1; I >= 0; --I)
 	{
 		auto& T = Targets[I];
-		if (!UpdateTarget(T, RealDelta)) continue;
+		if (!UpdateTarget(T, RealDelta))
+			continue;
 		OutFinished.Insert(T.Boar, 0);
 		RestoreTarget(T);
 		Targets.RemoveAt(I);
@@ -424,7 +467,8 @@ bool UCapturePresentationComponent::UpdateTarget(FCaptureVisualTarget& T, float 
 		T.VFX->SetVariableLinearColor(
 			TEXT("User.Color"), FLinearColor(CaptureColor.R, CaptureColor.G, CaptureColor.B, .8f * RingEnvelope));
 	}
-	if (T.Age >= DataStart && !T.bDataStarted) StartDataConversion(T);
+	if (T.Age >= DataStart && !T.bDataStarted) 
+		StartDataConversion(T);
 	if (T.bDataStarted)
 	{
 		const float DataAge = FMath::Max(0.f, T.Age - DataStart);
@@ -440,7 +484,8 @@ bool UCapturePresentationComponent::UpdateTarget(FCaptureVisualTarget& T, float 
 		if (IsValid(T.DataMesh) && T.Mesh.IsValid())
 			T.DataMesh->SetRelativeLocation(
 				T.Mesh->GetRelativeLocation() + FVector(0, 0, TransferRiseDistance * FinishP));
-		if (IsValid(T.DataVFX)) T.DataVFX->SetDesiredAge(DataAge);
+		if (IsValid(T.DataVFX)) 
+			T.DataVFX->SetDesiredAge(DataAge);
 	}
 	return !T.Boar.IsValid() || !T.Boar->IsCaptured() || T.Age >= GetTotalDuration();
 }
@@ -448,18 +493,23 @@ bool UCapturePresentationComponent::UpdateTarget(FCaptureVisualTarget& T, float 
 // 演出を終えた対象をGameModeへ通知し、確定（収容）できたBoarにだけCage受信演出を出す。
 // 確定可否・二重確定防止・収容数の再集計はGameModeが担当する（タイミングは従来どおり）。
 void UCapturePresentationComponent::CommitFinishedCaptures(ABoarGameMode* Mode,
-                                                          const TArray<TWeakObjectPtr<ABoarBase>>& Finished)
+                                                           const TArray<TWeakObjectPtr<ABoarBase>>& Finished)
 {
-	if (!Mode || Finished.IsEmpty()) return;
+	if (!Mode || Finished.IsEmpty())
+		return;
 	// 確定前の位置を控え、収容で移動したBoarだけを受信演出の対象にする。
 	TMap<TWeakObjectPtr<ABoarBase>, FVector> CaptureLocations;
 	for (const TWeakObjectPtr<ABoarBase>& Boar : Finished)
-		if (Boar.IsValid() && Boar->IsCaptured()) CaptureLocations.Add(Boar, Boar->GetActorLocation());
+	{
+		if (Boar.IsValid() && Boar->IsCaptured()) 
+			CaptureLocations.Add(Boar, Boar->GetActorLocation());
+	}
 	// 確定通知中にClear要求などで状態が変わっても、HasPendingCaptures()は通知中をtrueで返す。
 	const TWeakObjectPtr<UCapturePresentationComponent> Self(this);
 	bCommittingCaptures = true;
 	const TArray<ABoarBase*> Confirmed = Mode->CompletePendingCaptures(Finished);
-	if (!Self.IsValid()) return;
+	if (!Self.IsValid()) 
+		return;
 	bCommittingCaptures = false;
 	for (ABoarBase* Boar : Confirmed)
 	{
@@ -487,9 +537,11 @@ void UCapturePresentationComponent::UpdateReceptions(float RealDelta, ABoarGameM
 		}
 		if (R.Age >= CageReceptionDuration || !IsValid(R.VFX))
 		{
-			if (IsValid(R.VFX)) R.VFX->DestroyComponent();
+			if (IsValid(R.VFX)) 
+				R.VFX->DestroyComponent();
 			Receptions.RemoveAt(I);
 		}
 	}
-	if (bHadReceptions && Receptions.IsEmpty() && Targets.IsEmpty() && Mode) Mode->RefreshHousedBoarCount();
+	if (bHadReceptions && Receptions.IsEmpty() && Targets.IsEmpty() && Mode) 
+		Mode->RefreshHousedBoarCount();
 }

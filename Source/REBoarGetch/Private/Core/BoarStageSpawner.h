@@ -14,8 +14,9 @@ class ASpecialCoin;
  */
 namespace BoarStageSpawner
 {
-/** BoarSpawnDefinitions（永続ID付き）から生成します。設定が空なら手置きBoarのみを使いtrueを返します。 */
-bool SpawnConfiguredBoars(UWorld* World, const UStageConfig* StageConfig);
-/** SpecialCoinDefinitionsから未取得のコインだけを生成します。定義が空ならtrueを返します。 */
-bool SpawnConfiguredSpecialCoins(UWorld* World, const UStageConfig* StageConfig, TSubclassOf<ASpecialCoin> SpecialCoinClass, const UBoarSaveGame* Progress);
+	/** BoarSpawnDefinitions（永続ID付き）から生成します。設定が空なら手置きBoarのみを使いtrueを返します。 */
+	bool SpawnConfiguredBoars(UWorld* World, const UStageConfig* StageConfig);
+	/** SpecialCoinDefinitionsから未取得のコインだけを生成します。定義が空ならtrueを返します。 */
+	bool SpawnConfiguredSpecialCoins(UWorld* World, const UStageConfig* StageConfig,
+	                                 TSubclassOf<ASpecialCoin> SpecialCoinClass, const UBoarSaveGame* Progress);
 }

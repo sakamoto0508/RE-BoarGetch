@@ -37,7 +37,8 @@ void UCageVisualComponent::OnRegister()
 {
 	Super::OnRegister();
 	CageMeshComponent->AttachToComponent(this, FAttachmentTransformRules::KeepRelativeTransform);
-	if (!CageMeshComponent->IsRegistered()) CageMeshComponent->RegisterComponent();
+	if (!CageMeshComponent->IsRegistered()) 
+		CageMeshComponent->RegisterComponent();
 	ApplyVisualSource();
 	Gauge->AttachToComponent(this, FAttachmentTransformRules::KeepRelativeTransform);
 	// 代替Widgetは使わない。未設定ならWidgetを生成せず、BeginPlayでErrorを出す。
@@ -45,7 +46,8 @@ void UCageVisualComponent::OnRegister()
 	Gauge->SetDrawSize(GaugeDrawSize);
 	Gauge->SetRelativeLocation(FVector(0, 0, GaugeHeight));
 	Gauge->SetRelativeScale3D(FVector(GaugeWorldScale));
-	if (!Gauge->IsRegistered()) Gauge->RegisterComponent();
+	if (!Gauge->IsRegistered()) 
+		Gauge->RegisterComponent();
 }
 
 void UCageVisualComponent::BeginPlay()
@@ -59,11 +61,17 @@ void UCageVisualComponent::BeginPlay()
 	}
 	// 代替の見た目は作らない。未設定なら見た目（ランプ含む）だけを無効化し、HP・破壊処理は継続する。
 	if (!CageMesh)
+	{
 		UE_LOG(LogTemp, Error, TEXT("[CageVisual] %s.%s: CageMesh (SM_Cage) is missing; skipping the cage visual and lamps (HP and destruction keep working)."),
 		       *GetNameSafe(GetOwner()), *GetName());
+	}
 	else
-		for (int32 Slot : LampMaterialSlots) if (Slot >= 0 && Slot < CageMeshComponent->GetNumMaterials()) Lamps.Add(
-			CageMeshComponent->CreateDynamicMaterialInstance(Slot));
+	{
+		for (int32 Slot : LampMaterialSlots) if (Slot >= 0 && Slot < CageMeshComponent->GetNumMaterials())
+		{
+			Lamps.Add(CageMeshComponent->CreateDynamicMaterialInstance(Slot));
+		}
+	}
 	InitGauge();
 	Fraction = FMath::Clamp(Cage->GetHP() / FMath::Max(Cage->GetMaxHP(), 1.f), 0.f, 1.f);
 	Trail = Fraction;
@@ -122,9 +130,11 @@ void UCageVisualComponent::EndPlay(const EEndPlayReason::Type Reason)
 void UCageVisualComponent::HealthChanged(float Hp, float MaxHp)
 {
 	float Next = FMath::Clamp(Hp / FMath::Max(MaxHp, 1.f), 0.f, 1.f);
-	if (Next < Fraction) FlashRemaining = .18f;
+	if (Next < Fraction) 
+		FlashRemaining = .18f;
 	Fraction = Next;
-	if (Fraction > Trail) Trail = Fraction;
+	if (Fraction > Trail) 
+		Trail = Fraction;
 	bRedraw = true;
 }
 
@@ -146,20 +156,24 @@ void UCageVisualComponent::Respawned()
 void UCageVisualComponent::TickComponent(float Dt, ELevelTick Type, FActorComponentTickFunction* TickFunction)
 {
 	Super::TickComponent(Dt, Type, TickFunction);
-	if (!Cage || bDestroyed)return;
+	if (!Cage || bDestroyed)
+		return;
 	auto* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0);
-	if (!Camera)return;
+	if (!Camera)
+		return;
 	if (bGaugeAvailable)
 	{
 		const FVector Delta = Camera->GetCameraLocation() - Gauge->GetComponentLocation();
 		const bool bGaugeVisible = DisplayDistance <= 0 || Delta.SizeSquared() <= FMath::Square(DisplayDistance);
 		Gauge->SetVisibility(bGaugeVisible);
-		if (bGaugeVisible)Gauge->SetWorldRotation(Delta.Rotation());
+		if (bGaugeVisible)
+			Gauge->SetWorldRotation(Delta.Rotation());
 	}
 	const bool bAnimating = FlashRemaining > 0 || Trail > Fraction + .001f || Fraction <= LowThreshold;
 	FlashRemaining = FMath::Max(0.f, FlashRemaining - Dt);
 	Trail = FMath::FInterpConstantTo(Trail, Fraction, Dt, .75f);
-	if (!bRedraw && !bAnimating)return;
+	if (!bRedraw && !bAnimating)
+		return;
 	const bool bLow = Fraction > 0 && Fraction <= LowThreshold;
 	const float Pulse = bLow ? .5f + .5f * FMath::Sin(GetWorld()->GetTimeSeconds() * 4.f) : 0.f;
 	const FLinearColor Color = bLow ? GaugeLowColor : Fraction <= MediumThreshold ? GaugeMediumColor : GaugeHighColor;

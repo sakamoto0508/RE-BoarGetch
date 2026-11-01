@@ -122,7 +122,8 @@ void ABoarGameMode::StartPlay()
 		                                FMath::Max(0.1f, StageIntroductionTimeoutSeconds), false);
 		OnStageIntroductionRequested();
 	}
-	else CompleteStageIntroduction();
+	else 
+		CompleteStageIntroduction();
 }
 
 bool ABoarGameMode::PrepareStage()
@@ -249,7 +250,8 @@ void ABoarGameMode::HandleWorldTickEnd(UWorld* World, ELevelTick TickType, float
 {
 	if (World != GetWorld() || TickType == LEVELTICK_PauseTick)
 		return;
-	if (StageState == EBoarStageState::Playing) StageRunData.ClearTimeSeconds += DeltaSeconds;
+	if (StageState == EBoarStageState::Playing) 
+		StageRunData.ClearTimeSeconds += DeltaSeconds;
 	ResolveStageEnd();
 }
 
@@ -268,8 +270,7 @@ void ABoarGameMode::ResolveStageEnd()
 	}
 	if (auto* PC = GetWorld()->GetFirstPlayerController())
 		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
-			Presentation->
-				CancelPresentation();
+			Presentation->CancelPresentation();
 	// StageStateを変えた後なので、上の中断で確定されなかった捕獲は確定しないまま破棄する。
 	PendingCapturedBoars.Reset();
 	SetStageActorsStopped(true);
