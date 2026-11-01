@@ -8,7 +8,6 @@ class UProgressBar;
 /**
  * ワールド空間に表示する横型HPバーの表示窓口。保持する値は呼び出し元から受け取った表示用コピーで、HPの正本ではありません。
  * 枠・色・サイズ・残像・警告の見た目はWBP_CageHealth（Designer）で編集します。
- * バインド対象のWidgetが無い場合（C++クラスを直接使った場合）だけ、旧来のSlate描画をFallbackとして使います。
  */
 UCLASS()
 class REBOARGETCH_API UCageHealthWidget : public UUserWidget
@@ -18,7 +17,6 @@ public:
 	void SetPresentation(float InFraction, float InTrail, FLinearColor InColor, float InFlash, float InPulse);
 protected:
 	virtual void NativeConstruct() override;
-	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& CullingRect, FSlateWindowElementList& Elements, int32 Layer, const FWidgetStyle& Style, bool bEnabled) const override;
 
 	/** 値を受け取った直後に呼ばれます。WBP側で追加演出（Widget Animation等）を組む場合に使います。 */
 	UFUNCTION(BlueprintImplementableEvent,Category="Gauge") void OnPresentationChanged();
@@ -44,5 +42,4 @@ protected:
 	UPROPERTY(BlueprintReadOnly,Transient,Category="Gauge|Display") FLinearColor Color=FLinearColor(.02f,.75f,1.f);
 private:
 	void ApplyToBoundWidgets();
-	bool UsesFallbackPaint() const { return HealthBar == nullptr; }
 };

@@ -20,7 +20,7 @@ public:
 	UPROPERTY(EditAnywhere,Category="Visual") FTransform CageMeshTransform;
 	/** HPに応じて色を変えるランプのMaterial Slot番号です（CageMesh使用時）。Materialには"Tint"と"Intensity"が必要です。 */
 	UPROPERTY(EditAnywhere,Category="Visual") TArray<int32> LampMaterialSlots;
-	/** HPゲージに使うWidget。見た目はこのWBPで編集します。未設定時はC++のFallback描画を使います。 */
+	/** HPゲージに使うWidget（WBP_CageHealth）。見た目はこのWBPで編集します。未設定時はゲージを表示しません。 */
 	UPROPERTY(EditAnywhere,Category="Gauge") TSubclassOf<UCageHealthWidget> GaugeWidgetClass;
 	/** World Space WidgetComponentの描画解像度です。WBPのレイアウト基準サイズと合わせます。 */
 	UPROPERTY(EditAnywhere,Category="Gauge") FVector2D GaugeDrawSize=FVector2D(640,100);

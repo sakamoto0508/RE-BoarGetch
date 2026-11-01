@@ -5,7 +5,6 @@
 #include "Components/BoxComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/StaticMesh.h"
-#include "Engine/Font.h"
 #include "Engine/TextRenderActor.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -21,33 +20,13 @@
 
 namespace
 {
-	// 全World Space表示の共通デザイン言語。サイズ単位はcm（文字の高さ）、IntensityはM_FacilityUI_Widgetの発光倍率。
-	struct FSignStyle
-	{
-		float TitleSize;
-		float SubtitleSize;
-		float Padding;
-		float Intensity;
-		float Depth;
-		FLinearColor TitleColor;
-		FLinearColor SubtitleColor;
-	};
+	// 見た目の値（階層ごとの文字サイズ・色・余白・発光・厚み）はUFacilitySignWidget::TierStyles（WBP_FacilitySignのClass Defaults）が正本。
 
-	const FLinearColor White(FColor(244, 248, 252)), Cyan(FColor(64, 212, 240)), Yellow(FColor(255, 204, 51));
-
-	FSignStyle StyleFor(EFacilitySignTier Tier)
+	// 文字の描画解像度。どの階層でもタイトル1文字がTitlePixelHeight pxになるよう、1cmあたりのpx数を決める。
+	float PixelsPerCm(const FFacilitySignStyle& Style, float TitlePixelHeight)
 	{
-		switch (Tier)
-		{
-		case EFacilitySignTier::AreaSign: return {60.f, 16.f, 36.f, 3.f, 12.f, White, Cyan};
-		case EFacilitySignTier::Nameplate: return {9.f, 5.f, 6.f, 1.f, 2.f, White, Cyan};
-		case EFacilitySignTier::Prompt: return {7.f, 5.f, 6.f, 4.f, 1.f, Yellow, Yellow};
-		default: return {14.f, 7.f, 12.f, 1.5f, 4.f, White, Cyan};
-		}
+		return FMath::Clamp(TitlePixelHeight / FMath::Max(Style.TitleSize, 0.1f), 1.f, 8.f);
 	}
-
-	// 文字の描画解像度。どの階層でもタイトル1文字が約64pxになるよう、1cmあたりのpx数を決める。
-	float PixelsPerCm(const FSignStyle& Style) { return FMath::Clamp(64.f / Style.TitleSize, 1.f, 8.f); }
 	// Slateのフォントサイズはpt（96dpiで1pt=4/3px）。文字の高さ（em）をpxからptへ変換する。
 	int32 FontPoints(float SizeCm, float Ppc) { return FMath::Max(1, FMath::RoundToInt(SizeCm * Ppc * 0.75f)); }
 
@@ -77,8 +56,6 @@ AFacilitySign::AFacilitySign()
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
-	static ConstructorHelpers::FObjectFinder<UFont> SignFont(
-		TEXT("/Game/InportAssets/Font/Dela_Gothic_One/DelaGothicOne-Regular_Font.DelaGothicOne-Regular_Font"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> WidgetMat(
 		TEXT("/Game/UI/World/M_FacilityUI_Widget.M_FacilityUI_Widget"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> PanelMat(
@@ -89,7 +66,6 @@ AFacilitySign::AFacilitySign()
 		TEXT("/Game/UI/World/MI_FacilityUI_LineIdle.MI_FacilityUI_LineIdle"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> LineActive(
 		TEXT("/Game/UI/World/MI_FacilityUI_LineActive.MI_FacilityUI_LineActive"));
-	Font = SignFont.Object;
 	WidgetMaterial = WidgetMat.Object;
 	PanelMaterial = PanelMat.Object;
 	AccentMaterial = FrameMat.Object;
@@ -109,7 +85,9 @@ AFacilitySign::AFacilitySign()
 	LabelWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("LabelWidget"));
 	LabelWidget->SetupAttachment(SceneRoot);
 	LabelWidget->SetWidgetSpace(EWidgetSpace::World);
-	LabelWidget->SetWidgetClass(UFacilitySignWidget::StaticClass());
+	// 文字面のデザインはWBP_FacilitySign。読込失敗時もクラッシュしないよう、文字を持たない基底クラスにしておく。
+	static ConstructorHelpers::FClassFinder<UFacilitySignWidget> SignWidget(TEXT("/Game/UI/World/WBP_FacilitySign"));
+	LabelWidget->SetWidgetClass(SignWidget.Succeeded() ? SignWidget.Class.Get() : UFacilitySignWidget::StaticClass());
 	LabelWidget->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	LabelWidget->SetCanEverAffectNavigation(false);
 	LabelWidget->SetCastShadow(false);
@@ -136,46 +114,52 @@ void AFacilitySign::ApplyLayout(const FText& NewTitle, bool bDimmed)
 {
 	ShownTitle = NewTitle;
 	bShownDimmed = bDimmed;
-	const FSignStyle Style = StyleFor(Tier);
-	const float Ppc = PixelsPerCm(Style);
+	// 見た目の設定は文字面Widget（WBP_FacilitySign）から読む。Widgetを生成できない環境ではWidget ClassのClass Defaultsを使う。
+	LabelWidget->InitWidget();
+	UFacilitySignWidget* Widget = Cast<UFacilitySignWidget>(LabelWidget->GetUserWidgetObject());
+	const UFacilitySignWidget* StyleSource = Widget;
+	if (!StyleSource && LabelWidget->GetWidgetClass())
+		StyleSource = Cast<UFacilitySignWidget>(LabelWidget->GetWidgetClass()->GetDefaultObject());
+	if (!StyleSource)
+		StyleSource = GetDefault<UFacilitySignWidget>();
+	const FFacilitySignStyle Style = StyleSource->GetStyle(Tier);
+	const float Ppc = PixelsPerCm(Style, StyleSource->TitlePixelHeight);
 	const int32 TitlePt = FontPoints(Style.TitleSize, Ppc);
 	const int32 SubtitlePt = FontPoints(Style.SubtitleSize, Ppc);
-	FSlateFontInfo TitleFont = Font ? FSlateFontInfo(Font, TitlePt) : FCoreStyle::GetDefaultFontStyle("Bold", TitlePt);
-	TitleFont.LetterSpacing = 80;
-	FSlateFontInfo SubtitleFont = Font
-		                              ? FSlateFontInfo(Font, SubtitlePt)
-		                              : FCoreStyle::GetDefaultFontStyle("Regular", SubtitlePt);
-	SubtitleFont.LetterSpacing = 120;
+	const FSlateFontInfo TitleFont = StyleSource->MakeTitleFont(TitlePt);
+	const FSlateFontInfo SubtitleFont = StyleSource->MakeSubtitleFont(SubtitlePt);
 
 	// 行間と余白は文字高さから導出し、全サインで同じ比率にする。
 	const bool bSubtitle = !Subtitle.IsEmpty();
-	const float Gap = bSubtitle ? Style.Padding * 0.5f : 0.f;
+	const float Gap = bSubtitle ? Style.Padding * StyleSource->SubtitleGapRatio : 0.f;
 	const float Total = Style.TitleSize + Gap + (bSubtitle ? Style.SubtitleSize : 0.f);
 	const float Width = FixedPanelWidth > 0.f
 		                    ? FixedPanelWidth
 		                    : FMath::Max(
-			                    MeasureWidth(NewTitle, Style.TitleSize, Ppc, TitleFont, 0.08f),
-			                    bSubtitle ? MeasureWidth(Subtitle, Style.SubtitleSize, Ppc, SubtitleFont, 0.12f) : 0.f)
+			                    MeasureWidth(NewTitle, Style.TitleSize, Ppc, TitleFont, TitleFont.LetterSpacing / 1000.f),
+			                    bSubtitle
+				                    ? MeasureWidth(Subtitle, Style.SubtitleSize, Ppc, SubtitleFont,
+				                                   SubtitleFont.LetterSpacing / 1000.f)
+				                    : 0.f)
 		                    + Style.Padding * 2.f;
 	const float Height = Total + Style.Padding * 2.f;
 
 	Panel->SetRelativeLocation(FVector(-Style.Depth * 0.5f, 0.f, 0.f));
 	Panel->SetRelativeScale3D(FVector(Style.Depth, Width, Height) / 100.f);
 	Panel->SetMaterial(0, PanelMaterial);
-	const float LineHeight = FMath::Max(1.5f, Style.TitleSize * 0.06f);
-	AccentLine->SetRelativeLocation(FVector(0.3f, 0.f, -Height * 0.5f + LineHeight * 0.5f));
-	AccentLine->SetRelativeScale3D(FVector(0.6f, Width, LineHeight) / 100.f);
+	const float LineHeight = FMath::Max(StyleSource->AccentLineMinHeight, Style.TitleSize * StyleSource->AccentLineHeightRatio);
+	AccentLine->SetRelativeLocation(FVector(StyleSource->AccentLineOffset, 0.f, -Height * 0.5f + LineHeight * 0.5f));
+	AccentLine->SetRelativeScale3D(FVector(StyleSource->AccentLineDepth, Width, LineHeight) / 100.f);
 	AccentLine->SetMaterial(0, AccentMaterial);
 
 	// 文字面はパネルと同じ大きさのWidgetを、1cmあたりPpc px で描いて縮小配置する。
-	LabelWidget->SetRelativeLocation(FVector(0.5f, 0.f, 0.f));
+	LabelWidget->SetRelativeLocation(FVector(StyleSource->TextSurfaceOffset, 0.f, 0.f));
 	LabelWidget->SetRelativeScale3D(FVector(1.f, 1.f / Ppc, 1.f / Ppc));
 	LabelWidget->SetDrawSize(FVector2D(Width * Ppc, Height * Ppc));
 	if (WidgetMaterial)
 		LabelWidget->SetMaterial(0, WidgetMaterial);
-	LabelWidget->InitWidget();
-	const float Dim = bDimmed ? 0.35f : 1.f;
-	if (auto* Widget = Cast<UFacilitySignWidget>(LabelWidget->GetUserWidgetObject()))
+	const float Dim = bDimmed ? StyleSource->DimmedBrightness : 1.f;
+	if (Widget)
 		Widget->SetContent(NewTitle, Subtitle, TitleFont, SubtitleFont, Style.TitleColor * Dim,
 		                   Style.SubtitleColor * Dim, Gap * Ppc);
 	if (UMaterialInstanceDynamic* MID = LabelWidget->GetMaterialInstance())

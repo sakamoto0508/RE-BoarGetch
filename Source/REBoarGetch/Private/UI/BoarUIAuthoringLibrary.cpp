@@ -216,6 +216,7 @@ bool UBoarUIAuthoringLibrary::EnsureBlinkAnimation(UObject* Object, FName Animat
 	Alpha.AddConstantKey(ToFrame(Scene, FMath::Clamp(OnDuration, 0.f, Period)), OffOpacity);
 
 	WBP->Animations.Add(Animation);
+	WBP->OnVariableAdded(AnimationName);
 	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
 	return true;
 }
