@@ -67,7 +67,8 @@ bool AStageEntrance::CanInteract(const APlayerController* Controller) const
 }
 void AStageEntrance::Interact(APlayerController* Controller)
 {
-    if(CanInteract(Controller))ShowStageSelection(Controller);
+    if(CanInteract(Controller))
+    	ShowStageSelection(Controller);
 }
 void AStageEntrance::HandleTriggerEndOverlap(
 	UPrimitiveComponent* OverlappedComponent,

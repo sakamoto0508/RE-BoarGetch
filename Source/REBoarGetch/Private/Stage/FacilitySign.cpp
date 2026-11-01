@@ -27,6 +27,7 @@ namespace
 	{
 		return FMath::Clamp(TitlePixelHeight / FMath::Max(Style.TitleSize, 0.1f), 1.f, 8.f);
 	}
+
 	// Slateのフォントサイズはpt（96dpiで1pt=4/3px）。文字の高さ（em）をpxからptへ変換する。
 	int32 FontPoints(float SizeCm, float Ppc) { return FMath::Max(1, FMath::RoundToInt(SizeCm * Ppc * 0.75f)); }
 
@@ -34,17 +35,22 @@ namespace
 	float MeasureWidth(const FText& Value, float SizeCm, float Ppc, const FSlateFontInfo& Font, float LetterSpacingEm)
 	{
 		const FString String = Value.ToString();
-		if (String.IsEmpty())return 0.f;
+		if (String.IsEmpty())
+			return 0.f;
 		if (FSlateApplication::IsInitialized() && FSlateApplication::Get().GetRenderer())
 			return FSlateApplication::Get().GetRenderer()->GetFontMeasureService()->Measure(String, Font).X / Ppc;
 		float Em = 0.f;
-		for (const TCHAR Char : String)Em += (Char >= 0x2E80 ? 1.f : 0.62f) + LetterSpacingEm;
+		for (const TCHAR Char : String)
+		{
+			Em += (Char >= 0x2E80 ? 1.f : 0.62f) + LetterSpacingEm;
+		}
 		return Em * SizeCm;
 	}
 
 	void SetMeshMaterial(AActor* Actor, UMaterialInterface* Material)
 	{
-		if (!Actor || !Material)return;
+		if (!Actor || !Material)
+			return;
 		for (UActorComponent* Component : Actor->GetComponents())
 			if (auto* Mesh = Cast<UStaticMeshComponent>(Component))Mesh->SetMaterial(0, Material);
 	}
@@ -138,7 +144,8 @@ void AFacilitySign::ApplyLayout(const FText& NewTitle, bool bDimmed)
 	const float Width = FixedPanelWidth > 0.f
 		                    ? FixedPanelWidth
 		                    : FMath::Max(
-			                    MeasureWidth(NewTitle, Style.TitleSize, Ppc, TitleFont, TitleFont.LetterSpacing / 1000.f),
+			                    MeasureWidth(NewTitle, Style.TitleSize, Ppc, TitleFont,
+			                                 TitleFont.LetterSpacing / 1000.f),
 			                    bSubtitle
 				                    ? MeasureWidth(Subtitle, Style.SubtitleSize, Ppc, SubtitleFont,
 				                                   SubtitleFont.LetterSpacing / 1000.f)
@@ -149,7 +156,8 @@ void AFacilitySign::ApplyLayout(const FText& NewTitle, bool bDimmed)
 	Panel->SetRelativeLocation(FVector(-Style.Depth * 0.5f, 0.f, 0.f));
 	Panel->SetRelativeScale3D(FVector(Style.Depth, Width, Height) / 100.f);
 	Panel->SetMaterial(0, PanelMaterial);
-	const float LineHeight = FMath::Max(StyleSource->AccentLineMinHeight, Style.TitleSize * StyleSource->AccentLineHeightRatio);
+	const float LineHeight = FMath::Max(StyleSource->AccentLineMinHeight,
+	                                    Style.TitleSize * StyleSource->AccentLineHeightRatio);
 	AccentLine->SetRelativeLocation(FVector(StyleSource->AccentLineOffset, 0.f, -Height * 0.5f + LineHeight * 0.5f));
 	AccentLine->SetRelativeScale3D(FVector(StyleSource->AccentLineDepth, Width, LineHeight) / 100.f);
 	AccentLine->SetMaterial(0, AccentMaterial);
@@ -194,8 +202,9 @@ void AFacilitySign::BeginPlay()
 {
 	Super::BeginPlay();
 	if (!HasSignWidgetClass())
-		UE_LOG(LogTemp, Error, TEXT("[FacilitySign] %s.%s: WidgetClass (WBP_FacilitySign) is not set; skipping the sign text."),
-		       *GetActorNameOrLabel(), *LabelWidget->GetName());
+		UE_LOG(LogTemp, Error,
+	       TEXT("[FacilitySign] %s.%s: WidgetClass (WBP_FacilitySign) is not set; skipping the sign text."),
+	       *GetActorNameOrLabel(), *LabelWidget->GetName());
 	ApplyLayout(ShownTitle, bShownDimmed);
 	if (ProximitySource && ProximitySource->Trigger)
 	{

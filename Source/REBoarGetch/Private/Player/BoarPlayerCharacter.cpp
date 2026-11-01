@@ -112,9 +112,11 @@ void ABoarPlayerCharacter::BeginPlay()
 
 bool ABoarPlayerCharacter::InitializeForPlay(const FBoarGadgetLoadoutContext& Context)
 {
-	if (bStageInitialized) return true;
+	if (bStageInitialized) 
+		return true;
 	if (!HealthComponent || !HealthComponent->InitializeHealth()
-		|| !BoarGadgetLoadoutInitializer::Initialize(GadgetComponent, Context)) return false;
+		|| !BoarGadgetLoadoutInitializer::Initialize(GadgetComponent, Context)) 
+		return false;
 	bStageInitialized = true;
 	UE_LOG(LogTemp, Log, TEXT("[StageInit] Player ready: %s"), *GetName());
 	return true;
@@ -417,7 +419,8 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 	if (!IsValid(Boar) || Boar->IsCaptured())
 		return;
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage()) return;
+		if (!Mode->CanAdvanceStage()) 
+			return;
 
 	// ダメージを受けてスタン状態にする
 	HealthComponent->TakeDamage(ContactDamage);

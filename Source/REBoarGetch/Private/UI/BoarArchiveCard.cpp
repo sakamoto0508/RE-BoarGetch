@@ -33,8 +33,10 @@ void UBoarArchiveCard::SetPortrait(UTexture2D* Texture, const FText& Caption, co
 		Portrait->SetBrushFromTexture(Texture);
 		Portrait->SetVisibility(Texture ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
 	}
-	if (Placeholder)Placeholder->SetText(Texture ? FText::GetEmpty() : Caption);
-	if (BadgeText)BadgeText->SetText(Badge);
+	if (Placeholder)
+		Placeholder->SetText(Texture ? FText::GetEmpty() : Caption);
+	if (BadgeText)
+		BadgeText->SetText(Badge);
 	bActiveCard = bActive;
 	RefreshFrame();
 }
@@ -43,10 +45,12 @@ void UBoarArchiveCard::SetPortrait(UTexture2D* Texture, const FText& Caption, co
 void UBoarArchiveCard::RefreshFrame()
 {
 	const bool bHighlighted = bActiveCard || bFocusedCard;
-	if (Frame)Frame->SetBrushColor(bHighlighted ? ActiveColor : IdleColor);
+	if (Frame)
+		Frame->SetBrushColor(bHighlighted ? ActiveColor : IdleColor);
 	if (FocusFrame && FlowGlowMaterial)
 	{
-		if (auto* MID = FocusFrame->GetDynamicMaterial())MID->SetVectorParameterValue(TEXT("ActiveTint"), ActiveColor);
+		if (auto* MID = FocusFrame->GetDynamicMaterial())
+			MID->SetVectorParameterValue(TEXT("ActiveTint"), ActiveColor);
 		UBoarFlowGlowLibrary::ResizeFlowFrame(this, CardSize);
 		UBoarFlowGlowLibrary::SetFlowFrameState(this, true, bHighlighted);
 	}

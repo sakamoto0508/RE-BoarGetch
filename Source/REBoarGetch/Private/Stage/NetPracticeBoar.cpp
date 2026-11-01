@@ -54,7 +54,8 @@ void ANetPracticeBoar::Captured(AActor*)
 
 void ANetPracticeBoar::ResetDummy()
 {
-	if (auto* C = FindComponentByClass<UCaptureComponent>())C->Release();
+	if (auto* C = FindComponentByClass<UCaptureComponent>())
+		C->Release();
 	GetCharacterMovement()->DisableMovement();
 	Feedback->SetText(FText::FromString(TEXT("NET TARGET")));
 	Feedback->SetTextRenderColor(FColor::Cyan);
