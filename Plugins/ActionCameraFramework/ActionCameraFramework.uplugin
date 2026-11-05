@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "Action Camera Framework",
+	"Description": "Data-driven, composable gameplay camera framework (request/priority/blend director, rig nodes, presets) that layers on top of the standard PlayerCameraManager.",
+	"Category": "Gameplay",
+	"CreatedBy": "",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"Modules": [
+		{
+			"Name": "ActionCameraFramework",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "ActionCameraFrameworkEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}
