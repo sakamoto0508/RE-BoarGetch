@@ -39,13 +39,24 @@ namespace ACFTests
 	{
 		uint64 Frame = 1000;
 		FACFCameraPose Upstream;
+		FRotator ControlRotation = FRotator::ZeroRotator;
+		bool bHasControlRotation = false;
+		float AspectRatio = 16.f / 9.f;
+
+		void Fill(FACFCameraEvaluationContext& Context) const
+		{
+			Context.UpstreamPose = Upstream;
+			Context.ControlRotation = ControlRotation;
+			Context.bHasControlRotation = bHasControlRotation;
+			Context.AspectRatio = AspectRatio;
+		}
 
 		const FACFCameraEvaluationResult& Step(UACFCameraDirector* Director, float DeltaTime)
 		{
 			FACFCameraEvaluationContext Context;
 			Context.DeltaTime = DeltaTime;
 			Context.FrameNumber = ++Frame;
-			Context.UpstreamPose = Upstream;
+			Fill(Context);
 			return Director->Evaluate(Context);
 		}
 
@@ -54,7 +65,7 @@ namespace ACFTests
 			FACFCameraEvaluationContext Context;
 			Context.DeltaTime = DeltaTime;
 			Context.FrameNumber = Frame;
-			Context.UpstreamPose = Upstream;
+			Fill(Context);
 			return Director->Evaluate(Context);
 		}
 	};

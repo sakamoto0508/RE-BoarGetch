@@ -1,15 +1,30 @@
 #include "Nodes/ACFCameraTargetTracking.h"
+#include "Components/SceneComponent.h"
+#include "GameFramework/Actor.h"
 
-bool FACFCameraTargetTrackingState::ResolveTarget(const FACFCameraTarget& Target, EACFCameraTargetLostBehavior LostBehavior, FTransform& OutTransform)
+namespace ACFTracking
 {
-	const UObject* TargetObject = nullptr;
-	if (Target.Resolve(OutTransform, TargetObject))
+	static const AActor* ActorOf(const UObject* Object)
 	{
-		if (LastTargetObject.Get() != TargetObject)
+		if (const AActor* Actor = Cast<AActor>(Object))
+		{
+			return Actor;
+		}
+		const USceneComponent* Component = Cast<USceneComponent>(Object);
+		return Component ? Component->GetOwner() : nullptr;
+	}
+}
+
+bool FACFCameraTargetTrackingState::ResolveTarget(const FACFCameraTarget& Target, EACFCameraTargetLostBehavior LostBehavior, FTransform& OutTransform, const UObject*& OutObject)
+{
+	OutObject = nullptr;
+	if (Target.Resolve(OutTransform, OutObject))
+	{
+		if (LastTargetObject.Get() != OutObject)
 		{
 			// New or switched target: do not drag the camera across the level through damping.
-			LastTargetObject = TargetObject;
-			ResetDamping();
+			LastTargetObject = OutObject;
+			ResetInterpolation();
 		}
 		LastKnownTargetTransform = OutTransform;
 		bHasLastKnownTarget = true;
@@ -24,9 +39,69 @@ bool FACFCameraTargetTrackingState::ResolveTarget(const FACFCameraTarget& Target
 	return false;
 }
 
+bool FACFCameraTargetTrackingState::Track(const FACFCameraTarget& Target, const FACFCameraTargetMotionSettings& Settings, float DeltaTime, FACFCameraTrackedTarget& Out)
+{
+	const UObject* Object = nullptr;
+	if (!ResolveTarget(Target, Settings.LostBehavior, Out.Transform, Object))
+	{
+		return false;
+	}
+	Out.Transform.SetScale3D(FVector::OneVector); // a scaled character must not scale offsets
+	Out.Location = Out.Transform.GetLocation();
+	Out.Actor = ACFTracking::ActorOf(Object);
+	Out.bTeleported = false;
+
+	// Teleport: a jump larger than the threshold drops all interpolation history (snap).
+	if (bMotionInitialized && Settings.TeleportDistance > 0.f
+		&& FVector::DistSquared(Out.Location, PreviousTargetLocation) > FMath::Square(Settings.TeleportDistance))
+	{
+		ResetInterpolation();
+		Out.bTeleported = true;
+	}
+
+	const FACFCameraLookaheadSettings& Lookahead = Settings.Lookahead;
+	if (!bMotionInitialized)
+	{
+		PreviousTargetLocation = Out.Location;
+		SmoothedVelocity = FVector::ZeroVector;
+		bMotionInitialized = true;
+	}
+	else if (DeltaTime > 0.f)
+	{
+		FVector Velocity = (Out.Location - PreviousTargetLocation) / DeltaTime;
+		PreviousTargetLocation = Out.Location;
+		if (Lookahead.bIgnoreVertical)
+		{
+			Velocity.Z = 0.0;
+		}
+		// Moving against the prediction (sharp turn / reversal): forget the old direction faster.
+		const bool bAgainstPrediction = (Velocity | SmoothedVelocity) < 0.0;
+		const float Smoothing = Lookahead.Smoothing * (bAgainstPrediction ? Lookahead.DirectionChangeSmoothingScale : 1.f);
+		SmoothedVelocity += (Velocity - SmoothedVelocity) * ACFCameraMath::ExpAlpha(Smoothing, DeltaTime);
+	}
+
+	Out.Predicted = Out.Location;
+	if (Lookahead.Time > 0.f)
+	{
+		FVector Offset = SmoothedVelocity * Lookahead.Time;
+		if (Lookahead.MaxDistance > 0.f)
+		{
+			Offset = Offset.GetClampedToMaxSize(Lookahead.MaxDistance);
+		}
+		Out.Predicted += Offset;
+	}
+	return true;
+}
+
 FVector FACFCameraTargetTrackingState::UpdateDamped(const FVector& Goal, float DampingTime, float DeltaTime)
 {
-	if (!bDampingInitialized)
+	return UpdateDamped(Goal, FVector(DampingTime), FQuat::Identity, DeltaTime);
+}
+
+FVector FACFCameraTargetTrackingState::UpdateDamped(const FVector& Goal, const FVector& AxisTimes, const FQuat& Frame, float DeltaTime)
+{
+	const bool bRigid = AxisTimes.GetMax() <= UE_KINDA_SMALL_NUMBER;
+	if (!bDampingInitialized || bRigid)
 	{
 		DampedPoint = Goal;
 		PreviousGoal = Goal;
@@ -35,26 +110,70 @@ FVector FACFCameraTargetTrackingState::UpdateDamped(const FVector& Goal, float D
 	}
 	if (DeltaTime <= 0.f)
 	{
-		// Zero-time evaluation (e.g. PlayerCameraManager::InitializeFor): report, never advance.
-		return DampingTime > 0.f ? DampedPoint : Goal;
+		return DampedPoint; // zero-time evaluation: report, never advance
 	}
 
-	DampedPoint = ACFCameraMath::DampTowardsMovingGoal(DampedPoint, PreviousGoal, Goal, DampingTime, DeltaTime);
+	// Work relative to the previous goal, in the damping frame's axes.
+	const FVector Current = Frame.UnrotateVector(DampedPoint - PreviousGoal);
+	const FVector Move = Frame.UnrotateVector(Goal - PreviousGoal);
+	FVector Result;
+	for (int32 Axis = 0; Axis < 3; ++Axis)
+	{
+		Result[Axis] = ACFCameraMath::DampTowardsMovingGoal1D(Current[Axis], 0.0, Move[Axis], AxisTimes[Axis], DeltaTime);
+	}
+	DampedPoint = PreviousGoal + Frame.RotateVector(Result);
 	PreviousGoal = Goal;
 	return DampedPoint;
 }
 
-FVector ACFCameraMath::DampTowardsMovingGoal(const FVector& Current, const FVector& PreviousGoal, const FVector& Goal, float DampingTime, float DeltaTime)
+FQuat FACFCameraTargetTrackingState::DampingFrame(const FACFCameraPositionDamping& Damping, const FQuat& TargetRotation, const FRotator& CameraRotation)
 {
-	if (DampingTime <= UE_KINDA_SMALL_NUMBER || DeltaTime <= 0.f)
+	switch (Damping.Space)
 	{
-		return DampingTime <= UE_KINDA_SMALL_NUMBER ? Goal : Current;
+	case EACFCameraDampingSpace::TargetLocal:
+		return TargetRotation;
+	case EACFCameraDampingSpace::CameraYaw:
+		return FRotator(0.f, CameraRotation.Yaw, 0.f).Quaternion();
+	default:
+		return FQuat::Identity;
 	}
+}
 
+double ACFCameraMath::DampTowardsMovingGoal1D(double Current, double PreviousGoal, double Goal, float DampingTime, float DeltaTime)
+{
+	if (DampingTime <= UE_KINDA_SMALL_NUMBER)
+	{
+		return Goal;
+	}
+	if (DeltaTime <= 0.f)
+	{
+		return Current;
+	}
 	// goal(t) = PreviousGoal + V * t over [0, dt]. Solution of x' = (goal - x) / T:
 	//   x(dt) = Goal - V*T + (Current - PreviousGoal + V*T) * exp(-dt/T)
-	const FVector Velocity = (Goal - PreviousGoal) / DeltaTime;
-	const FVector Lag = Velocity * DampingTime;
+	const double Velocity = (Goal - PreviousGoal) / DeltaTime;
+	const double Lag = Velocity * DampingTime;
 	const double Decay = FMath::Exp(-static_cast<double>(DeltaTime) / DampingTime);
 	return Goal - Lag + (Current - PreviousGoal + Lag) * Decay;
+}
+
+FVector ACFCameraMath::DampTowardsMovingGoal(const FVector& Current, const FVector& PreviousGoal, const FVector& Goal, float DampingTime, float DeltaTime)
+{
+	return FVector(
+		DampTowardsMovingGoal1D(Current.X, PreviousGoal.X, Goal.X, DampingTime, DeltaTime),
+		DampTowardsMovingGoal1D(Current.Y, PreviousGoal.Y, Goal.Y, DampingTime, DeltaTime),
+		DampTowardsMovingGoal1D(Current.Z, PreviousGoal.Z, Goal.Z, DampingTime, DeltaTime));
+}
+
+float ACFCameraMath::ExpAlpha(float DampingTime, float DeltaTime)
+{
+	if (DeltaTime <= 0.f)
+	{
+		return 0.f;
+	}
+	if (DampingTime <= UE_KINDA_SMALL_NUMBER)
+	{
+		return 1.f;
+	}
+	return 1.f - FMath::Exp(-DeltaTime / DampingTime);
 }

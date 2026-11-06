@@ -5,6 +5,7 @@
 #include "ACFCameraTypes.h"
 #include "ACFCameraBlueprintLibrary.generated.h"
 
+class AActor;
 class APlayerController;
 class UACFCameraPreset;
 class UACFCameraSubsystem;
@@ -32,4 +33,8 @@ public:
 	/** Builds request params with the given priority and (optional) auto-release instigator. */
 	UFUNCTION(BlueprintPure, Category = "Action Camera")
 	static FACFCameraRequestParams MakeRequestParams(int32 Priority, UObject* Instigator);
+
+	/** Request params with follow / look-at actors (either may be null). */
+	UFUNCTION(BlueprintPure, Category = "Action Camera", meta = (DisplayName = "Make Target Request Params"))
+	static FACFCameraRequestParams MakeTargetRequestParams(int32 Priority, AActor* FollowTarget, AActor* LookAtTarget, UObject* Instigator);
 };

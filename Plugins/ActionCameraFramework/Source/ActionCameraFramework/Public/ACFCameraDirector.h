@@ -4,6 +4,7 @@
 #include "UObject/Object.h"
 #include "ACFCameraTypes.h"
 #include "ACFCameraRigInstance.h"
+#include "ACFCameraNode.h"
 #include "ACFCameraDirector.generated.h"
 
 class UACFCameraPreset;
@@ -83,6 +84,21 @@ public:
 	bool ReleaseOutputSuppression(const UObject* Source, float BlendTime);
 	bool IsOutputSuppressed() const { return SuppressionSources.Num() > 0; }
 
+	/**
+	 * Engine-agnostic camera input (X = yaw, Y = pitch, input units; nodes apply sensitivity).
+	 * AddCameraInput accumulates deltas (mouse); SetCameraInputRate holds a per-second rate (stick)
+	 * that is multiplied by DeltaTime. Both are consumed by the next time-advancing evaluation only,
+	 * so several PCM calls in one frame never apply input twice. Set the rate every frame.
+	 */
+	void AddCameraInput(const FVector2D& Delta);
+	void SetCameraInputRate(const FVector2D& Rate);
+
+	/** Drops interpolation history of every rig (next frame snaps). bCutBlend also ends a running blend. */
+	void NotifyTeleport(bool bCutBlend);
+
+	/** Sets the orbit rotation (world) of the request's Orbital Follow nodes. False if none. */
+	bool SetOrbitRotation(FACFCameraRequestHandle Handle, const FRotator& Rotation, bool bInstant);
+
 	/** True while ACF has any influence on the output (requests exist or a fade is running). */
 	bool IsInfluencingOutput() const { return Requests.Num() > 0 || LastResult.RequestWeight > 0.f; }
 
@@ -95,12 +111,17 @@ public:
 	 * zero delta, so time still advances exactly once.
 	 * Combining the result with the UE camera is the output adapter's job (per call).
 	 */
-	const FACFCameraEvaluationResult& Evaluate(const FACFCameraEvaluationContext& Context);
+	const FACFCameraEvaluationResult& Evaluate(const FACFCameraEvaluationContext& InContext);
 
 	const FACFCameraEvaluationResult& GetLastResult() const { return LastResult; }
 
 	/** Number of rig evaluations performed by the last Evaluate (tests / debugging). */
 	int32 GetLastRigEvaluationCount() const { return LastRigEvaluationCount; }
+
+#if !UE_BUILD_SHIPPING
+	/** Debug data published by the nodes of the camera in control during the last evaluation. */
+	const FACFCameraRigDebug& GetLastDebug() const { return LastDebug; }
+#endif
 
 private:
 	struct FTransition
@@ -133,7 +154,7 @@ private:
 	void BeginTransition(int32 NewActiveIndex, const FACFCameraEvaluationContext& Context);
 	float AdvanceTransition(float DeltaTime);
 	void EndTransition();
-	FACFCameraPose EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context);
+	FACFCameraPose EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context, FACFCameraRigScratch& OutScratch);
 	void StartSuppressionFade(float BlendTime);
 	float AdvanceSuppressionFade(float DeltaTime);
 
@@ -169,4 +190,9 @@ private:
 	uint64 LastEvaluatedFrame = MAX_uint64;
 	float LastEvaluatedDeltaTime = 0.f;
 	int32 LastRigEvaluationCount = 0;
+	FVector2D PendingInputDelta = FVector2D::ZeroVector;
+	FVector2D InputRate = FVector2D::ZeroVector;
+#if !UE_BUILD_SHIPPING
+	FACFCameraRigDebug LastDebug;
+#endif
 };

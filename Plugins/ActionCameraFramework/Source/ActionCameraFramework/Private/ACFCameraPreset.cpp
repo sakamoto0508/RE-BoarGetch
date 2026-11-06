@@ -3,6 +3,11 @@
 
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
+#include "Nodes/ACFCameraNode_Collision.h"
+#include "Nodes/ACFCameraNode_Composers.h"
+#include "Nodes/ACFCameraNode_Follow.h"
+#include "Nodes/ACFCameraNode_LookAt.h"
+#include "Nodes/ACFCameraNode_OrbitalFollow.h"
 
 #define LOCTEXT_NAMESPACE "ACFCameraPreset"
 
@@ -17,6 +22,40 @@ EDataValidationResult UACFCameraPreset::IsDataValid(FDataValidationContext& Cont
 			Context.AddWarning(FText::Format(LOCTEXT("EmptyNode", "Node slot {0} is empty and will be skipped."), Index));
 		}
 	}
+	// Responsibility conflicts (see README "Node の評価順序").
+	int32 PositionOwners = 0;
+	int32 AimNodes = 0;
+	int32 Collisions = 0;
+	bool bPositionComposer = false;
+	for (const UACFCameraNode* Node : Nodes)
+	{
+		if (!Node || !Node->bEnabled)
+		{
+			continue;
+		}
+		const bool bIsPositionComposer = Node->IsA<UACFCameraNode_PositionComposer>();
+		bPositionComposer |= bIsPositionComposer;
+		PositionOwners += (Node->IsA<UACFCameraNode_Follow>() || Node->IsA<UACFCameraNode_OrbitalFollow>() || bIsPositionComposer) ? 1 : 0;
+		AimNodes += (Node->IsA<UACFCameraNode_LookAt>() || Node->IsA<UACFCameraNode_RotationComposer>()) ? 1 : 0;
+		Collisions += Node->IsA<UACFCameraNode_Collision>() ? 1 : 0;
+	}
+	if (PositionOwners > 1)
+	{
+		Context.AddWarning(LOCTEXT("PositionOwners", "More than one enabled position node (Follow / Orbital Follow / Position Composer): the last Body node wins and the others only waste time and state."));
+	}
+	if (AimNodes > 1)
+	{
+		Context.AddWarning(LOCTEXT("AimNodes", "More than one enabled Aim node (Look At / Rotation Composer): the last one decides the rotation."));
+	}
+	if (bPositionComposer && AimNodes > 0)
+	{
+		Context.AddWarning(LOCTEXT("ComposerAim", "Position Composer frames with the incoming rotation; an Aim node re-rotates afterwards and breaks that framing."));
+	}
+	if (Collisions > 1)
+	{
+		Context.AddWarning(LOCTEXT("Collisions", "More than one Collision node: each one sweeps again."));
+	}
+
 	if (Nodes.IsEmpty())
 	{
 		Context.AddWarning(LOCTEXT("NoNodes", "Preset has no nodes; it will reproduce the upstream UE camera unchanged."));

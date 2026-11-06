@@ -2,6 +2,7 @@
 #include "ACFCameraNode.h"
 #include "ACFCameraPreset.h"
 #include "ACFCameraSettings.h"
+#include "Nodes/ACFCameraNode_OrbitalFollow.h"
 
 namespace ACFDirector
 {
@@ -210,15 +211,30 @@ float UACFCameraDirector::AdvanceSuppressionFade(float DeltaTime)
 // -------------------------------------------------------------------------------------------------
 // Evaluation
 
-const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraEvaluationContext& Context)
+const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraEvaluationContext& InContext)
 {
-	const bool bSameFrame = Context.FrameNumber == LastEvaluatedFrame;
-	const bool bUpgradeZeroDelta = bSameFrame && LastEvaluatedDeltaTime <= 0.f && Context.DeltaTime > 0.f;
+	const bool bSameFrame = InContext.FrameNumber == LastEvaluatedFrame;
+	const bool bUpgradeZeroDelta = bSameFrame && LastEvaluatedDeltaTime <= 0.f && InContext.DeltaTime > 0.f;
 	if (bSameFrame && !bUpgradeZeroDelta)
 	{
 		return LastResult;
 	}
 	LastRigEvaluationCount = 0;
+
+	// Stage 1 (input): camera input is consumed only by an evaluation that advances time, so a
+	// zero-delta call (InitializeFor) followed by the real one in the same frame never loses or
+	// doubles it, and cached repeat calls never see it again.
+	FACFCameraEvaluationContext Context = InContext;
+	if (Context.DeltaTime > 0.f)
+	{
+		Context.CameraInput = PendingInputDelta + InputRate * Context.DeltaTime;
+		PendingInputDelta = FVector2D::ZeroVector;
+		InputRate = FVector2D::ZeroVector;
+	}
+	else
+	{
+		Context.CameraInput = FVector2D::ZeroVector;
+	}
 
 	// Stage 2: resolve which request is in control, and who owns the output.
 	PruneLostInstigators();
@@ -239,37 +255,65 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	const float Alpha = AdvanceTransition(Context.DeltaTime);
 	FACFCameraRequestEntry* LiveSource = Transition.bActive ? FindLiveEntry(Transition.LiveSource) : nullptr;
 
-	// Stage 3: evaluate the rig(s), seeded with the upstream UE pose.
+	// Stage 3: evaluate the rig(s) (Body + Aim), seeded with the upstream UE pose.
+	FACFCameraRigScratch TargetScratch;
+	FACFCameraRigScratch SourceScratch;
+	FACFCameraRequestEntry* TargetEntry = nullptr;
 	FACFCameraPose TargetPose;
 	if (BestIndex != INDEX_NONE)
 	{
-		TargetPose = EvaluateEntry(Requests[BestIndex], Context);
+		TargetEntry = &Requests[BestIndex];
+		TargetPose = EvaluateEntry(*TargetEntry, Context, TargetScratch);
 	}
 	else if (LiveSource)
 	{
 		// Blending back to UE with a live source: the released camera keeps moving while it fades.
-		TargetPose = EvaluateEntry(*LiveSource, Context);
+		TargetEntry = LiveSource;
+		TargetPose = EvaluateEntry(*LiveSource, Context, TargetScratch);
 	}
 	else
 	{
 		TargetPose = LastResult.Pose; // blending back to UE from a snapshot: hold the last pose
 	}
 
-	// Stage 4 (mix) + stage 6: build the final result.
+	// Stage 4 (mix): request-to-request blend.
 	FACFCameraEvaluationResult Result;
-	if (Transition.bActive && Transition.bBlendPose)
+	const bool bBlendingPose = Transition.bActive && Transition.bBlendPose;
+	if (bBlendingPose)
 	{
-		const FACFCameraPose SourcePose = LiveSource ? EvaluateEntry(*LiveSource, Context) : Transition.FromPose;
+		const bool bLiveBlend = LiveSource && LiveSource != TargetEntry;
+		const FACFCameraPose SourcePose = bLiveBlend ? EvaluateEntry(*LiveSource, Context, SourceScratch) : Transition.FromPose;
 		Result.Pose = FACFCameraPose::Blend(SourcePose, TargetPose, Alpha);
+		if (bLiveBlend && SourceScratch.bHasPivot && TargetScratch.bHasPivot)
+		{
+			// Collision of a blended camera sweeps from the blended pivot.
+			TargetScratch.Pivot = FMath::Lerp(SourceScratch.Pivot, TargetScratch.Pivot, static_cast<double>(Alpha));
+		}
 	}
 	else
 	{
 		Result.Pose = TargetPose;
 	}
+
+	// Stage 5 (corrections of the final pose): PostBlend nodes (Collision) of the camera in control.
+	// Phase 3 visual effects will be inserted before this so they cannot push the camera into walls.
+	if (TargetEntry && TargetEntry->Rig.HasPostBlendNodes())
+	{
+		const FACFCameraNodeContext PostContext(Context, TargetEntry->Params);
+		PostContext.Scratch = TargetScratch;
+		TargetEntry->Rig.EvaluatePostBlend(PostContext, Result.Pose);
+		TargetScratch = PostContext.Scratch;
+	}
+#if !UE_BUILD_SHIPPING
+	LastDebug = TargetScratch.Debug;
+#endif
+
+	// Stage 6: final result.
 	Result.RequestWeight = Transition.bActive ? FMath::Lerp(Transition.FromWeight, Transition.ToWeight, Alpha) : Transition.ToWeight;
 	const float OutputFactor = AdvanceSuppressionFade(Context.DeltaTime);
 	Result.Weight = Result.RequestWeight * OutputFactor;
 	Result.bOutputSuppressed = IsOutputSuppressed();
+	Result.UpstreamPose = Context.UpstreamPose;
 	Result.AimPose = FACFCameraPose::Blend(Context.UpstreamPose, Result.Pose, Result.Weight);
 	Result.ActiveRequest = ActiveHandle;
 	Result.bIsBlending = Transition.bActive;
@@ -283,13 +327,63 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	return LastResult;
 }
 
-FACFCameraPose UACFCameraDirector::EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context)
+FACFCameraPose UACFCameraDirector::EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context, FACFCameraRigScratch& OutScratch)
 {
 	FACFCameraPose Pose = Context.UpstreamPose;
 	const FACFCameraNodeContext NodeContext(Context, Entry.Params);
 	Entry.Rig.Evaluate(NodeContext, Pose);
+	OutScratch = NodeContext.Scratch;
 	++LastRigEvaluationCount;
 	return Pose;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Input / runtime commands
+
+void UACFCameraDirector::AddCameraInput(const FVector2D& Delta)
+{
+	PendingInputDelta += Delta;
+}
+
+void UACFCameraDirector::SetCameraInputRate(const FVector2D& Rate)
+{
+	InputRate = Rate;
+}
+
+void UACFCameraDirector::NotifyTeleport(bool bCutBlend)
+{
+	for (FACFCameraRequestEntry& Entry : Requests)
+	{
+		Entry.Rig.ResetInterpolation();
+	}
+	for (FACFCameraRequestEntry& Entry : RetiredRequests)
+	{
+		Entry.Rig.ResetInterpolation();
+	}
+	if (bCutBlend && Transition.bActive)
+	{
+		EndTransition(); // do not blend across the level from the pre-teleport pose
+	}
+	ACFDirector::LogEvent(FString::Printf(TEXT("NotifyTeleport cutBlend=%d"), bCutBlend ? 1 : 0));
+}
+
+bool UACFCameraDirector::SetOrbitRotation(FACFCameraRequestHandle Handle, const FRotator& Rotation, bool bInstant)
+{
+	FACFCameraRequestEntry* Entry = FindLiveEntry(Handle);
+	if (!Entry)
+	{
+		return false;
+	}
+	bool bFound = false;
+	Entry->Rig.ForEachNode([&](const UACFCameraNode& Node, FInstancedStruct* State)
+	{
+		if (const UACFCameraNode_OrbitalFollow* Orbit = Cast<UACFCameraNode_OrbitalFollow>(&Node))
+		{
+			Orbit->SetOrbitRotation(State, Rotation, bInstant);
+			bFound = true;
+		}
+	});
+	return bFound;
 }
 
 void UACFCameraDirector::PruneLostInstigators()

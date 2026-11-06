@@ -9,6 +9,7 @@ class AActor;
 class APlayerController;
 class UCurveFloat;
 class USceneComponent;
+class UWorld;
 
 ACTIONCAMERAFRAMEWORK_API DECLARE_LOG_CATEGORY_EXTERN(LogActionCamera, Log, All);
 
@@ -187,6 +188,14 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestParams
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
 	FACFCameraTarget LookAtTarget;
 
+	/**
+	 * Extra actors the Collision node ignores (the follow / look-at target actors are ignored
+	 * automatically when the node says so). Destroyed actors are skipped (references to destroyed
+	 * actors are cleared by the garbage collector; this list never keeps an actor from being destroyed).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
+	TArray<TObjectPtr<AActor>> CollisionIgnoredActors;
+
 	/** Shown in logs and debug output. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
 	FName DebugName;
@@ -206,8 +215,25 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationContext
 	/** May be null (e.g. in unit tests). */
 	APlayerController* PlayerController = nullptr;
 
+	/** World of the player (collision queries, debug drawing). Null in unit tests. */
+	UWorld* World = nullptr;
+
 	/** The pose UE's own camera pipeline produced before ACF (view target + earlier modifiers). */
 	FACFCameraPose UpstreamPose;
+
+	/** PlayerController control rotation, if there is a controller. */
+	FRotator ControlRotation = FRotator::ZeroRotator;
+	bool bHasControlRotation = false;
+
+	/** Width / height of the view, used by screen-space composers. */
+	float AspectRatio = 16.f / 9.f;
+
+	/**
+	 * Camera input (X = yaw, Y = pitch, in "input units") consumed by this evaluation: the deltas
+	 * accumulated since the previous time-advancing evaluation plus rate input * DeltaTime.
+	 * Filled by the director; zero on zero-delta evaluations (input is kept for the next one).
+	 */
+	FVector2D CameraInput = FVector2D::ZeroVector;
 };
 
 /** Final result of the director for one frame (stage 6 of the pipeline). */
@@ -244,6 +270,10 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationResult
 	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Camera")
 	FACFCameraPose AimPose;
+
+	/** The UE camera pose ACF received this frame (first PCM call). Debugging / comparisons. */
+	UPROPERTY(BlueprintReadOnly, Category = "Camera")
+	FACFCameraPose UpstreamPose;
 
 	/** Request currently in control (invalid when blending back to / idling on the UE camera). */
 	UPROPERTY(BlueprintReadOnly, Category = "Camera")

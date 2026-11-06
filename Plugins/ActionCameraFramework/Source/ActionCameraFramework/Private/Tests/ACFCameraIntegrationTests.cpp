@@ -19,6 +19,12 @@
 #include "UObject/Package.h"
 
 #include "UObject/StrongObjectPtr.h"
+#include "Components/BoxComponent.h"
+#include "Engine/CollisionProfile.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Nodes/ACFCameraNode_Collision.h"
+#include "Nodes/ACFCameraNode_OrbitalFollow.h"
 
 /**
  * End-to-end checks against the real PlayerCameraManager. ClientContext only: run in a game process:
@@ -57,6 +63,13 @@ namespace ACFIntegration
 		FACFCameraRequestHandle Handle;
 		TWeakObjectPtr<AActor> ActorA;
 		TWeakObjectPtr<AActor> ActorB;
+		TArray<TWeakObjectPtr<AActor>> Spawned;
+		TWeakObjectPtr<USceneComponent> Component;
+		TStrongObjectPtr<UACFCameraPreset> PresetB;
+		FACFCameraRequestHandle HandleB;
+		FVector Pivot = FVector::ZeroVector;
+		bool bFlag = true;
+		double Value = 0.0;
 		TWeakObjectPtr<APlayerCameraManager> OldCameraManager;
 		FVector SavedLocation = FVector::ZeroVector;
 		FRotator SavedRotation = FRotator::ZeroRotator;
@@ -153,7 +166,9 @@ namespace ACFIntegration
 			{
 				State->Subsystem->ReleaseAllCameras(true);
 			}
-			for (TWeakObjectPtr<AActor> Actor : { State->ActorA, State->ActorB })
+			State->Spawned.Add(State->ActorA);
+			State->Spawned.Add(State->ActorB);
+			for (TWeakObjectPtr<AActor> Actor : State->Spawned)
 			{
 				if (Actor.IsValid())
 				{
@@ -420,6 +435,336 @@ bool FACFIntegrationBlueprintApiTest::RunTest(const FString& Parameters)
 		const FACFCameraEvaluationResult Result = S.Subsystem->GetLastEvaluationResult();
 		S.Test->TestEqual(TEXT("Blueprint released its request"), Result.NumRequests, 0);
 		S.Test->TestEqual(TEXT("Weight back to 0"), Result.Weight, 0.f);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+
+// =================================================================================================
+// Phase 2: third person camera against real collision and the real SpringArm.
+
+namespace ACFIntegration
+{
+	/** Far from the lobby geometry so only the test's own blockers matter. */
+	static const FVector TestArea(20000.f, 20000.f, 6000.f);
+
+	static AActor* SpawnBlocker(FScenario& S, const FVector& Center, const FVector& Extent)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AActor* Actor = S.World()->SpawnActor<AActor>(AActor::StaticClass(), FTransform(Center), Params);
+		UBoxComponent* Box = NewObject<UBoxComponent>(Actor, TEXT("Blocker"));
+		Box->SetBoxExtent(Extent);
+		Box->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+		Actor->SetRootComponent(Box);
+		Box->RegisterComponent();
+		Actor->SetActorLocation(Center);
+		S.Spawned.Add(Actor);
+		return Actor;
+	}
+
+	/** Orbit (fixed rotation, no input) + Collision, following ActorA. Camera desired at pivot - X * Distance. */
+	static UACFCameraPreset* MakeOrbitCollisionPreset(float Distance, float ReturnDamping, const FACFCameraBlendSettings& BlendIn)
+	{
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_OrbitalFollow* Orbit = NewObject<UACFCameraNode_OrbitalFollow>(Preset);
+		Orbit->InputSource = EACFCameraOrbitInputSource::None;
+		Orbit->InitialRotation = EACFCameraOrbitInitialRotation::Fixed;
+		Orbit->InitialYaw = 0.f;
+		Orbit->InitialPitch = 0.f;
+		Orbit->PivotOffset = FVector::ZeroVector;
+		Orbit->Distance = Distance;
+		UACFCameraNode_Collision* Collision = NewObject<UACFCameraNode_Collision>(Preset);
+		Collision->ReturnDampingTime = ReturnDamping;
+		Preset->Nodes = { Collision, Orbit }; // deliberately listed first: the PostBlend stage still runs last
+		Preset->DefaultBlendIn = BlendIn;
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		return Preset;
+	}
+
+	static bool CameraCloseTo(FScenario& S, const FVector& Expected, double Tolerance, const TCHAR* What)
+	{
+		S.LogCamera(What);
+		const bool bOk = S.PCM()->GetCameraLocation().Equals(Expected, Tolerance);
+		S.Test->TestTrue(FString::Printf(TEXT("%s (expected %s)"), What, *Expected.ToString()), bOk);
+		return bOk;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationSpringArmTest, "ActionCameraFramework.Integration.OrbitMatchesSpringArm",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationSpringArmTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		APawn* Pawn = S.Controller->GetPawn();
+		USpringArmComponent* Arm = Pawn ? Pawn->FindComponentByClass<USpringArmComponent>() : nullptr;
+		if (!S.Test->TestNotNull(TEXT("Player pawn with a SpringArm"), Arm))
+		{
+			return false;
+		}
+		S.Component = Arm;
+		S.Test->AddInfo(FString::Printf(TEXT("SpringArm %s: length %.1f socket %s target %s pawnRot %d lag %d(%.1f) rotLag %d collision %d probe %.1f"),
+			*Arm->GetPathName(), Arm->TargetArmLength, *Arm->SocketOffset.ToString(), *Arm->TargetOffset.ToString(), Arm->bUsePawnControlRotation ? 1 : 0,
+			Arm->bEnableCameraLag ? 1 : 0, Arm->CameraLagSpeed, Arm->bEnableCameraRotationLag ? 1 : 0, Arm->bDoCollisionTest ? 1 : 0, Arm->ProbeSize));
+
+		// The same camera expressed as an ACF preset (Orbital Follow + Collision), following the arm component.
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_OrbitalFollow* Orbit = NewObject<UACFCameraNode_OrbitalFollow>(Preset);
+		Orbit->InputSource = EACFCameraOrbitInputSource::ControlRotation;
+		Orbit->InitialRotation = EACFCameraOrbitInitialRotation::ControlRotation;
+		Orbit->PivotOffset = Arm->TargetOffset;
+		Orbit->PivotOffsetSpace = EACFCameraOffsetSpace::World;
+		Orbit->Distance = Arm->TargetArmLength;
+		Orbit->ShoulderOffset = Arm->SocketOffset;
+		Orbit->PitchMin = -89.f;
+		Orbit->PitchMax = 89.f;
+		Orbit->TargetMotion.TeleportDistance = 0.f;
+		Preset->Nodes.Add(Orbit);
+		if (Arm->bDoCollisionTest)
+		{
+			UACFCameraNode_Collision* Collision = NewObject<UACFCameraNode_Collision>(Preset);
+			Collision->ProbeRadius = Arm->ProbeSize;
+			Collision->ProbeChannel = Arm->ProbeChannel;
+			Collision->MinDistance = 0.f;
+			Collision->ReturnDampingTime = 0.f;
+			Preset->Nodes.Add(Collision);
+		}
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		S.Preset.Reset(Preset);
+
+		S.Controller->SetControlRotation(FRotator(-20.f, 30.f, 0.f));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Component = Arm;
+		Params.DebugName = TEXT("SpringArmEquivalent");
+		S.Handle = S.Subsystem->RequestCamera(Preset, Params);
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	auto Compare = [](FScenario& S, const TCHAR* What)
+	{
+		// Compare with the SpringArm socket itself (what a camera attached to it would see). The level's view
+		// target camera is not necessarily attached to this arm, so the PCM upstream pose is only logged.
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		const FTransform Socket = S.Component->GetSocketTransform(USpringArmComponent::SocketName);
+		const double LocError = FVector::Dist(R.Pose.Location, Socket.GetLocation());
+		const double RotError = FMath::RadiansToDegrees(FQuat(R.Pose.Rotation).AngularDistance(Socket.GetRotation()));
+		S.Test->AddInfo(FString::Printf(TEXT("%s: SpringArm socket %s %s (PCM upstream %s)"), What, *Socket.GetLocation().ToString(), *Socket.Rotator().ToString(), *R.UpstreamPose.Location.ToString()));
+		S.Test->AddInfo(FString::Printf(TEXT("%s: ACF %s %s  SpringArm %s %s  error %.3f cm %.3f deg"), What,
+			*R.Pose.Location.ToString(), *R.Pose.Rotation.ToString(), *R.UpstreamPose.Location.ToString(), *R.UpstreamPose.Rotation.ToString(), LocError, RotError));
+		S.Test->TestTrue(FString::Printf(TEXT("%s: position matches the SpringArm (< 1 cm)"), What), LocError < 1.0);
+		S.Test->TestTrue(FString::Printf(TEXT("%s: rotation matches the SpringArm (< 0.1 deg)"), What), RotError < 0.1);
+	};
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.5; return true; }); // SpringArm lag settles
+	Steps.Add([Compare](FScenario& S)
+	{
+		Compare(S, TEXT("Control rotation (-20, 30)"));
+		S.Controller->SetControlRotation(FRotator(-45.f, 160.f, 0.f));
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.5; return true; });
+	Steps.Add([Compare](FScenario& S)
+	{
+		Compare(S, TEXT("Control rotation (-45, 160)"));
+		return S.Test->TestTrue(TEXT("Release"), S.Subsystem->ReleaseCamera(S.Handle));
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationCollisionTest, "ActionCameraFramework.Integration.CollisionWallAndReturn",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationCollisionTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	static constexpr float Distance = 600.f;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea;
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.Preset.Reset(MakeOrbitCollisionPreset(Distance, 0.3f, FACFCameraBlendSettings::MakeCut()));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot - FVector(Distance, 0, 0), 0.1, TEXT("No obstacle: full distance"));
+		S.ActorB = SpawnBlocker(S, S.Pivot - FVector(300, 0, 0), FVector(10, 300, 300)); // wall face at pivot.X - 290
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double CameraX = S.PCM()->GetCameraLocation().X;
+		const double FaceX = S.Pivot.X - 290.0;
+		S.LogCamera(TEXT("Wall between pivot and camera"));
+		S.Test->TestTrue(TEXT("Camera stays in front of the wall (probe radius clearance)"), CameraX >= FaceX + 12.0 - 0.5);
+		S.Test->TestTrue(TEXT("Camera pulled in close to the wall"), CameraX <= FaceX + 12.0 + 2.0);
+		S.ActorB->Destroy();
+		S.Value = S.Pivot.X - CameraX; // distance while blocked
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double Dist = S.Pivot.X - S.PCM()->GetCameraLocation().X;
+		S.Test->AddInfo(FString::Printf(TEXT("Return after %.3fs: distance %.1f (blocked %.1f, full %.1f)"), S.World()->GetTimeSeconds() - S.StartTime, Dist, S.Value, Distance));
+		S.Test->TestTrue(TEXT("Return is smoothed (not an instant pop to full distance)"), Dist > S.Value + 1.0 && Dist < Distance - 5.0);
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 2.5; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot - FVector(Distance, 0, 0), 0.5, TEXT("Returned to full distance"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 2));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationBlendCollisionTest, "ActionCameraFramework.Integration.CollisionDuringBlend",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationBlendCollisionTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(0, 3000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		SpawnBlocker(S, S.Pivot - FVector(300, 0, 0), FVector(10, 600, 600));
+		// A: fixed camera behind the wall (no collision of its own). B: orbit + collision, 1s live blend.
+		S.Preset.Reset(MakeFixedPreset(S.Pivot + FVector(-900, 200, 150), FRotator(-5, 0, 0), 80.f));
+		FACFCameraBlendSettings Blend;
+		Blend.Curve = EACFCameraBlendCurve::Linear;
+		Blend.Duration = 1.f;
+		S.PresetB.Reset(MakeOrbitCollisionPreset(600.f, 0.3f, Blend));
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), FACFCameraRequestParams());
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.HandleB = S.Subsystem->RequestCamera(S.PresetB.Get(), Params);
+		S.StartTime = S.World()->GetTimeSeconds();
+		S.Value = 0.0;
+		S.bFlag = true;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		// Every frame of the blend: the final camera must be in front of the wall.
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		const double CameraX = S.PCM()->GetCameraLocation().X;
+		if (R.bIsBlending)
+		{
+			S.Value += 1.0;
+			S.bFlag &= CameraX >= S.Pivot.X - 290.0 + 12.0 - 0.5;
+		}
+		S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.2;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->AddInfo(FString::Printf(TEXT("Checked %.0f blend frames"), S.Value));
+		S.Test->TestTrue(TEXT("Blend frames were observed"), S.Value >= 5.0);
+		S.Test->TestTrue(TEXT("Camera never behind the wall during the blend"), S.bFlag);
+		S.LogCamera(TEXT("After blend"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationCollisionEdgeCasesTest, "ActionCameraFramework.Integration.CollisionIgnoreTargetAndStartInside",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationCollisionEdgeCasesTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		// Follow target that itself has blocking collision (like a character capsule).
+		S.Pivot = TestArea + FVector(0, -3000, 0);
+		S.ActorA = SpawnBlocker(S, S.Pivot, FVector(50, 50, 90));
+		S.Preset.Reset(MakeOrbitCollisionPreset(600.f, 0.f, FACFCameraBlendSettings::MakeCut()));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot - FVector(600, 0, 0), 0.5, TEXT("Follow target collision is ignored"));
+		// Pivot inside some other geometry (character pressed into a wall): no collapse onto the pivot.
+		SpawnBlocker(S, S.Pivot, FVector(150, 150, 150));
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot - FVector(600, 0, 0), 0.5, TEXT("Pivot starts inside geometry: camera not collapsed"));
+		// Desired camera position inside a thick wall: placed in front of the wall.
+		SpawnBlocker(S, S.Pivot - FVector(600, 0, 0), FVector(100, 400, 400)); // faces at X-500 / X-700
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double CameraX = S.PCM()->GetCameraLocation().X;
+		S.LogCamera(TEXT("Desired camera inside a wall"));
+		S.Test->TestTrue(TEXT("Camera placed in front of the wall that contained it"), CameraX >= S.Pivot.X - 500.0 + 12.0 - 0.5 && CameraX <= S.Pivot.X - 500.0 + 14.0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationBlueprintOrbitTest, "ActionCameraFramework.Integration.BlueprintOrbitInput",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationBlueprintOrbitTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	// Scripts/CreateVerificationAssets.py: BeginPlay -> Make Target Request Params(Follow = player pawn)
+	// -> Request Camera For Player(DA_ACFVerify_Orbit) -> Add Camera Input (90, 0) -> Delay 1 -> Release.
+	static const TCHAR* ClassPath = TEXT("/ActionCameraFramework/Verification/BP_ACFOrbitInputTest.BP_ACFOrbitInputTest_C");
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		UClass* BlueprintClass = LoadClass<AActor>(nullptr, ClassPath);
+		if (!S.Test->TestNotNull(TEXT("Verification Blueprint exists (run Scripts/CreateVerificationAssets.py)"), BlueprintClass)
+			|| !S.Test->TestTrue(TEXT("Player pawn"), S.Controller->GetPawn() != nullptr))
+		{
+			return false;
+		}
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		S.ActorA = S.World()->SpawnActor<AActor>(BlueprintClass, FTransform::Identity, Params);
+		S.StartTime = S.World()->GetTimeSeconds();
+		return S.Test->TestTrue(TEXT("Spawned"), S.ActorA.IsValid());
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const float PawnYaw = S.Controller->GetPawn()->GetActorRotation().Yaw;
+		const FRotator Camera = S.PCM()->GetCameraRotation();
+		S.Test->AddInfo(FString::Printf(TEXT("Pawn yaw %.2f, camera %s, %.3fs after spawn"), PawnYaw, *Camera.ToString(), S.World()->GetTimeSeconds() - S.StartTime));
+		S.Test->TestEqual(TEXT("Blueprint request active"), S.Subsystem->GetLastEvaluationResult().NumRequests, 1);
+		S.Test->TestTrue(TEXT("Blueprint camera input rotated the orbit by 90 deg from behind the pawn"),
+			FMath::IsNearlyEqual(FRotator::NormalizeAxis(Camera.Yaw - (PawnYaw + 90.f)), 0.f, 0.5f));
+		S.Test->TestTrue(TEXT("Initial pitch from the preset"), FMath::IsNearlyEqual(Camera.Pitch, -15.f, 0.5f));
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.3; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Blueprint released its request"), S.Subsystem->GetLastEvaluationResult().NumRequests, 0);
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));

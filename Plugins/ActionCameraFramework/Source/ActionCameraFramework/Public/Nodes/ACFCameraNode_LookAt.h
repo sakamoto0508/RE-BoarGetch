@@ -5,7 +5,7 @@
 #include "Nodes/ACFCameraTargetTracking.h"
 #include "ACFCameraNode_LookAt.generated.h"
 
-/** Which request target a LookAt node aims at. */
+/** Which request target an Aim node aims at. */
 UENUM(BlueprintType)
 enum class EACFCameraLookAtSource : uint8
 {
@@ -15,9 +15,9 @@ enum class EACFCameraLookAtSource : uint8
 };
 
 /**
- * Rotates the camera to aim at a target point (no roll). Place it after the node that sets the
- * camera location (e.g. Follow). Damping is applied to the aim point, not to the rotation, so it
- * is frame-rate independent and does not overshoot. Without a target the node does nothing.
+ * Aim: rotates the camera to look straight at a target point (no roll). Damping is applied to the
+ * aim point, not to the rotation, so it is frame-rate independent and does not overshoot. Use
+ * Rotation Composer instead when the target should sit at a screen position with dead / soft zones.
  */
 UCLASS(meta = (DisplayName = "Look At"))
 class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_LookAt : public UACFCameraNode
@@ -40,9 +40,11 @@ public:
 	float DampingTime = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Look At")
-	EACFCameraTargetLostBehavior TargetLostBehavior = EACFCameraTargetLostBehavior::HoldLastKnown;
+	FACFCameraTargetMotionSettings TargetMotion;
 
+	virtual EACFCameraNodeStage GetStage() const override { return EACFCameraNodeStage::Aim; }
 	virtual const UScriptStruct* GetRuntimeStateType() const override { return FACFCameraTargetTrackingState::StaticStruct(); }
-	virtual void OnActivated(const FACFCameraNodeContext& Context, FInstancedStruct* RuntimeState) const override;
+	virtual void OnActivated(const FACFCameraNodeContext& Context, FInstancedStruct* RuntimeState) const override { ResetInterpolation(RuntimeState); }
+	virtual void ResetInterpolation(FInstancedStruct* RuntimeState) const override;
 	virtual void Evaluate(const FACFCameraNodeContext& Context, FACFCameraPose& InOutPose, FInstancedStruct* RuntimeState) const override;
 };

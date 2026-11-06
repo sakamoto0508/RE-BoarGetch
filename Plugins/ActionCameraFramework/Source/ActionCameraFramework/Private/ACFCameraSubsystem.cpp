@@ -8,6 +8,9 @@
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "Engine/GameViewportClient.h"
+#include "Debug/DebugDrawService.h"
+#include "ACFCameraDebugDraw.h"
 
 void UACFCameraSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -15,12 +18,19 @@ void UACFCameraSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Director = NewObject<UACFCameraDirector>(this, TEXT("ACFCameraDirector"));
 	OutputModifierClass = GetDefault<UACFCameraSettings>()->ResolveOutputModifierClass();
 	WorldTickStartHandle = FWorldDelegates::OnWorldTickStart.AddUObject(this, &ThisClass::HandleWorldTickStart);
+#if !UE_BUILD_SHIPPING
+	DebugDrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateUObject(this, &ThisClass::HandleDebugDraw));
+#endif
 }
 
 void UACFCameraSubsystem::Deinitialize()
 {
 	FWorldDelegates::OnWorldTickStart.Remove(WorldTickStartHandle);
 	WorldTickStartHandle.Reset();
+#if !UE_BUILD_SHIPPING
+	UDebugDrawService::Unregister(DebugDrawHandle);
+	DebugDrawHandle.Reset();
+#endif
 	DetachOutput();
 	if (Director)
 	{
@@ -160,16 +170,43 @@ const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateForOutput(float D
 	FACFCameraEvaluationContext Context;
 	Context.DeltaTime = DeltaTime;
 	Context.FrameNumber = GFrameCounter;
-	if (const ULocalPlayer* LocalPlayer = GetLocalPlayer())
-	{
-		Context.PlayerController = LocalPlayer->PlayerController;
-	}
 	Context.UpstreamPose.Location = UpstreamPOV.Location;
 	Context.UpstreamPose.Rotation = UpstreamPOV.Rotation;
 	Context.UpstreamPose.FieldOfView = UpstreamPOV.FOV;
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (APlayerController* PlayerController = LocalPlayer ? LocalPlayer->PlayerController.Get() : nullptr)
+	{
+		Context.PlayerController = PlayerController;
+		Context.World = PlayerController->GetWorld();
+		Context.ControlRotation = PlayerController->GetControlRotation();
+		Context.bHasControlRotation = true;
+	}
+	// Aspect ratio for screen-space composition: constrained camera aspect, else this player's view.
+	if (UpstreamPOV.bConstrainAspectRatio && UpstreamPOV.AspectRatio > 0.f)
+	{
+		Context.AspectRatio = UpstreamPOV.AspectRatio;
+	}
+	else if (LocalPlayer && LocalPlayer->ViewportClient)
+	{
+		FVector2D ViewportSize = FVector2D::ZeroVector;
+		LocalPlayer->ViewportClient->GetViewportSize(ViewportSize);
+		ViewportSize *= LocalPlayer->Size; // split screen
+		if (ViewportSize.X > 0.0 && ViewportSize.Y > 0.0)
+		{
+			Context.AspectRatio = static_cast<float>(ViewportSize.X / ViewportSize.Y);
+		}
+	}
 
-	// Stages 2-6.
-	return Director->Evaluate(Context);
+	// Stages 2-6 (input is consumed inside, once per time-advancing evaluation).
+	const FACFCameraEvaluationResult& Result = Director->Evaluate(Context);
+#if ENABLE_DRAW_DEBUG && !UE_BUILD_SHIPPING
+	if (Result.FrameNumber != LastDebugDrawFrame && ACFCameraDebug::IsWorldDrawEnabled())
+	{
+		LastDebugDrawFrame = Result.FrameNumber;
+		ACFCameraDebug::DrawWorld(Context.World, Director->GetLastDebug(), Result);
+	}
+#endif
+	return Result;
 }
 
 APlayerCameraManager* UACFCameraSubsystem::GetCurrentCameraManager() const
@@ -242,3 +279,44 @@ void UACFCameraSubsystem::DetachOutput()
 	}
 	OutputModifier.Reset();
 }
+
+void UACFCameraSubsystem::AddCameraInput(FVector2D YawPitchDelta)
+{
+	if (Director)
+	{
+		Director->AddCameraInput(YawPitchDelta);
+	}
+}
+
+void UACFCameraSubsystem::SetCameraInputRate(FVector2D YawPitchRate)
+{
+	if (Director)
+	{
+		Director->SetCameraInputRate(YawPitchRate);
+	}
+}
+
+bool UACFCameraSubsystem::SetOrbitRotation(FACFCameraRequestHandle Handle, FRotator Rotation, bool bInstant)
+{
+	return Director && Director->SetOrbitRotation(Handle, Rotation, bInstant);
+}
+
+void UACFCameraSubsystem::NotifyTeleport(bool bCutBlend)
+{
+	if (Director)
+	{
+		Director->NotifyTeleport(bCutBlend);
+	}
+}
+
+#if !UE_BUILD_SHIPPING
+void UACFCameraSubsystem::HandleDebugDraw(UCanvas* Canvas, APlayerController* PlayerController)
+{
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (!Director || !LocalPlayer || PlayerController != LocalPlayer->PlayerController || !ACFCameraDebug::IsScreenDrawEnabled())
+	{
+		return;
+	}
+	ACFCameraDebug::DrawCanvas(Canvas, Director->GetLastDebug(), Director->GetLastResult());
+}
+#endif

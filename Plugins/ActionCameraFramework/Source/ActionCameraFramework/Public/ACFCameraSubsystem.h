@@ -98,6 +98,31 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Action Camera")
 	FACFCameraPose GetVisualCameraPose() const;
 
+	/**
+	 * Camera input for Orbital Follow (Input Source = Camera Input). Engine-input agnostic: call it from
+	 * Enhanced Input, legacy input, AI or UI. X = yaw, Y = pitch, in input units (nodes apply
+	 * sensitivity / inversion). Deltas accumulate until the next camera update consumes them once.
+	 * Use this for mouse-like deltas.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Input")
+	void AddCameraInput(FVector2D YawPitchDelta);
+
+	/** Per-second input (gamepad stick). Multiplied by the camera DeltaTime; set it every frame. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Input")
+	void SetCameraInputRate(FVector2D YawPitchRate);
+
+	/** Sets the orbit rotation (world yaw / pitch) of a request's Orbital Follow nodes. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera")
+	bool SetOrbitRotation(FACFCameraRequestHandle Handle, FRotator Rotation, bool bInstant = true);
+
+	/**
+	 * Tell ACF the targets were teleported (respawn, level streaming jump): all damping / lookahead
+	 * history is dropped so the camera cuts instead of flying. Large jumps are also detected
+	 * automatically per node (Target Motion > Teleport Distance).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera")
+	void NotifyTeleport(bool bCutBlend = true);
+
 	UACFCameraDirector* GetDirector() const { return Director; }
 
 	/**
@@ -125,6 +150,13 @@ private:
 	TSubclassOf<UACFCameraOutputModifier> OutputModifierClass;
 
 	FDelegateHandle WorldTickStartHandle;
+
+#if !UE_BUILD_SHIPPING
+	/** Screen-space debug (dead / soft zones, text) via UDebugDrawService; gated by ACF.Debug.Draw. */
+	void HandleDebugDraw(class UCanvas* Canvas, APlayerController* PlayerController);
+	FDelegateHandle DebugDrawHandle;
+	uint64 LastDebugDrawFrame = 0;
+#endif
 
 	/** Owned by the PCM's ModifierList; weak so a destroyed PCM simply drops it. */
 	TWeakObjectPtr<UACFCameraOutputModifier> OutputModifier;

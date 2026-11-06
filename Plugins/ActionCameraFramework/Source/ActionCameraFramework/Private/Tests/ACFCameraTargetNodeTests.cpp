@@ -36,7 +36,7 @@ namespace ACFNodeTests
 		UACFCameraNode_Follow* Node = NewObject<UACFCameraNode_Follow>(Preset);
 		Node->Offset = Offset;
 		Node->OffsetSpace = Space;
-		Node->DampingTime = Damping;
+		Node->Damping = FACFCameraPositionDamping::Uniform(Damping);
 		Preset->Nodes.Add(Node);
 		return Node;
 	}
@@ -163,7 +163,7 @@ bool FACFTargetLifetimeTest::RunTest(const FString& Parameters)
 	AddFollow(HoldPreset.Get(), FVector(0, 0, 100), EACFCameraOffsetSpace::World, 0.5f);
 	AddLookAt(HoldPreset.Get());
 	UACFCameraNode_Follow* PassFollow = AddFollow(PassPreset.Get(), FVector(0, 0, 100), EACFCameraOffsetSpace::World, 0.f);
-	PassFollow->TargetLostBehavior = EACFCameraTargetLostBehavior::PassThrough;
+	PassFollow->TargetMotion.LostBehavior = EACFCameraTargetLostBehavior::PassThrough;
 
 	USceneComponent* Doomed = MakeTarget(FVector(300, 0, 0));
 	USceneComponent* LookDoomed = MakeTarget(FVector(300, 500, 0));

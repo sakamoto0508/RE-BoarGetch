@@ -3,7 +3,8 @@
 - DA_ACFVerify_Fixed        : ACFCameraPreset created with the Data Asset factory, FixedPose node; then EDITED (FOV 55 -> 65)
 - DA_ACFVerify_FollowLookAt : preset with Follow + LookAt instanced nodes (checks new node types are editable)
 - BP_ACFBlueprintApiTest    : Actor Blueprint. BeginPlay -> Request Camera For Player(DA_ACFVerify_Fixed) -> Delay 1s -> Release Camera For Player(same handle)
-Used by ActionCameraFramework.Integration.BlueprintRequestRelease. Writes Saved/ACFVerification/CreateVerificationAssets.json."""
+- DA_ACFVerify_Orbit / BP_ACFOrbitInputTest : Orbital Follow + Collision; BP adds camera input (90, 0) from Blueprint
+Used by ActionCameraFramework.Integration.BlueprintRequestRelease / BlueprintOrbitInput. Writes Saved/ACFVerification/CreateVerificationAssets.json."""
 import unreal, json, traceback
 
 TS = 'editor_toolset.toolsets.blueprint.BlueprintTools'
@@ -29,6 +30,17 @@ def ensure_preset(name):
         f.set_editor_property('data_asset_class', unreal.ACFCameraPreset)
         unreal.AssetToolsHelpers.get_asset_tools().create_asset(name, FOLDER, unreal.ACFCameraPreset, f)
     return unreal.load_asset(path)
+
+
+def ensure_bp(name):
+    """Load the Actor Blueprint if it exists (headless delete is refused while loaded), else create it."""
+    path = FOLDER + '/' + name
+    existing = unreal.load_asset(path + '.' + name)  # the asset registry may not have scanned plugin content yet
+    if existing:
+        return existing
+    f = unreal.BlueprintFactory()
+    f.set_editor_property('parent_class', unreal.Actor)
+    return unreal.AssetToolsHelpers.get_asset_tools().create_asset(name, FOLDER, unreal.Blueprint, f)
 
 
 def cut():
@@ -66,7 +78,10 @@ try:
     follow = unreal.new_object(unreal.ACFCameraNode_Follow, outer=fl)
     follow.set_editor_property('offset', unreal.Vector(-350, 0, 180))
     follow.set_editor_property('offset_space', unreal.ACFCameraOffsetSpace.TARGET_LOCAL)
-    follow.set_editor_property('damping_time', 0.2)
+    damping = unreal.ACFCameraPositionDamping()
+    damping.set_editor_property('time', unreal.Vector(0.2, 0.2, 0.1))
+    damping.set_editor_property('space', unreal.ACFCameraDampingSpace.TARGET_LOCAL)
+    follow.set_editor_property('damping', damping)
     look = unreal.new_object(unreal.ACFCameraNode_LookAt, outer=fl)
     look.set_editor_property('target_source', unreal.ACFCameraLookAtSource.FOLLOW_TARGET)
     look.set_editor_property('target_offset', unreal.Vector(0, 0, 60))
@@ -81,11 +96,7 @@ try:
 
     # ---------- Blueprint using the public BP API ----------
     bp_path = FOLDER + '/BP_ACFBlueprintApiTest'
-    if E.does_asset_exist(bp_path):
-        E.delete_asset(bp_path)
-    f = unreal.BlueprintFactory()
-    f.set_editor_property('parent_class', unreal.Actor)
-    bp = unreal.AssetToolsHelpers.get_asset_tools().create_asset('BP_ACFBlueprintApiTest', FOLDER, unreal.Blueprint, f)
+    bp = ensure_bp('BP_ACFBlueprintApiTest')
     ref = {'refPath': bp_path + '.BP_ACFBlueprintApiTest'}
     graph = {'refPath': bp_path + '.BP_ACFBlueprintApiTest:EventGraph'}
     OUT['pins_request'] = call('get_node_type_pins', {'graph': graph, 'type_id': 'ActionCamera|RequestCameraForPlayer'})
@@ -100,8 +111,62 @@ try:
     call('write_graph_dsl', {'graph': graph, 'code': dsl})
     OUT['graph'] = call('read_graph_dsl', {'graph': graph})
     unreal.BlueprintEditorLibrary.compile_blueprint(bp)
-    OUT['bp_status'] = str(bp.get_editor_property('status')) if hasattr(bp, 'status') else 'n/a'
+    OUT['bp_status'] = str(bp.get_editor_property('status'))
     OUT['bp_saved'] = E.save_loaded_asset(bp, False)
+
+    # ---------- Phase 2: Orbital Follow (FreeLook) + Rotation Composer + Collision ----------
+    orbit_da = ensure_preset('DA_ACFVerify_Orbit')
+    orbit = unreal.new_object(unreal.ACFCameraNode_OrbitalFollow, outer=orbit_da)
+    orbit.set_editor_property('distance', 300.0)
+    orbit.set_editor_property('input_source', unreal.ACFCameraOrbitInputSource.CAMERA_INPUT)
+    orbit.set_editor_property('initial_rotation', unreal.ACFCameraOrbitInitialRotation.BEHIND_TARGET)
+    orbit.set_editor_property('initial_pitch', -15.0)
+    orbit.set_editor_property('sensitivity', unreal.Vector2D(1.0, 1.0))
+    collision = unreal.new_object(unreal.ACFCameraNode_Collision, outer=orbit_da)
+    collision.set_editor_property('probe_radius', 15.0)
+    orbit_da.set_editor_property('nodes', [orbit, collision])
+    orbit_da.set_editor_property('default_blend_in', cut())
+    orbit_da.set_editor_property('default_blend_out', cut())
+    OUT['orbit_saved'] = E.save_loaded_asset(orbit_da, False)
+    OUT['orbit_reread'] = [n.get_class().get_name() for n in unreal.load_asset(FOLDER + '/DA_ACFVerify_Orbit').get_editor_property('nodes')]
+
+    obp_path = FOLDER + '/BP_ACFOrbitInputTest'
+    obp = ensure_bp('BP_ACFOrbitInputTest')
+    ograph = {'refPath': obp_path + '.BP_ACFOrbitInputTest:EventGraph'}
+
+    def find_one(flt, must):
+        ids = call('find_node_types', {'graph': ograph, 'type_id_filter': flt, 'context_pins': []})['returnValue']
+        hits = [i for i in ids if must in i]
+        OUT.setdefault('node_ids', {})[flt] = ids[:20]
+        if not hits:
+            raise RuntimeError('node type not found: %s (%s)' % (flt, ids[:20]))
+        return hits[0]
+
+    ids = {
+        'pawn': find_one('GetPlayerPawn', 'Game|GetPlayerPawn'),
+        'params': find_one('MakeTargetRequestParams', 'ActionCamera|'),
+        'sub': find_one('GetACFCameraSubsystem', 'ActionCamera|'),
+        'input': find_one('AddCameraInput', 'ActionCamera|'),
+        'vec2': find_one('MakeVector2D', 'MakeVector2D'),
+    }
+    OUT['orbit_bp_ids'] = ids
+    OUT['pins_input'] = call('get_node_type_pins', {'graph': ograph, 'type_id': ids['input']})
+    odsl = '''
+(event EventBeginPlay
+  (bind pc (Game|GetPlayerController :PlayerIndex 0))
+  (bind pawn (%(pawn)s :PlayerIndex 0))
+  (bind params (%(params)s :Priority 0 :FollowTarget pawn))
+  (bind handle (ActionCamera|RequestCameraForPlayer :PlayerController pc :Preset "%(folder)s/DA_ACFVerify_Orbit.DA_ACFVerify_Orbit" :Params params))
+  (bind sub (%(sub)s :PlayerController pc))
+  (%(input)s :self sub :YawPitchDelta (%(vec2)s :X 90.0 :Y 0.0))
+  (Utilities|FlowControl|Delay :Duration 1.0)
+  (ActionCamera|ReleaseCameraForPlayer :PlayerController pc :Handle handle))
+''' % dict(ids, folder=FOLDER)
+    call('write_graph_dsl', {'graph': ograph, 'code': odsl})
+    OUT['orbit_graph'] = call('read_graph_dsl', {'graph': ograph})
+    unreal.BlueprintEditorLibrary.compile_blueprint(obp)
+    OUT['orbit_bp_status'] = str(obp.get_editor_property('status'))
+    OUT['orbit_bp_saved'] = E.save_loaded_asset(obp, False)
 except Exception:
     OUT['error'] = traceback.format_exc()
 
