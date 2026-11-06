@@ -4,6 +4,7 @@
 #include "Engine/EngineBaseTypes.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
 #include "ACFCameraTypes.h"
+#include "Effects/ACFCameraEffectTypes.h"
 #include "ACFCameraSubsystem.generated.h"
 
 class APlayerCameraManager;
@@ -12,6 +13,8 @@ class UACFCameraDirector;
 class UACFCameraOutputModifier;
 class UACFCameraModifierBase;
 class UACFCameraPreset;
+class UACFCameraEffectPreset;
+class UCameraShakeBase;
 struct FMinimalViewInfo;
 
 /**
@@ -124,6 +127,43 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Action Camera")
 	void NotifyTeleport(bool bCutBlend = true);
 
+	// --- Camera effects (Blueprint names carry "ACF" to stay distinct from UE's camera shake nodes) ---------
+
+	/** Plays an effect preset on this player's ACF camera. Keep the handle to stop this effect only. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Effects", meta = (DisplayName = "Play ACF Camera Effect", AutoCreateRefTerm = "Params"))
+	FACFCameraEffectHandle PlayCameraEffect(UACFCameraEffectPreset* Preset, const FACFCameraEffectParams& Params);
+
+	/** Releases (or cuts) one effect and invalidates the handle. Safe to call twice. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Effects", meta = (DisplayName = "Stop ACF Camera Effect"))
+	bool StopCameraEffect(UPARAM(ref) FACFCameraEffectHandle& Handle, bool bImmediate = false);
+
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Effects", meta = (DisplayName = "Stop All ACF Camera Effects"))
+	void StopAllCameraEffects(bool bImmediate = false);
+
+	/** Explosion / landing / hit impulse from a world location (Preset: Project Settings default, else built-in). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Effects", meta = (DisplayName = "Play ACF Camera Impulse"))
+	FACFCameraEffectHandle PlayCameraImpulse(FVector SourceLocation, float Scale = 1.f, UACFCameraEffectPreset* Preset = nullptr);
+
+	/** Attack recoil (Preset: Project Settings default, else built-in). Shots stack. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Effects", meta = (DisplayName = "Play ACF Camera Recoil"))
+	FACFCameraEffectHandle PlayCameraRecoil(float Scale = 1.f, UACFCameraEffectPreset* Preset = nullptr);
+
+	/**
+	 * Plays a standard UE camera shake class through ACF (location collided, rotation / FOV after collision).
+	 * The shake is NOT also started on the PlayerCameraManager, so it is applied exactly once.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Effects", meta = (DisplayName = "Play ACF Camera Shake"))
+	FACFCameraEffectHandle PlayCameraShake(TSubclassOf<UCameraShakeBase> ShakeClass, float Scale = 1.f);
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Effects", meta = (DisplayName = "Get Active ACF Camera Effects"))
+	TArray<FACFCameraEffectInfo> GetActiveCameraEffects() const;
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Effects", meta = (DisplayName = "Is ACF Camera Effect Active"))
+	bool IsCameraEffectActive(FACFCameraEffectHandle Handle) const;
+
+	/** Transient effect preset owned by this subsystem, created once per key (samples, convenience APIs). */
+	UACFCameraEffectPreset* GetOrCreateTransientEffectPreset(FName Key, TFunctionRef<void(UACFCameraEffectPreset*)> Build);
+
 	UACFCameraDirector* GetDirector() const { return Director; }
 
 	/**
@@ -161,6 +201,17 @@ private:
 	TSubclassOf<UACFCameraOutputModifier> OutputModifierClass;
 
 	FDelegateHandle WorldTickStartHandle;
+
+	/** Lazily created presets for the convenience functions (transient, one per kind / shake class). */
+	UACFCameraEffectPreset* GetDefaultEffectPreset(bool bImpulse);
+	UPROPERTY(Transient)
+	TObjectPtr<UACFCameraEffectPreset> BuiltinImpulsePreset;
+	UPROPERTY(Transient)
+	TObjectPtr<UACFCameraEffectPreset> BuiltinRecoilPreset;
+	UPROPERTY(Transient)
+	TMap<TObjectPtr<UClass>, TObjectPtr<UACFCameraEffectPreset>> ShakePresets;
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UACFCameraEffectPreset>> TransientEffectPresets;
 
 #if !UE_BUILD_SHIPPING
 	/** Screen-space debug (dead / soft zones, text) via UDebugDrawService; gated by ACF.Debug.Draw. */

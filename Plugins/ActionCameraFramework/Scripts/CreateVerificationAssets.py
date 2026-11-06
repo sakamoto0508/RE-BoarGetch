@@ -4,7 +4,8 @@
 - DA_ACFVerify_FollowLookAt : preset with Follow + LookAt instanced nodes (checks new node types are editable)
 - BP_ACFBlueprintApiTest    : Actor Blueprint. BeginPlay -> Request Camera For Player(DA_ACFVerify_Fixed) -> Delay 1s -> Release Camera For Player(same handle)
 - DA_ACFVerify_Orbit / BP_ACFOrbitInputTest : Orbital Follow + Collision; BP adds camera input (90, 0) from Blueprint
-Used by ActionCameraFramework.Integration.BlueprintRequestRelease / BlueprintOrbitInput. Writes Saved/ACFVerification/CreateVerificationAssets.json."""
+- BP_ACFEffectTest : Recoil + Impulse + ACF Shake from Blueprint, stop the shake by handle, Stop All
+Used by ActionCameraFramework.Integration.BlueprintRequestRelease / BlueprintOrbitInput / BlueprintEffects. Writes Saved/ACFVerification/CreateVerificationAssets.json."""
 import unreal, json, traceback
 
 TS = 'editor_toolset.toolsets.blueprint.BlueprintTools'
@@ -167,6 +168,41 @@ try:
     unreal.BlueprintEditorLibrary.compile_blueprint(obp)
     OUT['orbit_bp_status'] = str(obp.get_editor_property('status'))
     OUT['orbit_bp_saved'] = E.save_loaded_asset(obp, False)
+
+    # ---------- Phase 3: Blueprint using the camera effect API ----------
+    fbp = ensure_bp('BP_ACFEffectTest')
+    fgraph = {'refPath': FOLDER + '/BP_ACFEffectTest.BP_ACFEffectTest:EventGraph'}
+    fx = {
+        'recoil': find_one('PlayACFCameraRecoil', 'ActionCamera|'),
+        'impulse': find_one('PlayACFCameraImpulse', 'ActionCamera|'),
+        'shake': find_one('PlayACFCameraShake', 'ActionCamera|'),
+        'stop': find_one('StopACFCameraEffect', 'ActionCamera|'),
+        'stopall': find_one('StopAllACFCameraEffects', 'ActionCamera|'),
+        'loc': find_one('GetActorLocation', 'GetActorLocation'),
+    }
+    OUT['effect_bp_ids'] = fx
+    fdsl = '''
+(event EventBeginPlay
+  (bind pc (Game|GetPlayerController :PlayerIndex 0))
+  (bind pawn (%(pawn)s :PlayerIndex 0))
+  (bind params (%(params)s :Priority 0 :FollowTarget pawn))
+  (bind handle (ActionCamera|RequestCameraForPlayer :PlayerController pc :Preset "%(folder)s/DA_ACFVerify_Orbit.DA_ACFVerify_Orbit" :Params params))
+  (bind sub (%(sub)s :PlayerController pc))
+  (%(recoil)s :self sub :Scale 1.0)
+  (bind where (%(loc)s :self pawn))
+  (%(impulse)s :self sub :SourceLocation where :Scale 1.0)
+  (bind shake (%(shake)s :self sub :ShakeClass "/Script/ActionCameraFramework.ACFDebugCameraShake" :Scale 1.0))
+  (Utilities|FlowControl|Delay :Duration 0.5)
+  (%(stop)s :self sub :Handle shake :bImmediate false)
+  (Utilities|FlowControl|Delay :Duration 0.5)
+  (%(stopall)s :self sub :bImmediate true)
+  (ActionCamera|ReleaseCameraForPlayer :PlayerController pc :Handle handle))
+''' % dict(fx, pawn=ids['pawn'], params=ids['params'], sub=ids['sub'], folder=FOLDER)
+    call('write_graph_dsl', {'graph': fgraph, 'code': fdsl})
+    OUT['effect_graph'] = call('read_graph_dsl', {'graph': fgraph})
+    unreal.BlueprintEditorLibrary.compile_blueprint(fbp)
+    OUT['effect_bp_status'] = str(fbp.get_editor_property('status'))
+    OUT['effect_bp_saved'] = E.save_loaded_asset(fbp, False)
 except Exception:
     OUT['error'] = traceback.format_exc()
 

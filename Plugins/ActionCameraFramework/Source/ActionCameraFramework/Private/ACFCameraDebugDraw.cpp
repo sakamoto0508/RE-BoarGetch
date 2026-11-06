@@ -63,7 +63,7 @@ namespace ACFCameraDebug
 		DrawDebugCanvas2DBox(Canvas, FBox2D(Min, Max), Color, 1.5f);
 	}
 
-	void DrawCanvas(UCanvas* Canvas, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result)
+	void DrawCanvas(UCanvas* Canvas, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result, const TArray<FACFCameraEffectInfo>& Effects)
 	{
 		if (!Canvas || !GEngine)
 		{
@@ -113,6 +113,11 @@ namespace ACFCameraDebug
 		{
 			Line(FString::Printf(TEXT("Collision %s  pulled in %.0f cm"), Debug.bCollisionHit ? TEXT("HIT") : TEXT("clear"),
 				FVector::Dist(Debug.CollisionDesired, Result.Pose.Location)));
+		}
+		for (const FACFCameraEffectInfo& Effect : Effects)
+		{
+			Line(FString::Printf(TEXT("Effect %s %s  t %.2f  weight %.2f  layers %d%s"), *Effect.Handle.ToString(), *Effect.PresetName.ToString(),
+				Effect.Time, Effect.Weight, Effect.ActiveLayers, Effect.bStopping ? TEXT("  (stopping)") : TEXT("")));
 		}
 	}
 }

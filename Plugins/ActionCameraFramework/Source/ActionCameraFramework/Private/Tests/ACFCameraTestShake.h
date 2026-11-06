@@ -21,8 +21,13 @@ public:
 
 private:
 	virtual void GetShakePatternInfoImpl(FCameraShakeInfo& OutInfo) const override { OutInfo.Duration = FCameraShakeDuration::Infinite(); }
+	virtual void StartShakePatternImpl(const FCameraShakePatternStartParams& Params) override { bStopped = false; }
 	virtual void UpdateShakePatternImpl(const FCameraShakePatternUpdateParams& Params, FCameraShakePatternUpdateResult& OutResult) override { OutResult.Location = LocalOffset; }
-	virtual bool IsFinishedImpl() const override { return false; }
+	// No blend out: a (non-immediate) stop ends it at once.
+	virtual void StopShakePatternImpl(const FCameraShakePatternStopParams& Params) override { bStopped = true; }
+	virtual bool IsFinishedImpl() const override { return bStopped; }
+
+	bool bStopped = false;
 };
 
 UCLASS(NotBlueprintable, HideDropdown)

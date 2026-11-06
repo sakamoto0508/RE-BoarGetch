@@ -6,6 +6,7 @@
 
 #include "ACFCameraNode.h"
 #include "ACFCameraTypes.h"
+#include "Effects/ACFCameraEffectTypes.h"
 
 class UCanvas;
 class UWorld;
@@ -20,7 +21,7 @@ namespace ACFCameraDebug
 	bool IsWorldDrawEnabled();
 	bool IsScreenDrawEnabled();
 	void DrawWorld(UWorld* World, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result);
-	void DrawCanvas(UCanvas* Canvas, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result);
+	void DrawCanvas(UCanvas* Canvas, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result, const TArray<FACFCameraEffectInfo>& Effects);
 }
 
 #endif

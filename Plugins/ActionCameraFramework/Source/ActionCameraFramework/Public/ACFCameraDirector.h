@@ -5,6 +5,7 @@
 #include "ACFCameraTypes.h"
 #include "ACFCameraRigInstance.h"
 #include "ACFCameraNode.h"
+#include "Effects/ACFCameraEffectStack.h"
 #include "ACFCameraDirector.generated.h"
 
 class UACFCameraPreset;
@@ -103,6 +104,14 @@ public:
 	void AddCameraInput(const FVector2D& Delta);
 	void SetCameraInputRate(const FVector2D& Rate);
 
+	/** Camera effects (see FACFCameraEffectStack). They are applied to the ACF camera after request blending. */
+	FACFCameraEffectHandle PlayEffect(const UACFCameraEffectPreset* Preset, const FACFCameraEffectParams& Params) { return Effects.Play(Preset, Params); }
+	bool StopEffect(FACFCameraEffectHandle Handle, bool bImmediate) { return Effects.Stop(Handle, bImmediate); }
+	void StopAllEffects(bool bImmediate) { Effects.StopAll(bImmediate); }
+	bool IsEffectActive(FACFCameraEffectHandle Handle) const { return Effects.IsActive(Handle); }
+	int32 GetNumActiveEffects() const { return Effects.Num(); }
+	void GetActiveEffects(TArray<FACFCameraEffectInfo>& Out) const { Effects.GetInfos(Out); }
+
 	/** Drops interpolation history of every rig (next frame snaps). bCutBlend also ends a running blend. */
 	void NotifyTeleport(bool bCutBlend);
 
@@ -180,6 +189,12 @@ private:
 	 */
 	UPROPERTY()
 	TArray<FACFCameraRequestEntry> RetiredRequests;
+
+	UPROPERTY()
+	FACFCameraEffectStack Effects;
+
+	/** Blended pose of the last evaluation before effects / collision (snapshot source, hold pose). */
+	FACFCameraPose LastBlendedPose;
 
 	/** Blend of the transition in progress (UPROPERTY so a custom curve stays referenced). */
 	UPROPERTY()

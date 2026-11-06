@@ -23,6 +23,7 @@
 #include "ACFCameraSettings.h"
 #include "ACFCameraTestShake.h"
 #include "Camera/CameraActor.h"
+#include "Effects/ACFCameraBuiltinEffects.h"
 #include "Engine/CollisionProfile.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -68,6 +69,7 @@ namespace ACFIntegration
 		TWeakObjectPtr<AActor> ActorB;
 		TArray<TWeakObjectPtr<AActor>> Spawned;
 		TWeakObjectPtr<USceneComponent> Component;
+		TArray<TStrongObjectPtr<UACFCameraEffectPreset>> EffectPresets;
 		TStrongObjectPtr<UACFCameraPreset> PresetB;
 		FACFCameraRequestHandle HandleB;
 		FVector Pivot = FVector::ZeroVector;
@@ -1019,6 +1021,421 @@ bool FACFSampleMapSmokeTest::RunTest(const FString& Parameters)
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 2));
+	return true;
+}
+
+
+// =================================================================================================
+// Phase 3: camera effects in the real pipeline.
+
+namespace ACFIntegration
+{
+	static FACFCameraEffectEnvelope HoldEnvelope(float Sustain)
+	{
+		FACFCameraEffectEnvelope Envelope;
+		Envelope.Attack = 0.05f;
+		Envelope.Sustain = Sustain;
+		Envelope.Release = 0.2f;
+		return Envelope;
+	}
+
+	static UACFCameraEffectPreset* MakeEffectPreset(TFunctionRef<void(UACFCameraEffectPreset*)> Build)
+	{
+		UACFCameraEffectPreset* Preset = NewObject<UACFCameraEffectPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		Build(Preset);
+		return Preset;
+	}
+
+	static UACFCameraEffect_Punch* AddPunch(UACFCameraEffectPreset* Preset, const FVector& Location, float Sustain)
+	{
+		UACFCameraEffect_Punch* Punch = NewObject<UACFCameraEffect_Punch>(Preset);
+		Punch->Location = Location;
+		Punch->Envelope = HoldEnvelope(Sustain);
+		Preset->Layers.Add(Punch);
+		return Punch;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationEffectsCollisionTest, "ActionCameraFramework.Integration.EffectsRespectCollision",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationEffectsCollisionTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(0, 9000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.Preset.Reset(MakeOrbitCollisionPreset(600.f, 0.f, FACFCameraBlendSettings::MakeCut()));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		S.EffectPresets.Reset();
+		S.EffectPresets.Emplace(MakeEffectPreset([](UACFCameraEffectPreset* P) { AddPunch(P, FVector(-150, 0, 0), 1.5f); }));
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		// Free space: the punch really moves the camera backwards.
+		S.Subsystem->PlayCameraEffect(S.EffectPresets[0].Get(), FACFCameraEffectParams());
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 0.2; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot - FVector(750, 0, 0), 1.0, TEXT("Punch in free space moves the camera 150 cm back"));
+		S.Subsystem->StopAllCameraEffects(true);
+		SpawnBlocker(S, S.Pivot - FVector(300, 0, 0), FVector(10, 400, 400)); // face at pivot.X - 290
+		SetGuardEnabled(false); // prove ACF's own Collision handles effects (not the output guard)
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		// Punch + recoil x10 + impulse pushing backwards, all at once.
+		S.EffectPresets.Emplace(MakeEffectPreset([](UACFCameraEffectPreset* P)
+		{
+			UACFCameraEffect_Recoil* Recoil = NewObject<UACFCameraEffect_Recoil>(P);
+			Recoil->KickBack = 120.f;
+			Recoil->Envelope = HoldEnvelope(1.f);
+			P->Layers.Add(Recoil);
+			UACFCameraEffect_Impulse* Impulse = NewObject<UACFCameraEffect_Impulse>(P);
+			Impulse->Amplitude = 200.f;
+			Impulse->Frequency = 3.f;
+			Impulse->Envelope = HoldEnvelope(1.f);
+			P->Layers.Add(Impulse);
+		}));
+		S.Subsystem->PlayCameraEffect(S.EffectPresets[0].Get(), FACFCameraEffectParams());
+		FACFCameraEffectParams ImpulseParams;
+		ImpulseParams.bUseSourceLocation = true;
+		ImpulseParams.SourceLocation = S.PCM()->GetCameraLocation() + FVector(150, 0, 0); // in front -> pushes back
+		S.Subsystem->PlayCameraEffect(S.EffectPresets[1].Get(), ImpulseParams);
+		S.StartTime = S.World()->GetTimeSeconds();
+		S.bFlag = true;
+		S.Value = -1000.0;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double CameraX = S.PCM()->GetCameraLocation().X;
+		const double Clearance = S.Pivot.X - 290.0 + 12.0;
+		S.bFlag &= CameraX >= Clearance - 0.5;
+		S.Value = FMath::Max(S.Value, Clearance - CameraX);
+		S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.2;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->AddInfo(FString::Printf(TEXT("Effects against a wall (guard OFF): worst intrusion past the probe clearance %.2f cm (<= 0 is clear)"), S.Value));
+		S.Test->TestTrue(TEXT("Punch + Recoil + Impulse together never push the camera through the wall"), S.bFlag);
+		SetGuardEnabled(true);
+		S.Subsystem->StopAllCameraEffects(true);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationGuardIdleTest, "ActionCameraFramework.Integration.GuardLeavesUECameraAlone",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationGuardIdleTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	static const FVector UeCameraOffset(-600.f, 0.f, 0.f);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		// A UE camera that the ACF collision constraint would definitely move: inside a box, behind a wall.
+		S.Pivot = TestArea + FVector(0, -9000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		SpawnBlocker(S, S.Pivot - FVector(300, 0, 0), FVector(10, 400, 400));
+		SpawnBlocker(S, S.Pivot + UeCameraOffset, FVector(50, 50, 50));
+		ACameraActor* ViewCamera = S.World()->SpawnActor<ACameraActor>(S.Pivot + UeCameraOffset, FRotator::ZeroRotator);
+		S.Spawned.Add(ViewCamera);
+		S.ActorB = ViewCamera;
+		S.Controller->SetViewTarget(ViewCamera);
+		S.Preset.Reset(MakeOrbitCollisionPreset(600.f, 0.f, FACFCameraBlendSettings::MakeCut()));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("ACF active: collided camera in front of the wall"), S.PCM()->GetCameraLocation().X > S.Pivot.X - 290.0);
+		S.Subsystem->ReleaseAllCameras(true);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot + UeCameraOffset, 0.01, TEXT("ACF released: the guard leaves the UE camera exactly where it is"));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		S.Subsystem->SuppressOutput(S.ActorA.Get(), 0.f);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot + UeCameraOffset, 0.01, TEXT("Output suppressed: the guard leaves the UE camera exactly where it is"));
+		S.Subsystem->ReleaseOutputSuppression(S.ActorA.Get(), 0.f);
+		S.Subsystem->ReleaseAllCameras(true);
+		S.Controller->SetViewTarget(S.Controller->GetPawn() ? static_cast<AActor*>(S.Controller->GetPawn()) : S.Controller.Get());
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationAcfShakeTest, "ActionCameraFramework.Integration.AcfShakeAppliedOnceAndCollided",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationAcfShakeTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(3000, 9000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.Preset.Reset(MakeOrbitCollisionPreset(600.f, 0.f, FACFCameraBlendSettings::MakeCut()));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Value = static_cast<double>(S.Subsystem->PlayCameraShake(UACFTestCameraShake::StaticClass(), 1.f).GetId());
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot - FVector(660, 0, 0), 0.01, TEXT("ACF shake: 60 cm back exactly once (not 120)"));
+		TArray<FActiveCameraShakeInfo> UeShakes;
+		if (const UCameraModifier_CameraShake* ShakeModifier = Cast<UCameraModifier_CameraShake>(S.PCM()->FindCameraModifierByClass(UCameraModifier_CameraShake::StaticClass())))
+		{
+			ShakeModifier->GetActiveCameraShakes(UeShakes);
+		}
+		S.Test->TestEqual(TEXT("The PlayerCameraManager does not run the ACF shake"), UeShakes.Num(), 0);
+		SpawnBlocker(S, S.Pivot - FVector(300, 0, 0), FVector(10, 400, 400));
+		SetGuardEnabled(false);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double CameraX = S.PCM()->GetCameraLocation().X;
+		S.LogCamera(TEXT("ACF shake against the wall (guard OFF)"));
+		S.Test->TestTrue(TEXT("ACF shake location is collided (stays in front of the wall without the guard)"), CameraX >= S.Pivot.X - 290.0 + 12.0 - 0.5);
+		SetGuardEnabled(true);
+		S.Subsystem->StopAllCameraEffects(false);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Shake effect ended after stop"), S.Subsystem->GetActiveCameraEffects().Num(), 0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationSpeedFovRollTest, "ActionCameraFramework.Integration.SpeedFovAndRoll",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationSpeedFovRollTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(-3000, 9000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.Preset.Reset(MakeFixedPreset(S.Pivot - FVector(800, 0, 0), FRotator::ZeroRotator, 90.f));
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), FACFCameraRequestParams());
+		S.EffectPresets.Reset();
+		S.EffectPresets.Emplace(MakeEffectPreset([](UACFCameraEffectPreset* P)
+		{
+			UACFCameraEffect_SpeedFOV* Fov = NewObject<UACFCameraEffect_SpeedFOV>(P);
+			Fov->MinSpeed = 100.f;
+			Fov->MaxSpeed = 1000.f;
+			Fov->FOVAtMaxSpeed = 20.f;
+			Fov->MaxFOV = 105.f;
+			Fov->RiseTime = 0.1f;
+			Fov->FallTime = 0.1f;
+			P->Layers.Add(Fov);
+			UACFCameraEffect_Roll* Roll = NewObject<UACFCameraEffect_Roll>(P);
+			Roll->RollPerYawRate = 0.f;
+			Roll->RollPerLateralSpeed = 0.01f;
+			Roll->MaxRoll = 5.f;
+			Roll->ResponseTime = 0.1f;
+			Roll->ReturnTime = 0.1f;
+			P->Layers.Add(Roll);
+		}));
+		FACFCameraEffectParams Params;
+		Params.TargetActor = S.ActorA.Get();
+		S.Subsystem->PlayCameraEffect(S.EffectPresets[0].Get(), Params);
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		// Target runs sideways (camera right) at 1000 cm/s for 1.2 s.
+		const double T = S.World()->GetTimeSeconds() - S.StartTime;
+		S.ActorA->SetActorLocation(S.Pivot + FVector(0, 1000.0 * T, 0));
+		S.bRetry = T < 1.2;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const FMinimalViewInfo& View = S.PCM()->GetCameraCacheView();
+		S.Test->AddInfo(FString::Printf(TEXT("Running: FOV %.2f roll %.2f"), View.FOV, View.Rotation.Roll));
+		S.Test->TestTrue(TEXT("Speed FOV widened up to its MaxFOV (105)"), FMath::IsNearlyEqual(View.FOV, 105.f, 0.5f));
+		S.Test->TestTrue(TEXT("Roll banks to MaxRoll (5)"), FMath::IsNearlyEqual(FMath::Abs(View.Rotation.Roll), 5.f, 0.25f));
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.0; return true; }); // target stopped
+	Steps.Add([](FScenario& S)
+	{
+		const FMinimalViewInfo& View = S.PCM()->GetCameraCacheView();
+		S.Test->AddInfo(FString::Printf(TEXT("Stopped: FOV %.2f roll %.2f"), View.FOV, View.Rotation.Roll));
+		S.Test->TestTrue(TEXT("FOV returns to base when the target stops"), FMath::IsNearlyEqual(View.FOV, 90.f, 0.5f));
+		S.Test->TestTrue(TEXT("Roll returns to level"), FMath::Abs(View.Rotation.Roll) < 0.25f);
+		S.ActorA->Destroy(); // motion target destroyed: no crash, effect keeps running at rest
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Effect still active after its target was destroyed"), S.Subsystem->GetActiveCameraEffects().Num(), 1);
+		S.Test->TestTrue(TEXT("FOV stays at base"), FMath::IsNearlyEqual(S.PCM()->GetFOVAngle(), 90.f, 0.5f));
+		S.Subsystem->StopAllCameraEffects(true);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationEffectLifetimeTest, "ActionCameraFramework.Integration.EffectsSurvivePcmAndActorLoss",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationEffectLifetimeTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(-3000, -9000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.Preset.Reset(MakeOrbitCollisionPreset(600.f, 0.f, FACFCameraBlendSettings::MakeCut()));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		S.EffectPresets.Reset();
+		S.EffectPresets.Emplace(MakeEffectPreset([](UACFCameraEffectPreset* P) { AddPunch(P, FVector(-100, 0, 0), -1.f); })); // infinite
+		S.Subsystem->PlayCameraEffect(S.EffectPresets[0].Get(), FACFCameraEffectParams());
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 0.2; return true; }); // past the 0.05 s attack
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot - FVector(700, 0, 0), 0.01, TEXT("Infinite punch active"));
+		APlayerCameraManager* Old = S.PCM();
+		S.Controller->SpawnPlayerCameraManager();
+		if (S.PCM() != Old)
+		{
+			Old->Destroy();
+		}
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.Pivot - FVector(700, 0, 0), 0.01, TEXT("Effect still applied after PCM recreation"));
+		S.Subsystem->StopAllCameraEffects(true);
+		// Impulse with a source actor and an instigator actor, both destroyed while it plays.
+		S.ActorB = SpawnMovablePoint(S.World(), S.Pivot + FVector(-300, 0, 0));
+		AActor* Instigator = SpawnMovablePoint(S.World(), S.Pivot + FVector(0, 500, 0));
+		S.Spawned.Add(Instigator);
+		S.EffectPresets.Emplace(MakeEffectPreset([](UACFCameraEffectPreset* P)
+		{
+			UACFCameraEffect_Impulse* Impulse = NewObject<UACFCameraEffect_Impulse>(P);
+			Impulse->Envelope = HoldEnvelope(-1.f);
+			P->Layers.Add(Impulse);
+		}));
+		FACFCameraEffectParams Params;
+		Params.SourceActor = S.ActorB.Get();
+		Params.Instigator = Instigator;
+		S.Handle = FACFCameraRequestHandle(S.Subsystem->PlayCameraEffect(S.EffectPresets[1].Get(), Params).GetId());
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.ActorB->Destroy(); // source gone: keeps its last location
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Impulse survives the loss of its source actor"), S.Subsystem->GetActiveCameraEffects().Num(), 1);
+		S.Spawned.Last()->Destroy(); // instigator gone: effect stops
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Instigator destroyed -> effect removed"), S.Subsystem->GetActiveCameraEffects().Num(), 0);
+		CameraCloseTo(S, S.Pivot - FVector(600, 0, 0), 0.01, TEXT("No effect offset left"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationBlueprintEffectsTest, "ActionCameraFramework.Integration.BlueprintEffects",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationBlueprintEffectsTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	// Scripts/CreateVerificationAssets.py: BeginPlay -> request orbit camera -> Play ACF Camera Recoil / Impulse / Shake
+	// -> Delay 0.5 -> Stop ACF Camera Effect(shake handle) -> Delay 0.5 -> Stop All ACF Camera Effects -> release.
+	static const TCHAR* ClassPath = TEXT("/ActionCameraFramework/Verification/BP_ACFEffectTest.BP_ACFEffectTest_C");
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		UClass* BlueprintClass = LoadClass<AActor>(nullptr, ClassPath);
+		if (!S.Test->TestNotNull(TEXT("Verification Blueprint exists (run Scripts/CreateVerificationAssets.py)"), BlueprintClass))
+		{
+			return false;
+		}
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		S.ActorA = S.World()->SpawnActor<AActor>(BlueprintClass, FTransform::Identity, Params);
+		S.StartTime = S.World()->GetTimeSeconds();
+		return S.Test->TestTrue(TEXT("Spawned"), S.ActorA.IsValid());
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const TArray<FACFCameraEffectInfo> Effects = S.Subsystem->GetActiveCameraEffects();
+		FString Names;
+		for (const FACFCameraEffectInfo& Info : Effects)
+		{
+			Names += FString::Printf(TEXT("%s(%s w=%.2f) "), *Info.Handle.ToString(), *Info.PresetName.ToString(), Info.Weight);
+		}
+		S.Test->AddInfo(FString::Printf(TEXT("%.3fs after spawn: %s"), S.World()->GetTimeSeconds() - S.StartTime, *Names));
+		S.Test->TestEqual(TEXT("Recoil + Impulse + Shake playing from Blueprint"), Effects.Num(), 3);
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 0.75; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		// Recoil (0.33 s) and impulse (0.6 s) have ended; the 2 s shake only ends because Blueprint stopped its handle.
+		S.Test->TestEqual(TEXT("Stop ACF Camera Effect stopped the shake by handle"), S.Subsystem->GetActiveCameraEffects().Num(), 0);
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.3; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Blueprint released its camera"), S.Subsystem->GetLastEvaluationResult().NumRequests, 0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
 	return true;
 }
 

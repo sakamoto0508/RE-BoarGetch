@@ -10,7 +10,8 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 **現在の状態**:
 - Phase 1（Camera Core + Follow / LookAt）完了
 - Phase 2（Third Person: Orbital Follow / FreeLook、軸別 Damping、Composer、Collision、Lookahead）完了。最終監査で出力 Guard を追加
-- 次は Phase 3（Camera Effects。設計は Docs/Architecture.md 10 章）
+- Phase 3（Camera Effects: Punch / Recoil / Impulse / ACF Shake / Speed FOV / Roll、Effect Preset、Handle）完了
+- 次は Phase 4（Action Camera）
 
 ---
 
@@ -44,7 +45,7 @@ APlayerCameraManager（既存のまま）→ Camera Shake（127）→ 画面
 | 2. 要求の解決 | 優先度で有効な要求を決め、必要なら遷移（ブレンド）を開始します |
 | 3. Rig 評価 | **Body**（位置）→ **Aim**（回転）の順に Node を評価します |
 | 4. ブレンド | 要求同士のブレンド（Live / Snapshot）と、UE カメラに対する Weight |
-| 5. PostBlend | **Collision** をブレンド後の最終姿勢に 1 回だけ適用します。ブレンド中でも壁を抜けません |
+| 5. 演出と PostBlend | 位置の演出 → **Collision**（ブレンド後の最終姿勢に 1 回）→ 回転・FOV の演出。ブレンド中や演出中でも壁を抜けません |
 | 6. 結果確定 | `Weight`、`AimPose`、デバッグ情報 |
 | 7. 出力 | PCM の呼び出しごとに `Lerp(UE カメラ, ACF, Weight)`。この後に UE の Camera Shake がかかり、最後に Guard が最終位置を Collision で再拘束します |
 
@@ -189,14 +190,68 @@ Cameras->ReleaseCamera(CameraHandle);
 | 対象を差し替え / テレポート | その Node の補間をリセットします。カメラはレベルを滑らずにカットします |
 | PlayerController や PCM の作り直し | ACF が次のティックまでに自動で接続し直します |
 
-## 6. 他のシステムとの関係
+## 6. カメラ演出（Effects）
+
+Punch / Recoil / Impulse / Shake / Speed FOV / Roll を、ゲームのイベントから 1 ノードで再生できます。
+演出は ACF カメラにかかります。UE 標準のカメラだけを使っている場面で演出を出したい場合は、Node が Collision だけの「素通し Preset」を要求してください。UE カメラがそのまま映り、その上に演出と Collision がかかります。
+
+**Effect Preset を作る**: Data Asset > **ACFCameraEffectPreset** を作り、`Layers` に演出を追加します。1 つの Preset に複数の演出を入れることができ、まとめて 1 つの Handle で再生・停止されます（例: 重い着地 = Impulse + Shake + FOV Punch）。
+
+| Layer | チャンネル | 内容 |
+|-------|-----------|------|
+| **Camera Punch** | 位置 / 回転 / FOV | 瞬間的なキック。ダッシュ時の FOV の演出にも使えます |
+| **Camera Recoil** | 位置（後退・上）/ 回転（Pitch、Yaw・Roll はランダム） | 攻撃の反動。連射すると加算されます。ばらつきは Seed で決まる（再現できる） |
+| **Camera Impulse** | 位置 / 回転 | 爆発・着地・被弾。発生源から離れる方向へ押し、Frequency > 0 なら減衰しながら振動します。距離で減衰します |
+| **Camera Shake (UE)** | 位置 / 回転 / FOV | UE の `UCameraShakeBase` クラスをそのまま使います（Wave / Perlin / Sequence など） |
+| **Speed FOV** | FOV | 追従対象の速度に応じて FOV を広げます（Min / Max Speed、増加量、Min / Max FOV、上がる・戻る速さ） |
+| **Camera Roll** | 回転（Roll） | 旋回や横移動に応じてカメラを傾けます（最大角度、反応と戻りの速さ） |
+
+**全 Layer に共通の設定**
+
+| 項目 | 内容 |
+|------|------|
+| Envelope | Attack / Sustain（負の値 = 止めるまで続く）/ Release の秒数、形（Linear / Smooth） |
+| Weight / Priority | 強さ / Override の適用順（大きい方が後に適用され、上に乗る） |
+| Blend Mode | **Additive**（足す）/ **Override**（その値へ Weight で寄せる）/ **Multiply**（FOV の倍率） |
+| Intensity Curve | 経過秒数に対する強さの倍率（任意） |
+| Distance Attenuation | 発生源からの距離による減衰（Inner Radius まで 100%、Outer Radius で 0%、Falloff カーブは任意） |
+
+**合成の順番**（チャンネルごとに、すべての演出をまとめて適用します）
+- 位置・回転: Override（Priority の小さい順）→ Additive
+- FOV: Override → Multiply → Additive
+- 演出による FOV は Project Settings の Effect FOV Min / Max（既定 20〜130）に収まります。元の FOV がすでにこの範囲の外にある場合は、その値をさらに外へ押し出すことはしません。
+
+**Pipeline**
+
+```
+Rig → ブレンド → [PreCollision] 位置の演出 → Collision → [PostCollision] 回転・FOV の演出 → Output → UE Shake → Guard
+```
+- 位置を動かす演出（Punch / Recoil / Impulse / Shake の位置成分）は Collision の前にかかるので、壁を抜けません（Guard なしで確認済み）。
+- 回転・FOV の演出は Collision の後にかかるので、壁際でも効きます。
+- `Get Aim Camera Pose` は位置の演出（Collision 済み）を含み、回転・FOV の演出を含みません。そのため Recoil の Pitch や Shake の回転で照準は揺れません。
+
+**Blueprint**（UE 標準の Camera Shake ノードと区別できるよう、名前に「ACF」を付けています）
+
+| ノード | 内容 |
+|--------|------|
+| `Play ACF Camera Effect` (Preset, Params) → Handle | Params: Scale、発生源（位置・Actor）、Target Actor（Speed FOV / Roll 用、空ならプレイヤーの Pawn）、Instigator（破棄されたら停止）、Direction、Random Seed |
+| `Stop ACF Camera Effect` (Handle, Immediate) | その演出だけを Release（Immediate なら即座に消す） |
+| `Stop All ACF Camera Effects` | すべて停止 |
+| `Play ACF Camera Impulse` (Source Location, Scale, Preset) | Preset を省略すると、Project Settings の既定 → 組み込みの既定の順に使います |
+| `Play ACF Camera Recoil` (Scale, Preset) | 同上 |
+| `Play ACF Camera Shake` (Shake Class, Scale) | UE の Shake クラスを ACF 経由で再生します。PCM には登録しないので、二重にはかかりません |
+| `Get Active ACF Camera Effects` / `Is ACF Camera Effect Active` | 再生中の演出の一覧（Handle、Preset、経過時間、Weight、停止中かどうか） |
+
+演出の状態は再生ごとに確保され、終了・停止・Instigator の破棄と同時に解放されます（Shake のインスタンスも GC で回収されることを確認済み）。
+
+## 7. 他のシステムとの関係
 
 **適用順序**（1 フレーム、PCM の Modifier は Priority の小さい順に適用されます）
 
 ```
 ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream）
 [0〜63]   他の CameraModifier                     ※ACF の Weight = 1 の間は上書きされます
-[64]      ACF Output    Rig → ブレンド → Collision → Lerp(UE カメラ, ACF, Weight)
+[64]      ACF Output    Rig → ブレンド → 位置の演出 → Collision → 回転・FOV の演出 → Lerp(UE カメラ, ACF, Weight)
 [127]     UE Camera Shake（その他 65〜254 の Modifier）
 [255]     ACF Guard     Collision の拘束で最終位置を再 Sweep（Weight 合成や Shake での壁抜けを防ぐ）
 → PCM の ViewTarget ブレンド → 描画
@@ -207,14 +262,14 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - **Sequencer など**: 原則として ACF の出力を抑えます。自動検出はまだないので、`Suppress Output (Source=Self)` と `Release Output Suppression` を自分で呼んでください。抑制中も ACF は内部で評価を続けます。
 - **照準と見た目**:
   - `Get Aim Camera Pose`
-    - 値: `Lerp(UE カメラ, ACF(Collision 後), Weight)`
-    - 含まないもの: UE Shake、Guard の補正、PCM の ViewTarget ブレンド
+    - 値: `Lerp(UE カメラ, ACF(位置の演出 + Collision 後), Weight)`
+    - 含まないもの: 回転・FOV の演出、UE Shake、Guard の補正、PCM の ViewTarget ブレンド
     - 用途: 照準・トレース（Shake で揺れない）
     - 注意: UE カメラとの Weight ブレンド中は、位置が障害物の中を指すことがあります。
   - `Get Visual Camera Pose`: 実際に描画されるカメラ（PCM の CameraCache）です。
 - **ネットワーク**: ACF はカメラ情報をサーバーへ送りません。
 
-## 7. 設定・デバッグ
+## 8. 設定・デバッグ
 
 - **Project Settings > Plugins > Action Camera Framework**
   - Output Modifier Class
@@ -229,10 +284,10 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - **`showdebug camera`**: ACF の要求、Weight、抑制状態を表示します。
 - **コンソール**
   - `ACF.Debug.PushFixed` / `ReleaseLast` / `ReleaseAll` / `Dump`
-  - `ACF.Sample.*`（8 章）
+  - `ACF.Sample.*`（9 章）
 - デバッグ処理とサンプル用コマンドは、Shipping ビルドではコンパイル自体から除外されます。
 
-## 8. 手動確認（Editor で実際に見る）
+## 9. 手動確認（Editor で実際に見る）
 
 自動テストは NullRHI（描画なし）で実行しています。描画結果と操作感は、次の手順で人が確認してください。
 
@@ -261,10 +316,14 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 | Shake と Collision | 壁際または通路で `ACF.Sample.Shake`、比較として `ACF.Sample.Guard 0` → `ACF.Sample.Shake` | Guard ON では壁の中が見えない。OFF では壁の中が一瞬見える（既知の挙動の再現） |
 | Weight ブレンドと柱 | `Pillars` の間で `ACF.Sample.Release 1` / `ACF.Sample.Use ThirdPerson 1` を繰り返す | ブレンド中に柱の中が見えない |
 | テレポート | `ACF.Sample.Teleport 3000` | カメラが飛んで行かず、新しい位置でカットされる |
+| Recoil / Punch | `ACF.Sample.Effect Recoil`（連打する）、`ACF.Sample.Effect Punch` | 反動が重なり、短く戻る。Pitch の反動で照準（Aim）は動かない |
+| Impulse | 壁際で `ACF.Sample.Effect Impulse 3` | 揺れても壁を抜けない（Guard を `ACF.Sample.Guard 0` にしても同じ） |
+| ACF Shake | 通路で `ACF.Sample.Effect Shake` | UE の Shake がかかるが、壁・天井を抜けない。2 重にかからない |
+| Speed FOV / Roll | `ACF.Sample.Effect Motion`（もう一度で OFF）にしてダッシュ・横移動・旋回する | 速いほど FOV が広がり、旋回や横移動で傾く。止まると滑らかに戻る |
 
 `ACF.Sample.Use <Follow|ThirdPerson|FreeLook|Composer> [BlendSeconds=0.6] [Live=1]` は、プレイヤー Pawn を追従対象、`ACFLookTarget` タグの Actor を注視対象として要求を出し直します。
 
-## 9. 拡張（プログラマー向け）
+## 10. 拡張（プログラマー向け）
 
 `UACFCameraNode` を継承し、`GetStage()`（Body / Aim / PostBlend）と `Evaluate` を実装します。
 
@@ -274,25 +333,28 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - `DeltaTime <= 0` のときは状態を進めないでください。
 - Body の Node は `Context.Scratch.Pivot` を設定してください（Collision の Sweep 起点になります）。
 - 共通部品: `FACFCameraTargetTrackingState::Track`（対象喪失・テレポート・Lookahead）、`UpdateDamped`（軸別 Damping）、`ACFFraming`（画面への投影・構図）、`ACFCameraCollision::SweepCamera`
-- Phase 3 の Effect Pipeline（PreCollision / Collision / PostCollision）の設計は `Docs/Architecture.md` 10 章にあります。
+- 新しい演出: `UACFCameraEffect` を継承し、`Evaluate` で `FACFCameraEffectOutput`（チャンネル・値・空間）を返します。状態は `GetRuntimeStateType`、後始末は `OnEnd` で行います。Envelope・Weight・減衰・合成はスタック側が行います。
 
-## 10. 制限（Phase 2 時点）
+## 11. 制限（Phase 3 時点）
 
-- 描画結果の目視確認と、実機のマウス・パッドでの操作感確認は、まだ行っていません（8 章の手順で確認してください）。
-- PCM の ViewTarget ブレンド中の壁抜けは防げません（6 章）。
+- 描画結果の目視確認と、実機のマウス・パッドでの操作感確認は、まだ行っていません（9 章の手順で確認してください）。
+- PCM の ViewTarget ブレンド中の壁抜けは防げません（7 章）。
 - ブレンド中に割り込むと、割り込まれた側の動きはそれ以降反映されません。
 - Collision は「ピボット → カメラ」の線上だけを見ます。視線上の遮蔽物を避ける Deoccluder は Phase 4 です。
 - SpringArm と一致することは、静止時（Lag 収束後）と障害物ありで確認しました。移動中の過渡応答（Lag の式）は異なります。
-- Sequencer の自動検出、Blueprint 製の Node は未対応です。
+- Sequencer の自動検出、Blueprint 製の Node / Effect は未対応です。
+- 演出は ACF カメラにかかります。UE カメラだけの場面では、素通し Preset を要求してください（6 章）。
+- Shake の PostProcess 出力は PCM に渡します。ただし PCM が作り直されると、それ以降の PostProcess は失われます（位置・回転・FOV は影響を受けない）。
+- 演出のステージは 2 つ（Collision の前と後）で固定です。演出ごとに段を選ぶことはできません（位置は前、回転・FOV は後）。
 
-## 11. 検証
+## 12. 検証
 
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（DA ×4、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 36 件です。
-  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*`（24 件）: Editor とゲームの両方で実行できます。
-  - `.Integration.*`（11 件）: `-game` でのみ実行されます。
+- 自動テストは 50 件です。
+  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*`（32 件）: Editor とゲームの両方で実行できます。
+  - `.Integration.*`（17 件）: `-game` でのみ実行されます。
   - `.Samples.TestMapSmoke`（1 件）: テストマップ上でだけ実行されます。他のマップではスキップします。
 
 ```bash
@@ -307,12 +369,13 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /Game/Level/L_Lobby -
 MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramework/Samples/L_ACFCameraTest -game -unattended -NullRHI -nosplash -nosound "-ExecCmds=Automation RunTests ActionCameraFramework.Samples" "-TestExit=Automation Test Queue Empty"
 ```
 
-## 12. ファイル構成
+## 13. ファイル構成
 
 | パス | 内容 |
 |------|------|
 | `Source/ActionCameraFramework/Public/` | `ACFCameraSubsystem`（入口）、`ACFCameraDirector`、`ACFCameraPreset`、`ACFCameraNode`（段・Scratch）、`ACFCameraRigInstance`、`ACFCameraOutputModifier`（Output と Guard）、`ACFCameraTypes`、`ACFCameraSettings`、`ACFCameraBlueprintLibrary` |
 | `Source/ActionCameraFramework/Public/Nodes/` | FixedPose / Follow / LookAt / OrbitalFollow / Composers / Collision と、共通部品の TargetTracking（Damping・Lookahead・テレポート）/ Framing（画面座標の計算） |
+| `Source/ActionCameraFramework/Public/Effects/` | `ACFCameraEffect`（Layer 基底・Effect Preset）、`ACFCameraBuiltinEffects`（Punch / Recoil / Impulse / Shake / Speed FOV / Roll）、`ACFCameraEffectStack`（Instance・Envelope・合成）、`ACFCameraEffectTypes` |
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`、`ACFCameraDebugShake`（サンプル用 Shake）、`Tests/` |
 | `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 6 のツール置き場） |
 | `Content/Verification/` | 自動テスト用アセット |

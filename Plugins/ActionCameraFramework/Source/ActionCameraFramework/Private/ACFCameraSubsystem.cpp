@@ -12,6 +12,7 @@
 #include "Debug/DebugDrawService.h"
 #include "ACFCameraDebugDraw.h"
 #include "Nodes/ACFCameraNode_Collision.h"
+#include "Effects/ACFCameraBuiltinEffects.h"
 
 void UACFCameraSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -361,6 +362,117 @@ void UACFCameraSubsystem::HandleDebugDraw(UCanvas* Canvas, APlayerController* Pl
 	{
 		return;
 	}
-	ACFCameraDebug::DrawCanvas(Canvas, Director->GetLastDebug(), Director->GetLastResult());
+	TArray<FACFCameraEffectInfo> Effects;
+	Director->GetActiveEffects(Effects);
+	ACFCameraDebug::DrawCanvas(Canvas, Director->GetLastDebug(), Director->GetLastResult(), Effects);
 }
 #endif
+
+// -------------------------------------------------------------------------------------------------
+// Camera effects
+
+FACFCameraEffectHandle UACFCameraSubsystem::PlayCameraEffect(UACFCameraEffectPreset* Preset, const FACFCameraEffectParams& Params)
+{
+	return Director ? Director->PlayEffect(Preset, Params) : FACFCameraEffectHandle();
+}
+
+bool UACFCameraSubsystem::StopCameraEffect(FACFCameraEffectHandle& Handle, bool bImmediate)
+{
+	const bool bStopped = Director && Director->StopEffect(Handle, bImmediate);
+	Handle.Invalidate();
+	return bStopped;
+}
+
+void UACFCameraSubsystem::StopAllCameraEffects(bool bImmediate)
+{
+	if (Director)
+	{
+		Director->StopAllEffects(bImmediate);
+	}
+}
+
+UACFCameraEffectPreset* UACFCameraSubsystem::GetDefaultEffectPreset(bool bImpulse)
+{
+	const UACFCameraSettings* Settings = GetDefault<UACFCameraSettings>();
+	if (UACFCameraEffectPreset* Configured = (bImpulse ? Settings->DefaultImpulsePreset : Settings->DefaultRecoilPreset).LoadSynchronous())
+	{
+		return Configured;
+	}
+	TObjectPtr<UACFCameraEffectPreset>& Builtin = bImpulse ? BuiltinImpulsePreset : BuiltinRecoilPreset;
+	if (!Builtin)
+	{
+		Builtin = NewObject<UACFCameraEffectPreset>(this, bImpulse ? TEXT("ACFBuiltinImpulse") : TEXT("ACFBuiltinRecoil"), RF_Transient);
+		if (bImpulse)
+		{
+			Builtin->Layers.Add(NewObject<UACFCameraEffect_Impulse>(Builtin));
+		}
+		else
+		{
+			Builtin->Layers.Add(NewObject<UACFCameraEffect_Recoil>(Builtin));
+		}
+	}
+	return Builtin;
+}
+
+FACFCameraEffectHandle UACFCameraSubsystem::PlayCameraImpulse(FVector SourceLocation, float Scale, UACFCameraEffectPreset* Preset)
+{
+	FACFCameraEffectParams Params;
+	Params.Scale = Scale;
+	Params.bUseSourceLocation = true;
+	Params.SourceLocation = SourceLocation;
+	return PlayCameraEffect(Preset ? Preset : GetDefaultEffectPreset(true), Params);
+}
+
+FACFCameraEffectHandle UACFCameraSubsystem::PlayCameraRecoil(float Scale, UACFCameraEffectPreset* Preset)
+{
+	FACFCameraEffectParams Params;
+	Params.Scale = Scale;
+	return PlayCameraEffect(Preset ? Preset : GetDefaultEffectPreset(false), Params);
+}
+
+FACFCameraEffectHandle UACFCameraSubsystem::PlayCameraShake(TSubclassOf<UCameraShakeBase> ShakeClass, float Scale)
+{
+	if (!ShakeClass)
+	{
+		UE_LOG(LogActionCamera, Warning, TEXT("Play ACF Camera Shake: no shake class."));
+		return FACFCameraEffectHandle();
+	}
+	TObjectPtr<UACFCameraEffectPreset>& Preset = ShakePresets.FindOrAdd(ShakeClass.Get());
+	if (!Preset)
+	{
+		// One transient preset per shake class (created once; plays are per-instance runtime state).
+		Preset = NewObject<UACFCameraEffectPreset>(this, NAME_None, RF_Transient);
+		UACFCameraEffect_Shake* Layer = NewObject<UACFCameraEffect_Shake>(Preset);
+		Layer->ShakeClass = ShakeClass;
+		Preset->Layers.Add(Layer);
+	}
+	FACFCameraEffectParams Params;
+	Params.Scale = Scale;
+	return PlayCameraEffect(Preset, Params);
+}
+
+TArray<FACFCameraEffectInfo> UACFCameraSubsystem::GetActiveCameraEffects() const
+{
+	TArray<FACFCameraEffectInfo> Infos;
+	if (Director)
+	{
+		Director->GetActiveEffects(Infos);
+	}
+	return Infos;
+}
+
+bool UACFCameraSubsystem::IsCameraEffectActive(FACFCameraEffectHandle Handle) const
+{
+	return Director && Director->IsEffectActive(Handle);
+}
+
+UACFCameraEffectPreset* UACFCameraSubsystem::GetOrCreateTransientEffectPreset(FName Key, TFunctionRef<void(UACFCameraEffectPreset*)> Build)
+{
+	TObjectPtr<UACFCameraEffectPreset>& Preset = TransientEffectPresets.FindOrAdd(Key);
+	if (!Preset)
+	{
+		Preset = NewObject<UACFCameraEffectPreset>(this, Key, RF_Transient);
+		Build(Preset);
+	}
+	return Preset;
+}

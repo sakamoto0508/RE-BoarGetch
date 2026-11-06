@@ -39,6 +39,8 @@ private:
 		OutResult.Location = FVector(FMath::Sin(Phase) * LocationAmplitude.X, FMath::Sin(Phase * 1.3f) * LocationAmplitude.Y, FMath::Sin(Phase * 0.7f) * LocationAmplitude.Z) * Fade;
 		OutResult.Rotation = FRotator(0.f, 0.f, FMath::Sin(Phase) * RollAmplitude * Fade);
 	}
+	// "Stop ACF Camera Effect" (non-immediate) ends this sample shake right away (it has no blend out).
+	virtual void StopShakePatternImpl(const FCameraShakePatternStopParams& Params) override { Elapsed = Duration; }
 	virtual bool IsFinishedImpl() const override { return Elapsed >= Duration; }
 
 	float Elapsed = 0.f;

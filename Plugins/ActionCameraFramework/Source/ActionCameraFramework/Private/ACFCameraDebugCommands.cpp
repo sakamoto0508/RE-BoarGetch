@@ -16,6 +16,8 @@
 #include "HAL/IConsoleManager.h"
 #include "UObject/Package.h"
 #include "ACFCameraDebugShake.h"
+#include "Effects/ACFCameraBuiltinEffects.h"
+#include "UObject/StrongObjectPtr.h"
 #include "ACFCameraSettings.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
@@ -242,6 +244,71 @@ namespace ACFDebug
 		TEXT("Teleport the pawn forward: [Distance=3000]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleTeleport));
 	static FAutoConsoleCommandWithWorldAndArgs GSampleGuardCmd(TEXT("ACF.Sample.Guard"),
 		TEXT("Enable / disable the output collision guard: <0|1>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleGuard));
+
+	// ACF.Sample.Effect <Recoil|Impulse|Shake|Punch|Motion|Stop>
+	static FACFCameraEffectHandle GMotionHandle;
+
+	static void SampleEffect(const TArray<FString>& Args, UWorld* World)
+	{
+		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
+		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		const APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+		if (!Subsystem || Args.IsEmpty())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("Usage: ACF.Sample.Effect <Recoil|Impulse|Shake|Punch|Motion|Stop>"));
+			return;
+		}
+		const FString Kind = Args[0];
+		if (Kind == TEXT("Recoil"))
+		{
+			Subsystem->PlayCameraRecoil(ArgOr(Args, 1, 1.f));
+		}
+		else if (Kind == TEXT("Impulse"))
+		{
+			const FVector Source = Pawn ? Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * 300.f : FVector::ZeroVector;
+			Subsystem->PlayCameraImpulse(Source, ArgOr(Args, 1, 1.f));
+		}
+		else if (Kind == TEXT("Shake"))
+		{
+			Subsystem->PlayCameraShake(UACFDebugCameraShake::StaticClass(), ArgOr(Args, 1, 1.f));
+		}
+		else if (Kind == TEXT("Punch"))
+		{
+			UACFCameraEffectPreset* Punch = Subsystem->GetOrCreateTransientEffectPreset(TEXT("ACFSamplePunch"), [](UACFCameraEffectPreset* P)
+			{
+				UACFCameraEffect_Punch* Layer = NewObject<UACFCameraEffect_Punch>(P);
+				Layer->Location = FVector(-60.f, 0.f, 0.f);
+				Layer->FOV = 8.f;
+				P->Layers.Add(Layer);
+			});
+			Subsystem->PlayCameraEffect(Punch, FACFCameraEffectParams());
+		}
+		else if (Kind == TEXT("Motion"))
+		{
+			// Toggle Speed FOV + Roll driven by the pawn.
+			if (Subsystem->IsCameraEffectActive(GMotionHandle))
+			{
+				Subsystem->StopCameraEffect(GMotionHandle, false);
+				UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Effect Motion: off"));
+				return;
+			}
+			UACFCameraEffectPreset* Motion = Subsystem->GetOrCreateTransientEffectPreset(TEXT("ACFSampleMotion"), [](UACFCameraEffectPreset* P)
+			{
+				P->Layers.Add(NewObject<UACFCameraEffect_SpeedFOV>(P));
+				P->Layers.Add(NewObject<UACFCameraEffect_Roll>(P));
+			});
+			GMotionHandle = Subsystem->PlayCameraEffect(Motion, FACFCameraEffectParams());
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Effect Motion: on (%s)"), *GMotionHandle.ToString());
+		}
+		else if (Kind == TEXT("Stop"))
+		{
+			Subsystem->StopAllCameraEffects(false);
+		}
+	}
+
+	static FAutoConsoleCommandWithWorldAndArgs GSampleEffectCmd(TEXT("ACF.Sample.Effect"),
+		TEXT("Play a sample camera effect: <Recoil|Impulse|Shake|Punch|Motion(toggle Speed FOV + Roll)|Stop> [Scale]"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleEffect));
 }
 
 #endif // !UE_BUILD_SHIPPING

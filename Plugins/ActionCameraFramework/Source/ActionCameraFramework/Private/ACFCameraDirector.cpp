@@ -274,7 +274,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	}
 	else
 	{
-		TargetPose = LastResult.Pose; // blending back to UE from a snapshot: hold the last pose
+		TargetPose = LastBlendedPose; // blending back to UE from a snapshot: hold the last pose (without effects)
 	}
 
 	// Stage 4 (mix): request-to-request blend.
@@ -295,6 +295,12 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	{
 		Result.Pose = TargetPose;
 	}
+
+	// Stage 5a: effects. Evaluated once per frame (inside the frame guard); location before Collision.
+	LastBlendedPose = Result.Pose;
+	const FACFCameraPose EffectCamera = Result.Pose;
+	Effects.Evaluate(Context, EffectCamera);
+	Effects.ApplyPreCollision(Result.Pose, EffectCamera);
 
 	// Stage 5 (corrections of the final pose): PostBlend nodes (Collision) of the camera in control.
 	// Phase 3 visual effects will be inserted before this so they cannot push the camera into walls.
@@ -317,6 +323,10 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 			OutputConstraint.IgnoredActors.Add(Actor);
 		}
 	}
+	// Stage 5c: rotation / FOV effects after Collision (they do not move the camera). The aim pose excludes them.
+	const FACFCameraPose AimSource = Result.Pose;
+	const UACFCameraSettings* Settings = GetDefault<UACFCameraSettings>();
+	Effects.ApplyPostCollision(Result.Pose, Settings->EffectFovMin, Settings->EffectFovMax);
 #if !UE_BUILD_SHIPPING
 	LastDebug = TargetScratch.Debug;
 #endif
@@ -327,7 +337,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	Result.Weight = Result.RequestWeight * OutputFactor;
 	Result.bOutputSuppressed = IsOutputSuppressed();
 	Result.UpstreamPose = Context.UpstreamPose;
-	Result.AimPose = FACFCameraPose::Blend(Context.UpstreamPose, Result.Pose, Result.Weight);
+	Result.AimPose = FACFCameraPose::Blend(Context.UpstreamPose, AimSource, Result.Weight);
 	Result.ActiveRequest = ActiveHandle;
 	Result.bIsBlending = Transition.bActive;
 	Result.BlendAlpha = Transition.bActive ? Alpha : 1.f;
@@ -492,7 +502,7 @@ void UACFCameraDirector::BeginTransition(int32 NewActiveIndex, const FACFCameraE
 	const FACFCameraRequestHandle PreviousActive = ActiveHandle;
 
 	// Start from whatever ACF produces right now (possibly mid-blend), so interruptions never pop.
-	Transition.FromPose = LastResult.Pose;
+	Transition.FromPose = LastBlendedPose; // without effects, which are re-applied on top every frame
 	Transition.FromWeight = LastResult.RequestWeight;
 	Transition.Elapsed = 0.f;
 	Transition.LiveSource.Invalidate();

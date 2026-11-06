@@ -30,6 +30,20 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Output")
 	bool bEnableOutputCollisionGuard = true;
 
+	/** Camera effects may not push the FOV outside this range (a base FOV already outside is left alone). */
+	UPROPERTY(Config, EditAnywhere, Category = "Effects", meta = (ClampMin = "1.0", ClampMax = "170.0", Units = deg))
+	float EffectFovMin = 20.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Effects", meta = (ClampMin = "1.0", ClampMax = "170.0", Units = deg))
+	float EffectFovMax = 130.f;
+
+	/** Presets used by Play ACF Camera Impulse / Recoil when no preset is passed (built-in defaults if empty). */
+	UPROPERTY(Config, EditAnywhere, Category = "Effects")
+	TSoftObjectPtr<class UACFCameraEffectPreset> DefaultImpulsePreset;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Effects")
+	TSoftObjectPtr<class UACFCameraEffectPreset> DefaultRecoilPreset;
+
 	/** Log request add / release / transitions (LogActionCamera, Verbose otherwise). */
 	UPROPERTY(Config, EditAnywhere, Category = "Debug")
 	bool bLogRequests = false;
