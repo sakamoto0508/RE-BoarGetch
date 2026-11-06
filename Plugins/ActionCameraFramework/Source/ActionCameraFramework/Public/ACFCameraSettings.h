@@ -22,6 +22,14 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Output")
 	TSoftClassPtr<UACFCameraOutputModifier> OutputModifierClass;
 
+	/**
+	 * Re-apply the Collision constraint of the camera in control to the FINAL camera position, after the
+	 * Weight blend with the UE camera and after camera shakes / other modifiers (adds a Priority 255
+	 * modifier). Prevents interpolation and shake offsets from pushing the camera into walls.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Output")
+	bool bEnableOutputCollisionGuard = true;
+
 	/** Log request add / release / transitions (LogActionCamera, Verbose otherwise). */
 	UPROPERTY(Config, EditAnywhere, Category = "Debug")
 	bool bLogRequests = false;

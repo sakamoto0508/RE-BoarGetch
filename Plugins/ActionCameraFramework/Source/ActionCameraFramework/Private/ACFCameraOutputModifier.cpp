@@ -9,12 +9,12 @@ UACFCameraOutputModifier::UACFCameraOutputModifier()
 	Priority = 64;
 }
 
-void UACFCameraOutputModifier::SetSubsystem(UACFCameraSubsystem* InSubsystem)
+void UACFCameraModifierBase::SetSubsystem(UACFCameraSubsystem* InSubsystem)
 {
 	Subsystem = InSubsystem;
 }
 
-UACFCameraSubsystem* UACFCameraOutputModifier::GetSubsystem() const
+UACFCameraSubsystem* UACFCameraModifierBase::GetSubsystem() const
 {
 	return Subsystem.Get();
 }
@@ -71,4 +71,22 @@ void UACFCameraOutputModifier::DisplayDebug(UCanvas* Canvas, const FDebugDisplay
 		*Result.ActiveRequest.ToString(), Result.NumRequests, Result.Weight, Result.RequestWeight, Result.bOutputSuppressed ? 1 : 0, Result.bIsBlending ? 1 : 0, Result.BlendAlpha));
 	DisplayDebugManager.DrawString(FString::Printf(TEXT("   ACF pose loc=%s rot=%s fov=%.2f"),
 		*Result.Pose.Location.ToCompactString(), *Result.Pose.Rotation.ToCompactString(), Result.Pose.FieldOfView));
+}
+
+// -------------------------------------------------------------------------------------------------
+
+UACFCameraCollisionGuardModifier::UACFCameraCollisionGuardModifier()
+{
+	// Last of the standard modifiers (UCameraModifier_CameraShake is 127). Modifiers added later with
+	// the same priority are inserted before this one (APlayerCameraManager::AddCameraModifierToList).
+	Priority = 255;
+}
+
+bool UACFCameraCollisionGuardModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& InOutPOV)
+{
+	if (UACFCameraSubsystem* OwnerSubsystem = Subsystem.Get())
+	{
+		OwnerSubsystem->ApplyOutputCollisionGuard(InOutPOV.Location);
+	}
+	return false;
 }

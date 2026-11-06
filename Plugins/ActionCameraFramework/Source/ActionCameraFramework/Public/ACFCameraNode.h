@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "ACFCameraTypes.h"
+#include "Engine/EngineTypes.h"
 #include "ACFCameraNode.generated.h"
 
 struct FInstancedStruct;
@@ -56,6 +57,20 @@ struct FACFCameraRigDebug
  * Per-evaluation scratch shared by the nodes of ONE rig evaluation (not stored between frames).
  * Body nodes publish the pivot they orbit / follow, so post-blend Collision can sweep from it.
  */
+/**
+ * Hard position constraint published by the Collision node of the camera in control. The director keeps
+ * it for the final guard (UACFCameraCollisionGuardModifier), which re-applies it after the Weight blend
+ * with the UE camera and after camera shakes.
+ */
+struct FACFCameraCollisionConstraint
+{
+	bool bValid = false;
+	FVector Pivot = FVector::ZeroVector;
+	float ProbeRadius = 0.f;
+	ECollisionChannel Channel = ECC_Camera;
+	TArray<const AActor*, TInlineAllocator<4>> IgnoredActors;
+};
+
 struct FACFCameraRigScratch
 {
 	/** Safe point the camera is attached to (target + pivot offset, without lookahead / damping). */
@@ -64,6 +79,9 @@ struct FACFCameraRigScratch
 
 	/** Actor the pivot belongs to (ignored by collision when the Collision node asks for it). */
 	const AActor* PivotActor = nullptr;
+
+	/** Filled by the Collision node (PostBlend). */
+	FACFCameraCollisionConstraint Constraint;
 
 #if !UE_BUILD_SHIPPING
 	FACFCameraRigDebug Debug;

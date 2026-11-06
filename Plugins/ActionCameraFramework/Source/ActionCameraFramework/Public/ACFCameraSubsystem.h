@@ -10,6 +10,7 @@ class APlayerCameraManager;
 class APlayerController;
 class UACFCameraDirector;
 class UACFCameraOutputModifier;
+class UACFCameraModifierBase;
 class UACFCameraPreset;
 struct FMinimalViewInfo;
 
@@ -130,8 +131,18 @@ public:
 	 */
 	const FACFCameraEvaluationResult& EvaluateForOutput(float DeltaTime, const FMinimalViewInfo& UpstreamPOV);
 
+	/**
+	 * Called by the final guard modifier: re-sweeps from the controlling camera's pivot to the final
+	 * position (after the Weight blend and camera shakes) and clamps it. True if it moved the camera.
+	 */
+	bool ApplyOutputCollisionGuard(FVector& InOutLocation);
+
+	/** Distance the guard moved the camera in the given frame (0 if it did not act). Tests / debugging. */
+	float GetGuardCorrection(uint64 Frame) const { return Frame == LastGuardFrame ? LastGuardCorrection : 0.f; }
+
 private:
 	void EnsureOutputAttached();
+	bool AttachModifier(APlayerCameraManager* CameraManager, TSubclassOf<UACFCameraModifierBase> ModifierClass, TWeakObjectPtr<UACFCameraModifierBase>& InOutModifier);
 	void DetachOutput();
 	APlayerCameraManager* GetCurrentCameraManager() const;
 
@@ -159,5 +170,8 @@ private:
 #endif
 
 	/** Owned by the PCM's ModifierList; weak so a destroyed PCM simply drops it. */
-	TWeakObjectPtr<UACFCameraOutputModifier> OutputModifier;
+	TWeakObjectPtr<UACFCameraModifierBase> OutputModifier;
+	TWeakObjectPtr<UACFCameraModifierBase> GuardModifier;
+	float LastGuardCorrection = 0.f;
+	uint64 LastGuardFrame = 0;
 };

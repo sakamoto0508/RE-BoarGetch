@@ -11,6 +11,7 @@
 #include "Engine/GameViewportClient.h"
 #include "Debug/DebugDrawService.h"
 #include "ACFCameraDebugDraw.h"
+#include "Nodes/ACFCameraNode_Collision.h"
 
 void UACFCameraSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -216,6 +217,43 @@ APlayerCameraManager* UACFCameraSubsystem::GetCurrentCameraManager() const
 	return PlayerController ? PlayerController->PlayerCameraManager.Get() : nullptr;
 }
 
+bool UACFCameraSubsystem::AttachModifier(APlayerCameraManager* CameraManager, TSubclassOf<UACFCameraModifierBase> ModifierClass, TWeakObjectPtr<UACFCameraModifierBase>& InOutModifier)
+{
+	if (UACFCameraModifierBase* Existing = InOutModifier.Get())
+	{
+		// Fast path: still in the current PCM's list (someone may have removed it).
+		if (Existing->GetOwningCameraManager() == CameraManager && CameraManager->FindCameraModifierByClass(Existing->GetClass()) == Existing)
+		{
+			return true;
+		}
+		if (APlayerCameraManager* OldManager = Existing->GetOwningCameraManager(); IsValid(OldManager) && OldManager != CameraManager)
+		{
+			OldManager->RemoveCameraModifier(Existing);
+		}
+		Existing->SetSubsystem(nullptr);
+		InOutModifier.Reset();
+	}
+
+	UACFCameraModifierBase* Modifier = Cast<UACFCameraModifierBase>(CameraManager->FindCameraModifierByClass(ModifierClass));
+	if (Modifier && Modifier->GetSubsystem() && Modifier->GetSubsystem() != this)
+	{
+		Modifier = nullptr;
+	}
+	if (!Modifier)
+	{
+		Modifier = Cast<UACFCameraModifierBase>(CameraManager->AddNewCameraModifier(ModifierClass));
+	}
+	if (!Modifier)
+	{
+		UE_LOG(LogActionCamera, Error, TEXT("Failed to add %s to %s (exclusive priority conflict?)."), *GetNameSafe(ModifierClass), *GetNameSafe(CameraManager));
+		return false;
+	}
+	Modifier->SetSubsystem(this);
+	InOutModifier = Modifier;
+	UE_LOG(LogActionCamera, Log, TEXT("%s attached to %s (priority %d)."), *Modifier->GetName(), *CameraManager->GetName(), Modifier->Priority);
+	return true;
+}
+
 void UACFCameraSubsystem::EnsureOutputAttached()
 {
 	APlayerCameraManager* CameraManager = GetCurrentCameraManager();
@@ -229,55 +267,61 @@ void UACFCameraSubsystem::EnsureOutputAttached()
 	{
 		OutputModifierClass = GetDefault<UACFCameraSettings>()->ResolveOutputModifierClass();
 	}
-
-	if (UACFCameraOutputModifier* Existing = OutputModifier.Get())
+	if (!AttachModifier(CameraManager, OutputModifierClass.Get(), OutputModifier))
 	{
-		// Fast path: still in the current PCM's list (someone may have removed it).
-		if (Existing->GetOwningCameraManager() == CameraManager && CameraManager->FindCameraModifierByClass(Existing->GetClass()) == Existing)
-		{
-			return;
-		}
-		if (APlayerCameraManager* OldManager = Existing->GetOwningCameraManager(); IsValid(OldManager) && OldManager != CameraManager)
-		{
-			OldManager->RemoveCameraModifier(Existing);
-		}
-		Existing->SetSubsystem(nullptr);
-		OutputModifier.Reset();
-	}
-
-	UACFCameraOutputModifier* Modifier = Cast<UACFCameraOutputModifier>(CameraManager->FindCameraModifierByClass(OutputModifierClass));
-	if (Modifier && Modifier->GetSubsystem() && Modifier->GetSubsystem() != this)
-	{
-		Modifier = nullptr;
-	}
-	if (!Modifier)
-	{
-		Modifier = Cast<UACFCameraOutputModifier>(CameraManager->AddNewCameraModifier(OutputModifierClass));
-	}
-	if (!Modifier)
-	{
-		UE_LOG(LogActionCamera, Error, TEXT("Failed to add %s to %s (exclusive priority conflict?). ACF output disabled."),
-			*GetNameSafe(OutputModifierClass), *GetNameSafe(CameraManager));
+		UE_LOG(LogActionCamera, Error, TEXT("ACF output disabled for %s."), *GetNameSafe(CameraManager));
 		return;
 	}
-
-	Modifier->SetSubsystem(this);
-	OutputModifier = Modifier;
-	UE_LOG(LogActionCamera, Log, TEXT("Output modifier %s attached to %s (priority %d)."),
-		*Modifier->GetName(), *CameraManager->GetName(), Modifier->Priority);
+	// The guard is always attached with the output; whether it acts is decided per call by the setting.
+	AttachModifier(CameraManager, UACFCameraCollisionGuardModifier::StaticClass(), GuardModifier);
 }
 
 void UACFCameraSubsystem::DetachOutput()
 {
-	if (UACFCameraOutputModifier* Modifier = OutputModifier.Get())
+	for (TWeakObjectPtr<UACFCameraModifierBase>* Slot : { &OutputModifier, &GuardModifier })
 	{
-		Modifier->SetSubsystem(nullptr);
-		if (APlayerCameraManager* CameraManager = Modifier->GetOwningCameraManager(); IsValid(CameraManager))
+		if (UACFCameraModifierBase* Modifier = Slot->Get())
 		{
-			CameraManager->RemoveCameraModifier(Modifier);
+			Modifier->SetSubsystem(nullptr);
+			if (APlayerCameraManager* CameraManager = Modifier->GetOwningCameraManager(); IsValid(CameraManager))
+			{
+				CameraManager->RemoveCameraModifier(Modifier);
+			}
+		}
+		Slot->Reset();
+	}
+}
+
+bool UACFCameraSubsystem::ApplyOutputCollisionGuard(FVector& InOutLocation)
+{
+	if (!Director || !GetDefault<UACFCameraSettings>()->bEnableOutputCollisionGuard || !Director->GetLastResult().HasInfluence())
+	{
+		return false;
+	}
+	const FACFCameraOutputConstraint& Constraint = Director->GetOutputConstraint();
+	const APlayerCameraManager* CameraManager = GetCurrentCameraManager();
+	const UWorld* World = CameraManager ? CameraManager->GetWorld() : nullptr;
+	if (!Constraint.bValid || !World)
+	{
+		return false;
+	}
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ACFCameraOutputGuard), false);
+	for (const TWeakObjectPtr<const AActor>& Actor : Constraint.IgnoredActors)
+	{
+		if (const AActor* Ignored = Actor.Get())
+		{
+			Params.AddIgnoredActor(Ignored);
 		}
 	}
-	OutputModifier.Reset();
+	FHitResult Hit;
+	if (!ACFCameraCollision::SweepCamera(*World, Constraint.Pivot, InOutLocation, Constraint.ProbeRadius, Constraint.Channel, Params, Hit))
+	{
+		return false;
+	}
+	LastGuardCorrection = FVector::Dist(InOutLocation, Hit.Location);
+	LastGuardFrame = GFrameCounter;
+	InOutLocation = Hit.Location;
+	return true;
 }
 
 void UACFCameraSubsystem::AddCameraInput(FVector2D YawPitchDelta)

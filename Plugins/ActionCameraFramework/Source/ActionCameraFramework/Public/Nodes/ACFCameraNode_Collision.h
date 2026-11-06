@@ -75,3 +75,14 @@ public:
 	virtual void ResetInterpolation(FInstancedStruct* RuntimeState) const override;
 	virtual void Evaluate(const FACFCameraNodeContext& Context, FACFCameraPose& InOutPose, FInstancedStruct* RuntimeState) const override;
 };
+
+namespace ACFCameraCollision
+{
+	/**
+	 * Sphere sweep from Origin to Desired. If the sweep starts inside geometry (pivot pressed into a wall)
+	 * the component it starts in is ignored and the sweep repeated once. True on a blocking hit; OutHit.Location
+	 * is then the sphere centre at contact.
+	 */
+	ACTIONCAMERAFRAMEWORK_API bool SweepCamera(const UWorld& World, const FVector& Origin, const FVector& Desired, float Radius,
+		ECollisionChannel Channel, FCollisionQueryParams& Params, FHitResult& OutHit);
+}

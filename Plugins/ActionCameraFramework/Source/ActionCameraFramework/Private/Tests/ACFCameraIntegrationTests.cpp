@@ -20,6 +20,9 @@
 
 #include "UObject/StrongObjectPtr.h"
 #include "Components/BoxComponent.h"
+#include "ACFCameraSettings.h"
+#include "ACFCameraTestShake.h"
+#include "Camera/CameraActor.h"
 #include "Engine/CollisionProfile.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -572,6 +575,19 @@ bool FACFIntegrationSpringArmTest::RunTest(const FString& Parameters)
 	Steps.Add([Compare](FScenario& S)
 	{
 		Compare(S, TEXT("Control rotation (-45, 160)"));
+		// Obstacle on the arm: both the SpringArm probe and ACF Collision must pull in to the same point.
+		const FVector Pivot = S.Component->GetComponentLocation() + CastChecked<USpringArmComponent>(S.Component.Get())->TargetOffset;
+		const FVector Socket = S.Component->GetSocketLocation(USpringArmComponent::SocketName);
+		S.ActorB = SpawnBlocker(S, Pivot + (Socket - Pivot) * 0.6, FVector(30, 30, 30));
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.0; return true; });
+	Steps.Add([Compare](FScenario& S)
+	{
+		Compare(S, TEXT("Obstacle on the arm (both collide)"));
+		const FVector Pivot = S.Component->GetComponentLocation();
+		S.Test->TestTrue(TEXT("The obstacle actually shortened the arm"), FVector::Dist(Pivot, S.Component->GetSocketLocation(USpringArmComponent::SocketName)) < CastChecked<USpringArmComponent>(S.Component.Get())->TargetArmLength * 0.7);
 		return S.Test->TestTrue(TEXT("Release"), S.Subsystem->ReleaseCamera(S.Handle));
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
@@ -768,6 +784,241 @@ bool FACFIntegrationBlueprintOrbitTest::RunTest(const FString& Parameters)
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+
+// =================================================================================================
+// Phase 2 audit: final camera position after the Weight blend with the UE camera and after camera shakes.
+// Each test first REPRODUCES the problem with the output collision guard disabled, then checks the fix.
+
+namespace ACFIntegration
+{
+	static void SetGuardEnabled(bool bEnabled)
+	{
+		GetMutableDefault<UACFCameraSettings>()->bEnableOutputCollisionGuard = bEnabled;
+	}
+
+	static bool IsInsideBox(const FVector& Point, const FVector& Center, const FVector& Extent)
+	{
+		return FBox(Center - Extent, Center + Extent).IsInside(Point);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationWeightBlendPillarTest, "ActionCameraFramework.Integration.WeightBlendDoesNotCrossGeometry",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationWeightBlendPillarTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	static const FVector PillarExtent(40.f, 40.f, 400.f);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		// UE camera (a camera actor view target) left of a pillar, ACF camera right of it. Both see the
+		// pivot, but the straight interpolation between them passes through the pillar.
+		S.Pivot = TestArea + FVector(0, 6000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		SpawnBlocker(S, S.Pivot + FVector(-600, 0, 0), PillarExtent);
+		const FVector UeCamera = S.Pivot + FVector(-600, -300, 0);
+		ACameraActor* ViewCamera = S.World()->SpawnActor<ACameraActor>(UeCamera, (S.Pivot - UeCamera).Rotation());
+		S.Spawned.Add(ViewCamera);
+		S.Controller->SetViewTarget(ViewCamera);
+
+		UACFCameraPreset* Preset = MakeOrbitCollisionPreset(FVector(600, -300, 0).Size(), 0.f, FACFCameraBlendSettings());
+		Cast<UACFCameraNode_OrbitalFollow>(Preset->Nodes[1])->InitialYaw = FVector(600, -300, 0).Rotation().Yaw; // camera at pivot + (-600, +300)
+		FACFCameraBlendSettings Blend;
+		Blend.Curve = EACFCameraBlendCurve::Linear;
+		Blend.Duration = 1.5f;
+		Preset->DefaultBlendIn = Blend;
+		S.Preset.Reset(Preset);
+		SetGuardEnabled(false);
+		return true;
+	});
+	auto Request = [](FScenario& S)
+	{
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		S.StartTime = S.World()->GetTimeSeconds();
+		S.Value = 0.0;
+		S.bFlag = false;
+		return true;
+	};
+	auto Watch = [](FScenario& S)
+	{
+		const FVector Camera = S.PCM()->GetCameraLocation();
+		const float Weight = S.Subsystem->GetLastEvaluationResult().Weight;
+		if (Weight > 0.f && Weight < 1.f)
+		{
+			S.Value += 1.0;
+			S.bFlag |= IsInsideBox(Camera, S.Pivot + FVector(-600, 0, 0), PillarExtent);
+		}
+		S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.7;
+		return true;
+	};
+	Steps.Add(Request);
+	Steps.Add(Watch);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->AddInfo(FString::Printf(TEXT("Guard OFF: %.0f weight-blend frames, camera inside pillar: %d"), S.Value, S.bFlag ? 1 : 0));
+		S.Test->TestTrue(TEXT("Reproduced: without the guard the Weight blend passes through the pillar"), S.bFlag);
+		S.Subsystem->ReleaseAllCameras(true);
+		SetGuardEnabled(true);
+		return true;
+	});
+	Steps.Add(Request);
+	Steps.Add(Watch);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->AddInfo(FString::Printf(TEXT("Guard ON: %.0f weight-blend frames, camera inside pillar: %d"), S.Value, S.bFlag ? 1 : 0));
+		S.Test->TestTrue(TEXT("Weight blend frames observed"), S.Value >= 5.0);
+		S.Test->TestFalse(TEXT("Fixed: with the guard the camera never enters the pillar"), S.bFlag);
+		S.Controller->SetViewTarget(S.Controller->GetPawn() ? static_cast<AActor*>(S.Controller->GetPawn()) : S.Controller.Get());
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationShakeCollisionTest, "ActionCameraFramework.Integration.ShakeVersusCollision",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationShakeCollisionTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(0, -6000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		SpawnBlocker(S, S.Pivot - FVector(300, 0, 0), FVector(10, 300, 300)); // face at pivot.X - 290
+		S.Preset.Reset(MakeOrbitCollisionPreset(600.f, 0.f, FACFCameraBlendSettings::MakeCut()));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.LogCamera(TEXT("Against the wall, no shake"));
+		S.Test->TestTrue(TEXT("Collision keeps the camera in front of the wall"), S.PCM()->GetCameraLocation().X >= S.Pivot.X - 290.0 + 12.0 - 0.5);
+		SetGuardEnabled(false);
+		S.PCM()->StartCameraShake(UACFTestCameraShake::StaticClass(), 1.f); // 60 cm backwards, into the wall
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double CameraX = S.PCM()->GetCameraLocation().X;
+		S.LogCamera(TEXT("Shake, guard OFF"));
+		S.Test->TestTrue(TEXT("Reproduced: a UE camera shake after ACF pushes the camera through the wall face"), CameraX < S.Pivot.X - 290.0);
+		SetGuardEnabled(true);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double CameraX = S.PCM()->GetCameraLocation().X;
+		S.LogCamera(TEXT("Shake, guard ON"));
+		S.Test->TestTrue(TEXT("Fixed: the guard keeps the shaken camera in front of the wall"), CameraX >= S.Pivot.X - 290.0 + 12.0 - 0.5);
+		S.Test->TestTrue(TEXT("Guard reports a correction"), S.Subsystem->GetGuardCorrection(GFrameCounter - 1) > 0.f || S.Subsystem->GetGuardCorrection(GFrameCounter) > 0.f);
+		S.PCM()->StopAllCameraShakes(true);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Without shake the camera is back at the collision position"), FMath::IsNearlyEqual(S.PCM()->GetCameraLocation().X, S.Pivot.X - 278.0, 1.0));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+
+// =================================================================================================
+// Manual-verification content smoke test. Run on the sample map:
+//   UnrealEditor-Cmd <project> /ActionCameraFramework/Samples/L_ACFCameraTest -game ... "Automation RunTests ActionCameraFramework.Samples"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSampleMapSmokeTest, "ActionCameraFramework.Samples.TestMapSmoke",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFSampleMapSmokeTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	static const TCHAR* Samples[] = { TEXT("Follow"), TEXT("ThirdPerson"), TEXT("FreeLook"), TEXT("Composer") };
+	static const FVector CorridorCenter(0.f, 1500.f, 0.f);
+	// Inner wall faces at Y = 1500 +- 135, ceiling bottom at Z = 250 (Scripts/CreateManualTestAssets.py); sample probe radius 15.
+	static constexpr double CorridorHalfWidth = 135.0;
+	static constexpr double CeilingBottom = 250.0;
+	static constexpr double Probe = 15.0;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		if (!S.World()->GetMapName().Contains(TEXT("L_ACFCameraTest")))
+		{
+			S.Test->AddWarning(FString::Printf(TEXT("Skipped: run on /ActionCameraFramework/Samples/L_ACFCameraTest (current %s)."), *S.World()->GetMapName()));
+			return false;
+		}
+		return S.Test->TestTrue(TEXT("Pawn spawned by the project's default game mode"), S.Controller->GetPawn() != nullptr);
+	});
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(Samples); ++Index)
+	{
+		Steps.Add([Index](FScenario& S)
+		{
+			GEngine->Exec(S.World(), *FString::Printf(TEXT("ACF.Sample.Use %s 0"), Samples[Index]));
+			S.StartTime = S.World()->GetTimeSeconds();
+			return true;
+		});
+		Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 0.5; return true; });
+		Steps.Add([Index](FScenario& S)
+		{
+			const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+			const FVector Camera = S.PCM()->GetCameraLocation();
+			const double ToPawn = FVector::Dist(Camera, S.Controller->GetPawn()->GetActorLocation());
+			S.Test->AddInfo(FString::Printf(TEXT("Sample %s: active %s weight %.2f camera %s (%.0f cm from pawn)"), Samples[Index], *R.ActiveRequest.ToString(), R.Weight, *Camera.ToString(), ToPawn));
+			S.Test->TestTrue(FString::Printf(TEXT("%s active with full weight"), Samples[Index]), R.ActiveRequest.IsValid() && FMath::IsNearlyEqual(R.Weight, 1.f));
+			S.Test->TestTrue(FString::Printf(TEXT("%s camera near the pawn"), Samples[Index]), ToPawn > 50.0 && ToPawn < 1500.0);
+			return true;
+		});
+	}
+	Steps.Add([](FScenario& S)
+	{
+		// Real level geometry: put the pawn in the corridor under the low ceiling and look along it from above.
+		S.Controller->GetPawn()->TeleportTo(CorridorCenter + FVector(500.f, 0.f, 100.f), FRotator(0.f, 0.f, 0.f));
+		S.Controller->SetControlRotation(FRotator(-35.f, 90.f, 0.f)); // camera wants to go sideways into a corridor wall
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Use ThirdPerson 0"));
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 0.8; return true; });
+	auto InsideCorridor = [](FScenario& S, const TCHAR* What)
+	{
+		const FVector Camera = S.PCM()->GetCameraLocation();
+		S.LogCamera(What);
+		S.Test->TestTrue(FString::Printf(TEXT("%s: camera between the corridor walls"), What), FMath::Abs(Camera.Y - CorridorCenter.Y) <= CorridorHalfWidth - Probe + 0.5);
+		S.Test->TestTrue(FString::Printf(TEXT("%s: camera below the corridor ceiling"), What), Camera.Z <= CeilingBottom - Probe + 0.5);
+	};
+	Steps.Add([InsideCorridor](FScenario& S)
+	{
+		InsideCorridor(S, TEXT("Corridor"));
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Shake 1"));
+		S.StartTime = S.World()->GetTimeSeconds();
+		S.bFlag = true;
+		S.Value = -1000.0;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const FVector Camera = S.PCM()->GetCameraLocation();
+		S.bFlag &= FMath::Abs(Camera.Y - CorridorCenter.Y) <= CorridorHalfWidth - Probe + 0.5 && Camera.Z <= CeilingBottom - Probe + 0.5;
+		S.Value = FMath::Max(S.Value, FMath::Max(FMath::Abs(Camera.Y - CorridorCenter.Y) - (CorridorHalfWidth - Probe), Camera.Z - (CeilingBottom - Probe)));
+		S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.5;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->AddInfo(FString::Printf(TEXT("Shake in corridor: worst overshoot past the probe clearance %.2f cm (negative = always clear)"), S.Value));
+		S.Test->TestTrue(TEXT("Debug shake never pushes the camera out of the corridor (output guard)"), S.bFlag);
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Release 0"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 2));
 	return true;
 }
 

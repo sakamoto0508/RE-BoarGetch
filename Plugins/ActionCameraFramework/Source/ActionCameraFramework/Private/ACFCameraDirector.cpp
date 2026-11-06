@@ -99,6 +99,7 @@ void UACFCameraDirector::RemoveAllRequests(bool bImmediate)
 		LastResult.BlendAlpha = 1.f;
 		LastResult.NumRequests = 0;
 		LastEvaluatedFrame = MAX_uint64; // the next evaluation in this frame must not reuse the cache
+		OutputConstraint.bValid = false;
 	}
 	else
 	{
@@ -303,6 +304,18 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 		PostContext.Scratch = TargetScratch;
 		TargetEntry->Rig.EvaluatePostBlend(PostContext, Result.Pose);
 		TargetScratch = PostContext.Scratch;
+	}
+	OutputConstraint.bValid = TargetScratch.Constraint.bValid;
+	if (OutputConstraint.bValid)
+	{
+		OutputConstraint.Pivot = TargetScratch.Constraint.Pivot;
+		OutputConstraint.ProbeRadius = TargetScratch.Constraint.ProbeRadius;
+		OutputConstraint.Channel = TargetScratch.Constraint.Channel;
+		OutputConstraint.IgnoredActors.Reset();
+		for (const AActor* Actor : TargetScratch.Constraint.IgnoredActors)
+		{
+			OutputConstraint.IgnoredActors.Add(Actor);
+		}
 	}
 #if !UE_BUILD_SHIPPING
 	LastDebug = TargetScratch.Debug;

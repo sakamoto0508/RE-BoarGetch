@@ -9,6 +9,16 @@
 
 class UACFCameraPreset;
 
+/** Hard position constraint of the camera in control, kept between frames for the final output guard. */
+struct FACFCameraOutputConstraint
+{
+	bool bValid = false;
+	FVector Pivot = FVector::ZeroVector;
+	float ProbeRadius = 0.f;
+	TEnumAsByte<ECollisionChannel> Channel = ECC_Camera;
+	TArray<TWeakObjectPtr<const AActor>> IgnoredActors;
+};
+
 /** Internal bookkeeping of one request. */
 USTRUCT()
 struct FACFCameraRequestEntry
@@ -115,6 +125,9 @@ public:
 
 	const FACFCameraEvaluationResult& GetLastResult() const { return LastResult; }
 
+	/** Collision constraint of the camera in control (invalid if it has no Collision node). */
+	const FACFCameraOutputConstraint& GetOutputConstraint() const { return OutputConstraint; }
+
 	/** Number of rig evaluations performed by the last Evaluate (tests / debugging). */
 	int32 GetLastRigEvaluationCount() const { return LastRigEvaluationCount; }
 
@@ -190,6 +203,7 @@ private:
 	uint64 LastEvaluatedFrame = MAX_uint64;
 	float LastEvaluatedDeltaTime = 0.f;
 	int32 LastRigEvaluationCount = 0;
+	FACFCameraOutputConstraint OutputConstraint;
 	FVector2D PendingInputDelta = FVector2D::ZeroVector;
 	FVector2D InputRate = FVector2D::ZeroVector;
 #if !UE_BUILD_SHIPPING

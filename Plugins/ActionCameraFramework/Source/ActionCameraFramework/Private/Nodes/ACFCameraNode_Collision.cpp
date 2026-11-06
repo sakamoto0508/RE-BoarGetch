@@ -58,50 +58,46 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 	}
 	const FVector Direction = ToCamera / FullDistance;
 
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(ACFCameraCollision), false);
+	// Ignore list (also published as the hard constraint the final output guard re-applies).
+	FACFCameraCollisionConstraint& Constraint = Context.Scratch.Constraint;
+	Constraint.IgnoredActors.Reset();
 	if (bIgnorePivotActor && PivotActor)
 	{
-		Params.AddIgnoredActor(PivotActor);
+		Constraint.IgnoredActors.Add(PivotActor);
 	}
 	if (bIgnoreLookAtTargetActor)
 	{
 		if (const AActor* LookActor = Context.Request.LookAtTarget.Actor.Get())
 		{
-			Params.AddIgnoredActor(LookActor);
+			Constraint.IgnoredActors.Add(LookActor);
 		}
 	}
 	if (bIgnoreControlledPawn && Context.Evaluation.PlayerController)
 	{
 		if (const APawn* Pawn = Context.Evaluation.PlayerController->GetPawn())
 		{
-			Params.AddIgnoredActor(Pawn);
+			Constraint.IgnoredActors.Add(Pawn);
 		}
 	}
 	for (const TObjectPtr<AActor>& Ignored : Context.Request.CollisionIgnoredActors)
 	{
 		if (const AActor* Actor = Ignored.Get(); IsValid(Actor))
 		{
-			Params.AddIgnoredActor(Actor);
+			Constraint.IgnoredActors.Add(Actor);
 		}
 	}
+	Constraint.bValid = true;
+	Constraint.Pivot = Origin;
+	Constraint.ProbeRadius = ProbeRadius;
+	Constraint.Channel = ProbeChannel;
 
-	const FCollisionShape Sphere = FCollisionShape::MakeSphere(ProbeRadius);
-	FHitResult Hit;
-	bool bHit = World->SweepSingleByChannel(Hit, Origin, Desired, FQuat::Identity, ProbeChannel, Sphere, Params);
-	if (bHit && Hit.bStartPenetrating)
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ACFCameraCollision), false);
+	for (const AActor* Actor : Constraint.IgnoredActors)
 	{
-		// The pivot itself is inside something (e.g. the character pressed into a wall). Ignore what we
-		// start in and sweep again, otherwise the camera would collapse onto the pivot every frame.
-		if (const UPrimitiveComponent* Started = Hit.GetComponent())
-		{
-			Params.AddIgnoredComponent(Started);
-		}
-		bHit = World->SweepSingleByChannel(Hit, Origin, Desired, FQuat::Identity, ProbeChannel, Sphere, Params);
-		if (bHit && Hit.bStartPenetrating)
-		{
-			bHit = false;
-		}
+		Params.AddIgnoredActor(Actor);
 	}
+	FHitResult Hit;
+	const bool bHit = ACFCameraCollision::SweepCamera(*World, Origin, Desired, ProbeRadius, ProbeChannel, Params, Hit);
 
 	const double HitDistance = bHit ? FMath::Clamp(static_cast<double>(Hit.Distance), 0.0, FullDistance) : FullDistance;
 	const double Allowed = FMath::Max(HitDistance, FMath::Min(static_cast<double>(MinDistance), FullDistance));
@@ -137,4 +133,26 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 	Debug.CollisionDesired = Desired;
 	Debug.CollisionHit = bHit ? Hit.Location : Desired;
 #endif
+}
+
+bool ACFCameraCollision::SweepCamera(const UWorld& World, const FVector& Origin, const FVector& Desired, float Radius,
+	ECollisionChannel Channel, FCollisionQueryParams& Params, FHitResult& OutHit)
+{
+	const FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
+	bool bHit = World.SweepSingleByChannel(OutHit, Origin, Desired, FQuat::Identity, Channel, Sphere, Params);
+	if (bHit && OutHit.bStartPenetrating)
+	{
+		// The pivot itself is inside something (e.g. the character pressed into a wall). Ignore what we
+		// start in and sweep again, otherwise the camera would collapse onto the pivot every frame.
+		if (const UPrimitiveComponent* Started = OutHit.GetComponent())
+		{
+			Params.AddIgnoredComponent(Started);
+		}
+		bHit = World.SweepSingleByChannel(OutHit, Origin, Desired, FQuat::Identity, Channel, Sphere, Params);
+		if (bHit && OutHit.bStartPenetrating)
+		{
+			bHit = false;
+		}
+	}
+	return bHit;
 }
