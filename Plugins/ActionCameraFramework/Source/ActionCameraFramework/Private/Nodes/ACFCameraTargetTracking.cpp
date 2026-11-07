@@ -47,12 +47,40 @@ bool FACFCameraTargetTrackingState::Track(const FACFCameraTarget& Target, const 
 		return false;
 	}
 	Out.Transform.SetScale3D(FVector::OneVector); // a scaled character must not scale offsets
-	Out.Location = Out.Transform.GetLocation();
 	Out.Actor = ACFTracking::ActorOf(Object);
+	UpdateMotion(Settings, DeltaTime, true, Out);
+	return true;
+}
+
+bool FACFCameraTargetTrackingState::TrackPoint(bool bValid, const FTransform& Transform, const FACFCameraTargetMotionSettings& Settings, float DeltaTime, bool bDetectTeleport, FACFCameraTrackedTarget& Out)
+{
+	if (bValid)
+	{
+		LastKnownTargetTransform = Transform;
+		bHasLastKnownTarget = true;
+		Out.Transform = Transform;
+	}
+	else if (bHasLastKnownTarget && Settings.LostBehavior == EACFCameraTargetLostBehavior::HoldLastKnown)
+	{
+		Out.Transform = LastKnownTargetTransform;
+	}
+	else
+	{
+		return false;
+	}
+	Out.Transform.SetScale3D(FVector::OneVector);
+	Out.Actor = nullptr;
+	UpdateMotion(Settings, DeltaTime, bDetectTeleport, Out);
+	return true;
+}
+
+void FACFCameraTargetTrackingState::UpdateMotion(const FACFCameraTargetMotionSettings& Settings, float DeltaTime, bool bDetectTeleport, FACFCameraTrackedTarget& Out)
+{
+	Out.Location = Out.Transform.GetLocation();
 	Out.bTeleported = false;
 
 	// Teleport: a jump larger than the threshold drops all interpolation history (snap).
-	if (bMotionInitialized && Settings.TeleportDistance > 0.f
+	if (bDetectTeleport && bMotionInitialized && Settings.TeleportDistance > 0.f
 		&& FVector::DistSquared(Out.Location, PreviousTargetLocation) > FMath::Square(Settings.TeleportDistance))
 	{
 		ResetInterpolation();
@@ -90,7 +118,6 @@ bool FACFCameraTargetTrackingState::Track(const FACFCameraTarget& Target, const 
 		}
 		Out.Predicted += Offset;
 	}
-	return true;
 }
 
 FVector FACFCameraTargetTrackingState::UpdateDamped(const FVector& Goal, float DampingTime, float DeltaTime)

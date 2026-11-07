@@ -42,6 +42,23 @@ namespace ACFCameraDebug
 		{
 			DrawDebugCrosshairs(World, Debug.LookAtTarget, FRotator::ZeroRotator, 40.f, FColor::Yellow);
 		}
+		if (Debug.bHasGroup)
+		{
+			for (int32 Index = 0; Index < Debug.NumGroupSubjects; ++Index)
+			{
+				const FVector4& Subject = Debug.GroupSubjects[Index];
+				DrawDebugSphere(World, FVector(Subject), FMath::Max(static_cast<float>(Subject.W), 5.f), 12, FColor::Magenta);
+				DrawDebugLine(World, Debug.GroupCenter, FVector(Subject), FColor(160, 60, 160));
+			}
+			DrawDebugPoint(World, Debug.GroupCenter, 12.f, FColor::Magenta);
+		}
+		if (Debug.bHasLockOn)
+		{
+			const FColor LockColor = Debug.bLockOnTargetLost ? FColor(128, 128, 128) : FColor::Red;
+			DrawDebugSphere(World, Debug.LockOnPoint, 30.f, 12, LockColor);
+			DrawDebugLine(World, Debug.FollowTarget, Debug.LockOnPoint, LockColor);
+			DrawDebugCrosshairs(World, Debug.LockOnFocus, FRotator::ZeroRotator, 30.f, FColor::Orange);
+		}
 		if (Debug.bHasCollision)
 		{
 			DrawDebugLine(World, Debug.CollisionOrigin, Debug.CollisionDesired, Debug.bCollisionHit ? FColor::Red : FColor(80, 160, 80));
@@ -68,6 +85,10 @@ namespace ACFCameraDebug
 		if (!Canvas || !GEngine)
 		{
 			return;
+		}
+		if (Debug.bHasGroup)
+		{
+			DrawRect(Canvas, FVector2D::ZeroVector, Debug.GroupFramingSize, FLinearColor(1.f, 0.2f, 1.f, 1.f));
 		}
 		if (Debug.bHasComposition)
 		{
@@ -104,6 +125,14 @@ namespace ACFCameraDebug
 		if (Debug.bHasOrbit)
 		{
 			Line(FString::Printf(TEXT("Orbit yaw %.1f pitch %.1f distance %.0f"), Debug.OrbitYaw, Debug.OrbitPitch, Debug.OrbitDistance));
+		}
+		if (Debug.bHasGroup)
+		{
+			Line(FString::Printf(TEXT("Group subjects %d  dolly %.0f cm  FOV %+.1f"), Debug.NumGroupSubjects, Debug.GroupDolly, Debug.GroupFovDelta));
+		}
+		if (Debug.bHasLockOn)
+		{
+			Line(FString::Printf(TEXT("Lock-On %s  range %.0f cm%s"), *Debug.LockOnPoint.ToCompactString(), Debug.LockOnRange, Debug.bLockOnTargetLost ? TEXT("  (TARGET LOST: holding)") : TEXT("")));
 		}
 		if (Debug.bHasComposition)
 		{

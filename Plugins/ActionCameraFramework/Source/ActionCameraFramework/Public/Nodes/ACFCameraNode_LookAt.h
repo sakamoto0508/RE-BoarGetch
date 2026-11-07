@@ -12,6 +12,11 @@ enum class EACFCameraLookAtSource : uint8
 	LookAtTarget,
 	/** Aim at the follow target (common for a simple chase camera with a single target). */
 	FollowTarget,
+	/**
+	 * Aim at the weighted centre of the request's Target Group. The centre is not teleport-detected (it jumps when
+	 * members are added or removed, which is smoothed by damping instead).
+	 */
+	TargetGroup,
 };
 
 /**

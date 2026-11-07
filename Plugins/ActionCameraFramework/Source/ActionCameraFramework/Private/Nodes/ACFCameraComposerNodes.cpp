@@ -31,10 +31,9 @@ void UACFCameraNode_RotationComposer::ResetInterpolation(FInstancedStruct* Runti
 void UACFCameraNode_RotationComposer::Evaluate(const FACFCameraNodeContext& Context, FACFCameraPose& InOutPose, FInstancedStruct* RuntimeState) const
 {
 	FACFCameraRotationComposerState* State = ACFNodes::GetState<FACFCameraRotationComposerState>(RuntimeState);
-	const FACFCameraTarget& Source = TargetSource == EACFCameraLookAtSource::FollowTarget ? Context.Request.FollowTarget : Context.Request.LookAtTarget;
 	FACFCameraTrackedTarget Target;
 	const float Dt = Context.GetDeltaTime();
-	if (!State || !State->Tracking.Track(Source, TargetMotion, Dt, Target))
+	if (!State || !ACFNodes::TrackAimSource(State->Tracking, Context, TargetSource, TargetMotion, Target))
 	{
 		return;
 	}

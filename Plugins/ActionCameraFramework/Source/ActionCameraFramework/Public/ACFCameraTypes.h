@@ -155,6 +155,60 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraTarget
 	bool Resolve(FTransform& OutTransform, const UObject*& OutObject) const;
 };
 
+/** One member of a camera target group: a target plus how much it matters for framing. */
+USTRUCT(BlueprintType)
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraTargetGroupMember
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target Group")
+	FACFCameraTarget Target;
+
+	/** World-space offset from the resolved target (e.g. chest height). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target Group")
+	FVector Offset = FVector::ZeroVector;
+
+	/**
+	 * Importance. Pulls the group centre towards this member and scales how strongly it must stay on
+	 * screen (relative to the heaviest member). 0 = ignored (kept in the group, e.g. to fade it in later).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target Group", meta = (ClampMin = "0.0", UIMax = "4.0"))
+	float Weight = 1.f;
+
+	/** Radius (cm) of the sphere around the member that must stay inside the framing area. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target Group", meta = (ClampMin = "0.0", Units = cm))
+	float Radius = 60.f;
+
+	/** True if both refer to the same actor / component / socket. */
+	bool RefersTo(const FACFCameraTarget& Other) const
+	{
+		return Target.Actor == Other.Actor && Target.Component == Other.Component && Target.SocketName == Other.SocketName;
+	}
+};
+
+/**
+ * Several actors / components framed together (party, boss + adds, player + lock-on target).
+ * Lives in the request parameters, so it is per request and per local player; destroyed members are
+ * removed automatically by the director.
+ */
+USTRUCT(BlueprintType)
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraTargetGroup
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target Group")
+	TArray<FACFCameraTargetGroupMember> Members;
+
+	/** Adds the member, or updates Weight / Radius / Offset if the same target is already in the group. */
+	void AddOrUpdate(const FACFCameraTargetGroupMember& Member);
+
+	/** Removes the member referring to Target. False if it was not in the group. */
+	bool Remove(const FACFCameraTarget& Target);
+
+	/** Drops members whose target has been destroyed. Returns how many were removed (no allocation). */
+	int32 RemoveLostMembers();
+};
+
 /** Per-request parameters supplied by the requester (not stored in the shared preset). */
 USTRUCT(BlueprintType)
 struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestParams
@@ -184,9 +238,21 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestParams
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
 	FACFCameraTarget FollowTarget;
 
-	/** Used by LookAt nodes; independent of FollowTarget. */
+	/** Used by LookAt nodes; independent of FollowTarget. The Lock-On node locks onto this target. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
 	FACFCameraTarget LookAtTarget;
+
+	/**
+	 * If true, the request is released automatically (with its blend-out) once LookAtTarget has been
+	 * assigned and then destroyed. Typical for a lock-on camera: the enemy dies, the camera returns.
+	 * Unlike Instigator it follows SetCameraTargets / SetCameraLockOnTarget (switching targets is safe).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
+	bool bReleaseWhenLookAtTargetLost = false;
+
+	/** Targets framed together by Group Framing / aimed at by Look At or Rotation Composer (Target Source = Target Group). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
+	FACFCameraTargetGroup TargetGroup;
 
 	/**
 	 * Extra actors the Collision node ignores (the follow / look-at target actors are ignored

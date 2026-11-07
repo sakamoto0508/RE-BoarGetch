@@ -24,11 +24,17 @@
 #include "ACFCameraTestShake.h"
 #include "Camera/CameraActor.h"
 #include "Effects/ACFCameraBuiltinEffects.h"
+#include "UnrealClient.h"
 #include "Engine/CollisionProfile.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Nodes/ACFCameraNode_Collision.h"
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
+#include "Nodes/ACFCameraNode_LockOn.h"
+#include "Nodes/ACFCameraNode_GroupFraming.h"
+#include "Nodes/ACFCameraFraming.h"
+#include "Kismet/GameplayStatics.h"
+#include "Misc/App.h"
 
 /**
  * End-to-end checks against the real PlayerCameraManager. ClientContext only: run in a game process:
@@ -1436,6 +1442,348 @@ bool FACFIntegrationBlueprintEffectsTest::RunTest(const FString& Parameters)
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSampleMapScreenshotTest, "ActionCameraFramework.Samples.TestMapScreenshot",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFSampleMapScreenshotTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	// Visual check helper (needs a real RHI, i.e. no -NullRHI): saves Saved/Screenshots/<Platform>/ACF_TestMap_<n>.png.
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		if (!S.World()->GetMapName().Contains(TEXT("L_ACFCameraTest")))
+		{
+			S.Test->AddWarning(TEXT("Skipped: run on /ActionCameraFramework/Samples/L_ACFCameraTest."));
+			return false;
+		}
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 3.0; return true; }); // let exposure settle
+	Steps.Add([](FScenario& S)
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("ACF_TestMap_0"), false, false);
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Use ThirdPerson 0"));
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.0; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		S.Controller->SetControlRotation(FRotator(-25.f, 150.f, 0.f));
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.0; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("ACF_TestMap_1"), false, false);
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.0; return true; });
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Phase 4A: Lock-On with Collision, Effects, target destruction and Target Group in the real camera pipeline.
+
+namespace ACFIntegration
+{
+	static UACFCameraPreset* MakeLockOnCollisionPreset()
+	{
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_LockOn* LockOn = NewObject<UACFCameraNode_LockOn>(Preset);
+		LockOn->PivotOffset = FVector::ZeroVector;
+		LockOn->ShoulderOffset = FVector::ZeroVector;
+		LockOn->BasePitch = 0.f;
+		LockOn->ElevationPitchScale = 0.f;
+		LockOn->NearArmLength = LockOn->FarArmLength = 600.f;
+		UACFCameraNode_GroupFraming* Framing = NewObject<UACFCameraNode_GroupFraming>(Preset);
+		Framing->bFrameTargetGroup = false;
+		Framing->FollowTargetSubject.bInclude = true;
+		Framing->LookAtTargetSubject.bInclude = true;
+		UACFCameraNode_Collision* Collision = NewObject<UACFCameraNode_Collision>(Preset);
+		Collision->ReturnDampingTime = 0.f;
+		Preset->Nodes = { LockOn, Framing, Collision };
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		return Preset;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationLockOnTest, "ActionCameraFramework.Integration.LockOnCollisionEffectsAndDestroy",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationLockOnTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		// Player and enemy on the X axis: the lock-on camera sits on -X behind the player.
+		S.Pivot = TestArea + FVector(0, 12000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.ActorB = SpawnMovablePoint(S.World(), S.Pivot + FVector(1500, 0, 0));
+		S.Preset.Reset(MakeLockOnCollisionPreset());
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		Params.LookAtTarget.Actor = S.ActorB.Get();
+		Params.bReleaseWhenLookAtTargetLost = true;
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const FVector Camera = S.PCM()->GetCameraLocation();
+		S.LogCamera(TEXT("Lock-on, free space"));
+		S.Test->TestTrue(TEXT("Lock-on: camera behind the player, away from the enemy"), Camera.X < S.Pivot.X - 500.0 && FMath::Abs(Camera.Y - S.Pivot.Y) < 1.0);
+		S.Test->TestTrue(TEXT("Lock-on: looking towards the enemy"), S.PCM()->GetCameraRotation().Vector().X > 0.95);
+		// Wall behind the player: face at pivot.X - 290.
+		SpawnBlocker(S, S.Pivot - FVector(300, 0, 0), FVector(10, 400, 400));
+		SetGuardEnabled(false); // ACF's own Collision must handle it
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double CameraX = S.PCM()->GetCameraLocation().X;
+		const double Clearance = S.Pivot.X - 290.0 + 12.0;
+		S.LogCamera(TEXT("Lock-on with a wall behind the player"));
+		S.Test->TestTrue(TEXT("Lock-on + Collision: camera stays in front of the wall"), CameraX >= Clearance - 0.5);
+		S.Value = S.PCM()->GetFOVAngle();
+		// Effects on top of the lock-on camera: FOV punch + backwards punch into the wall.
+		S.EffectPresets.Reset();
+		S.EffectPresets.Emplace(MakeEffectPreset([](UACFCameraEffectPreset* P)
+		{
+			UACFCameraEffect_Punch* Punch = AddPunch(P, FVector(-200, 0, 0), 1.f);
+			Punch->FOV = 10.f;
+		}));
+		S.Subsystem->PlayCameraEffect(S.EffectPresets[0].Get(), FACFCameraEffectParams());
+		S.StartTime = S.World()->GetTimeSeconds();
+		S.bFlag = true;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.bFlag &= S.PCM()->GetCameraLocation().X >= S.Pivot.X - 290.0 + 12.0 - 0.5;
+		S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 0.4;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const float Fov = S.PCM()->GetFOVAngle();
+		S.Test->AddInfo(FString::Printf(TEXT("Lock-on + punch: FOV %.2f (before %.2f)"), Fov, S.Value));
+		S.Test->TestTrue(TEXT("Lock-on + Effects: FOV punch applied on top of the lock-on camera"), Fov > S.Value + 5.f);
+		S.Test->TestTrue(TEXT("Lock-on + Effects: backwards punch never pushes through the wall"), S.bFlag);
+		SetGuardEnabled(true);
+		S.Subsystem->StopAllCameraEffects(true);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		// Target group on the same request: add an actor far to the side.
+		S.SavedLocation = S.PCM()->GetCameraLocation(); // effects are gone now
+		S.Spawned.Add(SpawnMovablePoint(S.World(), S.Pivot + FVector(800, 2500, 0)));
+		S.Test->TestTrue(TEXT("Add group actor"), S.Subsystem->AddCameraGroupActor(S.Handle, S.Spawned.Last().Get(), 1.f, 60.f));
+		S.Test->TestEqual(TEXT("Group has one member"), S.Subsystem->GetCameraGroupMembers(S.Handle).Num(), 1);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		// The preset frames Follow + Look At only (Frame Target Group off), so the extra member must not change anything yet.
+		S.Test->TestTrue(TEXT("Group member does not affect a preset whose Group Framing has Frame Target Group off"), S.PCM()->GetCameraLocation().Equals(S.SavedLocation, 0.5));
+		S.Spawned.Last()->Destroy();
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Destroyed group actor removed automatically"), S.Subsystem->GetCameraGroupMembers(S.Handle).Num(), 0);
+		// The locked enemy dies: the request releases itself (bReleaseWhenLookAtTargetLost).
+		S.ActorB->Destroy();
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestFalse(TEXT("Enemy destroyed: lock-on request released automatically"), S.Subsystem->IsCameraRequestAlive(S.Handle));
+		S.Test->TestEqual(TEXT("Back on the UE camera"), S.Subsystem->GetLastEvaluationResult().Weight, 0.f);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 2));
+	return true;
+}
+
+namespace ACFIntegration
+{
+	/** True if the sphere is fully on screen in the PlayerCameraManager's final camera. */
+	static bool SphereOnScreen(FScenario& S, const FVector& Center, float Radius, FVector2D& OutScreen)
+	{
+		const APlayerCameraManager* M = S.PCM();
+		const ACFFraming::FLens Lens = ACFFraming::MakeLens(M->GetFOVAngle(), 16.f / 9.f);
+		const FVector Local = M->GetCameraRotation().UnrotateVector(Center - M->GetCameraLocation());
+		double Depth = 0.0;
+		ACFFraming::Project(M->GetCameraLocation(), M->GetCameraRotation(), Lens, Center, OutScreen, Depth);
+		const double Fh = Lens.TanHalfH;
+		const double Fv = Lens.TanHalfV;
+		const double H = (Fh * Local.X - FMath::Abs(Local.Y)) / FMath::Sqrt(1.0 + Fh * Fh);
+		const double V = (Fv * Local.X - FMath::Abs(Local.Z)) / FMath::Sqrt(1.0 + Fv * Fv);
+		return FMath::Min3(H, V, Local.X) >= Radius - 0.5;
+	}
+
+	static AActor* FindEnemy(FScenario& S, const TCHAR* Label)
+	{
+		TArray<AActor*> Enemies;
+		UGameplayStatics::GetAllActorsWithTag(S.World(), TEXT("ACFEnemy"), Enemies);
+		AActor** Found = Enemies.FindByPredicate([Label](const AActor* A) { return A->GetActorNameOrLabel().StartsWith(Label); });
+		return Found ? *Found : nullptr;
+	}
+
+	static void ExpectOnScreen(FScenario& S, AActor* Actor, float Radius, const TCHAR* What)
+	{
+		FVector2D Screen;
+		const bool bOk = Actor && SphereOnScreen(S, Actor->GetActorLocation(), Radius, Screen);
+		S.Test->AddInfo(FString::Printf(TEXT("%s: %s at screen (%.3f, %.3f)"), What, Actor ? *Actor->GetActorNameOrLabel() : TEXT("<none>"), Screen.X, Screen.Y));
+		S.Test->TestTrue(FString::Printf(TEXT("%s: %s fully on screen"), What, Actor ? *Actor->GetActorNameOrLabel() : TEXT("<none>")), bOk);
+	}
+
+	static void Wait(TArray<FStep>& Steps, double Seconds)
+	{
+		Steps.Add([](FScenario& S) { S.StartTime = S.World()->GetTimeSeconds(); return true; });
+		Steps.Add([Seconds](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < Seconds; return true; });
+	}
+
+	static void Shot(TArray<FStep>& Steps, const TCHAR* Name)
+	{
+		Steps.Add([Name](FScenario& S)
+		{
+			if (!FApp::CanEverRender())
+			{
+				return true;
+			}
+			FScreenshotRequest::RequestScreenshot(Name, false, false);
+			return true;
+		});
+		Wait(Steps, 0.3);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSampleLockOnGroupTest, "ActionCameraFramework.Samples.LockOnAndGroupOnTestMap",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFSampleLockOnGroupTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	// Drives the README console commands on the real sample map (real level geometry, the project's pawn).
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		if (!S.World()->GetMapName().Contains(TEXT("L_ACFCameraTest")))
+		{
+			S.Test->AddWarning(TEXT("Skipped: run on /ActionCameraFramework/Samples/L_ACFCameraTest."));
+			return false;
+		}
+		if (!FindEnemy(S, TEXT("Enemy_3")))
+		{
+			S.Test->AddError(TEXT("ACFEnemy actors missing: run Scripts/CreateManualTestAssets.py."));
+			return false;
+		}
+		S.Controller->GetPawn()->TeleportTo(FVector(0.f, 0.f, 120.f), FRotator::ZeroRotator);
+		S.Controller->SetControlRotation(FRotator(-15.f, 0.f, 0.f));
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Use ThirdPerson 0"));
+		return true;
+	});
+	Wait(Steps, 0.5);
+	Steps.Add([](FScenario& S) { GEngine->Exec(S.World(), TEXT("ACF.Sample.LockOn 0")); return true; });
+	Wait(Steps, 1.5);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		S.Test->TestTrue(TEXT("Lock-on request in control"), R.NumRequests == 2 && !R.bIsBlending && FMath::IsNearlyEqual(R.Weight, 1.f));
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_0")), 50.f, TEXT("Lock-on near enemy"));
+		ExpectOnScreen(S, S.Controller->GetPawn(), 50.f, TEXT("Lock-on near enemy (player)"));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_LockOn_0_Near"));
+	Steps.Add([](FScenario& S) { GEngine->Exec(S.World(), TEXT("ACF.Sample.LockOn 2")); return true; }); // switch to the boss
+	Wait(Steps, 2.0);
+	Steps.Add([](FScenario& S)
+	{
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_2")), 150.f, TEXT("Switched to the boss"));
+		ExpectOnScreen(S, S.Controller->GetPawn(), 50.f, TEXT("Switched to the boss (player)"));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_LockOn_1_Boss"));
+	Steps.Add([](FScenario& S) { GEngine->Exec(S.World(), TEXT("ACF.Sample.LockOn 1")); return true; }); // far enemy
+	Wait(Steps, 2.0);
+	Steps.Add([](FScenario& S)
+	{
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_1")), 50.f, TEXT("Far enemy"));
+		ExpectOnScreen(S, S.Controller->GetPawn(), 50.f, TEXT("Far enemy (player)"));
+		S.Value = S.PCM()->GetFOVAngle();
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Enemy Teleport 1500"));
+		return true;
+	});
+	Wait(Steps, 2.0);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->AddInfo(FString::Printf(TEXT("Far enemy FOV %.2f"), S.Value));
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_1")), 50.f, TEXT("After the enemy teleported"));
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.LockOn 3"));
+		return true;
+	});
+	Wait(Steps, 1.5);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Lock-on alive before the kill"), S.Subsystem->GetLastEvaluationResult().NumRequests == 2);
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Enemy Kill"));
+		return true;
+	});
+	Wait(Steps, 0.2);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		S.Test->TestEqual(TEXT("Killing the locked enemy releases the lock-on camera"), R.NumRequests, 1);
+		return true;
+	});
+	Wait(Steps, 1.0);
+	// Target group: player + near + boss.
+	Steps.Add([](FScenario& S)
+	{
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Group Use"));
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Group Add 0"));
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Group Add 2"));
+		return true;
+	});
+	Wait(Steps, 2.5);
+	Steps.Add([](FScenario& S)
+	{
+		ExpectOnScreen(S, S.Controller->GetPawn(), 60.f, TEXT("Group"));
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_0")), 80.f, TEXT("Group"));
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_2")), 80.f, TEXT("Group"));
+		S.SavedLocation = S.PCM()->GetCameraLocation();
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_Group_0"));
+	Steps.Add([](FScenario& S) { GEngine->Exec(S.World(), TEXT("ACF.Sample.Group Add 1")); return true; });
+	Wait(Steps, 2.5);
+	Steps.Add([](FScenario& S)
+	{
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_1")), 80.f, TEXT("Group + far"));
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_2")), 80.f, TEXT("Group + far"));
+		ExpectOnScreen(S, S.Controller->GetPawn(), 60.f, TEXT("Group + far"));
+		S.Test->AddInfo(FString::Printf(TEXT("Group camera moved %.0f cm after adding the far enemy"), FVector::Dist(S.SavedLocation, S.PCM()->GetCameraLocation())));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_Group_1"));
+	Steps.Add([](FScenario& S)
+	{
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Group Release 0"));
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Release 0"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
 	return true;
 }
 

@@ -15,6 +15,8 @@ class AActor;
  *
  *   Body      : camera position (Follow, Orbital Follow, Position Composer, Fixed Pose)
  *   Aim       : camera rotation (Look At, Rotation Composer)
+ *   Framing   : fits subjects on screen once position AND rotation are known, by moving the camera along
+ *               its view axis and / or changing the FOV only (Group Framing). Never changes rotation.
  *   PostBlend : corrections of the FINAL pose, run once after request blending (Collision).
  *               This keeps a blend between two cameras from passing through walls.
  */
@@ -23,6 +25,7 @@ enum class EACFCameraNodeStage : uint8
 {
 	Body,
 	Aim,
+	Framing,
 	PostBlend,
 };
 
@@ -45,6 +48,20 @@ struct FACFCameraRigDebug
 	FVector2D DeadZone = FVector2D::ZeroVector;
 	FVector2D SoftZone = FVector2D::ZeroVector;
 	FVector2D TargetOnScreen = FVector2D::ZeroVector;
+	// Group framing: subjects (xyz = centre, w = radius after weighting), fixed size (no per-frame allocation).
+	static constexpr int32 MaxGroupSubjects = 16;
+	int32 NumGroupSubjects = 0;
+	FVector4 GroupSubjects[MaxGroupSubjects];
+	bool bHasGroup = false;
+	FVector GroupCenter = FVector::ZeroVector;
+	float GroupDolly = 0.f;
+	float GroupFovDelta = 0.f;
+	FVector2D GroupFramingSize = FVector2D::ZeroVector;
+	bool bHasLockOn = false;
+	bool bLockOnTargetLost = false;
+	FVector LockOnPoint = FVector::ZeroVector;
+	FVector LockOnFocus = FVector::ZeroVector;
+	float LockOnRange = 0.f;
 	bool bHasCollision = false;
 	bool bCollisionHit = false;
 	FVector CollisionOrigin = FVector::ZeroVector;
@@ -79,6 +96,13 @@ struct FACFCameraRigScratch
 
 	/** Actor the pivot belongs to (ignored by collision when the Collision node asks for it). */
 	const AActor* PivotActor = nullptr;
+
+	/**
+	 * Smoothed location of the locked target published by the Lock-On node (without its Lock Target Offset).
+	 * Group Framing uses it for the Look At subject so framing glides with the camera on target switches.
+	 */
+	bool bHasLockOnTarget = false;
+	FVector LockOnTargetLocation = FVector::ZeroVector;
 
 	/** Filled by the Collision node (PostBlend). */
 	FACFCameraCollisionConstraint Constraint;

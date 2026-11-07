@@ -45,3 +45,21 @@ FACFCameraRequestParams UACFCameraBlueprintLibrary::MakeTargetRequestParams(int3
 	Params.LookAtTarget.Actor = LookAtTarget;
 	return Params;
 }
+
+FACFCameraRequestParams UACFCameraBlueprintLibrary::MakeLockOnRequestParams(int32 Priority, AActor* Player, AActor* LockTarget, bool bReleaseWhenTargetLost)
+{
+	FACFCameraRequestParams Params = MakeTargetRequestParams(Priority, Player, LockTarget, nullptr);
+	Params.bReleaseWhenLookAtTargetLost = bReleaseWhenTargetLost;
+	Params.DebugName = TEXT("LockOn");
+	return Params;
+}
+
+FACFCameraTargetGroupMember UACFCameraBlueprintLibrary::MakeTargetGroupMember(AActor* Actor, float Weight, float Radius, FVector Offset)
+{
+	FACFCameraTargetGroupMember Member;
+	Member.Target.Actor = Actor;
+	Member.Weight = FMath::Max(Weight, 0.f);
+	Member.Radius = FMath::Max(Radius, 0.f);
+	Member.Offset = Offset;
+	return Member;
+}

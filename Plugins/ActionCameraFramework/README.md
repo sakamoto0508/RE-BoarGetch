@@ -11,7 +11,8 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 1（Camera Core + Follow / LookAt）完了
 - Phase 2（Third Person: Orbital Follow / FreeLook、軸別 Damping、Composer、Collision、Lookahead）完了。最終監査で出力 Guard を追加
 - Phase 3（Camera Effects: Punch / Recoil / Impulse / ACF Shake / Speed FOV / Roll、Effect Preset、Handle）完了
-- 次は Phase 4（Action Camera）
+- Phase 4A（Lock-On、Target Group / Group Framing）完了
+- 次は Phase 4B（Action Camera の残り）
 
 ---
 
@@ -43,13 +44,13 @@ APlayerCameraManager（既存のまま）→ Camera Shake（127）→ 画面
 |----|------|
 | 1. Context | DeltaTime、UE カメラの姿勢、ControlRotation、アスペクト比、カメラ入力を集めます。入力は時間が進む評価でだけ消費されます |
 | 2. 要求の解決 | 優先度で有効な要求を決め、必要なら遷移（ブレンド）を開始します |
-| 3. Rig 評価 | **Body**（位置）→ **Aim**（回転）の順に Node を評価します |
+| 3. Rig 評価 | **Body**（位置）→ **Aim**（回転）→ **Framing**（視線方向の移動・FOV で対象を画面に収める）の順に Node を評価します |
 | 4. ブレンド | 要求同士のブレンド（Live / Snapshot）と、UE カメラに対する Weight |
 | 5. 演出と PostBlend | 位置の演出 → **Collision**（ブレンド後の最終姿勢に 1 回）→ 回転・FOV の演出。ブレンド中や演出中でも壁を抜けません |
 | 6. 結果確定 | `Weight`、`AimPose`、デバッグ情報 |
 | 7. 出力 | PCM の呼び出しごとに `Lerp(UE カメラ, ACF, Weight)`。この後に UE の Camera Shake がかかり、最後に Guard が最終位置を Collision で再拘束します |
 
-- Node は Preset の配列順ではなく、**段ごと**（Body → Aim → PostBlend）に評価されます。配列順が意味を持つのは同じ段の中だけです。
+- Node は Preset の配列順ではなく、**段ごと**（Body → Aim → Framing → PostBlend）に評価されます。配列順が意味を持つのは同じ段の中だけです。
 - PCM が Modifier を 1 フレームに複数回呼んでも、時間・Damping・入力が二重に進むことはありません（テストで確認済み）。
 
 ## 3. Preset を作る
@@ -62,16 +63,22 @@ Content Browser で右クリック > Miscellaneous > Data Asset > **ACFCameraPre
 | **Follow** | Body | FollowTarget の位置 + オフセットへ移動します。位置のみ |
 | **Orbital Follow** | Body | 対象を中心に旋回します（Third Person / FreeLook）。位置 + 回転 |
 | **Position Composer** | Body | 対象が画面上の決まった位置に来るよう、カメラを**平行移動**します（2.5D / 見下ろし向け）。回転はしません |
+| **Lock-On** | Body | プレイヤー（Follow Target）の背後、ロック対象（Look At Target）と反対側に回り込み、両方を見ます。位置 + 回転 |
 | **Look At** | Aim | 対象を真っ直ぐ注視します |
 | **Rotation Composer** | Aim | 対象が画面上の決まった位置に来るよう、カメラを**回転**します（Dead / Soft Zone あり） |
+| **Group Framing** | Framing | 複数の対象（球）が画面の指定範囲に収まるよう、カメラを**視線方向に前後**させるか **FOV** を変えます。回転はしません |
 | **Collision** | PostBlend | ピボットからカメラへ Sphere Sweep し、壁へのめり込みを防ぎます |
+
+Look At と Rotation Composer の **Target Source** は、Look At Target / Follow Target / **Target Group**（グループの重み付き中心）から選べます。
 
 **よく使う組み合わせ**
 - TPS / アクション: `Orbital Follow` + `Collision`（必要なら `Rotation Composer` で画面上の位置を調整）
 - 追従カメラ: `Follow` + `Look At`
 - 2.5D / 横スクロール: `Fixed Pose`（回転だけ ON）+ `Position Composer`
+- ロックオン: `Lock-On` + `Group Framing`（Follow / Look At Target Subject を ON）+ `Collision`（サンプル `DA_ACFSample_LockOn`）
+- 複数対象: `Orbital Follow` + `Rotation Composer`（Target Source = Target Group）+ `Group Framing` + `Collision`（サンプル `DA_ACFSample_Group`）
 
-位置を決める Node（Follow / Orbital Follow / Position Composer）は 1 つだけにしてください。Data Validation が警告を出します。
+位置を決める Node（Follow / Orbital Follow / Lock-On / Position Composer）は 1 つだけにしてください。Data Validation が警告を出します（Group Framing の重複、対象が 1 つも設定されていない Group Framing も警告します）。
 
 ### Orbital Follow（FreeLook）の主な設定
 
@@ -125,6 +132,47 @@ Content Browser で右クリック > Miscellaneous > Data Asset > **ACFCameraPre
 - UE の Camera Shake は Collision の後にかかります。Shake の移動量が Probe Radius を超えないようにしてください。
 - Phase 3 の ACF 演出は Collision の前に入れる設計です。
 
+### Lock-On の設定
+
+プレイヤー = 要求の **Follow Target**、ロック対象 = **Look At Target** です（Actor / SceneComponent / Socket）。
+
+| カテゴリ | 項目 | 意味 |
+|----------|------|------|
+| Player | Pivot Offset / Pivot Damping / Target Motion | 旋回の中心（プレイヤー + オフセット）、その追従の遅れ、テレポート検出・Lookahead |
+| Lock Target | Lock Target Offset | ロック点（例: 胸の高さ） |
+| Lock Target | Lock Target Damping Time | ロック点の追従時間。**ターゲット切替**や対象の瞬間移動はこの時間で滑らかに移ります（既定 0.25 秒） |
+| Lock Target | Min Horizontal Distance | プレイヤーと対象の水平距離がこれ未満なら Yaw を保持します（真上・重なりで回転しない） |
+| Orbit | Shoulder Offset | 肩越しのオフセット。プレイヤーが対象を隠さないようにします |
+| Orbit | Base Pitch / Elevation Pitch Scale / Pitch Min・Max | 基本の俯角と、対象の高さ（仰角）を Pitch に反映する割合。大型の敵ではカメラが下がって見上げます |
+| Orbit | Rotation Damping（Yaw / Pitch） | 回り込みの遅れ |
+| Range | Near / Far Range、Near / Far Arm Length | プレイヤーと対象の距離に応じたアーム長（間は線形）。既定は近いほど遠く引きます |
+| Range | Adjust Field Of View（Near / Far FOV） | 距離に応じて FOV も変えます（既定 OFF） |
+| Range | Range Damping Time | 距離による変化の遅れ（ポンピング防止） |
+| Aim | Aim At Focus / Focus Bias / Focus Screen Position | プレイヤー（0）とロック点（1）の間の注視点と、その画面位置。OFF にすると Aim の Node に回転を任せます |
+
+**構図の計算**: Orbit の Yaw = プレイヤー → ロック点の水平方向、Pitch = Base Pitch + 仰角 × Scale。カメラ = ピボット − 向き × アーム長 + 肩オフセット。回転は注視点を Focus Screen Position に置く向き（`ACFFraming::AimAt`）。
+両方を**確実に**画面に収めるのは Group Framing の役目です（ロック点は Lock-On Node が平滑化した位置を Group Framing へ渡すので、ターゲット切替中に構図が跳びません）。
+
+### Group Framing（Target Group）の設定
+
+対象は要求の **Target Group**（メンバーごとに Target・Offset・**Weight**・**Radius**）と、任意で Follow / Look At Target です。
+
+| 項目 | 意味 |
+|------|------|
+| Frame Target Group / Follow Target Subject / Look At Target Subject | 収める対象。Follow / Look At は Include を ON にし、Radius・Weight・Offset を設定します |
+| Mode | **Distance**（視線方向に前後）/ **Field Of View**（ズーム）/ **Distance Then Field Of View**（既定。前後の上限を超えた分を FOV で補う） |
+| Policy | **Keep Inside**（既定。はみ出しそうなときだけ引く・広げる。元のカメラより寄らない）/ **Fill**（範囲いっぱいに寄せる・ズームする） |
+| Framing Size | 対象の球を収める画面の範囲（1 = 画面全体、中央基準。既定 0.8） |
+| Max Dolly In / Out | 前後に動かせる最大距離（In は Fill のときだけ） |
+| Min / Max Field Of View、Near Clearance | FOV の範囲、カメラ前方に必要な余裕 |
+| Widen / Narrow Damping Time | 引く・広げるとき（速い、既定 0.15 秒）/ 寄る・狭めるとき（ゆっくり、既定 0.8 秒）の遅れ |
+
+**計算方法**: Body と Aim の後（回転が確定した後）に、各対象の球について「画面の枠（Framing Size）の 4 辺の平面に接する」ために必要な**後退距離**、または**半画角**を解析的に求め、最も厳しい値を使います（重心だけを追うのではなく、全員の球が枠に入ることを保証します）。
+- **Weight**: 重み付き中心を求め、各メンバーを `Weight / 最大 Weight` の割合で中心から離れた位置・半径として扱います。軽いメンバーは多少はみ出してもよい扱いになり、Weight 0 は無視されます（グループには残る）。
+- **0 件**: 補正なし（直前の補正は Narrow Damping で滑らかに戻ります）。**1 件**: その球だけを収めます（Radius が効きます）。
+- 補正は「入ってきたカメラからの差分」として保持するので、累積せず、前段の Damping とも干渉しません。
+- 破棄されたメンバーは Director が毎フレーム自動で取り除きます（メモリは再確保しません）。
+
 ### ブレンドの設定（Default Blend In / Out）
 
 | 項目 | 内容 |
@@ -155,6 +203,31 @@ Subsystem から使えるノード:
 - `Get Aim / Visual Camera Pose`
 - `Suppress Output`
 
+**ロックオン**（対象の選択・優先順位・切替の判断はゲーム側の責務です。ACF はカメラだけを担当します）
+
+```
+ロック開始 ─▶ Make ACF Lock-On Request Params (Priority = 10, Player, Lock Target, Release When Target Lost = true)
+           ─▶ Request Camera For Player (Player Controller, DA_ロックオン用Preset, Params) ─▶ LockHandle を保存
+ターゲット切替 ─▶ Set ACF Camera Lock-On Actor (LockHandle, 新しい対象)      … カメラは滑らかに回り込む
+ロック解除 ─▶ (任意) Set Control Rotation ← Get Aim Camera Pose の回転    … 通常カメラが元の向きへ戻らないように
+           ─▶ Release Camera For Player (LockHandle)                        … 通常カメラの Blend In で戻る
+```
+
+- 通常カメラ（Priority 0）を出したまま、ロックオン用 Preset を高い Priority で要求します。開始・解除は通常のカメラ間ブレンドです。
+- `Release When Target Lost` が ON なら、ロック中の対象が破棄されると自動で解除されます（切替後も新しい対象を見ます）。
+- ロックオン中も、移動入力の基準（ControlRotation）はゲーム側のものです。カメラの向きを使いたい場合は `Get Aim Camera Pose` を使ってください。
+
+**Target Group**
+
+| ノード | 内容 |
+|--------|------|
+| `Add ACF Camera Group Actor` (Handle, Actor, Weight, Radius) / `Add ACF Camera Group Member` (Handle, Member) | 追加（同じ対象なら Weight・Radius・Offset を更新） |
+| `Remove ACF Camera Group Actor` / `Remove ACF Camera Group Member` | 削除 |
+| `Set ACF Camera Group Members` (Handle, Members) / `Get ACF Camera Group Members` | 一括設定（空配列でクリア）/ 現在のメンバー |
+| `Make ACF Camera Group Member` (Actor, Weight, Radius, Offset) | メンバーの作成 |
+
+要求を出す前に `Params.TargetGroup.Members` に入れておくこともできます。
+
 ### C++
 
 ```cpp
@@ -171,6 +244,16 @@ Cameras->SetCameraInputRate(StickValue * 120.f);   // 毎フレーム呼ぶ
 
 Cameras->NotifyTeleport();                   // リスポーンなど: 補間をリセットしてカット
 Cameras->ReleaseCamera(CameraHandle);
+
+// ロックオン
+FACFCameraRequestParams LockParams = UACFCameraBlueprintLibrary::MakeLockOnRequestParams(10, PlayerPawn, Enemy);
+LockHandle = Cameras->RequestCamera(LockOnPreset, LockParams);
+Cameras->SetCameraLockOnActor(LockHandle, NextEnemy);              // 切替
+Cameras->ReleaseCamera(LockHandle);
+
+// Target Group
+Cameras->AddCameraGroupActor(GroupHandle, Boss, /*Weight*/ 2.f, /*Radius*/ 250.f);
+Cameras->RemoveCameraGroupActor(GroupHandle, Boss);
 ```
 
 **入力のルール**
@@ -187,7 +270,10 @@ Cameras->ReleaseCamera(CameraHandle);
 | ブレンド中の割り込み | その時点の画面の姿勢から新しいカメラへブレンドします。画面は飛びません |
 | Instigator が破棄 | 次のフレームで自動的に解除されます |
 | 追従・注視対象が破棄 | 要求は残り、Lost Behavior に従います。クラッシュはしません |
-| 対象を差し替え / テレポート | その Node の補間をリセットします。カメラはレベルを滑らずにカットします |
+| 対象を差し替え / テレポート | その Node の補間をリセットします。カメラはレベルを滑らずにカットします（Lock-On のロック対象だけは例外で、切替・瞬間移動とも Lock Target Damping Time で滑らかに回り込みます。プレイヤー側のテレポートはカットします） |
+| ロック対象が破棄 | 最後の位置を見続けます。`bReleaseWhenLookAtTargetLost` が ON なら、要求が自動で解除されます |
+| ロックオンの解除 | 戻り先のカメラの BlendIn で戻ります（カメラ間の切替なので、解除した要求の BlendOut は UE カメラへ戻るときだけ使われます） |
+| Target Group のメンバーが破棄 | 次の評価でグループから自動的に取り除かれます |
 | PlayerController や PCM の作り直し | ACF が次のティックまでに自動で接続し直します |
 
 ## 6. カメラ演出（Effects）
@@ -278,8 +364,11 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - **`ACF.Debug.Draw 1`**: ワールドに描画します。
   - 追従対象（緑）、Lookahead の予測位置（水色）、注視点（黄）
   - Collision の Sweep（ヒット時は赤）、カメラ
+  - Group Framing の対象の球と重み付き中心（マゼンタ）
+  - Lock-On のロック点（赤。対象喪失中は灰色）、プレイヤーとの線、注視点（オレンジ）
 - **`ACF.Debug.Draw 2`**: 上の描画に加えて、画面に表示します。
-  - Dead Zone（緑枠）、Soft Zone（赤枠）、画面上の対象位置
+  - Dead Zone（緑枠）、Soft Zone（赤枠）、画面上の対象位置、Framing Size（マゼンタ枠）
+  - Group の対象数・前後移動量・FOV 補正、Lock-On の距離と対象喪失の表示
   - カメラ位置・回転、Orbit の Yaw / Pitch / 距離、Collision の状態
 - **`showdebug camera`**: ACF の要求、Weight、抑制状態を表示します。
 - **コンソール**
@@ -296,6 +385,7 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 2. `/ActionCameraFramework/Samples/L_ACFCameraTest` を開いて PIE（Play）します。
    - Pawn と入力はプロジェクト既定の GameMode のものです。REBoarGetch 側の変更はありません。
 3. `~` でコンソールを開き、`ACF.Debug.Draw 2` を実行します。
+   - このプロジェクトでは RetroRender の PS1 / CRT ルックが全ゲームワールドに自動でかかります。カメラの動きを素の画面で見たい場合は `Retro.Preset OFF` を実行します（ACF とは無関係）。
 
 **操作**
 - マウス: プロジェクト既定の Look 入力（ControlRotation）でカメラを旋回します。
@@ -323,24 +413,62 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 
 `ACF.Sample.Use <Follow|ThirdPerson|FreeLook|Composer> [BlendSeconds=0.6] [Live=1]` は、プレイヤー Pawn を追従対象、`ACFLookTarget` タグの Actor を注視対象として要求を出し直します。
 
+**Lock-On / Target Group（Phase 4A）**
+
+テストマップには `ACFEnemy` タグの円柱が 4 本あります: `Enemy_0_Near`（スタート地点の近く）、`Enemy_1_Far`（遠く）、`Enemy_2_Boss`（高さ 6m、壁の向こう）、`Enemy_3_Small`（低い）。
+先に `ACF.Sample.Use ThirdPerson` で通常カメラを出しておくと、解除したときにそのカメラへ戻ります。
+
+| 確認項目 | 手順 | 期待する見た目 |
+|----------|------|----------------|
+| ロック開始 | `ACF.Sample.LockOn 0` | 0.5 秒で回り込み、プレイヤーの肩越しに Enemy_0 を正面に捉える。プレイヤーと敵の両方が画面に入る（マゼンタ枠の中） |
+| 相対移動 | ロック中に敵の周りを歩く・走る。`ACF.Sample.Enemy Circle 90`（もう一度で停止）で敵がプレイヤーの周りを回る | 常に敵の反対側に回り込み、両方が画面から出ない。マウスでは回らない |
+| 近距離・遠距離 | Enemy_0 に密着するまで近づく → `ACF.Sample.LockOn 1`（遠くの敵） | 近いほどカメラが引いて FOV 90°、遠いと寄って FOV 70°。重なっても回転が暴れない |
+| ターゲット切替 | `ACF.Sample.LockOn 2`（ボス）→ `ACF.Sample.LockOn 3` | カットではなく滑らかに回り込む。ボスでは下から見上げる |
+| 急移動・テレポート | ロック中に `ACF.Sample.Enemy Teleport 1500`、`ACF.Sample.Teleport 3000`（プレイヤー） | 敵の瞬間移動は滑らかに追う。プレイヤーのテレポートはカット |
+| 対象の破棄 | `ACF.Sample.Enemy Kill` | ロックオンが自動で解除され、通常カメラへ戻る（ACF.Debug.Draw 2 で要求数が 1 に） |
+| ロック解除 | `ACF.Sample.LockOff` | 0.5 秒で通常カメラへ戻る。ロック中の向きのまま戻る（サンプルが ControlRotation を合わせる） |
+| Collision | ロックしたまま `Wall` や `Corridor` に背を向けて下がる | カメラが壁・天井を抜けない |
+| Effects | ロック中に `ACF.Sample.Effect Recoil` / `Punch` / `Impulse` / `Shake` | 演出がロックオンのカメラの上にかかり、壁を抜けない |
+| 出力抑制 | （コンソールコマンドはありません）BP から `Suppress Output` / `Release Output Suppression` を呼ぶ | 抑制中は UE カメラ。解除すると最新の構図で即座に復帰する（自動テストで確認済み） |
+| Target Group | `ACF.Sample.Group Use` → `ACF.Sample.Group Add 0` → `Add 2` → `Add 1` | メンバーを足すたびに必要な分だけ引いて（足りなければ FOV を広げて）、全員がマゼンタ枠に入る |
+| Weight / Radius | `ACF.Sample.Group Weight 2 0.2`、`ACF.Sample.Group Radius 2 600` | Weight を下げると中心がボスから離れて寄る。Radius を上げるとさらに引く |
+| メンバー削除 | `ACF.Sample.Group Remove 2`、`ACF.Sample.Group Release` | ゆっくり寄って戻る（ポップしない）/ 通常カメラへ戻る |
+
+コマンド:
+- `ACF.Sample.LockOn [Index]`: `ACFEnemy` をラベル順に番号付け。ロック中なら対象の切替（省略時は次の敵）
+- `ACF.Sample.LockOff [BlendSeconds=0.5]`
+- `ACF.Sample.Enemy <Circle [DegPerSec=60]|Teleport [Distance=1500]|Kill>`: ロック中の敵を操作（Kill はその PIE セッション中は戻りません）
+- `ACF.Sample.Group <Use|Add i|Remove i|Weight i w|Radius i r|Release>`: プレイヤー（Weight 1、Radius 60）を含むグループ。追加する敵の Radius は 80
+
 ## 10. 拡張（プログラマー向け）
 
-`UACFCameraNode` を継承し、`GetStage()`（Body / Aim / PostBlend）と `Evaluate` を実装します。
+`UACFCameraNode` を継承し、`GetStage()`（Body / Aim / Framing / PostBlend）と `Evaluate` を実装します。
 
 - Node のメンバーは共有設定です。実行時に書き換えないでください。
 - フレームごとに変わる値は USTRUCT に入れ、`GetRuntimeStateType()` で返します。
 - テレポートには `ResetInterpolation`、有効化には `OnActivated` で対応します。
 - `DeltaTime <= 0` のときは状態を進めないでください。
 - Body の Node は `Context.Scratch.Pivot` を設定してください（Collision の Sweep 起点になります）。
-- 共通部品: `FACFCameraTargetTrackingState::Track`（対象喪失・テレポート・Lookahead）、`UpdateDamped`（軸別 Damping）、`ACFFraming`（画面への投影・構図）、`ACFCameraCollision::SweepCamera`
+- Framing 段の Node は位置（視線方向）と FOV だけを変え、回転は変えないでください。
+- 共通部品: `FACFCameraTargetTrackingState::Track` / `TrackPoint`（対象喪失・テレポート・Lookahead）、`UpdateDamped`（軸別 Damping）、`ACFFraming`（画面への投影・構図）、`ACFTargetGroup::GatherSubjects`（Target Group の解決）、`UACFCameraNode_GroupFraming::ComputeRequiredDolly / ComputeRequiredFov`、`ACFCameraCollision::SweepCamera`
 - 新しい演出: `UACFCameraEffect` を継承し、`Evaluate` で `FACFCameraEffectOutput`（チャンネル・値・空間）を返します。状態は `GetRuntimeStateType`、後始末は `OnEnd` で行います。Envelope・Weight・減衰・合成はスタック側が行います。
 
-## 11. 制限（Phase 3 時点）
+## 11. 制限（Phase 4A 時点）
+
+**Lock-On / Target Group**
+- 視線の遮蔽は扱いません。ボスが壁の向こうにいると、構図には入っていても壁に隠れます（Deoccluder は未実装）。
+- Collision がカメラを手前に押すと、Group Framing が引いた分が失われ、対象が枠からはみ出すことがあります（壁抜けを防ぐ方を優先）。Mode を Distance Then Field Of View にすると、Max Dolly Out を超えた分だけは FOV で補いますが、Collision で縮んだ分は補いません。
+- ロックオン中の移動入力の基準（ControlRotation）は変更しません。解除時にカメラの向きへ合わせるかどうかはゲーム側で決めます（サンプルは合わせます）。
+- ロックオンの解除は戻り先カメラの Blend In を使います。解除専用のブレンドを指定する API はありません。
+- Group Framing はメンバーの位置を平滑化しません（Lock-On のロック点だけは平滑化されたものを使います）。急な追加は Widen Damping Time で滑らかになりますが、メンバー自身の瞬間移動は枠の調整が追いかける形になります。
+- Weight の小さいメンバーは、`Weight / 最大 Weight` の割合で枠に入れる扱いになるので、完全には収まりません（仕様）。
+
+**全般**
 
 - 描画結果の目視確認と、実機のマウス・パッドでの操作感確認は、まだ行っていません（9 章の手順で確認してください）。
 - PCM の ViewTarget ブレンド中の壁抜けは防げません（7 章）。
 - ブレンド中に割り込むと、割り込まれた側の動きはそれ以降反映されません。
-- Collision は「ピボット → カメラ」の線上だけを見ます。視線上の遮蔽物を避ける Deoccluder は Phase 4 です。
+- Collision は「ピボット → カメラ」の線上だけを見ます。視線上の遮蔽物を避ける Deoccluder は Phase 4B 以降です。
 - SpringArm と一致することは、静止時（Lag 収束後）と障害物ありで確認しました。移動中の過渡応答（Lag の式）は異なります。
 - Sequencer の自動検出、Blueprint 製の Node / Effect は未対応です。
 - 演出は ACF カメラにかかります。UE カメラだけの場面では、素通し Preset を要求してください（6 章）。
@@ -351,11 +479,18 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
-  - `Content/Samples/`（DA ×4、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 50 件です。
-  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*`（32 件）: Editor とゲームの両方で実行できます。
-  - `.Integration.*`（17 件）: `-game` でのみ実行されます。
-  - `.Samples.TestMapSmoke`（1 件）: テストマップ上でだけ実行されます。他のマップではスキップします。
+  - `Content/Samples/`（DA ×6、テストマップ）: `Scripts/CreateManualTestAssets.py`
+- 自動テストは 63 件です。
+  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*`（42 件）: Editor とゲームの両方で実行できます。
+  - `.Integration.*`（18 件）: `-game` でのみ実行されます。
+  - `.Samples.*`（3 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
+- Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
+  - ロック開始・解除（ブレンド中に 1 フレーム 40cm 超の飛びがない）、敵が周回・プレイヤーが移動しても両方が画面内
+  - 近距離・遠距離のアーム長と FOV、重なり・真上でも NaN にならず Yaw を保持
+  - 敵の瞬間移動・ターゲット切替は滑らか、プレイヤーのテレポートはカット、破棄で保持または自動解除（切替後の旧対象の破棄では解除しない）
+  - ブレンド中のターゲット切替、高優先度カメラへの切替と復帰、出力抑制中も評価が続き復帰時に最新、同一フレームの二重評価で状態が進まない
+  - Group の追加・削除・破棄メンバーの自動除外、Weight / Radius による変化、0 件・1 件、FOV モード、Fill、Distance Then FOV、必要距離・必要 FOV の解析解との一致
+  - 実際の PCM 上で Collision（Guard OFF）と Effects の併用、テストマップ上でのコンソールコマンド一式
 
 ```bash
 UnrealEditor-Cmd.exe <project>.uproject -unattended -NullRHI -nosplash "-ExecCmds=Automation RunTests ActionCameraFramework.Director+ActionCameraFramework.Nodes+ActionCameraFramework.ThirdPerson" "-TestExit=Automation Test Queue Empty"
@@ -374,7 +509,7 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramewor
 | パス | 内容 |
 |------|------|
 | `Source/ActionCameraFramework/Public/` | `ACFCameraSubsystem`（入口）、`ACFCameraDirector`、`ACFCameraPreset`、`ACFCameraNode`（段・Scratch）、`ACFCameraRigInstance`、`ACFCameraOutputModifier`（Output と Guard）、`ACFCameraTypes`、`ACFCameraSettings`、`ACFCameraBlueprintLibrary` |
-| `Source/ActionCameraFramework/Public/Nodes/` | FixedPose / Follow / LookAt / OrbitalFollow / Composers / Collision と、共通部品の TargetTracking（Damping・Lookahead・テレポート）/ Framing（画面座標の計算） |
+| `Source/ActionCameraFramework/Public/Nodes/` | FixedPose / Follow / LookAt / OrbitalFollow / Composers / LockOn / GroupFraming / Collision と、共通部品の TargetTracking（Damping・Lookahead・テレポート）/ Framing（画面座標の計算）/ TargetGroup（グループの解決） |
 | `Source/ActionCameraFramework/Public/Effects/` | `ACFCameraEffect`（Layer 基底・Effect Preset）、`ACFCameraBuiltinEffects`（Punch / Recoil / Impulse / Shake / Speed FOV / Roll）、`ACFCameraEffectStack`（Instance・Envelope・合成）、`ACFCameraEffectTypes` |
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`、`ACFCameraDebugShake`（サンプル用 Shake）、`Tests/` |
 | `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 6 のツール置き場） |

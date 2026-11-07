@@ -129,6 +129,58 @@ bool UACFCameraDirector::SetRequestTargets(FACFCameraRequestHandle Handle, const
 	return true;
 }
 
+bool UACFCameraDirector::SetRequestLookAtTarget(FACFCameraRequestHandle Handle, const FACFCameraTarget& LookAtTarget)
+{
+	FACFCameraRequestEntry* Entry = FindLiveEntry(Handle);
+	if (!Entry)
+	{
+		return false;
+	}
+	Entry->Params.LookAtTarget = LookAtTarget;
+	ACFDirector::LogEvent(FString::Printf(TEXT("SetLookAtTarget %s -> %s"), *ACFDirector::Describe(*Entry),
+		*GetNameSafe(LookAtTarget.Component.IsValid() ? static_cast<const UObject*>(LookAtTarget.Component.Get()) : LookAtTarget.Actor.Get())));
+	return true;
+}
+
+bool UACFCameraDirector::AddGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTargetGroupMember& Member)
+{
+	FACFCameraRequestEntry* Entry = FindLiveEntry(Handle);
+	if (!Entry || !Member.Target.IsSet())
+	{
+		return false;
+	}
+	Entry->Params.TargetGroup.AddOrUpdate(Member);
+	return true;
+}
+
+bool UACFCameraDirector::RemoveGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTarget& Target)
+{
+	FACFCameraRequestEntry* Entry = FindLiveEntry(Handle);
+	return Entry && Entry->Params.TargetGroup.Remove(Target);
+}
+
+bool UACFCameraDirector::SetGroupMembers(FACFCameraRequestHandle Handle, const TArray<FACFCameraTargetGroupMember>& Members)
+{
+	FACFCameraRequestEntry* Entry = FindLiveEntry(Handle);
+	if (!Entry)
+	{
+		return false;
+	}
+	Entry->Params.TargetGroup.Members = Members;
+	return true;
+}
+
+const FACFCameraTargetGroup* UACFCameraDirector::GetGroup(FACFCameraRequestHandle Handle) const
+{
+	auto Matches = [Handle](const FACFCameraRequestEntry& Entry) { return Entry.Handle == Handle; };
+	const FACFCameraRequestEntry* Entry = Handle.IsValid() ? Requests.FindByPredicate(Matches) : nullptr;
+	if (!Entry && Handle.IsValid())
+	{
+		Entry = RetiredRequests.FindByPredicate(Matches);
+	}
+	return Entry ? &Entry->Params.TargetGroup : nullptr;
+}
+
 bool UACFCameraDirector::HasRequest(FACFCameraRequestHandle Handle) const
 {
 	return FindRequestIndex(Handle) != INDEX_NONE;
@@ -411,12 +463,29 @@ bool UACFCameraDirector::SetOrbitRotation(FACFCameraRequestHandle Handle, const 
 
 void UACFCameraDirector::PruneLostInstigators()
 {
+	// Destroyed group members are dropped (RemoveAll keeps the allocation: no per-frame heap traffic).
+	for (FACFCameraRequestEntry& Entry : Requests)
+	{
+		Entry.Params.TargetGroup.RemoveLostMembers();
+	}
+	for (FACFCameraRequestEntry& Entry : RetiredRequests)
+	{
+		Entry.Params.TargetGroup.RemoveLostMembers();
+	}
+
 	for (int32 Index = Requests.Num() - 1; Index >= 0; --Index)
 	{
 		const FACFCameraRequestEntry& Entry = Requests[Index];
-		if (Entry.bTracksInstigator && !Entry.Params.Instigator.IsValid())
+		bool bLookAtLost = false;
+		if (Entry.Params.bReleaseWhenLookAtTargetLost && Entry.Params.LookAtTarget.IsSet())
 		{
-			ACFDirector::LogEvent(FString::Printf(TEXT("Auto-release (instigator lost) %s"), *ACFDirector::Describe(Entry)));
+			FTransform Unused;
+			const UObject* Object = nullptr;
+			bLookAtLost = !Entry.Params.LookAtTarget.Resolve(Unused, Object);
+		}
+		if ((Entry.bTracksInstigator && !Entry.Params.Instigator.IsValid()) || bLookAtLost)
+		{
+			ACFDirector::LogEvent(FString::Printf(TEXT("Auto-release (%s lost) %s"), bLookAtLost ? TEXT("look-at target") : TEXT("instigator"), *ACFDirector::Describe(Entry)));
 			if (Entry.Handle == ActiveHandle || Entry.Handle == Transition.LiveSource)
 			{
 				RetireActiveEntry(Index, nullptr);

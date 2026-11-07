@@ -52,9 +52,8 @@ void UACFCameraNode_LookAt::ResetInterpolation(FInstancedStruct* RuntimeState) c
 void UACFCameraNode_LookAt::Evaluate(const FACFCameraNodeContext& Context, FACFCameraPose& InOutPose, FInstancedStruct* RuntimeState) const
 {
 	FACFCameraTargetTrackingState* State = ACFNodes::GetState<FACFCameraTargetTrackingState>(RuntimeState);
-	const FACFCameraTarget& Source = TargetSource == EACFCameraLookAtSource::FollowTarget ? Context.Request.FollowTarget : Context.Request.LookAtTarget;
 	FACFCameraTrackedTarget Target;
-	if (!State || !State->Track(Source, TargetMotion, Context.GetDeltaTime(), Target))
+	if (!State || !ACFNodes::TrackAimSource(*State, Context, TargetSource, TargetMotion, Target))
 	{
 		return;
 	}

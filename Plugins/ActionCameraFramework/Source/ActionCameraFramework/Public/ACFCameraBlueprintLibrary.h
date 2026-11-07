@@ -37,4 +37,16 @@ public:
 	/** Request params with follow / look-at actors (either may be null). */
 	UFUNCTION(BlueprintPure, Category = "Action Camera", meta = (DisplayName = "Make Target Request Params"))
 	static FACFCameraRequestParams MakeTargetRequestParams(int32 Priority, AActor* FollowTarget, AActor* LookAtTarget, UObject* Instigator);
+
+	/**
+	 * Lock-on request params: Player = Follow Target, LockTarget = Look At Target (the Lock-On node's target).
+	 * bReleaseWhenTargetLost releases the camera (with its blend-out) when the locked target is destroyed,
+	 * and keeps working after Set ACF Camera Lock-On Target switches targets.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Lock-On", meta = (DisplayName = "Make ACF Lock-On Request Params"))
+	static FACFCameraRequestParams MakeLockOnRequestParams(int32 Priority, AActor* Player, AActor* LockTarget, bool bReleaseWhenTargetLost = true);
+
+	/** One target group member for an actor (Weight = importance, Radius = sphere kept on screen). */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Target Group", meta = (DisplayName = "Make ACF Camera Group Member"))
+	static FACFCameraTargetGroupMember MakeTargetGroupMember(AActor* Actor, float Weight = 1.f, float Radius = 60.f, FVector Offset = FVector::ZeroVector);
 };

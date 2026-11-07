@@ -21,6 +21,8 @@
 #include "ACFCameraSettings.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
+#include "Containers/Ticker.h"
+#include "ACFCameraBlueprintLibrary.h"
 
 #if !UE_BUILD_SHIPPING
 
@@ -309,6 +311,233 @@ namespace ACFDebug
 	static FAutoConsoleCommandWithWorldAndArgs GSampleEffectCmd(TEXT("ACF.Sample.Effect"),
 		TEXT("Play a sample camera effect: <Recoil|Impulse|Shake|Punch|Motion(toggle Speed FOV + Roll)|Stop> [Scale]"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleEffect));
+}
+
+
+namespace ACFDebug
+{
+	// ---------------------------------------------------------------------------------------------
+	// Phase 4A manual verification (README "手動確認"). Enemies are the actors tagged ACFEnemy in L_ACFCameraTest.
+	//   ACF.Sample.LockOn [Index]                 lock on (or switch to) enemy Index (default: next one)
+	//   ACF.Sample.LockOff [BlendSeconds=0.5]     release (control rotation is aligned to the camera first)
+	//   ACF.Sample.Enemy <Circle|Teleport|Kill> [Value]   act on the locked enemy
+	//   ACF.Sample.Group <Use|Add|Remove|Weight|Radius|Release> [Index] [Value]
+
+	static FACFCameraRequestHandle GLockOnHandle;
+	static FACFCameraRequestHandle GGroupHandle;
+	static int32 GLockIndex = INDEX_NONE;
+	static TWeakObjectPtr<AActor> GLockedEnemy;
+	static FTSTicker::FDelegateHandle GCircleTicker;
+
+	static void GetEnemies(UWorld* World, TArray<AActor*>& Out)
+	{
+		UGameplayStatics::GetAllActorsWithTag(World, TEXT("ACFEnemy"), Out);
+		Out.Sort([](const AActor& A, const AActor& B) { return A.GetActorNameOrLabel() < B.GetActorNameOrLabel(); });
+	}
+
+	static UACFCameraPreset* LoadSamplePreset(const TCHAR* Name)
+	{
+		const FString Path = FString::Printf(TEXT("/ActionCameraFramework/Samples/DA_ACFSample_%s.DA_ACFSample_%s"), Name, Name);
+		UACFCameraPreset* Preset = LoadObject<UACFCameraPreset>(nullptr, *Path);
+		if (!Preset)
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample: %s not found (run Scripts/CreateManualTestAssets.py)."), *Path);
+		}
+		return Preset;
+	}
+
+	static void SampleLockOn(const TArray<FString>& Args, UWorld* World)
+	{
+		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
+		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		TArray<AActor*> Enemies;
+		GetEnemies(World, Enemies);
+		if (!Subsystem || !PC || !PC->GetPawn() || Enemies.IsEmpty())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.LockOn: needs a pawn and actors tagged ACFEnemy (L_ACFCameraTest)."));
+			return;
+		}
+		GLockIndex = Args.IsValidIndex(0) ? FMath::Clamp(FCString::Atoi(*Args[0]), 0, Enemies.Num() - 1) : (GLockIndex + 1) % Enemies.Num();
+		AActor* Enemy = Enemies[GLockIndex];
+		GLockedEnemy = Enemy;
+		if (Subsystem->IsCameraRequestAlive(GLockOnHandle))
+		{
+			// Gameplay switches the target; the camera only glides to it.
+			Subsystem->SetCameraLockOnActor(GLockOnHandle, Enemy);
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.LockOn switch -> %s"), *Enemy->GetActorNameOrLabel());
+			return;
+		}
+		UACFCameraPreset* Preset = LoadSamplePreset(TEXT("LockOn"));
+		if (!Preset)
+		{
+			return;
+		}
+		FACFCameraRequestParams Params;
+		Params.Priority = 10; // above the exploration camera (ACF.Sample.Use, priority 0)
+		Params.FollowTarget.Actor = PC->GetPawn();
+		Params.LookAtTarget.Actor = Enemy;
+		Params.bReleaseWhenLookAtTargetLost = true;
+		Params.DebugName = TEXT("Sample_LockOn");
+		GLockOnHandle = Subsystem->RequestCamera(Preset, Params);
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.LockOn -> %s (%s)"), *Enemy->GetActorNameOrLabel(), *GLockOnHandle.ToString());
+	}
+
+	static void AlignControlRotationToCamera(UACFCameraSubsystem* Subsystem, APlayerController* PC)
+	{
+		// Sample-side gameplay choice: keep facing where the ACF camera looked, so the exploration camera
+		// (Input Source = Control Rotation) does not swing back to the old control rotation.
+		const FRotator Aim = Subsystem->GetAimCameraPose().Rotation;
+		PC->SetControlRotation(FRotator(Aim.Pitch, Aim.Yaw, 0.f));
+	}
+
+	static void SampleLockOff(const TArray<FString>& Args, UWorld* World)
+	{
+		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
+		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		if (!Subsystem || !PC)
+		{
+			return;
+		}
+		if (Subsystem->IsCameraRequestAlive(GLockOnHandle))
+		{
+			AlignControlRotationToCamera(Subsystem, PC);
+		}
+		Subsystem->ReleaseCameraWithBlend(GLockOnHandle, SampleBlend(ArgOr(Args, 0, 0.5f), true));
+		GLockedEnemy.Reset();
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.LockOff"));
+	}
+
+	static void StopCircle()
+	{
+		if (GCircleTicker.IsValid())
+		{
+			FTSTicker::GetCoreTicker().RemoveTicker(GCircleTicker);
+			GCircleTicker.Reset();
+		}
+	}
+
+	static void SampleEnemy(const TArray<FString>& Args, UWorld* World)
+	{
+		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		AActor* Enemy = GLockedEnemy.Get();
+		if (!PC || !PC->GetPawn() || !Enemy || Args.IsEmpty())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("Usage (while locked on): ACF.Sample.Enemy <Circle [DegPerSec=60]|Teleport [Distance=1500]|Kill>"));
+			return;
+		}
+		const FString Kind = Args[0];
+		if (Kind == TEXT("Circle"))
+		{
+			if (GCircleTicker.IsValid())
+			{
+				StopCircle();
+				UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Enemy Circle: off"));
+				return;
+			}
+			const float Speed = ArgOr(Args, 1, 60.f);
+			TWeakObjectPtr<AActor> WeakEnemy = Enemy;
+			TWeakObjectPtr<APawn> WeakPawn = PC->GetPawn();
+			const FVector Offset = Enemy->GetActorLocation() - WeakPawn->GetActorLocation();
+			const float Radius = static_cast<float>(FMath::Max(FVector2D(Offset.X, Offset.Y).Size(), 300.0));
+			float Angle = static_cast<float>(FMath::Atan2(Offset.Y, Offset.X));
+			GCircleTicker = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([WeakEnemy, WeakPawn, Radius, Speed, Angle](float DeltaTime) mutable
+			{
+				if (!WeakEnemy.IsValid() || !WeakPawn.IsValid())
+				{
+					GCircleTicker.Reset();
+					return false;
+				}
+				Angle += FMath::DegreesToRadians(Speed) * DeltaTime;
+				const FVector Center = WeakPawn->GetActorLocation();
+				WeakEnemy->SetActorLocation(FVector(Center.X + FMath::Cos(Angle) * Radius, Center.Y + FMath::Sin(Angle) * Radius, WeakEnemy->GetActorLocation().Z));
+				return true;
+			}));
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Enemy Circle: on (%.0f deg/s, radius %.0f)"), Speed, Radius);
+		}
+		else if (Kind == TEXT("Teleport"))
+		{
+			const FVector Side = FVector::CrossProduct(FVector::UpVector, (Enemy->GetActorLocation() - PC->GetPawn()->GetActorLocation()).GetSafeNormal2D());
+			Enemy->SetActorLocation(Enemy->GetActorLocation() + Side * ArgOr(Args, 1, 1500.f));
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Enemy Teleport -> %s"), *Enemy->GetActorLocation().ToCompactString());
+		}
+		else if (Kind == TEXT("Kill"))
+		{
+			StopCircle();
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Enemy Kill %s"), *Enemy->GetActorNameOrLabel());
+			Enemy->Destroy();
+		}
+	}
+
+	static void SampleGroup(const TArray<FString>& Args, UWorld* World)
+	{
+		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
+		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		TArray<AActor*> Enemies;
+		GetEnemies(World, Enemies);
+		if (!Subsystem || !PC || !PC->GetPawn() || Args.IsEmpty())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("Usage: ACF.Sample.Group <Use|Add|Remove|Weight|Radius|Release> [EnemyIndex] [Value]"));
+			return;
+		}
+		const FString Kind = Args[0];
+		const int32 Index = Args.IsValidIndex(1) ? FCString::Atoi(*Args[1]) : INDEX_NONE;
+		AActor* Enemy = Enemies.IsValidIndex(Index) ? Enemies[Index] : nullptr;
+		if (Kind == TEXT("Use"))
+		{
+			UACFCameraPreset* Preset = LoadSamplePreset(TEXT("Group"));
+			if (!Preset || Subsystem->IsCameraRequestAlive(GGroupHandle))
+			{
+				return;
+			}
+			FACFCameraRequestParams Params;
+			Params.Priority = 5;
+			Params.FollowTarget.Actor = PC->GetPawn();
+			Params.TargetGroup.Members.Add(UACFCameraBlueprintLibrary::MakeTargetGroupMember(PC->GetPawn(), 1.f, 60.f));
+			Params.DebugName = TEXT("Sample_Group");
+			GGroupHandle = Subsystem->RequestCamera(Preset, Params);
+		}
+		else if (Kind == TEXT("Release"))
+		{
+			if (Subsystem->IsActiveCamera(GGroupHandle))
+			{
+				AlignControlRotationToCamera(Subsystem, PC);
+			}
+			Subsystem->ReleaseCameraWithBlend(GGroupHandle, SampleBlend(ArgOr(Args, 1, 0.6f), true));
+		}
+		else if (Kind == TEXT("Add") && Enemy)
+		{
+			Subsystem->AddCameraGroupActor(GGroupHandle, Enemy, 1.f, 80.f);
+		}
+		else if (Kind == TEXT("Remove") && Enemy)
+		{
+			Subsystem->RemoveCameraGroupActor(GGroupHandle, Enemy);
+		}
+		else if ((Kind == TEXT("Weight") || Kind == TEXT("Radius")) && Enemy)
+		{
+			for (FACFCameraTargetGroupMember Member : Subsystem->GetCameraGroupMembers(GGroupHandle))
+			{
+				if (Member.Target.Actor.Get() == Enemy)
+				{
+					(Kind == TEXT("Weight") ? Member.Weight : Member.Radius) = ArgOr(Args, 2, 1.f);
+					Subsystem->AddCameraGroupMember(GGroupHandle, Member);
+				}
+			}
+		}
+		else
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Group %s: unknown command or enemy index %d (0..%d)"), *Kind, Index, Enemies.Num() - 1);
+		}
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Group %s -> %d members"), *Kind, Subsystem->GetCameraGroupMembers(GGroupHandle).Num());
+	}
+
+	static FAutoConsoleCommandWithWorldAndArgs GSampleLockOnCmd(TEXT("ACF.Sample.LockOn"),
+		TEXT("Lock on to (or switch to) an ACFEnemy actor: [Index] (default: next)"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleLockOn));
+	static FAutoConsoleCommandWithWorldAndArgs GSampleLockOffCmd(TEXT("ACF.Sample.LockOff"),
+		TEXT("Release the lock-on camera: [BlendSeconds=0.5]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleLockOff));
+	static FAutoConsoleCommandWithWorldAndArgs GSampleEnemyCmd(TEXT("ACF.Sample.Enemy"),
+		TEXT("Act on the locked enemy: <Circle [DegPerSec] (toggle)|Teleport [Distance]|Kill>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleEnemy));
+	static FAutoConsoleCommandWithWorldAndArgs GSampleGroupCmd(TEXT("ACF.Sample.Group"),
+		TEXT("Target group sample: <Use|Add i|Remove i|Weight i w|Radius i r|Release>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleGroup));
 }
 
 #endif // !UE_BUILD_SHIPPING

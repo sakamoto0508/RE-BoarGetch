@@ -123,6 +123,55 @@ bool UACFCameraSubsystem::SetCameraTargets(FACFCameraRequestHandle Handle, const
 	return Director && Director->SetRequestTargets(Handle, FollowTarget, LookAtTarget);
 }
 
+bool UACFCameraSubsystem::SetCameraLockOnTarget(FACFCameraRequestHandle Handle, const FACFCameraTarget& LockTarget)
+{
+	return Director && Director->SetRequestLookAtTarget(Handle, LockTarget);
+}
+
+bool UACFCameraSubsystem::SetCameraLockOnActor(FACFCameraRequestHandle Handle, AActor* LockTarget)
+{
+	FACFCameraTarget Target;
+	Target.Actor = LockTarget;
+	return SetCameraLockOnTarget(Handle, Target);
+}
+
+bool UACFCameraSubsystem::AddCameraGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTargetGroupMember& Member)
+{
+	return Director && Director->AddGroupMember(Handle, Member);
+}
+
+bool UACFCameraSubsystem::AddCameraGroupActor(FACFCameraRequestHandle Handle, AActor* Actor, float Weight, float Radius)
+{
+	FACFCameraTargetGroupMember Member;
+	Member.Target.Actor = Actor;
+	Member.Weight = FMath::Max(Weight, 0.f);
+	Member.Radius = FMath::Max(Radius, 0.f);
+	return Actor && AddCameraGroupMember(Handle, Member);
+}
+
+bool UACFCameraSubsystem::RemoveCameraGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTarget& Target)
+{
+	return Director && Director->RemoveGroupMember(Handle, Target);
+}
+
+bool UACFCameraSubsystem::RemoveCameraGroupActor(FACFCameraRequestHandle Handle, AActor* Actor)
+{
+	FACFCameraTarget Target;
+	Target.Actor = Actor;
+	return Actor && RemoveCameraGroupMember(Handle, Target);
+}
+
+bool UACFCameraSubsystem::SetCameraGroupMembers(FACFCameraRequestHandle Handle, const TArray<FACFCameraTargetGroupMember>& Members)
+{
+	return Director && Director->SetGroupMembers(Handle, Members);
+}
+
+TArray<FACFCameraTargetGroupMember> UACFCameraSubsystem::GetCameraGroupMembers(FACFCameraRequestHandle Handle) const
+{
+	const FACFCameraTargetGroup* Group = Director ? Director->GetGroup(Handle) : nullptr;
+	return Group ? Group->Members : TArray<FACFCameraTargetGroupMember>();
+}
+
 void UACFCameraSubsystem::SuppressOutput(UObject* Source, float BlendTime)
 {
 	if (Director)

@@ -82,3 +82,35 @@ FACFCameraBlendSettings FACFCameraBlendSettings::MakeCut()
 	Cut.Duration = 0.f;
 	return Cut;
 }
+
+// -------------------------------------------------------------------------------------------------
+// Target group
+
+void FACFCameraTargetGroup::AddOrUpdate(const FACFCameraTargetGroupMember& Member)
+{
+	if (!Member.Target.IsSet())
+	{
+		return;
+	}
+	if (FACFCameraTargetGroupMember* Existing = Members.FindByPredicate([&Member](const FACFCameraTargetGroupMember& M) { return M.RefersTo(Member.Target); }))
+	{
+		*Existing = Member;
+		return;
+	}
+	Members.Add(Member);
+}
+
+bool FACFCameraTargetGroup::Remove(const FACFCameraTarget& Target)
+{
+	return Members.RemoveAll([&Target](const FACFCameraTargetGroupMember& M) { return M.RefersTo(Target); }) > 0;
+}
+
+int32 FACFCameraTargetGroup::RemoveLostMembers()
+{
+	return Members.RemoveAll([](const FACFCameraTargetGroupMember& M)
+	{
+		FTransform Unused;
+		const UObject* Object = nullptr;
+		return !M.Target.Resolve(Unused, Object);
+	});
+}

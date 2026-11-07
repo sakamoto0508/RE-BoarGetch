@@ -7,6 +7,7 @@
 #include "Effects/ACFCameraEffectTypes.h"
 #include "ACFCameraSubsystem.generated.h"
 
+class AActor;
 class APlayerCameraManager;
 class APlayerController;
 class UACFCameraDirector;
@@ -75,6 +76,41 @@ public:
 	/** Changes the follow / look-at targets of an existing request (e.g. switching lock-on). */
 	UFUNCTION(BlueprintCallable, Category = "Action Camera")
 	bool SetCameraTargets(FACFCameraRequestHandle Handle, const FACFCameraTarget& FollowTarget, const FACFCameraTarget& LookAtTarget);
+
+	// --- Lock-On / Target Group (camera side only: choosing and switching targets is gameplay) --------------
+
+	/**
+	 * Changes the locked target of a lock-on request (its Look At Target); the Follow Target is kept.
+	 * The Lock-On node turns smoothly to the new target. An empty target means "nothing locked" (behind the player).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Lock-On", meta = (DisplayName = "Set ACF Camera Lock-On Target"))
+	bool SetCameraLockOnTarget(FACFCameraRequestHandle Handle, const FACFCameraTarget& LockTarget);
+
+	/** Same for an actor (null clears the lock). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Lock-On", meta = (DisplayName = "Set ACF Camera Lock-On Actor"))
+	bool SetCameraLockOnActor(FACFCameraRequestHandle Handle, AActor* LockTarget);
+
+	/** Adds a member to the request's target group, or updates its Weight / Radius / Offset if already present. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Target Group", meta = (DisplayName = "Add ACF Camera Group Member"))
+	bool AddCameraGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTargetGroupMember& Member);
+
+	/** Adds an actor to the request's target group (or updates it). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Target Group", meta = (DisplayName = "Add ACF Camera Group Actor"))
+	bool AddCameraGroupActor(FACFCameraRequestHandle Handle, AActor* Actor, float Weight = 1.f, float Radius = 60.f);
+
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Target Group", meta = (DisplayName = "Remove ACF Camera Group Member"))
+	bool RemoveCameraGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTarget& Target);
+
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Target Group", meta = (DisplayName = "Remove ACF Camera Group Actor"))
+	bool RemoveCameraGroupActor(FACFCameraRequestHandle Handle, AActor* Actor);
+
+	/** Replaces all members (an empty array clears the group). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Target Group", meta = (DisplayName = "Set ACF Camera Group Members"))
+	bool SetCameraGroupMembers(FACFCameraRequestHandle Handle, const TArray<FACFCameraTargetGroupMember>& Members);
+
+	/** Current members (destroyed ones have already been removed). Empty for unknown handles. */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Target Group", meta = (DisplayName = "Get ACF Camera Group Members"))
+	TArray<FACFCameraTargetGroupMember> GetCameraGroupMembers(FACFCameraRequestHandle Handle) const;
 
 	/**
 	 * Output authority extension point. While suppressed, ACF keeps evaluating but its output weight

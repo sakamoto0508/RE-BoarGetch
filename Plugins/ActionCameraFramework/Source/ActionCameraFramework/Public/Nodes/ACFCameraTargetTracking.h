@@ -158,6 +158,13 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraTargetTrackingState
 	 */
 	bool Track(const FACFCameraTarget& Target, const FACFCameraTargetMotionSettings& Settings, float DeltaTime, FACFCameraTrackedTarget& Out);
 
+	/**
+	 * Same motion handling (lookahead, optional teleport detection) for a computed point that is not a
+	 * single target, e.g. a target group centre. bValid false = hold the last known point (false if none).
+	 * Group centres jump when members are added / removed, so callers usually pass bDetectTeleport = false.
+	 */
+	bool TrackPoint(bool bValid, const FTransform& Transform, const FACFCameraTargetMotionSettings& Settings, float DeltaTime, bool bDetectTeleport, FACFCameraTrackedTarget& Out);
+
 	/** Uniform damping towards Goal. DeltaTime <= 0 never changes state. */
 	FVector UpdateDamped(const FVector& Goal, float DampingTime, float DeltaTime);
 
@@ -168,6 +175,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraTargetTrackingState
 	static FQuat DampingFrame(const FACFCameraPositionDamping& Damping, const FQuat& TargetRotation, const FRotator& CameraRotation);
 
 private:
+	void UpdateMotion(const FACFCameraTargetMotionSettings& Settings, float DeltaTime, bool bDetectTeleport, FACFCameraTrackedTarget& Out);
 	bool ResolveTarget(const FACFCameraTarget& Target, EACFCameraTargetLostBehavior LostBehavior, FTransform& OutTransform, const UObject*& OutObject);
 };
 

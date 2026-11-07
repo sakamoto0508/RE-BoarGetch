@@ -81,6 +81,15 @@ public:
 	/** Replaces the follow / look-at targets of a live request. Returns false for unknown handles. */
 	bool SetRequestTargets(FACFCameraRequestHandle Handle, const FACFCameraTarget& FollowTarget, const FACFCameraTarget& LookAtTarget);
 
+	/** Replaces only the look-at target (= the Lock-On node's locked target). Nodes glide to the new target. */
+	bool SetRequestLookAtTarget(FACFCameraRequestHandle Handle, const FACFCameraTarget& LookAtTarget);
+
+	/** Target group of a live request. AddOrUpdate / Remove / Set return false for unknown handles. */
+	bool AddGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTargetGroupMember& Member);
+	bool RemoveGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTarget& Target);
+	bool SetGroupMembers(FACFCameraRequestHandle Handle, const TArray<FACFCameraTargetGroupMember>& Members);
+	const FACFCameraTargetGroup* GetGroup(FACFCameraRequestHandle Handle) const;
+
 	bool HasRequest(FACFCameraRequestHandle Handle) const;
 	int32 GetNumRequests() const { return Requests.Num(); }
 	FACFCameraRequestHandle GetActiveRequest() const { return ActiveHandle; }
@@ -167,6 +176,7 @@ private:
 		float Value = 1.f;
 	};
 
+	/** Instigator lost, or look-at target lost with bReleaseWhenLookAtTargetLost; also drops destroyed group members. */
 	void PruneLostInstigators();
 	void PruneLostSuppressionSources();
 	int32 FindBestRequestIndex() const;
