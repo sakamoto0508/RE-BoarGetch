@@ -63,7 +63,10 @@ void FACFCameraRigInstance::SyncStatesWithPreset()
 	{
 		Order.Add(Index);
 	}
-	auto StageOf = [&Nodes](int32 Index) { return Nodes[Index] ? static_cast<int32>(Nodes[Index]->GetStage()) : 0; };
+	auto StageOf = [&Nodes](int32 Index) -> int64
+	{
+		return Nodes[Index] ? static_cast<int64>(Nodes[Index]->GetStage()) * 1000000 + FMath::Clamp(Nodes[Index]->GetStageOrder(), -400000, 400000) : 0;
+	};
 	Algo::StableSortBy(Order, StageOf);
 	OrderedNodes.Reset(Nodes.Num());
 	PreBlendCount = 0;

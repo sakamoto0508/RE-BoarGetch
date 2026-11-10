@@ -18,7 +18,7 @@ namespace ACFCameraDebug
 	bool IsWorldDrawEnabled() { return CVarDraw.GetValueOnGameThread() >= 1; }
 	bool IsScreenDrawEnabled() { return CVarDraw.GetValueOnGameThread() >= 2; }
 
-	void DrawWorld(UWorld* World, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result)
+	void DrawWorld(UWorld* World, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result, const FACFCameraSolverReport& Solver)
 	{
 #if ENABLE_DRAW_DEBUG
 		if (!World || !Result.HasInfluence())
@@ -41,6 +41,10 @@ namespace ACFCameraDebug
 		if (Debug.bHasLookAtTarget)
 		{
 			DrawDebugCrosshairs(World, Debug.LookAtTarget, FRotator::ZeroRotator, 40.f, FColor::Yellow);
+		}
+		for (int32 Index = 0; Index < Solver.NumDebugLines; ++Index)
+		{
+			DrawDebugLine(World, Solver.DebugFrom[Index], Solver.DebugTo[Index], Solver.DebugBlocked[Index] ? FColor::Red : FColor(0, 200, 255));
 		}
 		if (Debug.bHasGroup)
 		{
@@ -80,7 +84,7 @@ namespace ACFCameraDebug
 		DrawDebugCanvas2DBox(Canvas, FBox2D(Min, Max), Color, 1.5f);
 	}
 
-	void DrawCanvas(UCanvas* Canvas, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result, const TArray<FACFCameraEffectInfo>& Effects)
+	void DrawCanvas(UCanvas* Canvas, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result, const FACFCameraSolverReport& Solver, const TArray<FACFCameraEffectInfo>& Effects, const TArray<FString>& ExtraLines)
 	{
 		if (!Canvas || !GEngine)
 		{
@@ -110,6 +114,10 @@ namespace ACFCameraDebug
 			*Result.ActiveRequest.ToString(), Result.Weight, Result.RequestWeight, Result.bOutputSuppressed ? TEXT(", SUPPRESSED") : TEXT(""),
 			Result.BlendAlpha, Result.NumRequests));
 		Line(FString::Printf(TEXT("Camera %s  %s  FOV %.1f"), *Result.Pose.Location.ToCompactString(), *Result.Pose.Rotation.ToCompactString(), Result.Pose.FieldOfView));
+		for (const FString& Extra : ExtraLines)
+		{
+			Line(Extra);
+		}
 		if (Debug.bHasFollowTarget)
 		{
 			Line(FString::Printf(TEXT("Follow %s"), *Debug.FollowTarget.ToCompactString()));
@@ -129,6 +137,18 @@ namespace ACFCameraDebug
 		if (Debug.bHasGroup)
 		{
 			Line(FString::Printf(TEXT("Group subjects %d  dolly %.0f cm  FOV %+.1f"), Debug.NumGroupSubjects, Debug.GroupDolly, Debug.GroupFovDelta));
+		}
+		if (Debug.bHasCombat)
+		{
+			Line(FString::Printf(TEXT("Combat %s  weight %.2f  distance x%.2f  FOV %+.1f  enemy range %.0f"), Debug.bInCombat ? TEXT("ON") : TEXT("off"),
+				Debug.CombatWeight, Debug.CombatDistanceScale, Debug.CombatFovOffset, Debug.CombatRange));
+		}
+		if (Solver.NumCheckedSubjects > 0 || Solver.FovRecovery != 0.f)
+		{
+			Line(FString::Printf(TEXT("Solver  checked %d  traces %d%s  correction yaw %.1f pitch %.1f pull %.2f  FOV recovery %+.1f%s%s  occluded %d%s"),
+				Solver.NumCheckedSubjects, Solver.NumTraces, Solver.bSearched ? TEXT(" (search)") : TEXT(""), Solver.Correction.X, Solver.Correction.Y, Solver.Correction.Z,
+				Solver.FovRecovery, Solver.bFramingLimited ? TEXT(" LIMIT") : TEXT(""), Solver.bPlayerRotationCorrected ? TEXT(" +turn") : TEXT(""),
+				Solver.NumOccluded, Solver.bPlayerOccluded ? TEXT(" PLAYER HIDDEN") : TEXT("")));
 		}
 		if (Debug.bHasLockOn)
 		{

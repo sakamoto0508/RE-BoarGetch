@@ -250,11 +250,12 @@ const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateForOutput(float D
 
 	// Stages 2-6 (input is consumed inside, once per time-advancing evaluation).
 	const FACFCameraEvaluationResult& Result = Director->Evaluate(Context);
+	FlushSequenceEvents();
 #if ENABLE_DRAW_DEBUG && !UE_BUILD_SHIPPING
 	if (Result.FrameNumber != LastDebugDrawFrame && ACFCameraDebug::IsWorldDrawEnabled())
 	{
 		LastDebugDrawFrame = Result.FrameNumber;
-		ACFCameraDebug::DrawWorld(Context.World, Director->GetLastDebug(), Result);
+		ACFCameraDebug::DrawWorld(Context.World, Director->GetLastDebug(), Result, Director->GetLastSolverReport());
 	}
 #endif
 	return Result;
@@ -413,7 +414,18 @@ void UACFCameraSubsystem::HandleDebugDraw(UCanvas* Canvas, APlayerController* Pl
 	}
 	TArray<FACFCameraEffectInfo> Effects;
 	Director->GetActiveEffects(Effects);
-	ACFCameraDebug::DrawCanvas(Canvas, Director->GetLastDebug(), Director->GetLastResult(), Effects);
+	TArray<FString> Lines;
+	TArray<FACFCameraSequenceHandle> Sequences;
+	Director->GetActiveSequences(Sequences);
+	for (const FACFCameraSequenceHandle Sequence : Sequences)
+	{
+		FACFCameraSequenceState S;
+		Director->GetSequenceState(Sequence, S);
+		Lines.Add(FString::Printf(TEXT("Sequence %s  shot %d/%d '%s'  t %.2f/%.2f  rate %.2f%s%s%s%s  effects %d"), *Sequence.ToString(), S.ShotIndex, S.NumShots,
+			*S.ShotName.ToString(), S.ShotTime, S.ShotDuration, S.PlayRate, S.bWaitingForEvent ? TEXT("  (wait event)") : TEXT(""), S.bHeld ? TEXT("  HELD") : TEXT(""),
+			S.bUsingFallback ? TEXT("  FALLBACK") : TEXT(""), S.bInControl ? TEXT("") : TEXT("  (not in control)"), S.NumOwnedEffects));
+	}
+	ACFCameraDebug::DrawCanvas(Canvas, Director->GetLastDebug(), Director->GetLastResult(), Director->GetLastSolverReport(), Effects, Lines);
 }
 #endif
 
@@ -524,4 +536,173 @@ UACFCameraEffectPreset* UACFCameraSubsystem::GetOrCreateTransientEffectPreset(FN
 		Build(Preset);
 	}
 	return Preset;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Combat / constraints
+
+void UACFCameraSubsystem::SetCombatState(const FACFCameraCombatState& State)
+{
+	if (Director)
+	{
+		Director->SetCombatState(State);
+	}
+}
+
+void UACFCameraSubsystem::EnterCombat(float Intensity, AActor* FocusEnemy)
+{
+	FACFCameraCombatState State = GetCombatState();
+	State.bInCombat = true;
+	State.Intensity = FMath::Clamp(Intensity, 0.f, 1.f);
+	State.FocusTarget = FACFCameraTarget();
+	State.FocusTarget.Actor = FocusEnemy;
+	SetCombatState(State);
+}
+
+void UACFCameraSubsystem::ExitCombat()
+{
+	FACFCameraCombatState State = GetCombatState();
+	State.bInCombat = false;
+	SetCombatState(State);
+}
+
+FACFCameraCombatState UACFCameraSubsystem::GetCombatState() const
+{
+	return Director ? Director->GetCombatState() : FACFCameraCombatState();
+}
+
+bool UACFCameraSubsystem::SetCameraDeoccluderEnabled(FACFCameraRequestHandle Handle, bool bEnabled)
+{
+	return Director && Director->SetRequestDeoccluderEnabled(Handle, bEnabled);
+}
+
+// -------------------------------------------------------------------------------------------------
+// Camera sequences / finishers
+
+FACFCameraSequenceHandle UACFCameraSubsystem::PlayCameraSequence(UACFCameraSequence* Sequence, const FACFCameraSequenceParams& Params)
+{
+	if (!Director)
+	{
+		return FACFCameraSequenceHandle();
+	}
+	const FACFCameraSequenceHandle Handle = Director->PlaySequence(Sequence, Params);
+	if (Handle.IsValid())
+	{
+		EnsureOutputAttached();
+	}
+	FlushSequenceEvents(); // replaced playbacks
+	return Handle;
+}
+
+FACFCameraSequenceHandle UACFCameraSubsystem::StartFinisherCamera(UACFCameraSequence* Sequence, AActor* Attacker, AActor* Target, float PlayRate)
+{
+	FACFCameraSequenceParams Params;
+	Params.Attacker = Attacker;
+	Params.Target = Target;
+	Params.PlayRate = PlayRate;
+	return PlayCameraSequence(Sequence, Params);
+}
+
+FACFCameraSequenceHandle UACFCameraSubsystem::StartFinisherCameraWithPreset(UACFCameraPreset* Preset, AActor* Attacker, AActor* Target, float Duration,
+	FACFCameraBlendSettings BlendIn, FACFCameraBlendSettings ReturnBlend, int32 Priority)
+{
+	if (!Director)
+	{
+		return FACFCameraSequenceHandle();
+	}
+	const FACFCameraSequenceHandle Handle = Director->PlayFinisherPreset(Preset, Attacker, Target, Duration, BlendIn, ReturnBlend, Priority);
+	if (Handle.IsValid())
+	{
+		EnsureOutputAttached();
+	}
+	FlushSequenceEvents();
+	return Handle;
+}
+
+bool UACFCameraSubsystem::AdvanceCameraShot(FACFCameraSequenceHandle Handle)
+{
+	return SendCameraSequenceCommand(Handle, EACFCameraSequenceCommand::AdvanceShot, NAME_None);
+}
+
+bool UACFCameraSubsystem::JumpToCameraShot(FACFCameraSequenceHandle Handle, FName ShotName)
+{
+	return SendCameraSequenceCommand(Handle, EACFCameraSequenceCommand::JumpToShot, ShotName);
+}
+
+bool UACFCameraSubsystem::JumpToCameraShotIndex(FACFCameraSequenceHandle Handle, int32 ShotIndex)
+{
+	return Director && Director->JumpToShot(Handle, ShotIndex);
+}
+
+bool UACFCameraSubsystem::HoldCameraShot(FACFCameraSequenceHandle Handle)
+{
+	return SendCameraSequenceCommand(Handle, EACFCameraSequenceCommand::HoldShot, NAME_None);
+}
+
+bool UACFCameraSubsystem::ReleaseCameraShot(FACFCameraSequenceHandle Handle)
+{
+	return SendCameraSequenceCommand(Handle, EACFCameraSequenceCommand::ReleaseShot, NAME_None);
+}
+
+bool UACFCameraSubsystem::FinishCameraSequence(FACFCameraSequenceHandle& Handle)
+{
+	const bool bDone = SendCameraSequenceCommand(Handle, EACFCameraSequenceCommand::Finish, NAME_None);
+	Handle.Invalidate();
+	return bDone;
+}
+
+bool UACFCameraSubsystem::CancelCameraSequence(FACFCameraSequenceHandle& Handle)
+{
+	const bool bDone = SendCameraSequenceCommand(Handle, EACFCameraSequenceCommand::Cancel, NAME_None);
+	Handle.Invalidate();
+	return bDone;
+}
+
+bool UACFCameraSubsystem::SendCameraSequenceCommand(FACFCameraSequenceHandle Handle, EACFCameraSequenceCommand Command, FName ShotName)
+{
+	const bool bDone = Director && Director->SendSequenceCommand(Handle, Command, ShotName);
+	FlushSequenceEvents();
+	return bDone;
+}
+
+int32 UACFCameraSubsystem::SendCameraSequenceCommandToActor(AActor* Actor, EACFCameraSequenceCommand Command, FName ShotName)
+{
+	const int32 Count = Director ? Director->SendSequenceCommandToActor(Actor, Command, ShotName) : 0;
+	FlushSequenceEvents();
+	return Count;
+}
+
+bool UACFCameraSubsystem::SetCameraSequencePlayRate(FACFCameraSequenceHandle Handle, float PlayRate)
+{
+	return Director && Director->SetSequencePlayRate(Handle, PlayRate);
+}
+
+FACFCameraSequenceState UACFCameraSubsystem::GetCameraSequenceState(FACFCameraSequenceHandle Handle) const
+{
+	FACFCameraSequenceState State;
+	if (Director)
+	{
+		Director->GetSequenceState(Handle, State);
+	}
+	return State;
+}
+
+bool UACFCameraSubsystem::IsCameraSequencePlaying(FACFCameraSequenceHandle Handle) const
+{
+	return Director && Director->IsSequencePlaying(Handle);
+}
+
+void UACFCameraSubsystem::FlushSequenceEvents()
+{
+	if (!Director || !Director->HasSequenceEvents())
+	{
+		return;
+	}
+	// Take the queue first: handlers may start / end playbacks, which queues new events for the next flush.
+	Director->ConsumeSequenceEvents(SequenceEventScratch);
+	for (const FACFCameraSequenceEvent& Event : SequenceEventScratch)
+	{
+		OnCameraSequenceEvent.Broadcast(Event);
+	}
+	SequenceEventScratch.Reset();
 }

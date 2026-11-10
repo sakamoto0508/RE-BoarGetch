@@ -3,6 +3,9 @@
 #include "CoreMinimal.h"
 #include "ACFCameraNode.h"
 #include "Engine/EngineTypes.h"
+#include "ACFCameraConstraintSolver.h"
+#include "Components/ActorComponent.h"
+#include "GameFramework/Actor.h"
 #include "ACFCameraNode_Collision.generated.h"
 
 /** Runtime state of the Collision node. */
@@ -16,6 +19,10 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraCollisionState
 	/** Unobstructed distance of the previous evaluation (tells "returning from a hit" from "zooming out"). */
 	float LastFullDistance = 0.f;
 	bool bInitialized = false;
+
+	// Constraint solver (plain C++ state, copied with the struct; fixed size).
+	FACFCameraDeoccluderState Deoccluder;
+	FACFCameraFramingRecoveryState Recovery;
 };
 
 /**
@@ -69,6 +76,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision")
 	FVector FallbackOriginOffset = FVector(0.f, 0.f, 60.f);
 
+	/**
+	 * Constraint solver step 1 (runs before the sweep): keeps the player and important targets visible by orbiting
+	 * / pulling the camera around the pivot. The sweep below still has the last word (no wall clipping).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Constraint Solver")
+	FACFCameraDeoccluderSettings Deoccluder;
+
+	/** Constraint solver step 3 (after the sweep): widen the FOV within limits when the camera was pushed in. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Constraint Solver")
+	FACFCameraFramingRecoverySettings FramingRecovery;
+
 	virtual EACFCameraNodeStage GetStage() const override { return EACFCameraNodeStage::PostBlend; }
 	virtual const UScriptStruct* GetRuntimeStateType() const override { return FACFCameraCollisionState::StaticStruct(); }
 	virtual void OnActivated(const FACFCameraNodeContext& Context, FInstancedStruct* RuntimeState) const override { ResetInterpolation(RuntimeState); }
@@ -85,4 +103,17 @@ namespace ACFCameraCollision
 	 */
 	ACTIONCAMERAFRAMEWORK_API bool SweepCamera(const UWorld& World, const FVector& Origin, const FVector& Desired, float Radius,
 		ECollisionChannel Channel, FCollisionQueryParams& Params, FHitResult& OutHit);
+
+	/** False while the debug cvar ACF.Debug.Solver is 0 (deoccluder and framing recovery bypassed). */
+	ACTIONCAMERAFRAMEWORK_API bool IsSolverEnabled();
+
+	inline const AActor* ActorOf(const UObject* Object)
+	{
+		if (const AActor* Actor = Cast<AActor>(Object))
+		{
+			return Actor;
+		}
+		const UActorComponent* Component = Cast<UActorComponent>(Object);
+		return Component ? Component->GetOwner() : nullptr;
+	}
 }

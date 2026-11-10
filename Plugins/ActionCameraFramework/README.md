@@ -12,7 +12,9 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 2（Third Person: Orbital Follow / FreeLook、軸別 Damping、Composer、Collision、Lookahead）完了。最終監査で出力 Guard を追加
 - Phase 3（Camera Effects: Punch / Recoil / Impulse / ACF Shake / Speed FOV / Roll、Effect Preset、Handle）完了
 - Phase 4A（Lock-On、Target Group / Group Framing）完了
-- 次は Phase 4B（Action Camera の残り）
+- Phase 4B（Combat Camera、Deoccluder、カメラ制約の調停 = Constraint Solver）完了
+- Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
+- 次は Phase 5
 
 ---
 
@@ -43,10 +45,11 @@ APlayerCameraManager（既存のまま）→ Camera Shake（127）→ 画面
 | 段 | 内容 |
 |----|------|
 | 1. Context | DeltaTime、UE カメラの姿勢、ControlRotation、アスペクト比、カメラ入力を集めます。入力は時間が進む評価でだけ消費されます |
+| 2a. シーケンス | 再生中の Camera Sequence（Finisher）の時間を進め、Shot が変わるなら Shot の要求を差し替えます（同じフレームの 2 で反映） |
 | 2. 要求の解決 | 優先度で有効な要求を決め、必要なら遷移（ブレンド）を開始します |
 | 3. Rig 評価 | **Body**（位置）→ **Aim**（回転）→ **Framing**（視線方向の移動・FOV で対象を画面に収める）の順に Node を評価します |
 | 4. ブレンド | 要求同士のブレンド（Live / Snapshot）と、UE カメラに対する Weight |
-| 5. 演出と PostBlend | 位置の演出 → **Collision**（ブレンド後の最終姿勢に 1 回）→ 回転・FOV の演出。ブレンド中や演出中でも壁を抜けません |
+| 5. 演出と PostBlend | 位置の演出 → **Collision**（ブレンド後の最終姿勢に 1 回。中で Constraint Solver が「遮蔽補正 → 衝突 → FOV 回復」の順に動く）→ 回転・FOV の演出。ブレンド中や演出中でも壁を抜けません |
 | 6. 結果確定 | `Weight`、`AimPose`、デバッグ情報 |
 | 7. 出力 | PCM の呼び出しごとに `Lerp(UE カメラ, ACF, Weight)`。この後に UE の Camera Shake がかかり、最後に Guard が最終位置を Collision で再拘束します |
 
@@ -64,10 +67,12 @@ Content Browser で右クリック > Miscellaneous > Data Asset > **ACFCameraPre
 | **Orbital Follow** | Body | 対象を中心に旋回します（Third Person / FreeLook）。位置 + 回転 |
 | **Position Composer** | Body | 対象が画面上の決まった位置に来るよう、カメラを**平行移動**します（2.5D / 見下ろし向け）。回転はしません |
 | **Lock-On** | Body | プレイヤー（Follow Target）の背後、ロック対象（Look At Target）と反対側に回り込み、両方を見ます。位置 + 回転 |
+| **Shot Anchor** | Body | 演出用。攻撃者（Follow Target）と対象（Look At Target）を結ぶ線を基準にカメラを置きます。毎フレーム追従（動的ショット）か、Shot 開始時に固定（固定ショット）。位置 + 回転 + FOV |
 | **Look At** | Aim | 対象を真っ直ぐ注視します |
 | **Rotation Composer** | Aim | 対象が画面上の決まった位置に来るよう、カメラを**回転**します（Dead / Soft Zone あり） |
+| **Combat Camera** | Framing（段の先頭） | ゲームから渡された戦闘状態に応じて、アーム長（敵との距離で変化）・FOV・肩越しオフセットを滑らかに変えます。回転はしません |
 | **Group Framing** | Framing | 複数の対象（球）が画面の指定範囲に収まるよう、カメラを**視線方向に前後**させるか **FOV** を変えます。回転はしません |
-| **Collision** | PostBlend | ピボットからカメラへ Sphere Sweep し、壁へのめり込みを防ぎます |
+| **Collision** | PostBlend | ピボットからカメラへ Sphere Sweep し、壁へのめり込みを防ぎます。**Constraint Solver**（Deoccluder / Framing Recovery、既定 OFF）もここに設定します |
 
 Look At と Rotation Composer の **Target Source** は、Look At Target / Follow Target / **Target Group**（グループの重み付き中心）から選べます。
 
@@ -77,6 +82,8 @@ Look At と Rotation Composer の **Target Source** は、Look At Target / Follo
 - 2.5D / 横スクロール: `Fixed Pose`（回転だけ ON）+ `Position Composer`
 - ロックオン: `Lock-On` + `Group Framing`（Follow / Look At Target Subject を ON）+ `Collision`（サンプル `DA_ACFSample_LockOn`）
 - 複数対象: `Orbital Follow` + `Rotation Composer`（Target Source = Target Group）+ `Group Framing` + `Collision`（サンプル `DA_ACFSample_Group`）
+- 戦闘: 上の TPS / ロックオンに `Combat Camera` を足し、`Collision` の Deoccluder と Framing Recovery を ON（サンプル `DA_ACFSample_ThirdPerson` / `DA_ACFSample_LockOn`）
+- フィニッシャーの Shot: `Shot Anchor` + `Collision`（サンプル `DA_ACFSample_Shot_*`）。Shot を並べる Camera Sequence は下の「Camera Sequence / Finisher」
 
 位置を決める Node（Follow / Orbital Follow / Lock-On / Position Composer）は 1 つだけにしてください。Data Validation が警告を出します（Group Framing の重複、対象が 1 つも設定されていない Group Framing も警告します）。
 
@@ -173,6 +180,96 @@ Look At と Rotation Composer の **Target Source** は、Look At Target / Follo
 - 補正は「入ってきたカメラからの差分」として保持するので、累積せず、前段の Damping とも干渉しません。
 - 破棄されたメンバーは Director が毎フレーム自動で取り除きます（メモリは再確保しません）。
 
+### Combat Camera の設定
+
+戦闘中かどうか・強さ（Intensity 0〜1）・距離の基準にする敵は**ゲームが決めて**渡します（`Set ACF Camera Combat State`。ローカルプレイヤーごと）。ACF は戦闘を判定しません。
+同じ Node を通常の TPS Preset とロックオン Preset の両方に入れれば、通常戦闘・ロックオン戦闘の両方に効きます。
+
+| 項目 | 意味 |
+|------|------|
+| Profile: Near / Far Range | プレイヤーと敵の距離。この間で Near → Far の値を線形補間します（敵がいなければ Far） |
+| Profile: Near / Far Distance Scale | アーム長（ピボット → カメラ）の倍率。既定は近い敵ほど引きます（1.25 / 1.05） |
+| Profile: Field Of View Offset | FOV に足す角度（既定 +5°） |
+| Profile: Shoulder Offset | カメラ空間で足す肩越しオフセット（Y = 右、Z = 上） |
+| Enter / Exit Time | 戦闘に入る・出るときの補間の時間（既定 0.35 / 0.8 秒） |
+| Range Damping Time | 敵との距離の変化の平滑化 |
+
+- 距離の基準の敵: Combat State の Focus Target → ロックオンの対象（Look At Target）→ Target Group で一番近いメンバーの順に使います。
+- 変化量はすべて `Intensity` 倍されます。`bOverrideProfile` でゲームから Profile ごと差し替えることもできます。
+- ピボットを中心にアームを伸ばすので、プレイヤーの画面上の位置は保たれます。後段の Group Framing が対象の収まりを、Collision が壁を保証します。
+
+### Constraint Solver（Collision Node の Deoccluder / Framing Recovery）
+
+Collision Node が 1 フレームに 1 回、次の順で処理します。どの制約も同時に満たせないときは、下の優先順位で段階的に緩めます。
+
+| 優先 | 制約 | 担当 |
+|------|------|------|
+| 1 | カメラ自身が障害物に入らない | Collision の Sweep（**常に最後に勝つ**。Guard も維持） |
+| 2 | プレイヤーが見える | Deoccluder（プレイヤーを最優先で確認）、最後の手段として Framing Recovery がプレイヤー方向へ少し回す |
+| 3 | 重要な敵ができるだけ見える | Deoccluder（Weight の合計が大きい候補）、Framing Recovery（FOV を上限まで広げる） |
+| 4 | 元の構図・距離を保つ | 補正は「必要なときだけ」「上限つき」。障害物が消えたら元へ戻る |
+| 5 | 移動量・回転量を最小に | 候補を移動量の小さい順に試し、全員見える最初の候補で止める |
+
+**Deoccluder**（Deoccluder > Enabled）
+- 確認する対象: Group Framing の対象（プレイヤー → Weight 順、最大 Max Checked Subjects 体）。Group Framing が無い Preset では、ピボット（プレイヤー）とロックオン点 / Look At Target。
+- 視線の確認は、Collision 後のカメラから各対象への Sphere Trace（Trace Radius、0 なら Line Trace）です。プレイヤー・操作中の Pawn・Ignored Actors は無視し、対象自身に先に当たった場合は「見えている」とします。
+- **ヒステリシス**: Occluded Delay（既定 0.25 秒）以上続いた遮蔽にだけ反応します。柱の前を一瞬横切るだけなら動きません。補正を戻すのは、元の位置から全員が Clear Delay（既定 0.5 秒）以上見えてからです。
+- **補正**: ピボットを中心にカメラを回す（Yaw ±、Pitch 上向き）か、手前に寄せます（Pull In）。候補は ±Max Yaw の半分 / 上へ Max Pitch の半分 / 寄せ半分 → 組み合わせ → 最大値の順（最大 10 候補）。各候補は Collision の Sweep 後の位置で評価します。視界の向きも同じだけ回るので、プレイヤーの画面上の位置は変わりません。
+- **補正量の上限**: Max Yaw Offset（既定 50°）、Max Pitch Offset（25°）、Max Pull In（アームの 60%）。
+- **滑らかさ**: 補正へは Correction Damping Time（0.3 秒）、戻りは Return Damping Time（0.7 秒）。
+- **解決できないとき**: 最もよく見える候補（プレイヤー優先、次に敵の Weight の合計）に留まり、見えない対象の数を `Get Last Evaluation Result` の `NumOccludedTargets`（プレイヤー自身なら `bPlayerOccluded`）で知らせます。毎フレームは探さず、Retry Interval（0.3 秒）ごとにだけ探し直します。上限を超えて動いたり、カメラが障害物に入ったりはしません。ゲーム側でシルエット表示などを出す判断に使ってください。
+- **トレース数**: 通常 1 フレームに「Sweep 1 回 + 対象数」。補正中は元の位置の確認でもう 1 組。探索するフレームだけ最大 10 候補 ×（1 + 対象数）。
+- 要求ごとに `Set ACF Camera Deoccluder Enabled` で OFF にできます。
+
+**Framing Recovery**（Framing Recovery > Enabled。Group Framing がある Preset で働きます）
+- Collision がカメラを手前に押した後、Group Framing の対象が枠（Framing Size）からはみ出すなら、必要な FOV を計算して広げます（Phase 4A の「Group Framing と Collision の競合」の解決）。
+- 上限: Max Field Of View（既定 100°）と、元の FOV + Max Field Of View Increase（既定 +25°）の小さい方。上限で足りない場合は `bFramingLimited` を立て、敵が枠から出ることを許します（優先 3 を緩める）。
+- それでもプレイヤーの中心が枠の外なら、プレイヤーの方へ最大 Max Player Rotation（20°）だけ回します（優先 2 を守る）。
+- 広げるときは速く（0.1 秒）、戻すときはゆっくり（0.6 秒）。対象が収まっているときは何もしません（Group Framing と競合しません）。
+
+### Shot Anchor の設定（Finisher / Cinematic の Shot 用）
+
+| 項目 | 意味 |
+|------|------|
+| Anchor Point / Between Alpha | 基準点: Follow Target（攻撃者）/ Look At Target（対象）/ その間（0 = 攻撃者、1 = 対象）。片方が無ければもう片方 |
+| Anchor Offset | 基準点に足すワールドオフセット（例: 胸の高さ） |
+| Basis | カメラオフセットの軸: World / 攻撃者の向き / **Line Of Action**（既定。X = 攻撃者 → 対象の水平方向、Y = その右、Z = 上） |
+| Camera Offset | 基準点からのカメラ位置（Basis の軸で） |
+| Freeze At Shot Start | ON = **固定ショット**（Shot の開始時に基準点と軸を記録し、以後動かない）。OFF = **動的ショット**（毎フレーム追従） |
+| Damping Time | 動的ショットの追従の遅れ |
+| Aim At Anchor / Field Of View | 基準点を注視するか（OFF なら Look At などの Aim Node に任せる）/ FOV |
+
+- 基準点を Collision のピボットとして渡します。Shot のカメラが壁の向こうに来ても、Collision は「演出の中心 → カメラ」の線上で手前に寄せます。
+- 攻撃者・対象が破棄されたときは、最後の基準点に留まります。
+- Line Of Action を使うと、レベルのどこで演出が起きても「攻撃の右側から」のような同じ構図になります。
+
+### Camera Sequence / Finisher（Phase 4C）
+
+Data Asset > **ACFCameraSequence** を作り、`Shots` に Shot を並べます。Sequence も Preset と同じく共有・不変で、再生ごとの状態は再生（Handle）ごとに持ちます。
+
+| Shot の項目 | 意味 |
+|-------------|------|
+| Name | Jump To Shot・通知・デバッグ表示で使う名前 |
+| Preset | その Shot のカメラ（動的 / 固定は Preset の Shot Anchor で決まる。Lock-On や Orbital Follow の Preset も使える） |
+| Advance Mode / Duration | **Duration**: Duration 秒（シーケンス時間）で次へ。**Wait For Event**: Advance イベントを待つ。Duration は**安全のためのタイムアウト**（0 = 無限）。どちらのモードでも Advance イベントで早めに進められます |
+| Blend In | この Shot へ入るときの切替。Cut または Blend（最初の Shot は、直前のゲームカメラからの切替） |
+| Priority Offset | Sequence の Priority に足す値 |
+| Targets | Follow / Look At に使う役割（Attacker / Target / None）と Socket、Target Group に入れる重み（Group Framing を使う Preset 用） |
+| Enable Deoccluder | この Shot で Collision Node の Deoccluder を使うか（既定 OFF = 演出の構図を崩さない） |
+| Fallback | 狭い場所で Shot が成立しないときの代わり（下の「Collision と演出」） |
+| Effects | Shot 開始時に再生する Effect Preset。寿命（Lifetime）: **Shot**（Shot の終わりで Release）/ **Sequence**（再生の終わりで Release）/ **Fire And Forget**（自然に終わる。Cancel では即座に止める） |
+
+| Sequence の項目 | 意味 |
+|-----------------|------|
+| Priority | Shot の要求の Priority（既定 1000。ロックオンなどゲームのカメラより上） |
+| Return Blend / Cancel Blend | 終了（最後の Shot の後・Finish）/ Cancel で、**どのカメラへ戻る場合でも**使うブレンド（既定 0.6 秒 / Cut） |
+| Interrupt Policy | もっと高い Priority のカメラに割り込まれたとき: **Continue**（既定。時間は進み続け、割り込みが終われば続きを映す）/ **Pause**（時間を止める）/ **Cancel**（終了） |
+| Actor Lost Policy | 攻撃者・対象が破棄されたとき: **Finish**（既定。Return Blend で戻る）/ **Cancel** / **Continue**（Node は最後の位置を保持） |
+| Use Attacker Time Dilation | シーケンス時間に攻撃者の Custom Time Dilation を掛ける（既定 ON。攻撃者のヒットストップでカメラのタイミングも止まる） |
+| Collision Ignores Role Actors | 攻撃者・対象を Shot の Collision の無視リストに入れる（既定 ON） |
+
+Data Validation は、Preset の無い Shot（エラー）、Collision の無い Preset、タイムアウトの無い Wait For Event、重複した Shot 名（警告）を報告します。
+
 ### ブレンドの設定（Default Blend In / Out）
 
 | 項目 | 内容 |
@@ -228,6 +325,61 @@ Subsystem から使えるノード:
 
 要求を出す前に `Params.TargetGroup.Members` に入れておくこともできます。
 
+**戦闘・制約**（戦闘の判定はゲーム側の責務です）
+
+| ノード | 内容 |
+|--------|------|
+| `Enter ACF Camera Combat` (Intensity, Focus Enemy) / `Exit ACF Camera Combat` | 戦闘に入る・出る（Combat Camera Node が滑らかに切り替える） |
+| `Set ACF Camera Combat State` (State) / `Get ACF Camera Combat State` | 戦闘状態を丸ごと設定（Intensity、Focus Target、Profile の差し替え） |
+| `Set ACF Camera Deoccluder Enabled` (Handle, Enabled) | 要求ごとに Deoccluder を ON / OFF |
+| `Get Last Evaluation Result` の `NumOccludedTargets` / `bPlayerOccluded` / `bFramingLimited` | 解決できなかった遮蔽・FOV 上限に達したことの通知 |
+
+**Finisher / Camera Sequence**（攻撃・ダメージ・アニメーションはゲーム側の責務です。ACF はカメラだけを扱い、Montage を再生・停止しません）
+
+```
+攻撃開始（ゲーム） ─▶ Play Montage（ゲーム）
+                  ─▶ Start ACF Finisher Camera (Sequence, Attacker = 自分, Target = 敵, Play Rate = Montage の再生速度) ─▶ Handle を保存
+Montage の Notify  ─▶ 「ACF Camera Sequence Command」(Advance Shot / Jump To Shot / Finish / Cancel)   … Handle 不要
+Montage の Notify State ─▶ 「ACF Camera Hold Shot」（区間の間、Shot の時間を止める）
+攻撃の中断（ゲーム） ─▶ Cancel ACF Camera Sequence (Handle)
+```
+
+| ノード | 内容 |
+|--------|------|
+| `Start ACF Finisher Camera` (Sequence, Attacker, Target, Play Rate) → Handle | フィニッシャー開始。このプレイヤーの他の再生は Replaced で終了します |
+| `Start ACF Finisher Camera (Preset)` (Preset, Attacker, Target, Duration, Blend In, Return Blend, Priority) | 専用 Preset 1 つだけのフィニッシャー。Duration 0 = Finish / Cancel まで |
+| `Play ACF Camera Sequence` (Sequence, Params) | 汎用（Params: Attacker、Target、Priority の上書き、Play Rate、Instigator、Stop Other Sequences、Start Shot） |
+| `Advance ACF Camera Shot` / `Jump To ACF Camera Shot` (Name) / `(Index)` | 次の Shot へ / 指定の Shot へ（途中の Shot はスキップ） |
+| `Hold ACF Camera Shot` / `Release ACF Camera Shot` | Shot の時間を止める / 再開（回数を数えます。Hold 2 回なら Release 2 回で再開） |
+| `Finish ACF Camera Sequence` / `Cancel ACF Camera Sequence` | 正常終了（Return Blend）/ 中断（Cancel Blend、演出を即座に停止）。Handle は無効化されます |
+| `Set ACF Camera Sequence Play Rate` | シーケンス時間の速さ（Montage の再生速度を変えたとき） |
+| `Get ACF Camera Sequence State` / `Is ACF Camera Sequence Playing` | 再生中か、現在の Shot（番号・名前・経過時間・長さ）、Hold 中か、イベント待ちか、カメラを握っているか、Fallback 中か、所有している演出の数 |
+| `On Camera Sequence Event`（Subsystem のイベント） | Shot Started / Shot Ended / Sequence Ended と理由（Completed / Advanced / Skipped / Infeasible / Cancelled / Interrupted / ActorLost / RequestLost / Replaced） |
+| `Send ACF Camera Sequence Command For Actor` (Actor, Command, Shot Name) | Actor が攻撃者か対象になっている再生（全ローカルプレイヤー）に命令を送る。Anim Notify はこれを使います |
+| `Start ACF Finisher Camera For Actor` / `Get ACF Camera Subsystem For Actor` | Actor を操作しているローカルプレイヤー（いなければ最初のローカルプレイヤー）で開始 |
+
+**アニメーションとの同期と時間**
+- シーケンス時間 = カメラの DeltaTime（ゲーム時間。グローバルの Time Dilation を含む）× Play Rate ×（ON なら）攻撃者の Custom Time Dilation。Montage の再生位置は読みません。
+- **Pause**: ワールドが Pause 中は進みません。**Time Dilation**: グローバルは DeltaTime に含まれ、攻撃者のヒットストップは Use Attacker Time Dilation で反映されます。**Montage の再生速度**: Play Rate で合わせます。
+- 推奨は「**Shot の切替をアニメーションの Notify（イベント）で行い、Duration はタイムアウトにする**」形です。こうすると Montage の速度変更・途中スキップ・ヒットストップ・フレーム落ちがあっても、カメラの切替は常にアニメーションの該当フレームで起きます。Duration だけで進める Shot は、Play Rate を Montage と揃えてください。
+- Advance / Jump は次のカメラ更新で適用されます（Anim Notify はカメラ更新の前に発火するので、同じフレームに反映されます）。同じフレームの Advance は何回送っても 1 回になり、Jump は最後のものが勝ちます。Hold / Release / Finish / Cancel は即座に適用されます。
+- 長いフレーム（ヒッチ）で複数の Shot を跨いだ場合は、超過時間を次の Shot へ繰り越し、跨いだ Shot は通知だけ出してカメラは作りません。
+- Notify State の Hold は、Montage が中断されても NotifyEnd で解除されます。Notify が来ない場合に備えて、Wait For Event の Shot には Duration（タイムアウト）を入れてください。
+
+**Request / Effect の所有権**
+- 1 つの再生は、同時に**最大 1 つ**のカメラ要求（現在の Shot）を持ちます。Shot の切替では「次の Shot の要求を追加 → 前の Shot の要求を削除」の順で行い、前の Shot は Blend の切替元（Live）としてだけ残ります（ブレンドが終わると Director が解放）。
+- Shot が再生した演出は再生が所有します。Shot の終わりで Lifetime = Shot の演出を Release、再生の終わりで残りすべてを Release（Cancel では即座に停止）します。終了後に残る演出はありません（Fire And Forget は自分の長さで終わります）。
+- 終了のしかた: 最後の Shot の終了・Finish・攻撃者 / 対象の破棄（Finish 設定時）は Return Blend、Cancel は Cancel Blend で、**戻り先がロックオンでも UE カメラでも**そのブレンドを使います。
+- 再生の要求が他から消された場合（`Release All Cameras`、Instigator の破棄）は、次の更新で RequestLost として終了し、演出も止めます。
+
+**Collision と演出の優先順位**
+1. カメラが障害物に入らない（Shot の Preset の Collision、出力 Guard。Finisher 中も常に有効）
+2. Shot の Deoccluder を ON にした Shot では、攻撃者 / 対象が見えるように補正（上限つき）
+3. Shot の構図（Shot Anchor の位置）
+
+- 狭い場所: Shot の開始時に 1 回だけ、その Shot のカメラを時間なしで評価（Probe）します。Collision で本来の距離の Min Distance Ratio（既定 60%）未満まで寄せられる、または（Require Line Of Sight）攻撃者 / 対象が遮られている場合は「成立しない」とみなし、**Fallback Preset**（例: 肩越しの近いショット）を使います。Fallback が無く Skip If Infeasible が ON ならその Shot を飛ばし、どちらも無ければ Collision で寄せたまま再生します。
+- Shot の途中では切り替えません（Shot の途中でカメラが跳ばない）。途中で狭くなった場合は Collision と（ON なら）Deoccluder が対応します。
+
 ### C++
 
 ```cpp
@@ -254,6 +406,12 @@ Cameras->ReleaseCamera(LockHandle);
 // Target Group
 Cameras->AddCameraGroupActor(GroupHandle, Boss, /*Weight*/ 2.f, /*Radius*/ 250.f);
 Cameras->RemoveCameraGroupActor(GroupHandle, Boss);
+
+// Finisher（Montage の再生はゲーム側。カメラ側は Handle で開始・終了する）
+FinisherHandle = Cameras->StartFinisherCamera(FinisherSequence, PlayerPawn, Enemy, MontagePlayRate);
+Cameras->AdvanceCameraShot(FinisherHandle);                        // 通常は Anim Notify が送る
+Cameras->CancelCameraSequence(FinisherHandle);                     // 攻撃が中断されたとき
+Cameras->OnCameraSequenceEvent.AddDynamic(this, &AMyCharacter::OnCameraShot);
 ```
 
 **入力のルール**
@@ -274,6 +432,12 @@ Cameras->RemoveCameraGroupActor(GroupHandle, Boss);
 | ロック対象が破棄 | 最後の位置を見続けます。`bReleaseWhenLookAtTargetLost` が ON なら、要求が自動で解除されます |
 | ロックオンの解除 | 戻り先のカメラの BlendIn で戻ります（カメラ間の切替なので、解除した要求の BlendOut は UE カメラへ戻るときだけ使われます） |
 | Target Group のメンバーが破棄 | 次の評価でグループから自動的に取り除かれます |
+| 遮蔽 | Occluded Delay 以上続いたときだけカメラを動かします。解決できない対象は通知し、カメラは上限内に留まります |
+| 戦闘状態の変更 | Combat Camera Node が Enter / Exit Time で補間します。ブレンド中の両方のカメラに同時に効きます |
+| Finisher の開始 | 高 Priority の Shot の要求で、ロックオンなど元のカメラの上に乗ります。元の要求は残ります |
+| Finisher の終了 | Return Blend（Cancel は Cancel Blend）で元のカメラへ戻ります。戻り先の Blend In ではありません |
+| Finisher 中の割り込み | Interrupt Policy に従います（既定は時間を進めたまま裏に回り、割り込みが終わると続きを映す） |
+| 攻撃者・対象の破棄 | Actor Lost Policy に従います（既定は Return Blend で終了）。クラッシュはしません |
 | PlayerController や PCM の作り直し | ACF が次のティックまでに自動で接続し直します |
 
 ## 6. カメラ演出（Effects）
@@ -369,6 +533,10 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - **`ACF.Debug.Draw 2`**: 上の描画に加えて、画面に表示します。
   - Dead Zone（緑枠）、Soft Zone（赤枠）、画面上の対象位置、Framing Size（マゼンタ枠）
   - Group の対象数・前後移動量・FOV 補正、Lock-On の距離と対象喪失の表示
+  - Combat（ON / OFF、重み、アーム倍率、FOV、敵との距離）、Solver（確認した対象数、トレース数、探索したか、補正 Yaw / Pitch / Pull、FOV 回復、LIMIT、見えない対象数）
+  - Sequence（Handle、Shot 番号 / 数と名前、経過 / 長さ、Play Rate、wait event、HELD、FALLBACK、not in control、所有する演出の数）
+- `ACF.Debug.Draw 1` では Deoccluder の視線も描きます（水色 = 見える、赤 = 遮られている）。
+- **`ACF.Debug.Solver 0`**: Constraint Solver（Deoccluder と Framing Recovery）を一時的に無効にします（比較用。Shipping では存在しません）。
   - カメラ位置・回転、Orbit の Yaw / Pitch / 距離、Collision の状態
 - **`showdebug camera`**: ACF の要求、Weight、抑制状態を表示します。
 - **コンソール**
@@ -440,6 +608,62 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - `ACF.Sample.Enemy <Circle [DegPerSec=60]|Teleport [Distance=1500]|Kill>`: ロック中の敵を操作（Kill はその PIE セッション中は戻りません）
 - `ACF.Sample.Group <Use|Add i|Remove i|Weight i w|Radius i r|Release>`: プレイヤー（Weight 1、Radius 60）を含むグループ。追加する敵の Radius は 80
 
+**Combat Camera / Deoccluder / Constraint Solver（Phase 4B）**
+
+テストマップには敵を 2 体追加しています: `Enemy_4_Pillars`（柱の列の裏）、`Enemy_5_Corridor`（通路の奥）。コマンドで使う敵の番号はラベル順（Enemy_0〜5）です。`ACF.Sample.Enemy Kill` で敵を消すと、その後ろの番号が 1 つずつ詰まります（PIE をやり直すと戻ります）。
+サンプルの ThirdPerson / LockOn / Group Preset は、Deoccluder と Framing Recovery を ON にしてあります。比較したいときは `ACF.Debug.Solver 0`（もう一度 `1` で戻す）を使います。
+
+| 確認項目 | 手順 | 期待する見た目 |
+|----------|------|----------------|
+| 壁越しのロックオン | `ACF.Sample.Goto Start` → `ACF.Sample.Use ThirdPerson` → `ACF.Sample.LockOn 2`（壁の向こうのボス） | 0.25 秒ほど後に、カメラが滑らかに上（または横）へ回り込み、壁越しにボスが見える。`ACF.Debug.Solver 0` にすると壁に隠れたまま |
+| 柱の周りを動く敵 | `ACF.Sample.Goto Pillars` → `ACF.Sample.LockOn 4` → `ACF.Sample.Enemy Patrol`（もう一度で停止） | 敵が柱の前を一瞬横切るだけではカメラは動かない（振動しない）。柱の陰に入り続けると回り込み、出てくると 0.5 秒待ってからゆっくり戻る |
+| 複数対象の遮蔽 | `ACF.Sample.Goto Start` → `ACF.Sample.Group Use` → `Add 2` → `Add 4` | 見せられる敵が見える位置へ動く。どうしても見えない敵が残る場合も、カメラは上限（Yaw 50° / Pitch 25° / 寄せ 60%）を超えない。`ACF.Debug.Draw 2` の `occluded` に残った数が出る |
+| 狭い通路 | `ACF.Sample.Goto Corridor` → `ACF.Sample.LockOn 5` → 歩いて通路に入る | カメラが壁・天井を抜けず、左右に揺れない。回り込めないときは寄せ（Pull In）で対応 |
+| Combat Camera の切替 | ThirdPerson で `ACF.Sample.Combat On` → `ACF.Sample.Combat On 0.5` → `ACF.Sample.Combat Off`。ロックオン中にも同じ操作 | On で少し引いて（近い敵ほど大きく）FOV +5°、肩越しが右上へずれる。0.5 では半分。Off でゆっくり元へ戻る。ロックオンの開始・解除と同時でも飛ばない |
+| Collision と Group Framing の競合 | `ACF.Sample.Goto Wall`（壁に背を向ける）→ `ACF.Sample.Group Use` → `Add 0` → `Add 4`。比較: `ACF.Debug.Solver 0` / `1` | Solver ON では、壁で寄せられた分を FOV（最大 100°、+25° まで）で補い、敵が枠に戻る。足りないときは `LIMIT` 表示で、プレイヤーの中心は枠内に保たれる。OFF では敵が枠の外へ出る |
+| 演出との併用 | 上のどの状態でも `ACF.Sample.Effect Recoil` / `Impulse` / `Shake` | 演出が戦闘カメラ・補正中のカメラの上にかかり、壁を抜けない |
+
+コマンド:
+- `ACF.Sample.Combat <On [Intensity=1]|Off>`: ゲームの代わりに戦闘状態を渡します（ロック中ならその敵を距離の基準にします）
+- `ACF.Sample.Goto <Start|Wall|Pillars|Corridor>`: Pawn を確認用の位置へ移動します（`NotifyTeleport` も呼びます）
+- `ACF.Sample.Enemy Patrol`: ロック中の敵を、柱の列の周りの楕円上で歩かせます（トグル）
+
+**Finisher / Camera Sequence（Phase 4C）**
+
+テストマップに `Enemy_6_Finisher`（開けた場所）を追加しています。サンプルの Sequence `DA_ACFSample_FinisherSequence` は 3 つの Shot でできています。攻撃やアニメーションの代わりに、コンソールコマンドでゲーム側の操作を再現します。
+
+| Shot | カメラ（Preset） | 進み方 | 期待する構図 |
+|------|-----------------|--------|--------------|
+| 0 `Approach` | `DA_ACFSample_Shot_Approach`（動的。攻撃者 → 対象の線の右 6m、少し後ろ、FOV 60） | 1.2 秒で次へ。0.35 秒のブレンドで入る | 横から見た 2 人。左に攻撃者、右に敵。2 人が動くとカメラも付いて行く |
+| 1 `Strike` | `DA_ACFSample_Shot_Strike`（固定。敵の向こう側から攻撃者を見る切り返し、FOV 50） | Advance イベント待ち（タイムアウト 2.5 秒）。カットで入る | 手前に敵の背中、奥に攻撃者。Shot 開始時の位置で止まり、動かない。ヒットの演出（FOV が一瞬狭まり、わずかに揺れる） |
+| 2 `Overhead` | `DA_ACFSample_Shot_Overhead`（固定。斜め上の俯瞰、FOV 70） | 1.6 秒で終了。0.6 秒のブレンドで入る | 上から 2 人を見下ろす。終わると 0.6 秒で元のカメラ（ロックオン）へ戻る |
+| （狭い場所） | `DA_ACFSample_Shot_Fallback`（攻撃者の肩越し、近い） | 各 Shot の Fallback | 通路の中では横から撮れないので、肩越しのショットに置き換わる。壁を抜けない |
+
+Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll 3°）がかかり、終了時に消えます。
+
+| 確認項目 | 手順 | 期待する見た目 |
+|----------|------|----------------|
+| 再生（ロックオンから） | `ACF.Debug.Draw 2` → `ACF.Sample.Goto Finisher` → `ACF.Sample.Use ThirdPerson` → `ACF.Sample.LockOn 6` → `ACF.Sample.Finisher Play` | ロックオンから Approach へ 0.35 秒で移り、1.2 秒後に Strike へカット。画面左上に `Sequence ... shot 0/3 'Approach'` などが出る |
+| イベントで次へ | Strike の間に `ACF.Sample.Finisher Notify Advance`（Anim Notify と同じ経路）または `ACF.Sample.Finisher Advance` | Overhead へブレンドし、1.6 秒後に元のロックオンへ 0.6 秒で戻る。何もしなければ Strike は 2.5 秒で自動的に進む |
+| Shot の保持 | Approach の間に `ACF.Sample.Finisher Hold` → 数秒待つ → `ACF.Sample.Finisher Release` | Hold 中は Approach のまま（`HELD` 表示）。Release から残り時間で次へ |
+| Shot のスキップ | `ACF.Sample.Finisher Play` → すぐ `ACF.Sample.Finisher Jump Overhead` | Approach・Strike を飛ばして Overhead へ |
+| 再生速度 | `ACF.Sample.Finisher Play 6 0.5`、または再生中に `ACF.Sample.Finisher Rate 2` | 0.5 で Approach が 2.4 秒、2 で半分の時間になる |
+| キャンセル | 再生中に `ACF.Sample.Finisher Cancel` | 即座に（カットで）元のカメラへ戻る。演出（Roll など）も即座に消える |
+| 正常終了 | 再生中に `ACF.Sample.Finisher Finish` | 0.6 秒で元のカメラへ戻る |
+| 対象の破棄 | 再生中に `ACF.Sample.Enemy Kill`（ロック中の敵 = Finisher の対象） | Finisher が終わり、元のカメラへ戻る（ロックオンも解除されるので通常カメラへ）。クラッシュしない |
+| 割り込み | 再生中に `ACF.Debug.PushFixed 1300 -800 700 -45 -90 0 70 5000`（Priority 5000 の固定カメラ）→ 少し待って `ACF.Debug.ReleaseLast` | 割り込み中は固定カメラ（`not in control` 表示）。時間は進み続け、解除すると続きの Shot が映る |
+| 狭い場所（Fallback） | `ACF.Sample.LockOff` → `ACF.Sample.Goto CorridorFinisher` → `ACF.Sample.Finisher Play 5` | 通路の壁で横からの Approach が成立しないので、`FALLBACK` 表示で肩越しのショットになる。どの Shot でもカメラが壁・天井を抜けない |
+| Collision の確認 | 上の状態で `ACF.Debug.Draw 1` | Collision の Sweep が「演出の中心 → カメラ」で描かれ、壁の手前で止まる |
+| 演出の確認 | 再生中・終了後に `ACF.Debug.Draw 2` の Effect 行を見る | 再生中は Tension（と Strike の Hit）が表示され、終了後（Release の時間の後）には何も残らない |
+| 単独 Preset の Finisher | `ACF.Sample.Finisher Preset 2`（2 秒）/ `ACF.Sample.Finisher Preset`（Finish まで） | Approach の Preset だけで 0.3 秒で入り、時間または Finish で 0.5 秒で戻る |
+
+コマンド:
+- `ACF.Sample.Finisher Play [敵の番号] [PlayRate=1]`: 番号を省略するとロック中の敵、いなければ一番近い敵が対象です
+- `ACF.Sample.Finisher Preset [Seconds=0]`
+- `ACF.Sample.Finisher <Advance|Hold|Release|Finish|Cancel|Status>`、`Jump <Approach|Strike|Overhead>`、`Rate <PlayRate>`
+- `ACF.Sample.Finisher Notify <Advance|Hold|Release|Finish|Cancel>`: Pawn を Actor として `Send ACF Camera Sequence Command For Actor` を呼びます（Anim Notify と同じ経路）
+- `ACF.Sample.Goto <Finisher|CorridorFinisher>`: Enemy_6 の 3.5m 手前 / 通路の中で Enemy_5 の 3m 手前
+
 ## 10. 拡張（プログラマー向け）
 
 `UACFCameraNode` を継承し、`GetStage()`（Body / Aim / Framing / PostBlend）と `Evaluate` を実装します。
@@ -449,15 +673,35 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - テレポートには `ResetInterpolation`、有効化には `OnActivated` で対応します。
 - `DeltaTime <= 0` のときは状態を進めないでください。
 - Body の Node は `Context.Scratch.Pivot` を設定してください（Collision の Sweep 起点になります）。
-- Framing 段の Node は位置（視線方向）と FOV だけを変え、回転は変えないでください。
+- Framing 段の Node は位置と FOV だけを変え、回転は変えないでください。
+- 同じ段の中で先に動きたい Node は `GetStageOrder()` を小さくします（例: Combat Camera は -100 で Group Framing より先）。
+- 制約の解決は `FACFCameraConstraintSolver`（`Deocclude` / `RecoverFraming`。ワールドへの問い合わせは関数で渡すので、ワールドなしでテストできます）。
 - 共通部品: `FACFCameraTargetTrackingState::Track` / `TrackPoint`（対象喪失・テレポート・Lookahead）、`UpdateDamped`（軸別 Damping）、`ACFFraming`（画面への投影・構図）、`ACFTargetGroup::GatherSubjects`（Target Group の解決）、`UACFCameraNode_GroupFraming::ComputeRequiredDolly / ComputeRequiredFov`、`ACFCameraCollision::SweepCamera`
+- シーケンス: `FACFCameraSequencePlayer`（Director が所有し、Evaluate の中で 1 フレーム 1 回 Tick）。Shot は普通の要求なので、Shot 用の Node も通常の Node と同じ作り方です。Shot の成立判定には `UACFCameraDirector::ProbeCamera`（状態を持たない一時的な Rig で 1 回評価）を使えます。要求の削除で戻りのブレンドを指定するには `RemoveRequest(Handle, &Blend, /*bOverrideAnyReturn*/ true)`。
 - 新しい演出: `UACFCameraEffect` を継承し、`Evaluate` で `FACFCameraEffectOutput`（チャンネル・値・空間）を返します。状態は `GetRuntimeStateType`、後始末は `OnEnd` で行います。Envelope・Weight・減衰・合成はスタック側が行います。
 
-## 11. 制限（Phase 4A 時点）
+## 11. 制限（Phase 4C 時点）
+
+**Finisher / Camera Sequence**
+- シーケンス時間は Montage の再生位置を読みません（ACF はアニメーションに依存しない）。Duration だけで進む Shot は、Montage の速度変更に Play Rate で合わせる必要があります。正確に合わせたい切替は Anim Notify（イベント）で行ってください。
+- 攻撃者以外の Actor の Custom Time Dilation（例: 対象だけのヒットストップ）は反映しません。必要なら Hold / Play Rate で制御します。
+- Shot の成立判定（Probe）は Shot の開始時の 1 回だけです。Shot の途中で狭くなっても別の Shot には切り替えず、Collision と（ON なら）Deoccluder で対応します。Probe は「本来の距離の何割まで寄せられたか」と「攻撃者・対象の中心への視線」だけを見ます。
+- Fallback は Shot ごとに 1 つです。Fallback 自体が成立するかは確認しません（Collision で寄せたまま再生します）。
+- Finisher の終了・Cancel 以外で、戻り先カメラのブレンドを再生側から指定する API はありません（ロックオン解除と同じく、通常の要求の解除は戻り先の Blend In）。
+- 通知（On Camera Sequence Event）はカメラ更新の直後にまとめて送られます（Finish / Cancel は呼んだ直後）。カメラ更新の途中には送りません。
+- Sequencer（Level Sequence）との連携は Phase 5 の予定です。今は Sequencer 側で `Suppress Output` を呼んでください。
+- 実機での演出の見栄え（各 Shot の構図・ブレンド時間の既定値）は、サンプルのスクリーンショットでしか確認していません。
+
+**Combat / Deoccluder / Constraint Solver**
+- 遮蔽物を透過させるマテリアル処理はありません。カメラを動かしても見えない対象は通知（`NumOccludedTargets`）だけです。
+- Deoccluder の候補は固定の 10 通り（回り込み・持ち上げ・寄せ）です。複雑な地形で、候補の間にしか見える位置がない場合は見つけられません。
+- 確認するのは各対象の中心 1 点への視線です。体の一部だけが見えている状態は「見えない」と判定されます。
+- 壁際で Collision が大きく寄せると、FOV の上限で足りず、敵が枠から出て、プレイヤーが画面の大部分を占めることがあります（テストマップの「競合」項目で再現。定義どおりの縮退動作）。
+- Combat Camera のアーム長は Body Node のピボットを中心に伸ばします。ピボットの Damping による遅れも同じ倍率で伸びます。
+- 実機での操作感（補正の速さ・ヒステリシス時間の既定値）は未調整です。
 
 **Lock-On / Target Group**
-- 視線の遮蔽は扱いません。ボスが壁の向こうにいると、構図には入っていても壁に隠れます（Deoccluder は未実装）。
-- Collision がカメラを手前に押すと、Group Framing が引いた分が失われ、対象が枠からはみ出すことがあります（壁抜けを防ぐ方を優先）。Mode を Distance Then Field Of View にすると、Max Dolly Out を超えた分だけは FOV で補いますが、Collision で縮んだ分は補いません。
+- Collision と Group Framing の競合は Framing Recovery（FOV、上限つき）で補います（Phase 4A の制限を解消）。
 - ロックオン中の移動入力の基準（ControlRotation）は変更しません。解除時にカメラの向きへ合わせるかどうかはゲーム側で決めます（サンプルは合わせます）。
 - ロックオンの解除は戻り先カメラの Blend In を使います。解除専用のブレンドを指定する API はありません。
 - Group Framing はメンバーの位置を平滑化しません（Lock-On のロック点だけは平滑化されたものを使います）。急な追加は Widen Damping Time で滑らかになりますが、メンバー自身の瞬間移動は枠の調整が追いかける形になります。
@@ -468,7 +712,7 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - 描画結果の目視確認と、実機のマウス・パッドでの操作感確認は、まだ行っていません（9 章の手順で確認してください）。
 - PCM の ViewTarget ブレンド中の壁抜けは防げません（7 章）。
 - ブレンド中に割り込むと、割り込まれた側の動きはそれ以降反映されません。
-- Collision は「ピボット → カメラ」の線上だけを見ます。視線上の遮蔽物を避ける Deoccluder は Phase 4B 以降です。
+- Collision は「ピボット → カメラ」の線上だけを見ます。視線上の遮蔽物は Deoccluder（Collision Node の設定）で扱います。
 - SpringArm と一致することは、静止時（Lag 収束後）と障害物ありで確認しました。移動中の過渡応答（Lag の式）は異なります。
 - Sequencer の自動検出、Blueprint 製の Node / Effect は未対応です。
 - 演出は ACF カメラにかかります。UE カメラだけの場面では、素通し Preset を要求してください（6 章）。
@@ -479,11 +723,11 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
-  - `Content/Samples/`（DA ×6、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 63 件です。
-  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*`（42 件）: Editor とゲームの両方で実行できます。
-  - `.Integration.*`（18 件）: `-game` でのみ実行されます。
-  - `.Samples.*`（3 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
+  - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、テストマップ）: `Scripts/CreateManualTestAssets.py`
+- 自動テストは 84 件です。
+  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*`（55 件）: Editor とゲームの両方で実行できます。
+  - `.Integration.*`（24 件）: `-game` でのみ実行されます。
+  - `.Samples.*`（5 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
   - ロック開始・解除（ブレンド中に 1 フレーム 40cm 超の飛びがない）、敵が周回・プレイヤーが移動しても両方が画面内
   - 近距離・遠距離のアーム長と FOV、重なり・真上でも NaN にならず Yaw を保持
@@ -491,6 +735,22 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
   - ブレンド中のターゲット切替、高優先度カメラへの切替と復帰、出力抑制中も評価が続き復帰時に最新、同一フレームの二重評価で状態が進まない
   - Group の追加・削除・破棄メンバーの自動除外、Weight / Radius による変化、0 件・1 件、FOV モード、Fill、Distance Then FOV、必要距離・必要 FOV の解析解との一致
   - 実際の PCM 上で Collision（Guard OFF）と Effects の併用、テストマップ上でのコンソールコマンド一式
+- Phase 4B で追加したテスト（`.Constraints.*` 7 件、`.Integration.Constraints*` 3 件、`.Samples.SolverAndCombatOnTestMap`）の確認内容:
+  - 遮蔽なし（補正なし、1 フレーム Sweep 1 + 対象数のトレース）、一時的な遮蔽・点滅する遮蔽（動かない）、継続的な遮蔽（遅延後に 1 回の探索で解決、補正は滑らか、障害物が消えると待ってから戻る）
+  - 複数対象（見せられる敵は見せ、見せられない敵は通知、探索は間引かれる）、プレイヤーが見えない場合（上限内・通知・NaN なし）、対象の破棄
+  - Collision と Group Framing の競合（Solver OFF で再現 → ON で FOV により解消）、FOV 上限（上限で止まり LIMIT を通知、プレイヤーは枠内）、プレイヤーが枠外のときの回転（上限つき）
+  - 実際のジオメトリ: 柱の裏のロックオン（実際の Line Trace で見えることを確認）、壁際のロックオン、狭い通路（壁・天井を抜けず、0.75 秒未満の左右の切り返しなし）
+  - Combat の状態切替（距離・FOV・肩越し・Intensity・Profile 差し替え・滑らかな出入り）、ブレンド中の Combat、Effect との併用、出力抑制中、1 フレームの二重評価（Combat と Solver の両方）
+  - テストマップで 4B のコンソールコマンド一式（壁越しのボス、柱を巡回する敵、通路、戦闘切替、壁際のグループ）と、遮蔽の通知が実際の視線と一致すること
+- Phase 4C で追加したテスト（`.Sequence.*` 6 件、`.Integration.Finisher*` 3 件、`.Samples.FinisherOnTestMap`）の確認内容:
+  - Finisher の開始・終了（同じフレームでカット、Duration で終了、Return Blend で戻る、Duration 0 は Finish まで待つ、古い Handle は無効）
+  - 複数 Shot の順次再生（Cut と Blend の姿勢を毎フレーム確認、要求は常に 1 つだけ、通知の順番）、ヒッチで Shot を跨いだときの繰り越し
+  - イベントでの進行（同じフレームの Advance は 1 回）、スキップ（Jump、名前の誤りは拒否）、Hold（回数）、Play Rate、Wait For Event のタイムアウト、同一フレームの二重評価で時間もイベントも進まない
+  - Cancel（要求と演出が即座に消え、カットで戻る）、演出の所有（Shot / Sequence / Fire And Forget の寿命どおりに止まり、何も残らない）、別の再生による置き換え、要求を外から消されたとき、Instigator の破棄
+  - 高 Priority の割り込み（Continue / Pause / Cancel）、ロックオン → Finisher → 戻り（Return Blend が戻り先の Blend In より優先、後の切替には漏れない）、ローカルプレイヤー 2 人の独立
+  - 実際の PCM: Shot Anchor の動的ショット（追従）と固定ショット（動かない）、対象の破棄で終了、狭い場所の Fallback / Skip / 寄せたまま再生、Shot ごとの Deoccluder（柱の裏の対象が実際の視線で見える / OFF では見えないまま）、Finisher 中の Collision Guard
+  - Anim Notify / Notify State での進行・保持・終了（Actor 経由のルーティング）、攻撃者の Custom Time Dilation、Pause 中は時間が止まる
+  - テストマップで 4C のコンソールコマンド一式（3 Shot の構図で攻撃者と敵が画面内、ロックオンへ戻る、演出が残らない、通路では Fallback、Cancel でカット）
 
 ```bash
 UnrealEditor-Cmd.exe <project>.uproject -unattended -NullRHI -nosplash "-ExecCmds=Automation RunTests ActionCameraFramework.Director+ActionCameraFramework.Nodes+ActionCameraFramework.ThirdPerson" "-TestExit=Automation Test Queue Empty"
@@ -508,12 +768,12 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramewor
 
 | パス | 内容 |
 |------|------|
-| `Source/ActionCameraFramework/Public/` | `ACFCameraSubsystem`（入口）、`ACFCameraDirector`、`ACFCameraPreset`、`ACFCameraNode`（段・Scratch）、`ACFCameraRigInstance`、`ACFCameraOutputModifier`（Output と Guard）、`ACFCameraTypes`、`ACFCameraSettings`、`ACFCameraBlueprintLibrary` |
-| `Source/ActionCameraFramework/Public/Nodes/` | FixedPose / Follow / LookAt / OrbitalFollow / Composers / LockOn / GroupFraming / Collision と、共通部品の TargetTracking（Damping・Lookahead・テレポート）/ Framing（画面座標の計算）/ TargetGroup（グループの解決） |
+| `Source/ActionCameraFramework/Public/` | `ACFCameraSubsystem`（入口）、`ACFCameraDirector`、`ACFCameraSequence`（Sequence / Shot の定義・Handle・状態・通知）、`ACFCameraSequencePlayer`（再生）、`ACFCameraAnimNotifies`（Anim Notify / Notify State）、`ACFCameraConstraintSolver`（Deoccluder / Framing Recovery）、`ACFCameraPreset`、`ACFCameraNode`（段・Scratch）、`ACFCameraRigInstance`、`ACFCameraOutputModifier`（Output と Guard）、`ACFCameraTypes`、`ACFCameraSettings`、`ACFCameraBlueprintLibrary` |
+| `Source/ActionCameraFramework/Public/Nodes/` | FixedPose / Follow / LookAt / OrbitalFollow / Composers / LockOn / ShotAnchor / Combat / GroupFraming / Collision と、共通部品の TargetTracking（Damping・Lookahead・テレポート）/ Framing（画面座標の計算）/ TargetGroup（グループの解決） |
 | `Source/ActionCameraFramework/Public/Effects/` | `ACFCameraEffect`（Layer 基底・Effect Preset）、`ACFCameraBuiltinEffects`（Punch / Recoil / Impulse / Shake / Speed FOV / Roll）、`ACFCameraEffectStack`（Instance・Envelope・合成）、`ACFCameraEffectTypes` |
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`、`ACFCameraDebugShake`（サンプル用 Shake）、`Tests/` |
 | `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 6 のツール置き場） |
 | `Content/Verification/` | 自動テスト用アセット |
-| `Content/Samples/` | 手動確認用のサンプル Preset とテストマップ `L_ACFCameraTest` |
+| `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト |
 | `Docs/`（Git 管理外） | 引き継ぎ用の詳細資料（設計判断、監査結果、Effect Pipeline 設計） |

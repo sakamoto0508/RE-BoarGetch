@@ -35,6 +35,14 @@
 #include "Nodes/ACFCameraFraming.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/App.h"
+#include "ACFCameraBlueprintLibrary.h"
+#include "ACFCameraDirector.h"
+#include "HAL/IConsoleManager.h"
+#include "Engine/GameViewportClient.h"
+#include "ACFCameraAnimNotifies.h"
+#include "Nodes/ACFCameraNode_ShotAnchor.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Animation/AnimNotifyQueue.h"
 
 /**
  * End-to-end checks against the real PlayerCameraManager. ClientContext only: run in a game process:
@@ -76,6 +84,9 @@ namespace ACFIntegration
 		TArray<TWeakObjectPtr<AActor>> Spawned;
 		TWeakObjectPtr<USceneComponent> Component;
 		TArray<TStrongObjectPtr<UACFCameraEffectPreset>> EffectPresets;
+		/** Phase 4C: assets kept alive for the scenario and the playback under test. */
+		TArray<TStrongObjectPtr<UObject>> Keep;
+		FACFCameraSequenceHandle Sequence;
 		TStrongObjectPtr<UACFCameraPreset> PresetB;
 		FACFCameraRequestHandle HandleB;
 		FVector Pivot = FVector::ZeroVector;
@@ -175,6 +186,7 @@ namespace ACFIntegration
 		{
 			if (State->Subsystem.IsValid())
 			{
+				State->Subsystem->GetDirector()->StopAllSequences(true);
 				State->Subsystem->ReleaseAllCameras(true);
 			}
 			State->Spawned.Add(State->ActorA);
@@ -1643,7 +1655,7 @@ namespace ACFIntegration
 
 	static void ExpectOnScreen(FScenario& S, AActor* Actor, float Radius, const TCHAR* What)
 	{
-		FVector2D Screen;
+		FVector2D Screen = FVector2D::ZeroVector;
 		const bool bOk = Actor && SphereOnScreen(S, Actor->GetActorLocation(), Radius, Screen);
 		S.Test->AddInfo(FString::Printf(TEXT("%s: %s at screen (%.3f, %.3f)"), What, Actor ? *Actor->GetActorNameOrLabel() : TEXT("<none>"), Screen.X, Screen.Y));
 		S.Test->TestTrue(FString::Printf(TEXT("%s: %s fully on screen"), What, Actor ? *Actor->GetActorNameOrLabel() : TEXT("<none>")), bOk);
@@ -1783,6 +1795,944 @@ bool FACFSampleLockOnGroupTest::RunTest(const FString& Parameters)
 		GEngine->Exec(S.World(), TEXT("ACF.Sample.Release 0"));
 		return true;
 	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Phase 4B: constraint solver (Deoccluder, Collision vs Group Framing) with real level geometry.
+
+namespace ACFIntegration
+{
+	static UACFCameraPreset* MakeSolverLockOnPreset(bool bDeoccluder, bool bRecovery)
+	{
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_LockOn* LockOn = NewObject<UACFCameraNode_LockOn>(Preset);
+		LockOn->PivotOffset = FVector::ZeroVector;
+		LockOn->ShoulderOffset = FVector::ZeroVector;
+		LockOn->BasePitch = 0.f;
+		LockOn->ElevationPitchScale = 0.f;
+		LockOn->NearArmLength = LockOn->FarArmLength = 600.f;
+		UACFCameraNode_GroupFraming* Framing = NewObject<UACFCameraNode_GroupFraming>(Preset);
+		Framing->bFrameTargetGroup = false;
+		Framing->FollowTargetSubject.bInclude = true;
+		Framing->FollowTargetSubject.Radius = 50.f;
+		Framing->LookAtTargetSubject.bInclude = true;
+		Framing->LookAtTargetSubject.Radius = 80.f;
+		UACFCameraNode_Collision* Collision = NewObject<UACFCameraNode_Collision>(Preset);
+		Collision->ReturnDampingTime = 0.f;
+		Collision->Deoccluder.bEnabled = bDeoccluder;
+		Collision->FramingRecovery.bEnabled = bRecovery;
+		Collision->FramingRecovery.MaxFieldOfView = 120.f;
+		Collision->FramingRecovery.MaxFieldOfViewIncrease = 30.f;
+		Preset->Nodes = { LockOn, Framing, Collision };
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		return Preset;
+	}
+
+	/** Aspect ratio the subsystem uses for this player's view. */
+	static float ViewAspect(FScenario& S)
+	{
+		const ULocalPlayer* LP = S.Controller->GetLocalPlayer();
+		FVector2D Size = FVector2D::ZeroVector;
+		if (LP && LP->ViewportClient)
+		{
+			LP->ViewportClient->GetViewportSize(Size);
+			Size *= LP->Size;
+		}
+		return Size.X > 0.0 && Size.Y > 0.0 ? static_cast<float>(Size.X / Size.Y) : 16.f / 9.f;
+	}
+
+	/** Signed clearance (cm) of a sphere inside the centred framing area of the PCM's final camera (>= 0 = inside). */
+	static double ClearanceInFrame(FScenario& S, const FVector& Center, float Radius, const FVector2D& Size)
+	{
+		const APlayerCameraManager* M = S.PCM();
+		const ACFFraming::FLens Lens = ACFFraming::MakeLens(M->GetFOVAngle(), ViewAspect(S));
+		const FVector Local = M->GetCameraRotation().UnrotateVector(Center - M->GetCameraLocation());
+		const double Fh = Lens.TanHalfH * Size.X;
+		const double Fv = Lens.TanHalfV * Size.Y;
+		const double H = (Fh * Local.X - FMath::Abs(Local.Y)) / FMath::Sqrt(1.0 + Fh * Fh) - Radius;
+		const double V = (Fv * Local.X - FMath::Abs(Local.Z)) / FMath::Sqrt(1.0 + Fv * Fv) - Radius;
+		return FMath::Min3(H, V, Local.X - Radius);
+	}
+
+	static bool LineOfSightClear(FScenario& S, const FVector& To, const AActor* Ignore1, const AActor* Ignore2)
+	{
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(ACFTestLos), false);
+		Params.AddIgnoredActor(Ignore1);
+		Params.AddIgnoredActor(Ignore2);
+		FHitResult Hit;
+		return !S.World()->LineTraceSingleByChannel(Hit, S.PCM()->GetCameraLocation(), To, ECC_Camera, Params);
+	}
+
+	static void SetSolverCVar(int32 Value)
+	{
+		if (IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(TEXT("ACF.Debug.Solver")))
+		{
+			Var->Set(Value, ECVF_SetByCode);
+		}
+	}
+
+	static void WaitSeconds(TArray<FStep>& Steps, double Seconds)
+	{
+		Steps.Add([](FScenario& S) { S.StartTime = S.World()->GetTimeSeconds(); return true; });
+		Steps.Add([Seconds](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < Seconds; return true; });
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationDeoccluderTest, "ActionCameraFramework.Integration.ConstraintsLockOnBehindPillar",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationDeoccluderTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(0, 15000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.ActorB = SpawnMovablePoint(S.World(), S.Pivot + FVector(1500, 0, 0));
+		SpawnBlocker(S, S.Pivot + FVector(600, 0, 0), FVector(40, 40, 300)); // pillar on the player -> enemy line
+		S.Preset.Reset(MakeSolverLockOnPreset(true, true));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		Params.LookAtTarget.Actor = S.ActorB.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestFalse(TEXT("Activation: the pillar hides the enemy"), LineOfSightClear(S, S.ActorB->GetActorLocation(), S.ActorA.Get(), S.ActorB.Get()));
+		return true;
+	});
+	WaitSeconds(Steps, 1.5);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraSolverReport& Report = S.Subsystem->GetDirector()->GetLastSolverReport();
+		S.LogCamera(TEXT("Deoccluded"));
+		S.Test->AddInfo(FString::Printf(TEXT("Deoccluder correction yaw %.1f pitch %.1f pull %.2f, occluded %d, traces/frame %d"),
+			Report.Correction.X, Report.Correction.Y, Report.Correction.Z, Report.NumOccluded, Report.NumTraces));
+		S.Test->TestTrue(TEXT("Camera moved around the pillar"), FMath::Abs(Report.Correction.X) > 5.f || Report.Correction.Y > 5.f);
+		S.Test->TestTrue(TEXT("Enemy visible (real line trace)"), LineOfSightClear(S, S.ActorB->GetActorLocation(), S.ActorA.Get(), S.ActorB.Get()));
+		S.Test->TestTrue(TEXT("Player visible (real line trace)"), LineOfSightClear(S, S.Pivot, S.ActorA.Get(), S.ActorB.Get()));
+		S.Test->TestEqual(TEXT("Nothing reported hidden"), S.Subsystem->GetLastEvaluationResult().NumOccludedTargets, 0);
+		S.Test->TestTrue(TEXT("Steady state trace budget (1 sweep + 1 per subject, + base check)"), Report.NumTraces <= 6);
+
+		// Second evaluation in the same frame: cached (no extra traces, same pose).
+		FMinimalViewInfo View = S.PCM()->GetCameraCacheView();
+		const FACFCameraEvaluationResult First = S.Subsystem->EvaluateForOutput(1.f / 60.f, View);
+		const int32 Traces = S.Subsystem->GetDirector()->GetLastSolverReport().NumTraces;
+		const FACFCameraEvaluationResult Second = S.Subsystem->EvaluateForOutput(1.f / 60.f, View);
+		S.Test->TestTrue(TEXT("Same-frame re-evaluation is cached"), First.Pose.Location.Equals(Second.Pose.Location) && First.FrameNumber == Second.FrameNumber
+			&& Traces == S.Subsystem->GetDirector()->GetLastSolverReport().NumTraces);
+
+		// Effect on top of the deoccluded camera.
+		S.EffectPresets.Reset();
+		S.EffectPresets.Emplace(MakeEffectPreset([](UACFCameraEffectPreset* P) { AddPunch(P, FVector::ZeroVector, 0.5f)->FOV = 8.f; }));
+		S.Value = S.PCM()->GetFOVAngle();
+		S.Subsystem->PlayCameraEffect(S.EffectPresets[0].Get(), FACFCameraEffectParams());
+		return true;
+	});
+	WaitSeconds(Steps, 0.2);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Effect FOV on top of the deoccluded camera"), S.PCM()->GetFOVAngle() > S.Value + 5.f);
+		S.Test->TestTrue(TEXT("Enemy still visible during the effect"), LineOfSightClear(S, S.ActorB->GetActorLocation(), S.ActorA.Get(), S.ActorB.Get()));
+		S.Subsystem->StopAllCameraEffects(true);
+		// The pillar disappears: after Clear Delay the camera glides back behind the player.
+		S.Spawned[0]->Destroy();
+		return true;
+	});
+	WaitSeconds(Steps, 5.0);
+	Steps.Add([](FScenario& S)
+	{
+		const FVector Correction = S.Subsystem->GetDirector()->GetLastSolverReport().Correction;
+		S.Test->AddInfo(FString::Printf(TEXT("After the pillar was removed: correction %s"), *Correction.ToString()));
+		S.Test->TestTrue(TEXT("Correction released"), Correction.IsNearlyZero(0.5));
+		S.Test->TestTrue(TEXT("Back on the player -> enemy line"), FMath::Abs(S.PCM()->GetCameraLocation().Y - S.Pivot.Y) < 2.0);
+		S.ActorB->Destroy(); // target destroyed while locked (no auto release requested): held, no crash
+		return true;
+	});
+	WaitSeconds(Steps, 0.5);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Target destroyed: camera finite and request alive"), !S.PCM()->GetCameraLocation().ContainsNaN() && S.Subsystem->IsCameraRequestAlive(S.Handle));
+		S.Test->TestEqual(TEXT("Target destroyed: nothing reported hidden"), S.Subsystem->GetLastEvaluationResult().NumOccludedTargets, 0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationFramingConflictTest, "ActionCameraFramework.Integration.ConstraintsCollisionVsGroupFraming",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationFramingConflictTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	static const FVector2D Size(0.8, 0.8);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		// Exploration camera framing a group (player + two enemies to the sides); a wall behind the player.
+		S.Pivot = TestArea + FVector(0, 18000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.Spawned.Add(SpawnMovablePoint(S.World(), S.Pivot + FVector(400, 500, 0)));
+		S.Spawned.Add(SpawnMovablePoint(S.World(), S.Pivot + FVector(400, -500, 0)));
+		SpawnBlocker(S, S.Pivot - FVector(300, 0, 0), FVector(10, 900, 400)); // face at pivot.X - 290
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_OrbitalFollow* Orbit = NewObject<UACFCameraNode_OrbitalFollow>(Preset);
+		Orbit->InputSource = EACFCameraOrbitInputSource::None;
+		Orbit->InitialRotation = EACFCameraOrbitInitialRotation::Fixed;
+		Orbit->InitialPitch = 0.f;
+		Orbit->PivotOffset = FVector::ZeroVector;
+		Orbit->Distance = 600.f;
+		UACFCameraNode_GroupFraming* Framing = NewObject<UACFCameraNode_GroupFraming>(Preset);
+		Framing->Mode = EACFCameraGroupFramingMode::Distance;
+		Framing->FramingSize = Size;
+		UACFCameraNode_Collision* Collision = NewObject<UACFCameraNode_Collision>(Preset);
+		Collision->ReturnDampingTime = 0.f;
+		Collision->FramingRecovery.bEnabled = true;
+		Collision->FramingRecovery.MaxFieldOfView = 130.f;
+		Collision->FramingRecovery.MaxFieldOfViewIncrease = 40.f;
+		Preset->Nodes = { Orbit, Framing, Collision };
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		S.Preset.Reset(Preset);
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		Params.TargetGroup.Members.Add(UACFCameraBlueprintLibrary::MakeTargetGroupMember(S.ActorA.Get(), 1.f, 50.f));
+		Params.TargetGroup.Members.Add(UACFCameraBlueprintLibrary::MakeTargetGroupMember(S.Spawned[0].Get(), 1.f, 80.f));
+		Params.TargetGroup.Members.Add(UACFCameraBlueprintLibrary::MakeTargetGroupMember(S.Spawned[1].Get(), 1.f, 80.f));
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		SetSolverCVar(0); // first reproduce the Phase 4A conflict
+		return true;
+	});
+	WaitSeconds(Steps, 0.5);
+	auto Worst = [](FScenario& S)
+	{
+		return FMath::Min3(ClearanceInFrame(S, S.Pivot, 50.f, Size),
+			ClearanceInFrame(S, S.Spawned[0]->GetActorLocation(), 80.f, Size), ClearanceInFrame(S, S.Spawned[1]->GetActorLocation(), 80.f, Size));
+	};
+	Steps.Add([Worst](FScenario& S)
+	{
+		const double Clearance = Worst(S);
+		S.LogCamera(TEXT("Solver OFF"));
+		S.Test->AddInfo(FString::Printf(TEXT("Solver OFF: camera X %.1f (wall face %.1f), worst clearance %.1f cm"), S.PCM()->GetCameraLocation().X - S.Pivot.X, -290.0, Clearance));
+		S.Test->TestTrue(TEXT("Conflict reproduced: Collision pushed the camera in and subjects left the framing area"), Clearance < -5.0);
+		SetSolverCVar(1);
+		return true;
+	});
+	WaitSeconds(Steps, 1.0);
+	Steps.Add([Worst](FScenario& S)
+	{
+		const double Clearance = Worst(S);
+		const float Fov = S.PCM()->GetFOVAngle();
+		S.LogCamera(TEXT("Solver ON"));
+		S.Test->AddInfo(FString::Printf(TEXT("Solver ON: FOV %.2f, worst clearance %.2f cm"), Fov, Clearance));
+		S.Test->TestTrue(TEXT("Camera still in front of the wall (priority 1)"), S.PCM()->GetCameraLocation().X >= S.Pivot.X - 290.0 + 12.0 - 0.5);
+		S.Test->TestTrue(TEXT("FOV widened within the limits"), Fov > 90.5f && Fov <= 130.f);
+		S.Test->TestTrue(TEXT("All subjects back inside the framing area"), Clearance >= -1.0);
+		S.Test->TestFalse(TEXT("Not limited"), S.Subsystem->GetLastEvaluationResult().bFramingLimited);
+		// FOV limit: allow only +4 deg.
+		Cast<UACFCameraNode_Collision>(S.Preset->Nodes[2])->FramingRecovery.MaxFieldOfViewIncrease = 4.f;
+		return true;
+	});
+	WaitSeconds(Steps, 4.0);
+	Steps.Add([](FScenario& S)
+	{
+		const float Fov = S.PCM()->GetFOVAngle();
+		S.Test->AddInfo(FString::Printf(TEXT("FOV limit +4: FOV %.2f"), Fov));
+		S.Test->TestTrue(TEXT("FOV stops at the limit"), FMath::IsNearlyEqual(Fov, 94.f, 0.1f));
+		S.Test->TestTrue(TEXT("Limit reported"), S.Subsystem->GetLastEvaluationResult().bFramingLimited);
+		S.Test->TestTrue(TEXT("Player still inside the framing area (priority 2)"), ClearanceInFrame(S, S.Pivot, 50.f, Size) >= -1.0);
+		// Lock-on against the same wall.
+		S.Subsystem->ReleaseAllCameras(true);
+		S.ActorB = SpawnMovablePoint(S.World(), S.Pivot + FVector(1200, 150, 0));
+		S.Preset.Reset(MakeSolverLockOnPreset(true, true));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		Params.LookAtTarget.Actor = S.ActorB.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return true;
+	});
+	WaitSeconds(Steps, 1.5);
+	Steps.Add([](FScenario& S)
+	{
+		S.LogCamera(TEXT("Lock-on at the wall"));
+		S.Test->TestTrue(TEXT("Lock-on at the wall: camera in front of the wall"), S.PCM()->GetCameraLocation().X >= S.Pivot.X - 290.0 + 12.0 - 0.5);
+		S.Test->TestTrue(TEXT("Lock-on at the wall: player on screen"), ClearanceInFrame(S, S.Pivot, 50.f, FVector2D(1, 1)) >= -1.0);
+		S.Test->TestTrue(TEXT("Lock-on at the wall: enemy on screen"), ClearanceInFrame(S, S.ActorB->GetActorLocation(), 80.f, FVector2D(1, 1)) >= -1.0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationCorridorTest, "ActionCameraFramework.Integration.ConstraintsNarrowCorridor",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationCorridorTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	static constexpr double HalfWidth = 135.0;
+	static constexpr double Ceiling = 250.0;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(0, 21000, 90);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.ActorB = SpawnMovablePoint(S.World(), S.Pivot + FVector(900, 0, 0));
+		const FVector Base = S.Pivot - FVector(0, 0, 90);
+		SpawnBlocker(S, Base + FVector(0, HalfWidth + 10, 150), FVector(1500, 10, 300));
+		SpawnBlocker(S, Base + FVector(0, -HalfWidth - 10, 150), FVector(1500, 10, 300));
+		SpawnBlocker(S, Base + FVector(0, 0, Ceiling + 10), FVector(1500, 200, 10));
+		SpawnBlocker(S, Base + FVector(450, 0, 100), FVector(15, 15, 100)); // thin post between player and enemy
+		S.Preset.Reset(MakeSolverLockOnPreset(true, true));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		Params.LookAtTarget.Actor = S.ActorB.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		S.StartTime = S.World()->GetTimeSeconds();
+		S.bFlag = true;
+		S.Value = 0.0;   // sign changes of the correction
+		S.SavedLocation = FVector(-100.0, 0.0, 0.0); // X = time of the last change, Y = changes less than 0.75 s apart
+		S.SavedRotation = FRotator::ZeroRotator; // .Yaw = last correction sign
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		// Enemy strafes across the corridor for 4 s.
+		const double T = S.World()->GetTimeSeconds() - S.StartTime;
+		S.ActorB->SetActorLocation(S.Pivot + FVector(900, 100.0 * FMath::Sin(T * 2.0), 0));
+		const FVector Camera = S.PCM()->GetCameraLocation();
+		const FVector Base = S.Pivot - FVector(0, 0, 90);
+		S.bFlag &= FMath::Abs(Camera.Y - Base.Y) <= HalfWidth - 12.0 + 0.5 && Camera.Z - Base.Z <= Ceiling - 12.0 + 0.5;
+		const float Yaw = S.Subsystem->GetDirector()->GetLastSolverReport().Correction.X;
+		const float Sign = FMath::Abs(Yaw) > 1.f ? FMath::Sign(Yaw) : 0.f;
+		if (Sign != 0.f && S.SavedRotation.Yaw != 0.f && Sign != S.SavedRotation.Yaw)
+		{
+			S.Value += 1.0;
+			S.SavedLocation.Y += T - S.SavedLocation.X < 0.75 ? 1.0 : 0.0;
+			S.SavedLocation.X = T;
+		}
+		if (Sign != 0.f)
+		{
+			S.SavedRotation.Yaw = Sign;
+		}
+		S.bRetry = T < 4.0;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraSolverReport& Report = S.Subsystem->GetDirector()->GetLastSolverReport();
+		S.LogCamera(TEXT("Corridor"));
+		S.Test->AddInfo(FString::Printf(TEXT("Corridor: correction %s, side changes %.0f (rapid %.0f), occluded %d"), *Report.Correction.ToString(), S.Value, S.SavedLocation.Y, Report.NumOccluded));
+		S.Test->TestTrue(TEXT("Corridor: the camera never leaves the corridor (walls, ceiling)"), S.bFlag);
+		S.Test->TestTrue(TEXT("Corridor: no left-right oscillation (no side changes less than 0.75 s apart)"), S.SavedLocation.Y == 0.0);
+		S.Test->TestTrue(TEXT("Corridor: player visible"), LineOfSightClear(S, S.Pivot, S.ActorA.Get(), S.ActorB.Get()));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSampleSolverCombatTest, "ActionCameraFramework.Samples.SolverAndCombatOnTestMap",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFSampleSolverCombatTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	// Drives the Phase 4B README commands on the real sample map.
+	TArray<FStep> Steps;
+	auto Exec = [&Steps](const TCHAR* Command) { Steps.Add([Command](FScenario& S) { GEngine->Exec(S.World(), Command); return true; }); };
+	// "%s" in Command is replaced by the current index of the enemy whose label starts with Label (indices shift when one is killed).
+	auto ExecEnemy = [&Steps](const TCHAR* Command, const TCHAR* Label)
+	{
+		Steps.Add([Command, Label](FScenario& S)
+		{
+			TArray<AActor*> Enemies;
+			UGameplayStatics::GetAllActorsWithTag(S.World(), TEXT("ACFEnemy"), Enemies);
+			Enemies.Sort([](const AActor& A, const AActor& B) { return A.GetActorNameOrLabel() < B.GetActorNameOrLabel(); });
+			const int32 Index = Enemies.IndexOfByPredicate([Label](const AActor* A) { return A->GetActorNameOrLabel().StartsWith(Label); });
+			S.Test->TestTrue(FString::Printf(TEXT("%s exists"), Label), Index != INDEX_NONE);
+			GEngine->Exec(S.World(), *FString(Command).Replace(TEXT("%s"), *FString::FromInt(Index)));
+			return true;
+		});
+	};
+	auto ReportOccluded = [](FScenario& S, const TCHAR* Label, AActor* Enemy)
+	{
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		const bool bVisible = Enemy && LineOfSightClear(S, Enemy->GetActorLocation(), S.Controller->GetPawn(), Enemy);
+		S.LogCamera(Label);
+		S.Test->AddInfo(FString::Printf(TEXT("%s: occluded reported %d, enemy line of sight %s, FOV %.1f"), Label, R.NumOccludedTargets, bVisible ? TEXT("clear") : TEXT("blocked"), S.PCM()->GetFOVAngle()));
+		S.Test->TestTrue(FString::Printf(TEXT("%s: the report matches the real line of sight"), Label), (R.NumOccludedTargets == 0) == bVisible);
+		S.Test->TestTrue(FString::Printf(TEXT("%s: player visible"), Label), LineOfSightClear(S, S.Controller->GetPawn()->GetActorLocation() + FVector(0, 0, 60), S.Controller->GetPawn(), Enemy));
+	};
+	Steps.Add([](FScenario& S)
+	{
+		if (!S.World()->GetMapName().Contains(TEXT("L_ACFCameraTest")))
+		{
+			S.Test->AddWarning(TEXT("Skipped: run on /ActionCameraFramework/Samples/L_ACFCameraTest."));
+			return false;
+		}
+		if (!FindEnemy(S, TEXT("Enemy_5")))
+		{
+			S.Test->AddError(TEXT("Enemy_4 / Enemy_5 missing: run Scripts/CreateManualTestAssets.py."));
+			return false;
+		}
+		return true;
+	});
+	Exec(TEXT("ACF.Sample.Goto Start"));
+	Exec(TEXT("ACF.Sample.Use ThirdPerson 0"));
+	Wait(Steps, 0.5);
+	// Lock-on to the boss behind the wall.
+	ExecEnemy(TEXT("ACF.Sample.LockOn %s"), TEXT("Enemy_2"));
+	Wait(Steps, 2.5);
+	Steps.Add([ReportOccluded](FScenario& S) { ReportOccluded(S, TEXT("Boss behind the wall"), FindEnemy(S, TEXT("Enemy_2"))); return true; });
+	Shot(Steps, TEXT("ACF_4B_BossBehindWall"));
+	// Enemy patrolling around the pillars.
+	Exec(TEXT("ACF.Sample.Goto Pillars"));
+	ExecEnemy(TEXT("ACF.Sample.LockOn %s"), TEXT("Enemy_4"));
+	Exec(TEXT("ACF.Sample.Enemy Patrol"));
+	Steps.Add([](FScenario& S) { S.StartTime = S.World()->GetTimeSeconds(); S.Value = 0.0; S.bFlag = true; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		// While it patrols (6 s), the camera never ends up inside a pillar.
+		const FVector Camera = S.PCM()->GetCameraLocation();
+		for (const double Y : { -1600.0, -1200.0, -800.0 })
+		{
+			S.bFlag &= !(FMath::Abs(Camera.X + 600.0) < 30.0 + 14.5 && FMath::Abs(Camera.Y - Y) < 30.0 + 14.5 && Camera.Z < 400.0);
+		}
+		S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 6.0;
+		return true;
+	});
+	Steps.Add([ReportOccluded](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Patrol around the pillars: camera never inside a pillar"), S.bFlag);
+		ReportOccluded(S, TEXT("Enemy patrolling the pillars"), FindEnemy(S, TEXT("Enemy_4")));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_4B_Pillars"));
+	Exec(TEXT("ACF.Sample.Enemy Patrol"));
+	// Combat state switch (exploration camera <-> combat profile).
+	Exec(TEXT("ACF.Sample.LockOff 0"));
+	Wait(Steps, 0.5);
+	Steps.Add([](FScenario& S) { S.Value = S.PCM()->GetFOVAngle(); GEngine->Exec(S.World(), TEXT("ACF.Sample.Combat On")); return true; });
+	Wait(Steps, 2.0);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->AddInfo(FString::Printf(TEXT("Combat on: FOV %.2f -> %.2f"), S.Value, S.PCM()->GetFOVAngle()));
+		S.Test->TestTrue(TEXT("Combat profile applied to the exploration camera"), S.PCM()->GetFOVAngle() > S.Value + 3.f);
+		GEngine->Exec(S.World(), TEXT("ACF.Sample.Combat Off"));
+		return true;
+	});
+	Wait(Steps, 4.0);
+	Steps.Add([](FScenario& S) { S.Test->TestTrue(TEXT("Combat off: back to the exploration FOV"), FMath::IsNearlyEqual(S.PCM()->GetFOVAngle(), static_cast<float>(S.Value), 0.2f)); return true; });
+	// Narrow corridor with a lock-on down the corridor.
+	Exec(TEXT("ACF.Sample.Goto Corridor"));
+	ExecEnemy(TEXT("ACF.Sample.LockOn %s"), TEXT("Enemy_5"));
+	Wait(Steps, 2.0);
+	Steps.Add([](FScenario& S)
+	{
+		const FVector Camera = S.PCM()->GetCameraLocation();
+		S.LogCamera(TEXT("Corridor lock-on"));
+		S.Test->TestTrue(TEXT("Corridor: camera between the corridor walls"), FMath::Abs(Camera.Y - 1500.0) <= 135.0 - 15.0 + 0.5);
+		S.Test->TestTrue(TEXT("Corridor: camera below the low ceiling where there is one"), Camera.X < 0.0 || Camera.X > 800.0 || Camera.Z <= 250.0 - 15.0 + 0.5);
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_4B_Corridor"));
+	// Collision vs Group Framing at the wall: group of the player and two enemies, back to the wall.
+	Exec(TEXT("ACF.Sample.LockOff 0"));
+	Exec(TEXT("ACF.Sample.Goto Wall"));
+	Exec(TEXT("ACF.Sample.Group Use"));
+	ExecEnemy(TEXT("ACF.Sample.Group Add %s"), TEXT("Enemy_0"));
+	ExecEnemy(TEXT("ACF.Sample.Group Add %s"), TEXT("Enemy_4"));
+	Wait(Steps, 2.5);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		S.LogCamera(TEXT("Group at the wall"));
+		S.Test->TestTrue(TEXT("Group at the wall: camera in front of the wall (X <= 690 - probe)"), S.PCM()->GetCameraLocation().X <= 690.0 - 15.0 + 0.5);
+		if (R.bFramingLimited)
+		{
+			// Defined degraded behaviour at the FOV limit: the player's centre stays inside the framing area (0.8).
+			FVector2D Screen;
+			SphereOnScreen(S, S.Controller->GetPawn()->GetActorLocation(), 0.f, Screen);
+			S.Test->AddInfo(FString::Printf(TEXT("Group at the wall (limited): player centre at (%.3f, %.3f)"), Screen.X, Screen.Y));
+			S.Test->TestTrue(TEXT("Group at the wall (limited): player centre inside the framing area"), FMath::Abs(Screen.X) <= 0.4 + 1e-3 && FMath::Abs(Screen.Y) <= 0.4 + 1e-3);
+		}
+		else
+		{
+			ExpectOnScreen(S, S.Controller->GetPawn(), 50.f, TEXT("Group at the wall"));
+			ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_0")), 50.f, TEXT("Group at the wall"));
+			ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_4")), 50.f, TEXT("Group at the wall"));
+		}
+		S.Test->AddInfo(FString::Printf(TEXT("Group at the wall: FOV %.1f, framing limited %d"), S.PCM()->GetFOVAngle(), R.bFramingLimited ? 1 : 0));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_4B_GroupWall"));
+	Exec(TEXT("ACF.Sample.Group Release 0"));
+	Exec(TEXT("ACF.Sample.Release 0"));
+	Exec(TEXT("ACF.Sample.Goto Start"));
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+
+// =================================================================================================
+// Phase 4C: finisher / cinematic camera sequences in the real camera pipeline.
+
+namespace ACFIntegration
+{
+	/** Shot Anchor (between attacker and target, line-of-action axes) + Collision. Camera at mid + Offset. */
+	static UACFCameraPreset* MakeShotPreset(FScenario& S, const FVector& Offset, bool bFreeze, bool bDeoccluder = false)
+	{
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_ShotAnchor* Anchor = NewObject<UACFCameraNode_ShotAnchor>(Preset);
+		Anchor->AnchorPoint = EACFCameraShotAnchorPoint::Between;
+		Anchor->BetweenAlpha = 0.5f;
+		Anchor->AnchorOffset = FVector::ZeroVector;
+		Anchor->Basis = EACFCameraShotAnchorBasis::LineOfAction;
+		Anchor->CameraOffset = Offset;
+		Anchor->bFreezeAtShotStart = bFreeze;
+		Anchor->DampingTime = 0.f;
+		Anchor->FieldOfView = 60.f;
+		UACFCameraNode_Collision* Collision = NewObject<UACFCameraNode_Collision>(Preset);
+		Collision->ReturnDampingTime = 0.f;
+		Collision->Deoccluder.bEnabled = bDeoccluder;
+		Collision->Deoccluder.bCheckLookAtTarget = true;
+		Preset->Nodes = { Anchor, Collision };
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		S.Keep.Emplace(Preset);
+		return Preset;
+	}
+
+	static FACFCameraShot& AddShot(UACFCameraSequence* Sequence, FName Name, UACFCameraPreset* Preset)
+	{
+		FACFCameraShot& Shot = Sequence->Shots.AddDefaulted_GetRef();
+		Shot.Name = Name;
+		Shot.Preset = Preset;
+		Shot.AdvanceMode = EACFCameraShotAdvanceMode::WaitForEvent;
+		Shot.Duration = 0.f;
+		Shot.Targets.Follow = EACFCameraShotRole::Attacker;
+		Shot.Targets.LookAt = EACFCameraShotRole::Target;
+		return Shot;
+	}
+
+	static UACFCameraSequence* NewSequence(FScenario& S)
+	{
+		UACFCameraSequence* Sequence = NewObject<UACFCameraSequence>(GetTransientPackage(), NAME_None, RF_Transient);
+		Sequence->ReturnBlend = FACFCameraBlendSettings::MakeCut();
+		S.Keep.Emplace(Sequence);
+		return Sequence;
+	}
+
+	static FACFCameraSequenceState SeqState(FScenario& S)
+	{
+		return S.Subsystem->GetCameraSequenceState(S.Sequence);
+	}
+
+	static FVector Mid(FScenario& S)
+	{
+		return (S.ActorA->GetActorLocation() + S.ActorB->GetActorLocation()) * 0.5;
+	}
+
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationFinisherAnchorTest, "ActionCameraFramework.Integration.FinisherShotAnchorAndActorLost",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationFinisherAnchorTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(-6000, -20000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.ActorB = SpawnMovablePoint(S.World(), S.Pivot + FVector(300, 0, 0));
+		UACFCameraSequence* Sequence = NewSequence(S);
+		AddShot(Sequence, TEXT("Dynamic"), MakeShotPreset(S, FVector(0, 400, 0), false));
+		AddShot(Sequence, TEXT("Fixed"), MakeShotPreset(S, FVector(0, -400, 0), true));
+		S.Sequence = S.Subsystem->StartFinisherCamera(Sequence, S.ActorA.Get(), S.ActorB.Get());
+		S.Test->TestTrue(TEXT("finisher handle"), S.Sequence.IsValid());
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, Mid(S) + FVector(0, 400, 0), 1.0, TEXT("Dynamic shot: right of the attacker -> target line"));
+		const FRotator Look = (Mid(S) - S.PCM()->GetCameraLocation()).Rotation();
+		S.Test->TestTrue(TEXT("Dynamic shot looks at the middle of the action"), S.PCM()->GetCameraRotation().Equals(Look, 0.1f));
+		S.Test->TestTrue(TEXT("finisher in control"), SeqState(S).bInControl);
+		S.Test->TestTrue(TEXT("Collision guard constraint active during the finisher"), S.Subsystem->GetDirector()->GetOutputConstraint().bValid);
+		// Both actors move: the dynamic shot follows.
+		S.ActorA->SetActorLocation(S.ActorA->GetActorLocation() + FVector(500, 200, 0));
+		S.ActorB->SetActorLocation(S.ActorB->GetActorLocation() + FVector(500, 200, 0));
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, Mid(S) + FVector(0, 400, 0), 1.0, TEXT("Dynamic shot followed the actors"));
+		S.Subsystem->AdvanceCameraShot(S.Sequence);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Fixed shot"), SeqState(S).ShotIndex, 1);
+		S.SavedLocation = S.PCM()->GetCameraLocation();
+		S.SavedRotation = S.PCM()->GetCameraRotation();
+		CameraCloseTo(S, Mid(S) + FVector(0, -400, 0), 1.0, TEXT("Fixed shot placed at its start"));
+		S.ActorA->SetActorLocation(S.ActorA->GetActorLocation() + FVector(150, 100, 0));
+		S.ActorB->SetActorLocation(S.ActorB->GetActorLocation() + FVector(150, 100, 0));
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.SavedLocation, 0.01, TEXT("Fixed shot does not move with the actors"));
+		S.Test->TestTrue(TEXT("Fixed shot rotation frozen"), S.PCM()->GetCameraRotation().Equals(S.SavedRotation, 0.01f));
+		// The target dies mid-shot: the playback ends (Actor Lost Policy = Finish) and the camera returns.
+		S.ActorB->Destroy();
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestFalse(TEXT("target destroyed: playback ended"), S.Subsystem->IsCameraSequencePlaying(S.Sequence));
+		S.Test->TestEqual(TEXT("no request left"), S.Subsystem->GetDirector()->GetNumRequests(), 0);
+		S.Test->TestEqual(TEXT("no effect left"), S.Subsystem->GetDirector()->GetNumActiveEffects(), 0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationFinisherNarrowTest, "ActionCameraFramework.Integration.FinisherNarrowFallbackAndDeoccluder",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationFinisherNarrowTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(-6000, -26000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.ActorB = SpawnMovablePoint(S.World(), S.Pivot + FVector(300, 0, 0));
+		const FVector M = Mid(S);
+		// Wall 200 cm right of the action: the right-side shot (400 cm) does not fit.
+		SpawnBlocker(S, M + FVector(0, 220, 0), FVector(600, 20, 400));
+		// Pillar between the left-side camera and the target.
+		SpawnBlocker(S, M + FVector(75, -200, 0), FVector(25, 25, 400));
+		UACFCameraSequence* Sequence = NewSequence(S);
+		UACFCameraPreset* Right = MakeShotPreset(S, FVector(0, 400, 0), false);
+		FACFCameraShot& Fallback = AddShot(Sequence, TEXT("RightWithFallback"), Right);
+		Fallback.Fallback.FallbackPreset = MakeShotPreset(S, FVector(-400, 0, 150), false);
+		AddShot(Sequence, TEXT("RightSqueezed"), Right);
+		FACFCameraShot& Skip = AddShot(Sequence, TEXT("RightSkipped"), Right);
+		Skip.Fallback.bSkipIfInfeasible = true;
+		FACFCameraShot& Deocc = AddShot(Sequence, TEXT("LeftDeoccluder"), MakeShotPreset(S, FVector(0, -400, 0), false, true));
+		Deocc.bEnableDeoccluder = true;
+		AddShot(Sequence, TEXT("LeftNoDeoccluder"), MakeShotPreset(S, FVector(0, -400, 0), false, true)).bEnableDeoccluder = false;
+		S.Sequence = S.Subsystem->StartFinisherCamera(Sequence, S.ActorA.Get(), S.ActorB.Get());
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraSequenceState State = SeqState(S);
+		S.Test->TestEqual(TEXT("shot 0"), State.ShotIndex, 0);
+		S.Test->TestTrue(TEXT("narrow: fallback preset used"), State.bUsingFallback);
+		CameraCloseTo(S, Mid(S) + FVector(-400, 0, 150), 1.0, TEXT("fallback shot (behind the attacker, high)"));
+		S.Subsystem->AdvanceCameraShot(S.Sequence);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const FVector Cam = S.PCM()->GetCameraLocation();
+		S.LogCamera(TEXT("squeezed shot"));
+		S.Test->TestEqual(TEXT("shot 1 (no fallback configured)"), SeqState(S).ShotIndex, 1);
+		S.Test->TestTrue(TEXT("squeezed shot: Collision keeps the camera in front of the wall"), Cam.Y < Mid(S).Y + 200.0 && Cam.Y > Mid(S).Y);
+		S.Test->TestTrue(TEXT("guard active"), S.Subsystem->GetDirector()->GetOutputConstraint().bValid);
+		S.Subsystem->AdvanceCameraShot(S.Sequence);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("infeasible shot 2 skipped -> shot 3"), SeqState(S).ShotIndex, 3);
+		return true;
+	});
+	WaitSeconds(Steps, 2.0);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraSolverReport& Report = S.Subsystem->GetDirector()->GetLastSolverReport();
+		const bool bVisible = LineOfSightClear(S, S.ActorB->GetActorLocation(), S.ActorA.Get(), S.ActorB.Get());
+		S.LogCamera(TEXT("deoccluder shot"));
+		S.Test->AddInfo(FString::Printf(TEXT("deoccluder shot: traces %d, occluded %d, correction yaw %.1f pitch %.1f"), Report.NumTraces, Report.NumOccluded,
+			Report.Correction.X, Report.Correction.Y));
+		S.Test->TestTrue(TEXT("shot with Deoccluder: solver ran"), Report.NumTraces > 0);
+		S.Test->TestTrue(TEXT("shot with Deoccluder: target revealed (real line of sight)"), bVisible);
+		S.Subsystem->AdvanceCameraShot(S.Sequence);
+		return true;
+	});
+	WaitSeconds(Steps, 1.0);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraSolverReport& Report = S.Subsystem->GetDirector()->GetLastSolverReport();
+		S.Test->TestEqual(TEXT("shot without Deoccluder: no solver traces"), Report.NumTraces, 0);
+		CameraCloseTo(S, Mid(S) + FVector(0, -400, 0), 1.0, TEXT("shot without Deoccluder keeps its staged position"));
+		S.Test->TestFalse(TEXT("shot without Deoccluder: the pillar hides the target"), LineOfSightClear(S, S.ActorB->GetActorLocation(), S.ActorA.Get(), S.ActorB.Get()));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationFinisherLockOnNotifyTest, "ActionCameraFramework.Integration.FinisherFromLockOnWithAnimNotifies",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationFinisherLockOnNotifyTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(-6000, -32000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);                     // player
+		S.ActorB = SpawnMovablePoint(S.World(), S.Pivot + FVector(800, 0, 0)); // locked enemy
+		AActor* Victim = SpawnMovablePoint(S.World(), S.Pivot + FVector(250, 150, 0));
+		S.Spawned.Add(Victim);
+		USkeletalMeshComponent* Mesh = NewObject<USkeletalMeshComponent>(S.ActorA.Get(), TEXT("FinisherMesh"));
+		S.Component = Mesh;
+		S.Preset.Reset(MakeLockOnCollisionPreset());
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), UACFCameraBlueprintLibrary::MakeLockOnRequestParams(10, S.ActorA.Get(), S.ActorB.Get(), true));
+		UACFCameraSequence* Sequence = NewSequence(S);
+		AddShot(Sequence, TEXT("Approach"), MakeShotPreset(S, FVector(0, 400, 50), false));
+		FACFCameraShot& Strike = AddShot(Sequence, TEXT("Strike"), MakeShotPreset(S, FVector(-300, -250, 80), false));
+		Strike.AdvanceMode = EACFCameraShotAdvanceMode::Duration;
+		Strike.Duration = 3.f;
+		Sequence->ReturnBlend.Curve = EACFCameraBlendCurve::Linear;
+		Sequence->ReturnBlend.Duration = 0.5f;
+		S.Keep.Emplace(Sequence); // Keep.Last() = the sequence for the next step
+		S.Value = 0.0;
+		return true;
+	});
+	WaitSeconds(Steps, 0.3);
+	Steps.Add([](FScenario& S)
+	{
+		S.SavedLocation = S.PCM()->GetCameraLocation(); // lock-on camera
+		AActor* Victim = S.Spawned.Last().Get();
+		S.Sequence = UACFCameraBlueprintLibrary::StartFinisherCameraForActor(S.ActorA.Get(), Cast<UACFCameraSequence>(S.Keep.Last().Get()), Victim, 1.f);
+		S.Test->TestTrue(TEXT("finisher started for the attacker's local player"), S.Sequence.IsValid());
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("finisher above the lock-on"), SeqState(S).bInControl);
+		S.Test->TestTrue(TEXT("lock-on kept underneath"), S.Subsystem->IsCameraRequestAlive(S.Handle));
+		// Anim notify on the attacker's mesh: next shot.
+		UAnimNotify_ACFCameraSequence* Notify = NewObject<UAnimNotify_ACFCameraSequence>();
+		Notify->Command = EACFCameraSequenceCommand::AdvanceShot;
+		Notify->Notify(Cast<USkeletalMeshComponent>(S.Component.Get()), nullptr, FAnimNotifyEventReference());
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("anim notify advanced to Strike"), SeqState(S).ShotIndex, 1);
+		// Hold window (anim notify state) freezes shot time.
+		UAnimNotifyState_ACFCameraHoldShot* Hold = NewObject<UAnimNotifyState_ACFCameraHoldShot>();
+		Hold->NotifyBegin(Cast<USkeletalMeshComponent>(S.Component.Get()), nullptr, 1.f, FAnimNotifyEventReference());
+		S.Value = SeqState(S).ShotTime;
+		S.Keep.Emplace(Hold);
+		return true;
+	});
+	WaitSeconds(Steps, 0.5);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("held by the notify state"), SeqState(S).ShotTime, static_cast<float>(S.Value));
+		Cast<UAnimNotifyState_ACFCameraHoldShot>(S.Keep.Last().Get())->NotifyEnd(Cast<USkeletalMeshComponent>(S.Component.Get()), nullptr, FAnimNotifyEventReference());
+		// Attacker hit-stop: half speed on the attacker -> half speed for the shot.
+		S.ActorA->CustomTimeDilation = 0.5f;
+		S.Value = SeqState(S).ShotTime;
+		S.StartTime = S.World()->GetTimeSeconds();
+		return true;
+	});
+	Steps.Add([](FScenario& S) { S.bRetry = S.World()->GetTimeSeconds() - S.StartTime < 1.0; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		const double World = S.World()->GetTimeSeconds() - S.StartTime;
+		const double Shot = SeqState(S).ShotTime - S.Value;
+		S.Test->AddInfo(FString::Printf(TEXT("attacker dilation 0.5: world %.3fs -> shot %.3fs"), World, Shot));
+		S.Test->TestTrue(TEXT("shot time follows the attacker's Custom Time Dilation"), FMath::IsNearlyEqual(Shot, World * 0.5, 0.05));
+		S.ActorA->CustomTimeDilation = 1.f;
+		// Pause: no camera time.
+		S.Value = SeqState(S).ShotTime;
+		S.bFlag = UGameplayStatics::SetGamePaused(S.World(), true);
+		if (!S.bFlag)
+		{
+			S.Test->AddWarning(TEXT("The game mode refused to pause: pause check skipped."));
+		}
+		return true;
+	});
+	Steps.Add([](FScenario& S) { return true; });
+	Steps.Add([](FScenario& S)
+	{
+		if (S.bFlag)
+		{
+			S.Test->TestEqual(TEXT("paused: shot time frozen"), SeqState(S).ShotTime, static_cast<float>(S.Value));
+		}
+		UGameplayStatics::SetGamePaused(S.World(), false);
+		// Finish from an anim notify on the target (routing by actor works for both roles).
+		UAnimNotify_ACFCameraSequence* Notify = NewObject<UAnimNotify_ACFCameraSequence>();
+		Notify->Command = EACFCameraSequenceCommand::Finish;
+		USkeletalMeshComponent* VictimMesh = NewObject<USkeletalMeshComponent>(S.Spawned.Last().Get());
+		Notify->Notify(VictimMesh, nullptr, FAnimNotifyEventReference());
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		S.Test->TestFalse(TEXT("finished by notify"), S.Subsystem->IsCameraSequencePlaying(S.Sequence));
+		S.Test->TestTrue(TEXT("back on the lock-on request"), R.ActiveRequest == S.Handle);
+		S.Test->TestTrue(TEXT("with the sequence's return blend"), R.bIsBlending);
+		return true;
+	});
+	WaitSeconds(Steps, 0.7);
+	Steps.Add([](FScenario& S)
+	{
+		CameraCloseTo(S, S.SavedLocation, 2.0, TEXT("lock-on camera restored"));
+		S.Test->TestEqual(TEXT("no sequence effect left"), S.Subsystem->GetDirector()->GetNumActiveEffects(), 0);
+		S.Test->TestEqual(TEXT("notify without a playback reaches nobody"), UACFCameraBlueprintLibrary::SendCameraSequenceCommandForActor(S.ActorA.Get(), EACFCameraSequenceCommand::AdvanceShot), 0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSampleFinisherTest, "ActionCameraFramework.Samples.FinisherOnTestMap",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFSampleFinisherTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	// Drives the Phase 4C README commands on the real sample map (screenshots need a real RHI).
+	TArray<FStep> Steps;
+	auto Exec = [&Steps](const TCHAR* Command) { Steps.Add([Command](FScenario& S) { GEngine->Exec(S.World(), Command); return true; }); };
+	auto ExecEnemy = [&Steps](const TCHAR* Command, const TCHAR* Label)
+	{
+		Steps.Add([Command, Label](FScenario& S)
+		{
+			TArray<AActor*> Enemies;
+			UGameplayStatics::GetAllActorsWithTag(S.World(), TEXT("ACFEnemy"), Enemies);
+			Enemies.Sort([](const AActor& A, const AActor& B) { return A.GetActorNameOrLabel() < B.GetActorNameOrLabel(); });
+			const int32 Index = Enemies.IndexOfByPredicate([Label](const AActor* A) { return A->GetActorNameOrLabel().StartsWith(Label); });
+			S.Test->TestTrue(FString::Printf(TEXT("%s exists"), Label), Index != INDEX_NONE);
+			GEngine->Exec(S.World(), *FString(Command).Replace(TEXT("%s"), *FString::FromInt(Index)));
+			return true;
+		});
+	};
+	auto Current = [](FScenario& S)
+	{
+		TArray<FACFCameraSequenceHandle> Handles;
+		S.Subsystem->GetDirector()->GetActiveSequences(Handles);
+		S.Sequence = Handles.IsEmpty() ? FACFCameraSequenceHandle() : Handles[0];
+		return S.Subsystem->GetCameraSequenceState(S.Sequence);
+	};
+	Steps.Add([](FScenario& S)
+	{
+		if (!S.World()->GetMapName().Contains(TEXT("L_ACFCameraTest")))
+		{
+			S.Test->AddWarning(TEXT("Skipped: run on /ActionCameraFramework/Samples/L_ACFCameraTest."));
+			return false;
+		}
+		if (!FindEnemy(S, TEXT("Enemy_6")))
+		{
+			S.Test->AddError(TEXT("Enemy_6_Finisher missing: run Scripts/CreateManualTestAssets.py."));
+			return false;
+		}
+		return true;
+	});
+	Exec(TEXT("ACF.Sample.Goto Finisher"));
+	Exec(TEXT("ACF.Sample.Use ThirdPerson 0"));
+	ExecEnemy(TEXT("ACF.Sample.LockOn %s"), TEXT("Enemy_6"));
+	Wait(Steps, 1.5);
+	Steps.Add([](FScenario& S)
+	{
+		S.SavedLocation = S.PCM()->GetCameraLocation();
+		S.Handle = S.Subsystem->GetLastEvaluationResult().ActiveRequest; // lock-on
+		return true;
+	});
+	Exec(TEXT("ACF.Sample.Finisher Play"));
+	Exec(TEXT("ACF.Sample.Finisher Hold")); // keep "Approach" for the check / screenshot
+	Wait(Steps, 0.6);
+	Steps.Add([Current](FScenario& S)
+	{
+		const FACFCameraSequenceState State = Current(S);
+		S.LogCamera(TEXT("Approach"));
+		S.Test->TestEqual(TEXT("Approach: shot 0"), State.ShotIndex, 0);
+		S.Test->TestFalse(TEXT("Approach: open ground, no fallback"), State.bUsingFallback);
+		S.Test->TestTrue(TEXT("Approach: finisher above the lock-on"), State.bInControl && S.Subsystem->IsCameraRequestAlive(S.Handle));
+		ExpectOnScreen(S, S.Controller->GetPawn(), 40.f, TEXT("Approach"));
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_6")), 40.f, TEXT("Approach"));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_4C_Approach"));
+	Exec(TEXT("ACF.Sample.Finisher Release"));
+	Wait(Steps, 1.4); // Approach lasts 1.2 s
+	Steps.Add([Current](FScenario& S)
+	{
+		const FACFCameraSequenceState State = Current(S);
+		S.LogCamera(TEXT("Strike"));
+		S.Test->TestEqual(TEXT("Strike: shot 1 after the Approach duration"), State.ShotIndex, 1);
+		S.Test->TestTrue(TEXT("Strike: waits for the event"), State.bWaitingForEvent);
+		S.Test->TestEqual(TEXT("Strike: owns the tension (sequence) and hit (shot) effects"), State.NumOwnedEffects, 2);
+		// Reverse angle: the enemy fills the foreground (its centre must be on screen), the attacker is framed fully.
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_6")), 0.f, TEXT("Strike"));
+		ExpectOnScreen(S, S.Controller->GetPawn(), 40.f, TEXT("Strike"));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_4C_Strike"));
+	Exec(TEXT("ACF.Sample.Finisher Notify Advance")); // what the anim notify does
+	Wait(Steps, 0.9);
+	Steps.Add([Current](FScenario& S)
+	{
+		const FACFCameraSequenceState State = Current(S);
+		S.LogCamera(TEXT("Overhead"));
+		S.Test->TestEqual(TEXT("Overhead: shot 2 after the notify"), State.ShotIndex, 2);
+		ExpectOnScreen(S, S.Controller->GetPawn(), 40.f, TEXT("Overhead"));
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_6")), 40.f, TEXT("Overhead"));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_4C_Overhead"));
+	Wait(Steps, 2.2);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		S.Test->TestEqual(TEXT("finished: no playback"), S.Subsystem->GetDirector()->GetNumSequences(), 0);
+		S.Test->TestTrue(TEXT("finished: lock-on in control again"), R.ActiveRequest == S.Handle);
+		S.Test->TestEqual(TEXT("finished: no effect left"), S.Subsystem->GetDirector()->GetNumActiveEffects(), 0);
+		CameraCloseTo(S, S.SavedLocation, 5.0, TEXT("finished: lock-on camera restored"));
+		return true;
+	});
+	// Narrow place: the corridor forces the fallback shot; Cancel cuts back.
+	Exec(TEXT("ACF.Sample.LockOff 0"));
+	Exec(TEXT("ACF.Sample.Goto CorridorFinisher"));
+	Wait(Steps, 1.0);
+	ExecEnemy(TEXT("ACF.Sample.Finisher Play %s"), TEXT("Enemy_5"));
+	Wait(Steps, 0.4);
+	Steps.Add([Current](FScenario& S)
+	{
+		const FACFCameraSequenceState State = Current(S);
+		const FVector Camera = S.PCM()->GetCameraLocation();
+		S.LogCamera(TEXT("Corridor finisher"));
+		S.Test->TestTrue(TEXT("Corridor: Approach replaced by the fallback shot"), State.ShotIndex == 0 && State.bUsingFallback);
+		S.Test->TestTrue(TEXT("Corridor: camera between the corridor walls"), FMath::Abs(Camera.Y - 1500.0) <= 135.0 - 12.0 + 0.5);
+		ExpectOnScreen(S, FindEnemy(S, TEXT("Enemy_5")), 40.f, TEXT("Corridor finisher"));
+		return true;
+	});
+	Shot(Steps, TEXT("ACF_4C_CorridorFallback"));
+	Exec(TEXT("ACF.Sample.Finisher Cancel"));
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEvaluationResult R = S.Subsystem->GetLastEvaluationResult();
+		S.Test->TestEqual(TEXT("Cancel: no playback"), S.Subsystem->GetDirector()->GetNumSequences(), 0);
+		S.Test->TestEqual(TEXT("Cancel: effects cut"), S.Subsystem->GetDirector()->GetNumActiveEffects(), 0);
+		S.Test->TestFalse(TEXT("Cancel: cut back (no blend)"), R.bIsBlending);
+		return true;
+	});
+	Exec(TEXT("ACF.Sample.Release 0"));
+	Exec(TEXT("ACF.Sample.Goto Start"));
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
 	return true;
 }
