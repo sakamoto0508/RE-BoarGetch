@@ -62,7 +62,7 @@ FACFCameraRequestHandle UACFCameraDirector::AddRequest(const UACFCameraPreset* P
 	return Entry.Handle;
 }
 
-bool UACFCameraDirector::RemoveRequest(FACFCameraRequestHandle Handle, const FACFCameraBlendSettings* BlendOutOverride)
+bool UACFCameraDirector::RemoveRequest(FACFCameraRequestHandle Handle, const FACFCameraBlendSettings* BlendOutOverride, bool bOverrideAnyReturn)
 {
 	const int32 Index = FindRequestIndex(Handle);
 	if (Index == INDEX_NONE)
@@ -71,6 +71,11 @@ bool UACFCameraDirector::RemoveRequest(FACFCameraRequestHandle Handle, const FAC
 	}
 
 	ACFDirector::LogEvent(FString::Printf(TEXT("RemoveRequest %s"), *ACFDirector::Describe(Requests[Index])));
+	if (bOverrideAnyReturn && BlendOutOverride && Handle == ActiveHandle)
+	{
+		PendingReturnBlend = *BlendOutOverride;
+		bHasPendingReturnBlend = true;
+	}
 	if (Handle == ActiveHandle || Handle == Transition.LiveSource)
 	{
 		// Still on screen (active, or the live outgoing side of a blend): keep its rig alive until
@@ -100,6 +105,7 @@ void UACFCameraDirector::RemoveAllRequests(bool bImmediate)
 		LastResult.NumRequests = 0;
 		LastEvaluatedFrame = MAX_uint64; // the next evaluation in this frame must not reuse the cache
 		OutputConstraint.bValid = false;
+		bHasPendingReturnBlend = false;
 	}
 	else
 	{
@@ -167,6 +173,17 @@ bool UACFCameraDirector::SetGroupMembers(FACFCameraRequestHandle Handle, const T
 		return false;
 	}
 	Entry->Params.TargetGroup.Members = Members;
+	return true;
+}
+
+bool UACFCameraDirector::SetRequestDeoccluderEnabled(FACFCameraRequestHandle Handle, bool bEnabled)
+{
+	FACFCameraRequestEntry* Entry = FindLiveEntry(Handle);
+	if (!Entry)
+	{
+		return false;
+	}
+	Entry->Params.bEnableDeoccluder = bEnabled;
 	return true;
 }
 
@@ -278,6 +295,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	// zero-delta call (InitializeFor) followed by the real one in the same frame never loses or
 	// doubles it, and cached repeat calls never see it again.
 	FACFCameraEvaluationContext Context = InContext;
+	Context.Combat = CombatState;
 	if (Context.DeltaTime > 0.f)
 	{
 		Context.CameraInput = PendingInputDelta + InputRate * Context.DeltaTime;
@@ -288,6 +306,10 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	{
 		Context.CameraInput = FVector2D::ZeroVector;
 	}
+
+	// Stage 2a: camera sequences (finishers) advance once per frame and switch their shot requests now, so the
+	// request chosen below already reflects this frame's shot.
+	Sequences.Tick(*this, Context);
 
 	// Stage 2: resolve which request is in control, and who owns the output.
 	PruneLostInstigators();
@@ -394,6 +416,13 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	Result.bIsBlending = Transition.bActive;
 	Result.BlendAlpha = Transition.bActive ? Alpha : 1.f;
 	Result.NumRequests = Requests.Num();
+	LastSolverReport = TargetScratch.bHasSolverReport ? TargetScratch.SolverReport : FACFCameraSolverReport();
+	if (TargetScratch.bHasSolverReport)
+	{
+		Result.NumOccludedTargets = TargetScratch.SolverReport.NumOccluded;
+		Result.bPlayerOccluded = TargetScratch.SolverReport.bPlayerOccluded;
+		Result.bFramingLimited = TargetScratch.SolverReport.bFramingLimited;
+	}
 	Result.FrameNumber = Context.FrameNumber;
 
 	LastResult = Result;
@@ -602,6 +631,13 @@ void UACFCameraDirector::BeginTransition(int32 NewActiveIndex, const FACFCameraE
 
 	// Live source: the camera that was fully in control keeps being evaluated during the blend.
 	// Interrupting a blend always uses the snapshot (the on-screen pose) instead.
+	if (bHasPendingReturnBlend)
+	{
+		// The camera that just left asked for its own return blend (sequence end), whoever takes over.
+		TransitionBlend = PendingReturnBlend;
+		bHasPendingReturnBlend = false;
+	}
+
 	if (TransitionBlend.Source == EACFCameraBlendSource::Live && !TransitionBlend.IsCut()
 		&& !bInterrupting && bHadAcfInfluence && FindLiveEntry(PreviousActive))
 	{
@@ -642,4 +678,71 @@ void UACFCameraDirector::EndTransition()
 	Transition.bActive = false;
 	Transition.LiveSource.Invalidate();
 	RetiredRequests.Reset();
+}
+
+// -------------------------------------------------------------------------------------------------
+// Sequences / probes
+
+FACFCameraRequestHandle UACFCameraDirector::GetBestRequest() const
+{
+	const int32 Index = FindBestRequestIndex();
+	return Index != INDEX_NONE ? Requests[Index].Handle : FACFCameraRequestHandle();
+}
+
+bool UACFCameraDirector::ProbeCamera(const UACFCameraPreset* Preset, const FACFCameraRequestParams& Params, const FACFCameraEvaluationContext& Context, FACFCameraProbeResult& OutResult) const
+{
+	OutResult = FACFCameraProbeResult();
+	if (!Preset)
+	{
+		return false;
+	}
+	// A throw-away rig: no damping history, no time (nodes snap and never advance on a zero delta).
+	FACFCameraEvaluationContext ProbeContext = Context;
+	ProbeContext.DeltaTime = 0.f;
+	ProbeContext.CameraInput = FVector2D::ZeroVector;
+	FACFCameraRigInstance Rig;
+	Rig.Initialize(Preset);
+	const FACFCameraNodeContext NodeContext(ProbeContext, Params);
+	Rig.Activate(NodeContext);
+	FACFCameraPose Pose = ProbeContext.UpstreamPose;
+	Rig.Evaluate(NodeContext, Pose);
+	OutResult.DesiredPose = Pose;
+	if (Rig.HasPostBlendNodes())
+	{
+		const FACFCameraNodeContext PostContext(ProbeContext, Params);
+		PostContext.Scratch = NodeContext.Scratch;
+		Rig.EvaluatePostBlend(PostContext, Pose);
+		const FACFCameraCollisionConstraint& Constraint = PostContext.Scratch.Constraint;
+		OutResult.bHasConstraint = Constraint.bValid;
+		OutResult.Pivot = Constraint.Pivot;
+		OutResult.Channel = Constraint.Channel;
+		OutResult.IgnoredActors = Constraint.IgnoredActors;
+	}
+	OutResult.Pose = Pose;
+	return true;
+}
+
+FACFCameraSequenceHandle UACFCameraDirector::PlayFinisherPreset(const UACFCameraPreset* Preset, AActor* Attacker, AActor* Target, float Duration,
+	const FACFCameraBlendSettings& BlendIn, const FACFCameraBlendSettings& ReturnBlend, int32 Priority)
+{
+	if (!Preset)
+	{
+		UE_LOG(LogActionCamera, Warning, TEXT("PlayFinisherPreset rejected: preset is null."));
+		return FACFCameraSequenceHandle();
+	}
+	// Created per play (an event, not per frame); kept alive by the playback only.
+	UACFCameraSequence* Sequence = NewObject<UACFCameraSequence>(this, NAME_None, RF_Transient);
+	FACFCameraShot& Shot = Sequence->Shots.AddDefaulted_GetRef();
+	Shot.Name = TEXT("Finisher");
+	Shot.Preset = const_cast<UACFCameraPreset*>(Preset);
+	Shot.AdvanceMode = Duration > 0.f ? EACFCameraShotAdvanceMode::Duration : EACFCameraShotAdvanceMode::WaitForEvent;
+	Shot.Duration = FMath::Max(Duration, 0.f);
+	Shot.BlendIn = BlendIn;
+	Sequence->Priority = Priority;
+	Sequence->ReturnBlend = ReturnBlend;
+
+	FACFCameraSequenceParams Params;
+	Params.Attacker = Attacker;
+	Params.Target = Target;
+	return Sequences.Play(*this, Sequence, Params);
 }

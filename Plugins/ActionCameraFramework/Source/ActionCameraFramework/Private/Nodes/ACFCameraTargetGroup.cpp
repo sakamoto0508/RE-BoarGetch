@@ -1,8 +1,20 @@
 #include "Nodes/ACFCameraTargetGroup.h"
+#include "Components/ActorComponent.h"
+#include "GameFramework/Actor.h"
 
 namespace ACFTargetGroup
 {
-	static void AddTarget(const FACFCameraTarget& Target, const FVector& Offset, float Weight, float Radius, FACFCameraFramingSubjects& Out)
+	static const AActor* ActorOf(const UObject* Object)
+	{
+		if (const AActor* Actor = Cast<AActor>(Object))
+		{
+			return Actor;
+		}
+		const UActorComponent* Component = Cast<UActorComponent>(Object);
+		return Component ? Component->GetOwner() : nullptr;
+	}
+
+	static void AddTarget(const FACFCameraTarget& Target, const FVector& Offset, float Weight, float Radius, const AActor* PlayerActor, bool bForcePlayer, FACFCameraFramingSubjects& Out)
 	{
 		if (Weight <= 0.f)
 		{
@@ -12,7 +24,12 @@ namespace ACFTargetGroup
 		const UObject* Object = nullptr;
 		if (Target.Resolve(Transform, Object))
 		{
-			Out.Add({ Transform.GetLocation() + Offset, FMath::Max(Radius, 0.f), Weight });
+			FACFCameraFramingSubject& Subject = Out.AddDefaulted_GetRef();
+			Subject.Location = Transform.GetLocation() + Offset;
+			Subject.Radius = FMath::Max(Radius, 0.f);
+			Subject.Weight = Weight;
+			Subject.Actor = ActorOf(Object);
+			Subject.bIsPlayer = bForcePlayer || (PlayerActor && Subject.Actor == PlayerActor);
 		}
 	}
 }
@@ -22,27 +39,36 @@ void ACFTargetGroup::GatherSubjects(const FACFCameraRequestParams& Request, bool
 	const FVector* LookAtLocationOverride)
 {
 	Out.Reset();
+	FTransform PlayerTransform;
+	const UObject* PlayerObject = nullptr;
+	const AActor* PlayerActor = Request.FollowTarget.Resolve(PlayerTransform, PlayerObject) ? ActorOf(PlayerObject) : nullptr;
 	if (bIncludeGroup)
 	{
 		for (const FACFCameraTargetGroupMember& Member : Request.TargetGroup.Members)
 		{
-			AddTarget(Member.Target, Member.Offset, Member.Weight, Member.Radius, Out);
+			AddTarget(Member.Target, Member.Offset, Member.Weight, Member.Radius, PlayerActor, false, Out);
 		}
 	}
 	if (FollowSubject.bInclude)
 	{
-		AddTarget(Request.FollowTarget, FollowSubject.Offset, FollowSubject.Weight, FollowSubject.Radius, Out);
+		AddTarget(Request.FollowTarget, FollowSubject.Offset, FollowSubject.Weight, FollowSubject.Radius, PlayerActor, true, Out);
 	}
 	if (LookAtSubject.bInclude && LookAtLocationOverride)
 	{
 		if (LookAtSubject.Weight > 0.f)
 		{
-			Out.Add({ *LookAtLocationOverride + LookAtSubject.Offset, FMath::Max(LookAtSubject.Radius, 0.f), LookAtSubject.Weight });
+			FACFCameraFramingSubject& Subject = Out.AddDefaulted_GetRef();
+			Subject.Location = *LookAtLocationOverride + LookAtSubject.Offset;
+			Subject.Radius = FMath::Max(LookAtSubject.Radius, 0.f);
+			Subject.Weight = LookAtSubject.Weight;
+			FTransform Unused;
+			const UObject* LookObject = nullptr;
+			Subject.Actor = Request.LookAtTarget.Resolve(Unused, LookObject) ? ActorOf(LookObject) : nullptr;
 		}
 	}
 	else if (LookAtSubject.bInclude)
 	{
-		AddTarget(Request.LookAtTarget, LookAtSubject.Offset, LookAtSubject.Weight, LookAtSubject.Radius, Out);
+		AddTarget(Request.LookAtTarget, LookAtSubject.Offset, LookAtSubject.Weight, LookAtSubject.Radius, PlayerActor, false, Out);
 	}
 }
 

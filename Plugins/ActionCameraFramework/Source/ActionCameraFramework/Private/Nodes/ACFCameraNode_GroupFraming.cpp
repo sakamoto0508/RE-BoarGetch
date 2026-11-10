@@ -97,6 +97,13 @@ void UACFCameraNode_GroupFraming::Evaluate(const FACFCameraNodeContext& Context,
 		Context.Scratch.bHasLockOnTarget ? &Context.Scratch.LockOnTargetLocation : nullptr);
 	FVector Center = FVector::ZeroVector;
 	const bool bHasSubjects = ApplyWeights(Subjects, Center);
+	if (bHasSubjects)
+	{
+		// For the constraint solver (Collision node): re-checked after deocclusion / collision moved the camera.
+		Context.Scratch.bHasFramingSubjects = true;
+		Context.Scratch.FramingSubjects = Subjects;
+		Context.Scratch.FramingSize = FramingSize;
+	}
 
 	const float Dt = Context.GetDeltaTime();
 	const float Aspect = Context.Evaluation.AspectRatio;

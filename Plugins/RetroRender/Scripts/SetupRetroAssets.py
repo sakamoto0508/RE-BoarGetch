@@ -1,4 +1,4 @@
-"""Creates/refreshes the RetroRender shared assets under /Game/Art/Rendering/Retro.
+"""Creates/refreshes the RetroRender shared assets under /RetroRender (plugin content).
 
 UnrealEditor-Cmd REBoarGetch.uproject -run=pythonscript -script=<this> -unattended -nosplash -NullRHI
   - M_RetroPost        : post process material generated from Shaders/RetroPost.hlsl (always regenerated)
@@ -10,11 +10,16 @@ UnrealEditor-Cmd REBoarGetch.uproject -run=pythonscript -script=<this> -unattend
 Existing project materials/levels are NOT touched here (see PatchRetroMaterials.py).
 """
 from pathlib import Path
+import sys
 import unreal
 
-ROOT = '/Game/Art/Rendering/Retro'
-LP_MPC = '/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength'
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import retro_project  # noqa: E402  同じフォルダの共通モジュール
+ROOT = retro_project.PLUGIN_ROOT
+# MPC を既に 2 個使うマテリアル用の追加 MPC（プロジェクト設定 snap_collections の先頭）。無ければ _LP 版は作らない。
+_SNAP = retro_project.load_config()['snap_collections']
+LP_MPC = _SNAP[0] if _SNAP else ''
 SHADERS = HERE.parent / 'Shaders'
 tools = unreal.AssetToolsHelpers.get_asset_tools()
 lib = unreal.EditorAssetLibrary
@@ -97,12 +102,12 @@ def main():
     # The LowPoly pack's materials already use 2 collections (UE limit). Its MPC_UnlitStrength (used by all of
     # them) also carries the vertex-snap scalars so MF_RetroVertexSnap_LP stays within the limit. Defaults: no effect.
     snap_scalars = ['VertexSnapStrength', 'SnapResolutionX', 'SnapResolutionY', 'SnapMaxObjectRadius', 'SnapFlatRatio']
-    lp_mpc = unreal.load_asset(LP_MPC) if lib.does_asset_exist(LP_MPC) else None
+    lp_mpc = unreal.load_asset(LP_MPC) if LP_MPC and lib.does_asset_exist(LP_MPC) else None
     if lp_mpc:
         _backup_package(LP_MPC)  # git-ignored pack: keep the untouched file once (Saved/RetroRender/MaterialBackup)
         ensure_scalars(lp_mpc, snap_scalars)
     else:
-        log('LowPoly pack not installed: MPC_UnlitStrength / MF_RetroVertexSnap_LP skipped')
+        log('no snap_collections in the project config (or not installed): MF_RetroVertexSnap_LP skipped')
 
     FLOAT1 = unreal.CustomMaterialOutputType.CMOT_FLOAT1
     FLOAT2 = unreal.CustomMaterialOutputType.CMOT_FLOAT2

@@ -5,13 +5,30 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "HAL/IConsoleManager.h"
 
 void UACFCameraNode_Collision::ResetInterpolation(FInstancedStruct* RuntimeState) const
 {
 	if (FACFCameraCollisionState* State = ACFNodes::GetState<FACFCameraCollisionState>(RuntimeState))
 	{
 		State->bInitialized = false;
+		State->Deoccluder.Reset();
+		State->Recovery.Reset();
 	}
+}
+
+#if !UE_BUILD_SHIPPING
+static TAutoConsoleVariable<int32> CVarACFSolver(TEXT("ACF.Debug.Solver"), 1,
+	TEXT("Constraint solver (Deoccluder + Framing Recovery of Collision nodes). 0 = bypassed (comparison), 1 = as configured."), ECVF_Cheat);
+#endif
+
+bool ACFCameraCollision::IsSolverEnabled()
+{
+#if !UE_BUILD_SHIPPING
+	return CVarACFSolver.GetValueOnGameThread() != 0;
+#else
+	return true;
+#endif
 }
 
 void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FACFCameraPose& InOutPose, FInstancedStruct* RuntimeState) const
@@ -48,15 +65,6 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 			}
 		}
 	}
-
-	const FVector Desired = InOutPose.Location;
-	const FVector ToCamera = Desired - Origin;
-	const double FullDistance = ToCamera.Size();
-	if (FullDistance < UE_KINDA_SMALL_NUMBER)
-	{
-		return;
-	}
-	const FVector Direction = ToCamera / FullDistance;
 
 	// Ignore list (also published as the hard constraint the final output guard re-applies).
 	FACFCameraCollisionConstraint& Constraint = Context.Scratch.Constraint;
@@ -96,12 +104,86 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 	{
 		Params.AddIgnoredActor(Actor);
 	}
+	const float Dt = Context.GetDeltaTime();
+	FACFCameraSolverReport& Report = Context.Scratch.SolverReport;
+	Report = FACFCameraSolverReport();
+	const bool bSolverAllowed = ACFCameraCollision::IsSolverEnabled();
+
+	// Constraint solver step 1 (priority 2 / 3): deocclusion moves the DESIRED camera; the sweep below still wins.
+	if (Deoccluder.bEnabled && Context.Request.bEnableDeoccluder && bSolverAllowed)
+	{
+		FACFCameraFramingSubjects DefaultSubjects;
+		const FACFCameraFramingSubjects* Subjects = &Context.Scratch.FramingSubjects;
+		if (!Context.Scratch.bHasFramingSubjects)
+		{
+			// No Group Framing: the player pivot and (optionally) the look-at / lock-on target.
+			FACFCameraFramingSubject& Player = DefaultSubjects.AddDefaulted_GetRef();
+			Player.Location = Origin;
+			Player.Weight = 1.f;
+			Player.Actor = PivotActor;
+			Player.bIsPlayer = true;
+			FTransform LookTransform;
+			const UObject* LookObject = nullptr;
+			const bool bLookAlive = Context.Request.LookAtTarget.Resolve(LookTransform, LookObject);
+			if (Deoccluder.bCheckLookAtTarget && (Context.Scratch.bHasLockOnTarget || bLookAlive))
+			{
+				FACFCameraFramingSubject& Look = DefaultSubjects.AddDefaulted_GetRef();
+				Look.Location = Context.Scratch.bHasLockOnTarget ? Context.Scratch.LockOnTargetLocation : LookTransform.GetLocation();
+				Look.Weight = 1.f;
+				Look.Actor = bLookAlive ? ACFCameraCollision::ActorOf(LookObject) : nullptr;
+			}
+			Subjects = &DefaultSubjects;
+		}
+		const float LosRadius = Deoccluder.TraceRadius;
+		const ECollisionChannel Channel = ProbeChannel;
+		const float Probe = ProbeRadius;
+		const float MinDist = MinDistance;
+		auto Collide = [World, &Params, Channel, Probe, MinDist](const FVector& Pivot, const FVector& Want) -> FVector
+		{
+			const FVector Arm = Want - Pivot;
+			const double Full = Arm.Size();
+			if (Full < UE_KINDA_SMALL_NUMBER)
+			{
+				return Want;
+			}
+			FCollisionQueryParams SweepParams = Params; // SweepCamera may add an ignored component
+			FHitResult SweepHit;
+			const bool bBlocked = ACFCameraCollision::SweepCamera(*World, Pivot, Want, Probe, Channel, SweepParams, SweepHit);
+			const double Allowed = bBlocked ? FMath::Max(FMath::Clamp(static_cast<double>(SweepHit.Distance), 0.0, Full), FMath::Min(static_cast<double>(MinDist), Full)) : Full;
+			return Pivot + Arm / Full * Allowed;
+		};
+		auto IsBlocked = [World, &Params, Channel, LosRadius](const FVector& From, const FACFCameraFramingSubject& Subject) -> bool
+		{
+			FHitResult LosHit;
+			const bool bHit = LosRadius > 0.f
+				? World->SweepSingleByChannel(LosHit, From, Subject.Location, FQuat::Identity, Channel, FCollisionShape::MakeSphere(LosRadius), Params)
+				: World->LineTraceSingleByChannel(LosHit, From, Subject.Location, Channel, Params);
+			// Reaching the subject's own collision first means it is visible.
+			return bHit && (!Subject.Actor || LosHit.GetActor() != Subject.Actor);
+		};
+		const FACFCameraSolverQueries Queries{ Collide, IsBlocked };
+		FACFCameraConstraintSolver::Deocclude(Deoccluder, Origin, *Subjects, Dt, State->Deoccluder, Queries, InOutPose, Report);
+		Context.Scratch.bHasSolverReport = true;
+	}
+	else
+	{
+		State->Deoccluder.Reset();
+	}
+
+	// Step 2 (priority 1): the camera never ends up inside geometry.
+	const FVector Desired = InOutPose.Location;
+	const FVector ToCamera = Desired - Origin;
+	const double FullDistance = ToCamera.Size();
+	if (FullDistance < UE_KINDA_SMALL_NUMBER)
+	{
+		return;
+	}
+	const FVector Direction = ToCamera / FullDistance;
 	FHitResult Hit;
 	const bool bHit = ACFCameraCollision::SweepCamera(*World, Origin, Desired, ProbeRadius, ProbeChannel, Params, Hit);
 
 	const double HitDistance = bHit ? FMath::Clamp(static_cast<double>(Hit.Distance), 0.0, FullDistance) : FullDistance;
 	const double Allowed = FMath::Max(HitDistance, FMath::Min(static_cast<double>(MinDistance), FullDistance));
-	const float Dt = Context.GetDeltaTime();
 	double Current = State->CurrentDistance;
 	if (!State->bInitialized)
 	{
@@ -124,6 +206,19 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 	State->CurrentDistance = static_cast<float>(Current);
 	State->LastFullDistance = static_cast<float>(FullDistance);
 	InOutPose.Location = Origin + Direction * Current;
+
+	// Step 3 (priority 3 / 4): if the subjects no longer fit after the camera was moved in, widen the FOV within
+	// limits; as a last resort turn slightly to keep the player on screen.
+	if (FramingRecovery.bEnabled && Context.Scratch.bHasFramingSubjects && bSolverAllowed)
+	{
+		FACFCameraConstraintSolver::RecoverFraming(FramingRecovery, Context.Scratch.FramingSubjects, Context.Scratch.FramingSize,
+			Context.Evaluation.AspectRatio, Dt, State->Recovery, InOutPose, Report);
+		Context.Scratch.bHasSolverReport = true;
+	}
+	else
+	{
+		State->Recovery.Reset();
+	}
 
 #if !UE_BUILD_SHIPPING
 	FACFCameraRigDebug& Debug = Context.Scratch.Debug;

@@ -2,13 +2,13 @@
   run_ue_py.sh C:/UnrealGames/REBoarGetch/Plugins/ActionCameraFramework/Scripts/CreateManualTestAssets.py
 Presets in /ActionCameraFramework/Samples (used by the console command ACF.Sample.Use <Name>):
   DA_ACFSample_Follow      Follow (axis damping, lookahead) + Look At + Collision
-  DA_ACFSample_ThirdPerson Orbital Follow (Control Rotation = the project's mouse / gamepad look) + Collision
+  DA_ACFSample_ThirdPerson Orbital Follow (Control Rotation = the project's mouse / gamepad look) + Combat Camera + Collision (solver)
   DA_ACFSample_FreeLook    Orbital Follow with FreeLook rings + Collision
   DA_ACFSample_Composer    Orbital Follow + Rotation Composer (dead / soft zone on the ACFLookTarget pillar) + Collision
-  DA_ACFSample_LockOn      Lock-On + Group Framing (player + locked enemy) + Collision   (ACF.Sample.LockOn)
+  DA_ACFSample_LockOn      Lock-On + Combat Camera + Group Framing (player + locked enemy) + Collision (solver)  (ACF.Sample.LockOn)
   DA_ACFSample_Group       Orbital Follow + Rotation Composer (Target Group) + Group Framing + Collision (ACF.Sample.Group)
 Map /ActionCameraFramework/Samples/L_ACFCameraTest: open floor, single wall, narrow corridor with a low ceiling,
-pillars, a tall pillar tagged ACFLookTarget and four cylinders tagged ACFEnemy (near, far, boss, small). Uses the project's default game mode / pawn (nothing in
+pillars, a tall pillar tagged ACFLookTarget and six cylinders tagged ACFEnemy (near, far, boss behind the wall, small, behind the pillars, in the corridor). Uses the project's default game mode / pawn (nothing in
 REBoarGetch is changed). Writes Saved/ACFVerification/CreateManualTestAssets.json."""
 import unreal, json, os, traceback
 
@@ -53,11 +53,23 @@ def motion(lookahead_time=0.0):
     return m
 
 
-def collision(outer, radius=15.0):
+def collision(outer, radius=15.0, solver=False, check_look_at=True):
     c = unreal.new_object(unreal.ACFCameraNode_Collision, outer=outer)
     c.set_editor_property('probe_radius', radius)
     c.set_editor_property('return_damping_time', 0.35)
+    if solver:  # Phase 4B constraint solver: deoccluder + framing recovery
+        d = unreal.ACFCameraDeoccluderSettings()
+        d.set_editor_property('enabled', True)
+        d.set_editor_property('check_look_at_target', check_look_at)
+        c.set_editor_property('deoccluder', d)
+        r = unreal.ACFCameraFramingRecoverySettings()
+        r.set_editor_property('enabled', True)
+        c.set_editor_property('framing_recovery', r)
     return c
+
+
+def combat(outer):
+    return unreal.new_object(unreal.ACFCameraNode_Combat, outer=outer)
 
 
 def orbit(outer, distance=350.0, rings=False):
@@ -100,7 +112,7 @@ def presets():
     OUT['Follow'] = save_preset(p, [follow, look, collision(p)])
 
     p = ensure_preset('DA_ACFSample_ThirdPerson')
-    OUT['ThirdPerson'] = save_preset(p, [orbit(p), collision(p)])
+    OUT['ThirdPerson'] = save_preset(p, [orbit(p), combat(p), collision(p, solver=True, check_look_at=False)])
 
     p = ensure_preset('DA_ACFSample_FreeLook')
     OUT['FreeLook'] = save_preset(p, [orbit(p, 420.0, rings=True), collision(p)])
@@ -130,7 +142,7 @@ def presets():
     framing.set_editor_property('look_at_target_subject', subject(100.0))
     framing.set_editor_property('framing_size', unreal.Vector2D(0.85, 0.85))
     framing.set_editor_property('max_dolly_out', 600.0)
-    OUT['LockOn'] = save_preset(p, [lock, framing, collision(p)], blend_in=0.5)
+    OUT['LockOn'] = save_preset(p, [lock, combat(p), framing, collision(p, solver=True)], blend_in=0.5)
 
     # Phase 4A: Target Group (exploration orbit + aim at the group centre + keep every member on screen).
     p = ensure_preset('DA_ACFSample_Group')
@@ -145,7 +157,106 @@ def presets():
     framing = unreal.new_object(unreal.ACFCameraNode_GroupFraming, outer=p)
     framing.set_editor_property('framing_size', unreal.Vector2D(0.8, 0.8))
     framing.set_editor_property('max_dolly_out', 1500.0)
-    OUT['Group'] = save_preset(p, [orbit(p, 500.0), comp, framing, collision(p)])
+    OUT['Group'] = save_preset(p, [orbit(p, 500.0), comp, framing, collision(p, solver=True)])
+
+
+# --- Phase 4C: finisher sample (ACF.Sample.Finisher) -------------------------------------------------------
+
+def ensure_asset(name, cls):
+    path = FOLDER + '/' + name
+    existing = unreal.load_asset(path + '.' + name)
+    if existing:
+        return existing
+    f = unreal.DataAssetFactory()
+    f.set_editor_property('data_asset_class', cls)
+    return unreal.AssetToolsHelpers.get_asset_tools().create_asset(name, FOLDER, cls, f)
+
+
+def shot_anchor(outer, point, offset, freeze, fov, damping_time=0.12, anchor_offset=(0, 0, 80)):
+    a = unreal.new_object(unreal.ACFCameraNode_ShotAnchor, outer=outer)
+    a.set_editor_property('anchor_point', point)
+    a.set_editor_property('anchor_offset', unreal.Vector(*anchor_offset))
+    a.set_editor_property('basis', unreal.ACFCameraShotAnchorBasis.LINE_OF_ACTION)
+    a.set_editor_property('camera_offset', unreal.Vector(*offset))
+    a.set_editor_property('freeze_at_shot_start', freeze)
+    a.set_editor_property('damping_time', damping_time)
+    a.set_editor_property('field_of_view', fov)
+    return a
+
+
+def envelope(attack, sustain, release):
+    e = unreal.ACFCameraEffectEnvelope()
+    e.set_editor_property('attack', attack)
+    e.set_editor_property('sustain', sustain)
+    e.set_editor_property('release', release)
+    return e
+
+
+def effect_preset(name, location, rotation, fov, env):
+    p = ensure_asset(name, unreal.ACFCameraEffectPreset)
+    layer = unreal.new_object(unreal.ACFCameraEffect_Punch, outer=p)
+    layer.set_editor_property('location', unreal.Vector(*location))
+    layer.set_editor_property('rotation', unreal.Rotator(roll=rotation[2], pitch=rotation[0], yaw=rotation[1]))
+    layer.set_editor_property('fov', fov)
+    layer.set_editor_property('envelope', env)
+    p.set_editor_property('layers', [layer])
+    E.save_loaded_asset(p, False)
+    return p
+
+
+def shot(name, preset, mode, duration, blend_in, fallback=None, deoccluder=False, effects=()):
+    s = unreal.ACFCameraShot()
+    s.set_editor_property('name', name)
+    s.set_editor_property('preset', preset)
+    s.set_editor_property('advance_mode', mode)
+    s.set_editor_property('duration', duration)
+    s.set_editor_property('blend_in', blend_in)
+    s.set_editor_property('enable_deoccluder', deoccluder)
+    if fallback:
+        f = unreal.ACFCameraShotFallback()
+        f.set_editor_property('fallback_preset', fallback)
+        s.set_editor_property('fallback', f)
+    fx = []
+    for preset_fx, lifetime in effects:
+        e = unreal.ACFCameraShotEffect()
+        e.set_editor_property('preset', preset_fx)
+        e.set_editor_property('lifetime', lifetime)
+        fx.append(e)
+    s.set_editor_property('effects', fx)
+    return s
+
+
+def finisher_assets():
+    P = unreal.ACFCameraShotAnchorPoint
+    # Dynamic: right of the attacker -> target line, slightly behind the middle (both on screen).
+    p = ensure_preset('DA_ACFSample_Shot_Approach')
+    save_preset(p, [shot_anchor(p, P.BETWEEN, (-150, 600, 50), False, 60.0, anchor_offset=(0, 0, 40)), collision(p, 12.0, solver=True)])
+    # Fixed: reverse angle from beyond the target (over its shoulder onto the attacker), captured when the shot starts.
+    p_strike = ensure_preset('DA_ACFSample_Shot_Strike')
+    a = shot_anchor(p_strike, P.BETWEEN, (380, -150, 50), True, 50.0, anchor_offset=(0, 0, 50))
+    a.set_editor_property('between_alpha', 0.8)
+    save_preset(p_strike, [a, collision(p_strike, 12.0, solver=True)])
+    # Fixed: high wide shot over the action.
+    p_over = ensure_preset('DA_ACFSample_Shot_Overhead')
+    save_preset(p_over, [shot_anchor(p_over, P.BETWEEN, (-420, 220, 330), True, 70.0, anchor_offset=(0, 0, 40)), collision(p_over, 12.0, solver=True)])
+    # Fallback for narrow places: close behind the attacker's shoulder (fits a 270 cm corridor).
+    p_fb = ensure_preset('DA_ACFSample_Shot_Fallback')
+    save_preset(p_fb, [shot_anchor(p_fb, P.FOLLOW_TARGET, (-230, 60, 60), False, 65.0, anchor_offset=(0, 0, 90)), collision(p_fb, 12.0, solver=True)])
+
+    hit = effect_preset('DA_ACFSample_FinisherHit', (-25, 0, 0), (-1.5, 0, 0), -6.0, envelope(0.04, 0.15, 0.45))
+    tension = effect_preset('DA_ACFSample_FinisherTension', (0, 0, 0), (0, 0, 3.0), -3.0, envelope(0.4, -1.0, 0.5))
+
+    L = unreal.ACFCameraShotEffectLifetime
+    M = unreal.ACFCameraShotAdvanceMode
+    seq = ensure_asset('DA_ACFSample_FinisherSequence', unreal.ACFCameraSequence)
+    seq.set_editor_property('shots', [
+        shot('Approach', p, M.DURATION, 1.2, blend(0.35), fallback=p_fb, effects=((tension, L.SEQUENCE),)),
+        shot('Strike', p_strike, M.WAIT_FOR_EVENT, 2.5, blend(0.0, unreal.ACFCameraBlendCurve.CUT), fallback=p_fb, effects=((hit, L.SHOT),)),
+        shot('Overhead', p_over, M.DURATION, 1.6, blend(0.6), fallback=p_fb),
+    ])
+    seq.set_editor_property('return_blend', blend(0.6))
+    E.save_loaded_asset(seq, False)
+    OUT['finisher'] = [a.get_path_name() for a in (p, p_strike, p_over, p_fb, hit, tension, seq)]
 
 
 def subject(radius):
@@ -228,7 +339,10 @@ def build_map():
     for label, location, scale in (('Enemy_0_Near', (500, -700, 90), (0.8, 0.8, 1.8)),
                                    ('Enemy_1_Far', (2600, -1800, 90), (0.8, 0.8, 1.8)),
                                    ('Enemy_2_Boss', (2200, 400, 300), (3.0, 3.0, 6.0)),
-                                   ('Enemy_3_Small', (-200, -1400, 40), (0.5, 0.5, 0.8))):
+                                   ('Enemy_3_Small', (-200, -1400, 40), (0.5, 0.5, 0.8)),
+                                   ('Enemy_4_Pillars', (-950, -1200, 90), (0.8, 0.8, 1.8)),
+                                   ('Enemy_5_Corridor', (650, 1500, 90), (0.8, 0.8, 1.8)),
+                                   ('Enemy_6_Finisher', (1500, -1500, 90), (0.8, 0.8, 1.8))):
         e = sub.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(*location), unreal.Rotator(roll=0.0, pitch=0.0, yaw=0.0))
         e.static_mesh_component.set_mobility(unreal.ComponentMobility.MOVABLE)
         e.static_mesh_component.set_static_mesh(unreal.load_asset('/Engine/BasicShapes/Cylinder.Cylinder'))
@@ -244,6 +358,7 @@ def build_map():
 
 try:
     presets()
+    finisher_assets()
     build_map()
 except Exception:
     OUT['error'] = traceback.format_exc()

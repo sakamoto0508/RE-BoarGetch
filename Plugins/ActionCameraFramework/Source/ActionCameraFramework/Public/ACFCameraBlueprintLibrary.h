@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "ACFCameraTypes.h"
+#include "ACFCameraSequence.h"
 #include "ACFCameraBlueprintLibrary.generated.h"
 
 class AActor;
@@ -49,4 +50,28 @@ public:
 	/** One target group member for an actor (Weight = importance, Radius = sphere kept on screen). */
 	UFUNCTION(BlueprintPure, Category = "Action Camera|Target Group", meta = (DisplayName = "Make ACF Camera Group Member"))
 	static FACFCameraTargetGroupMember MakeTargetGroupMember(AActor* Actor, float Weight = 1.f, float Radius = 60.f, FVector Offset = FVector::ZeroVector);
+
+	// --- Sequences from anywhere (anim notifies, gameplay abilities): routed by actor -------------------------
+
+	/**
+	 * Subsystem of the local player that controls Actor (a pawn, or an actor owned by one), else of the first local
+	 * player of Actor's world. Null on dedicated servers.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Sequence", meta = (DisplayName = "Get ACF Camera Subsystem For Actor"))
+	static UACFCameraSubsystem* GetCameraSubsystemForActor(const AActor* Actor);
+
+	/** Starts a finisher on the local player of Attacker (see Get ACF Camera Subsystem For Actor). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Start ACF Finisher Camera For Actor"))
+	static FACFCameraSequenceHandle StartFinisherCameraForActor(AActor* Attacker, UACFCameraSequence* Sequence, AActor* Target, float PlayRate = 1.f);
+
+	/**
+	 * Sends Command to every playback, on every local player, whose attacker or target is Actor. This is what the ACF
+	 * anim notifies call with the mesh owner, so a montage steers "its" finisher camera without knowing the handle.
+	 * Returns how many playbacks received it (0 in editor previews and on servers).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Send ACF Camera Sequence Command For Actor", DefaultToSelf = "Actor"))
+	static int32 SendCameraSequenceCommandForActor(AActor* Actor, EACFCameraSequenceCommand Command, FName ShotName = NAME_None);
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Sequence", meta = (DisplayName = "Is Valid (ACF Camera Sequence Handle)", CompactNodeTitle = "IsValid"))
+	static bool IsValidSequenceHandle(const FACFCameraSequenceHandle& Handle) { return Handle.IsValid(); }
 };

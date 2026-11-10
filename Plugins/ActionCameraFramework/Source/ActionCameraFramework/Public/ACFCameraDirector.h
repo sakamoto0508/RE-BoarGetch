@@ -6,6 +6,7 @@
 #include "ACFCameraRigInstance.h"
 #include "ACFCameraNode.h"
 #include "Effects/ACFCameraEffectStack.h"
+#include "ACFCameraSequencePlayer.h"
 #include "ACFCameraDirector.generated.h"
 
 class UACFCameraPreset;
@@ -71,9 +72,12 @@ public:
 
 	/**
 	 * Removes a request. Unknown / already released handles are ignored (returns false).
-	 * @param BlendOutOverride  Optional blend used if this release returns control to the UE camera.
+	 * @param BlendOutOverride    Optional blend used if this release returns control to the UE camera.
+	 * @param bOverrideAnyReturn  Use BlendOutOverride whatever camera takes over (a lower request too, instead of its
+	 *                            blend-in). Only when the removed request is the active one. Sequences use it to return
+	 *                            from a finisher to the lock-on / gameplay camera with the sequence's Return Blend.
 	 */
-	bool RemoveRequest(FACFCameraRequestHandle Handle, const FACFCameraBlendSettings* BlendOutOverride = nullptr);
+	bool RemoveRequest(FACFCameraRequestHandle Handle, const FACFCameraBlendSettings* BlendOutOverride = nullptr, bool bOverrideAnyReturn = false);
 
 	/** Removes every request. bImmediate cuts straight back to the UE camera. */
 	void RemoveAllRequests(bool bImmediate);
@@ -88,11 +92,45 @@ public:
 	bool AddGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTargetGroupMember& Member);
 	bool RemoveGroupMember(FACFCameraRequestHandle Handle, const FACFCameraTarget& Target);
 	bool SetGroupMembers(FACFCameraRequestHandle Handle, const TArray<FACFCameraTargetGroupMember>& Members);
+	bool SetRequestDeoccluderEnabled(FACFCameraRequestHandle Handle, bool bEnabled);
 	const FACFCameraTargetGroup* GetGroup(FACFCameraRequestHandle Handle) const;
 
 	bool HasRequest(FACFCameraRequestHandle Handle) const;
 	int32 GetNumRequests() const { return Requests.Num(); }
 	FACFCameraRequestHandle GetActiveRequest() const { return ActiveHandle; }
+
+	/** Request that would be in control right now (highest priority, newest); the active one changes on the next Evaluate. */
+	FACFCameraRequestHandle GetBestRequest() const;
+
+	/**
+	 * Evaluates Preset once without time and without touching any live request (fresh rig, DeltaTime 0, Body -> Aim ->
+	 * Framing -> PostBlend). Used to test whether a shot fits before it starts. False if Preset is null.
+	 * Allocates the temporary rig state: call it on events (shot start), not every frame.
+	 */
+	bool ProbeCamera(const UACFCameraPreset* Preset, const FACFCameraRequestParams& Params, const FACFCameraEvaluationContext& Context, FACFCameraProbeResult& OutResult) const;
+
+	// --- Camera sequences / finisher cameras (see FACFCameraSequencePlayer) -----------------------------------
+
+	FACFCameraSequenceHandle PlaySequence(const UACFCameraSequence* Sequence, const FACFCameraSequenceParams& Params) { return Sequences.Play(*this, Sequence, Params); }
+
+	/**
+	 * Finisher with a single preset: plays a one-shot sequence (transient asset created here). Duration 0 = until
+	 * Finish / Cancel (Wait For Event without timeout).
+	 */
+	FACFCameraSequenceHandle PlayFinisherPreset(const UACFCameraPreset* Preset, AActor* Attacker, AActor* Target, float Duration,
+		const FACFCameraBlendSettings& BlendIn, const FACFCameraBlendSettings& ReturnBlend, int32 Priority);
+
+	bool SendSequenceCommand(FACFCameraSequenceHandle Handle, EACFCameraSequenceCommand Command, FName ShotName = NAME_None) { return Sequences.SendCommand(*this, Handle, Command, ShotName); }
+	bool JumpToShot(FACFCameraSequenceHandle Handle, int32 ShotIndex) { return Sequences.JumpToShot(Handle, ShotIndex); }
+	int32 SendSequenceCommandToActor(const AActor* Actor, EACFCameraSequenceCommand Command, FName ShotName = NAME_None) { return Sequences.SendCommandToActor(*this, Actor, Command, ShotName); }
+	bool SetSequencePlayRate(FACFCameraSequenceHandle Handle, float PlayRate) { return Sequences.SetPlayRate(Handle, PlayRate); }
+	bool GetSequenceState(FACFCameraSequenceHandle Handle, FACFCameraSequenceState& OutState) const { return Sequences.GetState(*this, Handle, OutState); }
+	bool IsSequencePlaying(FACFCameraSequenceHandle Handle) const { return Sequences.IsPlaying(Handle); }
+	int32 GetNumSequences() const { return Sequences.Num(); }
+	void GetActiveSequences(TArray<FACFCameraSequenceHandle>& Out) const { Sequences.GetHandles(Out); }
+	void StopAllSequences(bool bImmediate) { Sequences.StopAll(*this, bImmediate); }
+	void ConsumeSequenceEvents(TArray<FACFCameraSequenceEvent>& Out) { Sequences.ConsumeEvents(Out); }
+	bool HasSequenceEvents() const { return Sequences.HasEvents(); }
 
 	/**
 	 * Output authority: while at least one source suppresses output, the final Weight fades to 0
@@ -121,6 +159,10 @@ public:
 	int32 GetNumActiveEffects() const { return Effects.Num(); }
 	void GetActiveEffects(TArray<FACFCameraEffectInfo>& Out) const { Effects.GetInfos(Out); }
 
+	/** Combat situation decided by gameplay (read by Combat Camera nodes). Per director = per local player. */
+	void SetCombatState(const FACFCameraCombatState& State) { CombatState = State; }
+	const FACFCameraCombatState& GetCombatState() const { return CombatState; }
+
 	/** Drops interpolation history of every rig (next frame snaps). bCutBlend also ends a running blend. */
 	void NotifyTeleport(bool bCutBlend);
 
@@ -145,6 +187,9 @@ public:
 
 	/** Collision constraint of the camera in control (invalid if it has no Collision node). */
 	const FACFCameraOutputConstraint& GetOutputConstraint() const { return OutputConstraint; }
+
+	/** What the Collision node's constraint solver did in the last evaluation (empty if it did not run). */
+	const FACFCameraSolverReport& GetLastSolverReport() const { return LastSolverReport; }
 
 	/** Number of rig evaluations performed by the last Evaluate (tests / debugging). */
 	int32 GetLastRigEvaluationCount() const { return LastRigEvaluationCount; }
@@ -203,6 +248,10 @@ private:
 	UPROPERTY()
 	FACFCameraEffectStack Effects;
 
+	/** Camera sequences of this player. Ticked inside Evaluate's frame guard, before the active request is chosen. */
+	UPROPERTY()
+	FACFCameraSequencePlayer Sequences;
+
 	/** Blended pose of the last evaluation before effects / collision (snapshot source, hold pose). */
 	FACFCameraPose LastBlendedPose;
 
@@ -213,6 +262,11 @@ private:
 	/** Blend-out of the most recently removed active request (used if control returns to UE). */
 	UPROPERTY()
 	FACFCameraBlendSettings PendingBlendOut;
+
+	/** RemoveRequest(..., bOverrideAnyReturn): blend of the next transition whatever camera takes over. */
+	UPROPERTY()
+	FACFCameraBlendSettings PendingReturnBlend;
+	bool bHasPendingReturnBlend = false;
 
 	UPROPERTY()
 	FACFCameraEvaluationResult LastResult;
@@ -229,6 +283,9 @@ private:
 	float LastEvaluatedDeltaTime = 0.f;
 	int32 LastRigEvaluationCount = 0;
 	FACFCameraOutputConstraint OutputConstraint;
+	UPROPERTY()
+	FACFCameraCombatState CombatState;
+	FACFCameraSolverReport LastSolverReport;
 	FVector2D PendingInputDelta = FVector2D::ZeroVector;
 	FVector2D InputRate = FVector2D::ZeroVector;
 #if !UE_BUILD_SHIPPING

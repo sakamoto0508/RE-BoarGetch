@@ -3,6 +3,9 @@
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Pawn.h"
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
 
 UACFCameraSubsystem* UACFCameraBlueprintLibrary::GetCameraSubsystem(const APlayerController* PlayerController)
 {
@@ -62,4 +65,59 @@ FACFCameraTargetGroupMember UACFCameraBlueprintLibrary::MakeTargetGroupMember(AA
 	Member.Radius = FMath::Max(Radius, 0.f);
 	Member.Offset = Offset;
 	return Member;
+}
+
+UACFCameraSubsystem* UACFCameraBlueprintLibrary::GetCameraSubsystemForActor(const AActor* Actor)
+{
+	if (!Actor)
+	{
+		return nullptr;
+	}
+	// The pawn itself or the pawn owning the actor (weapon, projectile...).
+	for (const AActor* It = Actor; It; It = It->GetOwner())
+	{
+		if (const APawn* Pawn = Cast<APawn>(It))
+		{
+			if (UACFCameraSubsystem* Subsystem = GetCameraSubsystem(Cast<APlayerController>(Pawn->GetController())))
+			{
+				return Subsystem;
+			}
+		}
+		if (UACFCameraSubsystem* Subsystem = GetCameraSubsystem(Cast<APlayerController>(It)))
+		{
+			return Subsystem;
+		}
+	}
+	const UWorld* World = Actor->GetWorld();
+	const UGameInstance* GameInstance = World ? World->GetGameInstance() : nullptr;
+	const ULocalPlayer* First = GameInstance ? GameInstance->GetFirstGamePlayer() : nullptr;
+	return First ? First->GetSubsystem<UACFCameraSubsystem>() : nullptr;
+}
+
+FACFCameraSequenceHandle UACFCameraBlueprintLibrary::StartFinisherCameraForActor(AActor* Attacker, UACFCameraSequence* Sequence, AActor* Target, float PlayRate)
+{
+	if (UACFCameraSubsystem* Subsystem = GetCameraSubsystemForActor(Attacker))
+	{
+		return Subsystem->StartFinisherCamera(Sequence, Attacker, Target, PlayRate);
+	}
+	return FACFCameraSequenceHandle();
+}
+
+int32 UACFCameraBlueprintLibrary::SendCameraSequenceCommandForActor(AActor* Actor, EACFCameraSequenceCommand Command, FName ShotName)
+{
+	const UWorld* World = Actor ? Actor->GetWorld() : nullptr;
+	const UGameInstance* GameInstance = World && World->IsGameWorld() ? World->GetGameInstance() : nullptr;
+	if (!GameInstance)
+	{
+		return 0; // editor animation preview, server without local players
+	}
+	int32 Count = 0;
+	for (const ULocalPlayer* LocalPlayer : GameInstance->GetLocalPlayers())
+	{
+		if (UACFCameraSubsystem* Subsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UACFCameraSubsystem>() : nullptr)
+		{
+			Count += Subsystem->SendCameraSequenceCommandToActor(Actor, Command, ShotName);
+		}
+	}
+	return Count;
 }

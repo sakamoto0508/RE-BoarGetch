@@ -468,6 +468,8 @@ namespace ACFDebug
 		}
 	}
 
+	static void SampleEnemyEx(const TArray<FString>& Args, UWorld* World);
+
 	static void SampleGroup(const TArray<FString>& Args, UWorld* World)
 	{
 		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
@@ -535,9 +537,227 @@ namespace ACFDebug
 	static FAutoConsoleCommandWithWorldAndArgs GSampleLockOffCmd(TEXT("ACF.Sample.LockOff"),
 		TEXT("Release the lock-on camera: [BlendSeconds=0.5]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleLockOff));
 	static FAutoConsoleCommandWithWorldAndArgs GSampleEnemyCmd(TEXT("ACF.Sample.Enemy"),
-		TEXT("Act on the locked enemy: <Circle [DegPerSec] (toggle)|Teleport [Distance]|Kill>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleEnemy));
+		TEXT("Act on the locked enemy: <Circle [DegPerSec] (toggle)|Patrol (toggle)|Teleport [Distance]|Kill>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleEnemyEx));
 	static FAutoConsoleCommandWithWorldAndArgs GSampleGroupCmd(TEXT("ACF.Sample.Group"),
 		TEXT("Target group sample: <Use|Add i|Remove i|Weight i w|Radius i r|Release>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleGroup));
+}
+
+namespace ACFDebug
+{
+	// ---------------------------------------------------------------------------------------------
+	// Phase 4B manual verification (README "手動確認").
+	//   ACF.Sample.Combat <On [Intensity=1]|Off>      gameplay-side combat state (focus = locked enemy, if any)
+	//   ACF.Sample.Goto <Start|Wall|Pillars|Corridor>  moves the pawn to a test spot
+	//   ACF.Sample.Enemy Patrol                       (toggle) the locked enemy walks around the pillar row
+	//   ACF.Debug.Solver <0|1>                        (cvar) bypass the constraint solver for comparison
+
+	static void SampleCombat(const TArray<FString>& Args, UWorld* World)
+	{
+		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
+		if (!Subsystem || Args.IsEmpty())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("Usage: ACF.Sample.Combat <On [Intensity]|Off>"));
+			return;
+		}
+		if (Args[0] == TEXT("Off"))
+		{
+			Subsystem->ExitCombat();
+		}
+		else
+		{
+			Subsystem->EnterCombat(ArgOr(Args, 1, 1.f), GLockedEnemy.Get());
+		}
+		const FACFCameraCombatState State = Subsystem->GetCombatState();
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Combat in combat=%d intensity=%.2f focus=%s"), State.bInCombat ? 1 : 0, State.Intensity,
+			*GetNameSafe(State.FocusTarget.Actor.Get()));
+	}
+
+	static void SampleGoto(const TArray<FString>& Args, UWorld* World)
+	{
+		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+		if (!Pawn || Args.IsEmpty())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("Usage: ACF.Sample.Goto <Start|Wall|Pillars|Corridor|Finisher|CorridorFinisher>"));
+			return;
+		}
+		struct FSpot { const TCHAR* Name; FVector Location; float Yaw; };
+		static const FSpot Spots[] = {
+			{ TEXT("Start"), FVector(0, 0, 120), 0.f },
+			{ TEXT("Wall"), FVector(590, -150, 120), 180.f },     // back to the wall, Enemy_0 in front
+			{ TEXT("Pillars"), FVector(-200, -1200, 120), 180.f }, // facing the pillar row (Enemy_4 behind it)
+			{ TEXT("Corridor"), FVector(-600, 1500, 120), 0.f },  // inside the corridor, Enemy_5 at its far end
+			{ TEXT("Finisher"), FVector(1150, -1500, 120), 0.f }, // open ground, Enemy_6 3.5 m ahead (Phase 4C)
+			{ TEXT("CorridorFinisher"), FVector(350, 1500, 120), 0.f }, // in the corridor, Enemy_5 3 m ahead (fallback shots)
+		};
+		for (const FSpot& Spot : Spots)
+		{
+			if (Args[0] == Spot.Name)
+			{
+				Pawn->TeleportTo(Spot.Location, FRotator(0.f, Spot.Yaw, 0.f));
+				PC->SetControlRotation(FRotator(-15.f, Spot.Yaw, 0.f));
+				if (UACFCameraSubsystem* Subsystem = FindSubsystem(World))
+				{
+					Subsystem->NotifyTeleport(true);
+				}
+				UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Goto %s"), Spot.Name);
+				return;
+			}
+		}
+	}
+
+	static void SamplePatrol(UWorld* World)
+	{
+		if (GCircleTicker.IsValid())
+		{
+			StopCircle();
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Enemy Patrol: off"));
+			return;
+		}
+		TWeakObjectPtr<AActor> WeakEnemy = GLockedEnemy;
+		if (!WeakEnemy.IsValid())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Enemy Patrol: lock on to an enemy first."));
+			return;
+		}
+		// Ellipse around the pillar row (pillars at X = -600, Y = -1600 / -1200 / -800).
+		float Angle = 0.f;
+		GCircleTicker = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([WeakEnemy, Angle](float DeltaTime) mutable
+		{
+			if (!WeakEnemy.IsValid())
+			{
+				GCircleTicker.Reset();
+				return false;
+			}
+			Angle += FMath::DegreesToRadians(35.f) * DeltaTime;
+			WeakEnemy->SetActorLocation(FVector(-600.f + FMath::Cos(Angle) * 350.f, -1200.f + FMath::Sin(Angle) * 750.f, WeakEnemy->GetActorLocation().Z));
+			return true;
+		}));
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Enemy Patrol: on"));
+	}
+
+	static void SampleEnemyEx(const TArray<FString>& Args, UWorld* World)
+	{
+		if (!Args.IsEmpty() && Args[0] == TEXT("Patrol"))
+		{
+			SamplePatrol(World);
+			return;
+		}
+		SampleEnemy(Args, World);
+	}
+
+	static FAutoConsoleCommandWithWorldAndArgs GSampleCombatCmd(TEXT("ACF.Sample.Combat"),
+		TEXT("Gameplay-side combat state for the sample: <On [Intensity]|Off>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleCombat));
+	static FAutoConsoleCommandWithWorldAndArgs GSampleGotoCmd(TEXT("ACF.Sample.Goto"),
+		TEXT("Move the pawn to a test spot: <Start|Wall|Pillars|Corridor|Finisher|CorridorFinisher>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleGoto));
+}
+
+namespace ACFDebug
+{
+	// ---------------------------------------------------------------------------------------------
+	// Phase 4C manual verification (README "手動確認"). The game side (attack / montage) is simulated by commands.
+	//   ACF.Sample.Finisher Play [EnemyIndex] [PlayRate]   DA_ACFSample_FinisherSequence on the locked / given / nearest enemy
+	//   ACF.Sample.Finisher Preset [Seconds=0]             single-preset finisher (Shot_Approach); 0 = until Finish
+	//   ACF.Sample.Finisher <Advance|Hold|Release|Finish|Cancel|Status>
+	//   ACF.Sample.Finisher Jump <ShotName>                 Approach / Strike / Overhead
+	//   ACF.Sample.Finisher Rate <PlayRate>                 like a montage play-rate change
+	//   ACF.Sample.Finisher Notify <Advance|Hold|Release|Finish|Cancel>   same route as the anim notifies (by actor)
+
+	static FACFCameraSequenceHandle GFinisherHandle;
+
+	static AActor* PickFinisherTarget(UWorld* World, const APawn* Pawn, const TArray<FString>& Args)
+	{
+		TArray<AActor*> Enemies;
+		GetEnemies(World, Enemies);
+		if (Args.IsValidIndex(1) && Enemies.IsValidIndex(FCString::Atoi(*Args[1])))
+		{
+			return Enemies[FCString::Atoi(*Args[1])];
+		}
+		if (GLockedEnemy.IsValid())
+		{
+			return GLockedEnemy.Get();
+		}
+		AActor* Best = nullptr;
+		for (AActor* Enemy : Enemies)
+		{
+			if (!Best || FVector::DistSquared(Enemy->GetActorLocation(), Pawn->GetActorLocation()) < FVector::DistSquared(Best->GetActorLocation(), Pawn->GetActorLocation()))
+			{
+				Best = Enemy;
+			}
+		}
+		return Best;
+	}
+
+	static void SampleFinisher(const TArray<FString>& Args, UWorld* World)
+	{
+		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
+		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+		if (!Subsystem || !Pawn || Args.IsEmpty())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("Usage: ACF.Sample.Finisher <Play [Enemy] [Rate]|Preset [Seconds]|Advance|Jump <Shot>|Hold|Release|Rate <x>|Finish|Cancel|Notify <Cmd>|Status>"));
+			return;
+		}
+		const FString& Kind = Args[0];
+		if (Kind == TEXT("Play") || Kind == TEXT("Preset"))
+		{
+			AActor* Target = PickFinisherTarget(World, Pawn, Args);
+			if (!Target)
+			{
+				UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Finisher: no actor tagged ACFEnemy (L_ACFCameraTest)."));
+				return;
+			}
+			if (Kind == TEXT("Play"))
+			{
+				UACFCameraSequence* Sequence = LoadObject<UACFCameraSequence>(nullptr, TEXT("/ActionCameraFramework/Samples/DA_ACFSample_FinisherSequence.DA_ACFSample_FinisherSequence"));
+				if (!Sequence)
+				{
+					UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Finisher: DA_ACFSample_FinisherSequence not found (run Scripts/CreateManualTestAssets.py)."));
+					return;
+				}
+				GFinisherHandle = Subsystem->StartFinisherCamera(Sequence, Pawn, Target, ArgOr(Args, 2, 1.f));
+			}
+			else
+			{
+				FACFCameraBlendSettings In = MakeLinear(0.3f);
+				GFinisherHandle = Subsystem->StartFinisherCameraWithPreset(LoadSamplePreset(TEXT("Shot_Approach")), Pawn, Target, ArgOr(Args, 1, 0.f), In, MakeLinear(0.5f), 1000);
+			}
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Finisher %s -> %s on %s"), *Kind, *GFinisherHandle.ToString(), *Target->GetActorNameOrLabel());
+			return;
+		}
+		bool bOk = false;
+		if (Kind == TEXT("Advance")) { bOk = Subsystem->AdvanceCameraShot(GFinisherHandle); }
+		else if (Kind == TEXT("Jump")) { bOk = Args.IsValidIndex(1) && Subsystem->JumpToCameraShot(GFinisherHandle, FName(*Args[1])); }
+		else if (Kind == TEXT("Hold")) { bOk = Subsystem->HoldCameraShot(GFinisherHandle); }
+		else if (Kind == TEXT("Release")) { bOk = Subsystem->ReleaseCameraShot(GFinisherHandle); }
+		else if (Kind == TEXT("Rate")) { bOk = Subsystem->SetCameraSequencePlayRate(GFinisherHandle, ArgOr(Args, 1, 1.f)); }
+		else if (Kind == TEXT("Finish")) { bOk = Subsystem->FinishCameraSequence(GFinisherHandle); }
+		else if (Kind == TEXT("Cancel")) { bOk = Subsystem->CancelCameraSequence(GFinisherHandle); }
+		else if (Kind == TEXT("Notify") && Args.IsValidIndex(1))
+		{
+			const int64 Value = StaticEnum<EACFCameraSequenceCommand>()->GetValueByNameString(Args[1] == TEXT("Advance") ? TEXT("AdvanceShot")
+				: Args[1] == TEXT("Hold") ? TEXT("HoldShot") : Args[1] == TEXT("Release") ? TEXT("ReleaseShot") : Args[1]);
+			if (Value != INDEX_NONE)
+			{
+				const int32 Count = UACFCameraBlueprintLibrary::SendCameraSequenceCommandForActor(Pawn, static_cast<EACFCameraSequenceCommand>(Value), Args.IsValidIndex(2) ? FName(*Args[2]) : NAME_None);
+				UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Finisher Notify %s -> %d playback(s)"), *Args[1], Count);
+				return;
+			}
+		}
+		else if (Kind != TEXT("Status"))
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Finisher: unknown command %s"), *Kind);
+			return;
+		}
+		const FACFCameraSequenceState S = Subsystem->GetCameraSequenceState(GFinisherHandle);
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Finisher %s (%s): playing=%d shot=%d '%s' t=%.2f/%.2f held=%d fallback=%d in control=%d effects=%d"),
+			*Kind, bOk || Kind == TEXT("Status") ? TEXT("ok") : TEXT("no playback"), S.bIsPlaying ? 1 : 0, S.ShotIndex, *S.ShotName.ToString(), S.ShotTime, S.ShotDuration,
+			S.bHeld ? 1 : 0, S.bUsingFallback ? 1 : 0, S.bInControl ? 1 : 0, S.NumOwnedEffects);
+	}
+
+	static FAutoConsoleCommandWithWorldAndArgs GSampleFinisherCmd(TEXT("ACF.Sample.Finisher"),
+		TEXT("Finisher camera sample: <Play [Enemy] [Rate]|Preset [Seconds]|Advance|Jump <Shot>|Hold|Release|Rate <x>|Finish|Cancel|Notify <Cmd>|Status>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleFinisher));
 }
 
 #endif // !UE_BUILD_SHIPPING

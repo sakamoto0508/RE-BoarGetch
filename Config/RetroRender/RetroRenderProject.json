@@ -1,0 +1,89 @@
+{
+ "_comment": "RetroRender のプロジェクト固有設定（Plugins/RetroRender/Scripts/retro_project.py 参照）。M_RetroFBXPhong はプラグイン側で常に対象。",
+ "targets": {
+  "/Game/InportAssets/LevelPrototyping/Materials/M_FlatCol": [
+   "snap"
+  ],
+  "/Game/InportAssets/LPRiverForest/Materials/M_LowPoly": [
+   "snap_lp"
+  ],
+  "/Game/InportAssets/LPRiverForest/Materials/M_LowPolyGrass": [
+   "snap_lp"
+  ],
+  "/Game/InportAssets/LPRiverForest/Materials/M_LowPolyWater": [
+   "snap_lp"
+  ],
+  "/Game/Stage01/Ground/Materials/M_Grass_LowPoly_World": [
+   "snap",
+   "texel",
+   "world"
+  ],
+  "/Game/Stage01/Ground/Materials/M_Ground_LowPoly_World": [
+   "snap",
+   "texel",
+   "world"
+  ],
+  "/Game/Art/Materials/Cage/M_Cage_White": [
+   "snap"
+  ],
+  "/Game/Art/Materials/Cage/M_Cage_Yellow": [
+   "snap"
+  ],
+  "/Game/Art/Materials/Cage/M_Cage_Glow": [
+   "snap"
+  ],
+  "/Game/Art/Materials/Cage/M_Cage_Navy": [
+   "snap"
+  ],
+  "/Game/InportAssets/Farm_House/Materials/MM_Hybrid_Trim": [
+   "snap"
+  ],
+  "/Game/Lobby/Materials/M_Lobby_CyanEdge": [
+   "snap"
+  ],
+  "/Game/Lobby/Materials/M_Architecture_SoftWhite": [
+   "snap"
+  ],
+  "/Game/Lobby/Materials/M_Architecture_CeilingWhite": [
+   "snap"
+  ],
+  "/Game/Lobby/Materials/M_StageSelect_HoloPanel": [
+   "snap"
+  ],
+  "/Game/Lobby/Materials/M_Facility_ExhibitHologram": [
+   "snap"
+  ],
+  "/Game/Lobby/Materials/M_Lobby_ResearchHologram": [
+   "snap"
+  ],
+  "/Game/Lobby/Materials/M_DataPortal_Tunnel": [
+   "snap"
+  ],
+  "/Game/InportAssets/Clinic/Materials/M_Default_Master": [
+   "snap"
+  ],
+  "/Game/InportAssets/Clinic/Materials/M_Translucent_Master": [
+   "snap"
+  ],
+  "/Game/InportAssets/Clinic/Materials/M_Lights": [
+   "snap"
+  ],
+  "/Game/InportAssets/Clinic/Materials/M_Screen": [
+   "snap"
+  ],
+  "/Game/InportAssets/Clinic/Materials/M_Grid": [
+   "snap"
+  ],
+  "/Game/InportAssets/Clinic/Materials/M_Grid2": [
+   "snap"
+  ]
+ },
+ "snap_collections": [
+  "/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength"
+ ],
+ "chained": {
+  "M_LowPoly": "MaterialExpressionAdd_5",
+  "M_LowPolyGrass": "MaterialExpressionMultiply_2",
+  "M_LowPolyWater": "MaterialExpressionReroute_13"
+ }
+}

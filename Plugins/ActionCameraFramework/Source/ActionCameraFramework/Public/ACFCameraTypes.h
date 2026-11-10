@@ -250,6 +250,10 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestParams
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
 	bool bReleaseWhenLookAtTargetLost = false;
 
+	/** Per-request switch for the Collision node's Deoccluder (the preset decides whether it exists). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
+	bool bEnableDeoccluder = true;
+
 	/** Targets framed together by Group Framing / aimed at by Look At or Rotation Composer (Target Source = Target Group). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
 	FACFCameraTargetGroup TargetGroup;
@@ -265,6 +269,63 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestParams
 	/** Shown in logs and debug output. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
 	FName DebugName;
+};
+
+/** How a Combat Camera node changes the camera while in combat (deltas from the incoming camera). */
+USTRUCT(BlueprintType)
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraCombatProfile
+{
+	GENERATED_BODY()
+
+	/** Player-enemy distance where the Near / Far values apply (linear in between). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (ClampMin = "0.0", Units = cm))
+	float NearRange = 300.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (ClampMin = "0.0", Units = cm))
+	float FarRange = 1500.f;
+
+	/** Arm length multiplier (distance pivot -> camera) for a close / far enemy. Without an enemy: Far. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (ClampMin = "0.1", ClampMax = "4.0"))
+	float NearDistanceScale = 1.25f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (ClampMin = "0.1", ClampMax = "4.0"))
+	float FarDistanceScale = 1.05f;
+
+	/** Degrees added to the field of view. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (ClampMin = "-60.0", ClampMax = "60.0", Units = deg))
+	float FieldOfViewOffset = 5.f;
+
+	/** Added over-the-shoulder offset in camera space (Y = right, Z = up). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	FVector ShoulderOffset = FVector(0.f, 25.f, 10.f);
+};
+
+/**
+ * Combat situation as decided by the GAME (ACF never detects combat). Set it per local player with
+ * UACFCameraSubsystem::SetCombatState; every Combat Camera node of that player's cameras reacts to it.
+ */
+USTRUCT(BlueprintType)
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraCombatState
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	bool bInCombat = false;
+
+	/** 0..1: how strongly the combat profile applies (e.g. number of enemies, danger). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float Intensity = 1.f;
+
+	/** Optional enemy used for the distance rule; else the request's Look At target, else the nearest Target Group member. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	FACFCameraTarget FocusTarget;
+
+	/** Use Profile instead of the node's own profile (runtime tuning from gameplay). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (InlineEditConditionToggle))
+	bool bOverrideProfile = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (EditCondition = "bOverrideProfile"))
+	FACFCameraCombatProfile Profile;
 };
 
 /**
@@ -300,6 +361,9 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationContext
 	 * Filled by the director; zero on zero-delta evaluations (input is kept for the next one).
 	 */
 	FVector2D CameraInput = FVector2D::ZeroVector;
+
+	/** Combat state of this local player (filled by the director from SetCombatState). */
+	FACFCameraCombatState Combat;
 };
 
 /** Final result of the director for one frame (stage 6 of the pipeline). */
@@ -354,6 +418,18 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationResult
 
 	UPROPERTY(BlueprintReadOnly, Category = "Camera")
 	int32 NumRequests = 0;
+
+	/** Constraint solver: targets the deoccluder could not reveal (hidden behind geometry). */
+	UPROPERTY(BlueprintReadOnly, Category = "Camera|Constraints")
+	int32 NumOccludedTargets = 0;
+
+	/** The player itself stays hidden even after the deoccluder's correction (unsolvable). */
+	UPROPERTY(BlueprintReadOnly, Category = "Camera|Constraints")
+	bool bPlayerOccluded = false;
+
+	/** Group Framing needed more FOV than the recovery allows: some targets may be partly off screen. */
+	UPROPERTY(BlueprintReadOnly, Category = "Camera|Constraints")
+	bool bFramingLimited = false;
 
 	/** Engine frame this result was produced for. */
 	uint64 FrameNumber = 0;

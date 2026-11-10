@@ -4,6 +4,7 @@
 #include "UObject/Object.h"
 #include "ACFCameraTypes.h"
 #include "Engine/EngineTypes.h"
+#include "ACFCameraConstraintSolver.h"
 #include "ACFCameraNode.generated.h"
 
 struct FInstancedStruct;
@@ -15,8 +16,8 @@ class AActor;
  *
  *   Body      : camera position (Follow, Orbital Follow, Position Composer, Fixed Pose)
  *   Aim       : camera rotation (Look At, Rotation Composer)
- *   Framing   : fits subjects on screen once position AND rotation are known, by moving the camera along
- *               its view axis and / or changing the FOV only (Group Framing). Never changes rotation.
+ *   Framing   : composition once position AND rotation are known: combat distance / shoulder / FOV (Combat
+ *               Camera, runs first), then fitting subjects on screen (Group Framing). Never changes rotation.
  *   PostBlend : corrections of the FINAL pose, run once after request blending (Collision).
  *               This keeps a blend between two cameras from passing through walls.
  */
@@ -57,6 +58,12 @@ struct FACFCameraRigDebug
 	float GroupDolly = 0.f;
 	float GroupFovDelta = 0.f;
 	FVector2D GroupFramingSize = FVector2D::ZeroVector;
+	bool bHasCombat = false;
+	bool bInCombat = false;
+	float CombatWeight = 0.f;
+	float CombatDistanceScale = 1.f;
+	float CombatFovOffset = 0.f;
+	float CombatRange = -1.f;
 	bool bHasLockOn = false;
 	bool bLockOnTargetLost = false;
 	FVector LockOnPoint = FVector::ZeroVector;
@@ -103,6 +110,18 @@ struct FACFCameraRigScratch
 	 */
 	bool bHasLockOnTarget = false;
 	FVector LockOnTargetLocation = FVector::ZeroVector;
+
+	/**
+	 * Subjects Group Framing fitted (after its Weight rule) and its framing area, published for the constraint
+	 * solver (Collision node): it re-checks them after the camera was moved (deoccluder, collision).
+	 */
+	bool bHasFramingSubjects = false;
+	FACFCameraFramingSubjects FramingSubjects;
+	FVector2D FramingSize = FVector2D(1.0, 1.0);
+
+	/** Filled by the Collision node's constraint solver. */
+	bool bHasSolverReport = false;
+	FACFCameraSolverReport SolverReport;
 
 	/** Filled by the Collision node (PostBlend). */
 	FACFCameraCollisionConstraint Constraint;
@@ -153,6 +172,9 @@ public:
 	bool bEnabled = true;
 
 	virtual EACFCameraNodeStage GetStage() const { return EACFCameraNodeStage::Body; }
+
+	/** Order inside the stage (smaller first; ties keep the array order). Lets a node require running first in its stage. */
+	virtual int32 GetStageOrder() const { return 0; }
 
 	/**
 	 * Struct type of the per-request runtime state, or null if the node is stateless.

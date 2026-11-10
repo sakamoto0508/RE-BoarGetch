@@ -20,8 +20,8 @@ namespace ACFCameraDebug
 {
 	bool IsWorldDrawEnabled();
 	bool IsScreenDrawEnabled();
-	void DrawWorld(UWorld* World, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result);
-	void DrawCanvas(UCanvas* Canvas, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result, const TArray<FACFCameraEffectInfo>& Effects);
+	void DrawWorld(UWorld* World, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result, const FACFCameraSolverReport& Solver);
+	void DrawCanvas(UCanvas* Canvas, const FACFCameraRigDebug& Debug, const FACFCameraEvaluationResult& Result, const FACFCameraSolverReport& Solver, const TArray<FACFCameraEffectInfo>& Effects, const TArray<FString>& ExtraLines);
 }
 
 #endif

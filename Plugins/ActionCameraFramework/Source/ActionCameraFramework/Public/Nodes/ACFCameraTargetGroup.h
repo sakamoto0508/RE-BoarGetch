@@ -30,6 +30,10 @@ struct FACFCameraFramingSubject
 	FVector Location = FVector::ZeroVector;
 	float Radius = 0.f;
 	float Weight = 0.f;
+	/** Owning actor (ignored by its own line-of-sight trace). May be null. */
+	const AActor* Actor = nullptr;
+	/** The player (Follow Target): highest visibility priority in the constraint solver. */
+	bool bIsPlayer = false;
 };
 
 /** Stack buffer: up to 16 subjects without touching the heap (more is allowed, it then allocates). */

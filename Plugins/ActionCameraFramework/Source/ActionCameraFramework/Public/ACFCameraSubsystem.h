@@ -5,7 +5,10 @@
 #include "Subsystems/LocalPlayerSubsystem.h"
 #include "ACFCameraTypes.h"
 #include "Effects/ACFCameraEffectTypes.h"
+#include "ACFCameraSequence.h"
 #include "ACFCameraSubsystem.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FACFCameraSequenceEventSignature, const FACFCameraSequenceEvent&, Event);
 
 class AActor;
 class APlayerCameraManager;
@@ -112,6 +115,98 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Action Camera|Target Group", meta = (DisplayName = "Get ACF Camera Group Members"))
 	TArray<FACFCameraTargetGroupMember> GetCameraGroupMembers(FACFCameraRequestHandle Handle) const;
 
+	// --- Combat camera / constraints (the GAME decides the combat state; ACF only reacts to it) --------------
+
+	/** Combat state for every Combat Camera node of this player's cameras. Changes are blended by the nodes. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Combat", meta = (DisplayName = "Set ACF Camera Combat State"))
+	void SetCombatState(const FACFCameraCombatState& State);
+
+	/** Convenience: in combat with Intensity, optional enemy used for the distance rule. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Combat", meta = (DisplayName = "Enter ACF Camera Combat"))
+	void EnterCombat(float Intensity = 1.f, AActor* FocusEnemy = nullptr);
+
+	/** Convenience: out of combat (the profile fades out with the nodes' Exit Time). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Combat", meta = (DisplayName = "Exit ACF Camera Combat"))
+	void ExitCombat();
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Combat", meta = (DisplayName = "Get ACF Camera Combat State"))
+	FACFCameraCombatState GetCombatState() const;
+
+	/** Turns the Collision node's Deoccluder on / off for one request (it must be enabled in the preset). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Constraints", meta = (DisplayName = "Set ACF Camera Deoccluder Enabled"))
+	bool SetCameraDeoccluderEnabled(FACFCameraRequestHandle Handle, bool bEnabled);
+
+	// --- Finisher / cinematic camera sequences (ACF never plays montages: the GAME drives the playback) ----------
+
+	/**
+	 * Plays a camera sequence (shots = ordinary camera requests owned by the playback). The first shot starts on the
+	 * next camera update (normally the same frame). Keep the handle to steer / end it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Play ACF Camera Sequence"))
+	FACFCameraSequenceHandle PlayCameraSequence(UACFCameraSequence* Sequence, const FACFCameraSequenceParams& Params);
+
+	/** Finisher: plays Sequence with Attacker / Target (other playbacks of this player are replaced). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Start ACF Finisher Camera"))
+	FACFCameraSequenceHandle StartFinisherCamera(UACFCameraSequence* Sequence, AActor* Attacker, AActor* Target, float PlayRate = 1.f);
+
+	/**
+	 * Finisher with one dedicated preset (requested at Priority). Duration 0 = until Finish / Cancel (anim notify or
+	 * gameplay), else it ends on its own after Duration seconds of sequence time.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Start ACF Finisher Camera (Preset)"))
+	FACFCameraSequenceHandle StartFinisherCameraWithPreset(UACFCameraPreset* Preset, AActor* Attacker, AActor* Target, float Duration,
+		FACFCameraBlendSettings BlendIn, FACFCameraBlendSettings ReturnBlend, int32 Priority = 1000);
+
+	/** Ends the current shot and starts the next one (applied by the next camera update; repeats in one frame count once). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Advance ACF Camera Shot"))
+	bool AdvanceCameraShot(FACFCameraSequenceHandle Handle);
+
+	/** Skips to the named shot (applied by the next camera update). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Jump To ACF Camera Shot"))
+	bool JumpToCameraShot(FACFCameraSequenceHandle Handle, FName ShotName);
+
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Jump To ACF Camera Shot (Index)"))
+	bool JumpToCameraShotIndex(FACFCameraSequenceHandle Handle, int32 ShotIndex);
+
+	/** Freezes shot time (e.g. while an attack is charged). Counted: call Release once per Hold. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Hold ACF Camera Shot"))
+	bool HoldCameraShot(FACFCameraSequenceHandle Handle);
+
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Release ACF Camera Shot"))
+	bool ReleaseCameraShot(FACFCameraSequenceHandle Handle);
+
+	/** Normal end: back to the previous camera with the sequence's Return Blend. Invalidates the handle. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Finish ACF Camera Sequence"))
+	bool FinishCameraSequence(UPARAM(ref) FACFCameraSequenceHandle& Handle);
+
+	/** Abort: back with the Cancel Blend (default cut), owned effects cut. Invalidates the handle. Safe to call twice. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Cancel ACF Camera Sequence"))
+	bool CancelCameraSequence(UPARAM(ref) FACFCameraSequenceHandle& Handle);
+
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Send ACF Camera Sequence Command"))
+	bool SendCameraSequenceCommand(FACFCameraSequenceHandle Handle, EACFCameraSequenceCommand Command, FName ShotName);
+
+	/** Sends Command to every playback of this player whose attacker or target is Actor (null = all). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Send ACF Camera Sequence Command To Actor"))
+	int32 SendCameraSequenceCommandToActor(AActor* Actor, EACFCameraSequenceCommand Command, FName ShotName);
+
+	/** Sequence time scale (match the montage play rate for Duration-timed shots). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequence", meta = (DisplayName = "Set ACF Camera Sequence Play Rate"))
+	bool SetCameraSequencePlayRate(FACFCameraSequenceHandle Handle, float PlayRate);
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Sequence", meta = (DisplayName = "Get ACF Camera Sequence State"))
+	FACFCameraSequenceState GetCameraSequenceState(FACFCameraSequenceHandle Handle) const;
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Sequence", meta = (DisplayName = "Is ACF Camera Sequence Playing"))
+	bool IsCameraSequencePlaying(FACFCameraSequenceHandle Handle) const;
+
+	/**
+	 * Shot started / ended and playback ended. Broadcast after the director evaluation of the frame (never while it
+	 * runs), or right away for Finish / Cancel; handlers may call any ACF function.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Action Camera|Sequence")
+	FACFCameraSequenceEventSignature OnCameraSequenceEvent;
+
 	/**
 	 * Output authority extension point. While suppressed, ACF keeps evaluating but its output weight
 	 * fades to 0 so another system (Sequencer camera cuts, a debug camera, ...) owns the view.
@@ -216,8 +311,12 @@ public:
 	/** Distance the guard moved the camera in the given frame (0 if it did not act). Tests / debugging. */
 	float GetGuardCorrection(uint64 Frame) const { return Frame == LastGuardFrame ? LastGuardCorrection : 0.f; }
 
+	/** Broadcasts queued sequence notifications (outside the camera update). */
+	void FlushSequenceEvents();
+
 private:
 	void EnsureOutputAttached();
+	TArray<FACFCameraSequenceEvent> SequenceEventScratch;
 	bool AttachModifier(APlayerCameraManager* CameraManager, TSubclassOf<UACFCameraModifierBase> ModifierClass, TWeakObjectPtr<UACFCameraModifierBase>& InOutModifier);
 	void DetachOutput();
 	APlayerCameraManager* GetCurrentCameraManager() const;

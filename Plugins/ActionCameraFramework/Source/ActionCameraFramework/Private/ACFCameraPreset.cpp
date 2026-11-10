@@ -7,6 +7,7 @@
 #include "Nodes/ACFCameraNode_Composers.h"
 #include "Nodes/ACFCameraNode_Follow.h"
 #include "Nodes/ACFCameraNode_GroupFraming.h"
+#include "Nodes/ACFCameraNode_Combat.h"
 #include "Nodes/ACFCameraNode_LockOn.h"
 #include "Nodes/ACFCameraNode_LookAt.h"
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
@@ -29,6 +30,7 @@ EDataValidationResult UACFCameraPreset::IsDataValid(FDataValidationContext& Cont
 	int32 AimNodes = 0;
 	int32 Collisions = 0;
 	int32 GroupFramings = 0;
+	int32 Combats = 0;
 	bool bPositionComposer = false;
 	for (const UACFCameraNode* Node : Nodes)
 	{
@@ -41,6 +43,7 @@ EDataValidationResult UACFCameraPreset::IsDataValid(FDataValidationContext& Cont
 		PositionOwners += (Node->IsA<UACFCameraNode_Follow>() || Node->IsA<UACFCameraNode_OrbitalFollow>() || Node->IsA<UACFCameraNode_LockOn>() || bIsPositionComposer) ? 1 : 0;
 		AimNodes += (Node->IsA<UACFCameraNode_LookAt>() || Node->IsA<UACFCameraNode_RotationComposer>()) ? 1 : 0;
 		Collisions += Node->IsA<UACFCameraNode_Collision>() ? 1 : 0;
+		Combats += Node->IsA<UACFCameraNode_Combat>() ? 1 : 0;
 		if (const UACFCameraNode_GroupFraming* Framing = Cast<UACFCameraNode_GroupFraming>(Node))
 		{
 			++GroupFramings;
@@ -61,6 +64,10 @@ EDataValidationResult UACFCameraPreset::IsDataValid(FDataValidationContext& Cont
 	if (bPositionComposer && AimNodes > 0)
 	{
 		Context.AddWarning(LOCTEXT("ComposerAim", "Position Composer frames with the incoming rotation; an Aim node re-rotates afterwards and breaks that framing."));
+	}
+	if (Combats > 1)
+	{
+		Context.AddWarning(LOCTEXT("Combats", "More than one Combat Camera node: their distance / FOV / shoulder changes add up."));
 	}
 	if (GroupFramings > 1)
 	{

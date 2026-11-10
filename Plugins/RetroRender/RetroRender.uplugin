@@ -5,7 +5,7 @@
 	"FriendlyName": "Retro Render",
 	"Description": "PS1 / N64 / PS2 / CRT look: post process, MPC-driven vertex snapping, affine mapping, texture and mesh retro utilities.",
 	"Category": "Rendering",
-	"CanContainContent": false,
+	"CanContainContent": true,
 	"Modules": [
 		{
 			"Name": "RetroRender",
@@ -16,12 +16,6 @@
 			"Name": "RetroRenderEditor",
 			"Type": "Editor",
 			"LoadingPhase": "Default"
-		}
-	],
-	"Plugins": [
-		{
-			"Name": "PythonScriptPlugin",
-			"Enabled": true
 		}
 	]
 }
