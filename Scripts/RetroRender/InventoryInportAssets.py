@@ -1,7 +1,7 @@
 """Lists every dependency of RetroRender on /Game/InportAssets (git-ignored in this repository).
 
 UnrealEditor-Cmd REBoarGetch.uproject -run=pythonscript -script=<this> -unattended -nosplash -NullRHI
-Writes Plugins/RetroRender/Docs/InportAssetsDependencies.json and .md:
+REBoarGetch 専用ツール（プラグイン外）。Writes Scripts/RetroRender/InportAssetsDependencies.json and .md:
   - modified : InportAssets packages RetroRender changes (patched materials, extended MPC, reparented MIs)
   - referenced : InportAssets packages that tracked RetroRender assets / patched materials depend on
   - present : whether each package exists in this checkout
@@ -11,9 +11,9 @@ import json
 import unreal
 
 HERE = Path(__file__).resolve().parent
-DOCS = HERE.parent / 'Docs'
+DOCS = HERE
 INPORT = '/Game/InportAssets/'
-RECORD = HERE / 'PatchRetroMaterials.json'
+RECORD = HERE.parent.parent / 'Config' / 'RetroRender' / 'PatchRecord.json'
 registry = unreal.AssetRegistryHelpers.get_asset_registry()
 lib = unreal.EditorAssetLibrary
 
@@ -32,8 +32,8 @@ if RECORD.exists():
         MODIFIED.setdefault(mi, 'material instance reparented to M_RetroFBXPhong')
 
 # Tracked assets that RetroRender owns or patches (dependencies are followed one level deep).
-ROOTS = ['/Game/Art/Rendering/Retro', '/Game/Stage01/Ground/Materials/M_Grass_LowPoly_World',
-         '/Game/Stage01/Ground/Materials/M_Ground_LowPoly_World', '/Game/BP/Cage/Materials']
+ROOTS = ['/RetroRender', '/Game/Art/Rendering/Retro', '/Game/Stage01/Ground/Materials/M_Grass_LowPoly_World',
+         '/Game/Stage01/Ground/Materials/M_Ground_LowPoly_World', '/Game/Art/Materials/Cage']
 options = unreal.AssetRegistryDependencyOptions(include_soft_package_references=True, include_hard_package_references=True,
                                                 include_searchable_names=False, include_soft_management_references=False,
                                                 include_hard_management_references=False)

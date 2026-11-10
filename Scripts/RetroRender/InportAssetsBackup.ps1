@@ -2,7 +2,7 @@
 #   Backup : powershell -File InportAssetsBackup.ps1 -Backup  -Archive D:\Share\RetroRender_InportAssets.zip
 #   Restore: powershell -File InportAssetsBackup.ps1 -Restore -Archive D:\Share\RetroRender_InportAssets.zip
 #   Pristine (pre-patch copies kept by PatchRetroMaterials.py): -Restore -Pristine
-# The package list comes from Plugins/RetroRender/Docs/InportAssetsDependencies.json (InventoryInportAssets.py).
+# REBoarGetch 専用ツール（プラグイン外）。The package list comes from InportAssetsDependencies.json next to this script (InventoryInportAssets.py).
 # Restore overwrites .uasset files, so it refuses to run while the Unreal Editor is open.
 param(
     [switch] $Backup,
@@ -11,9 +11,9 @@ param(
     [string] $Archive = ""
 )
 $ErrorActionPreference = "Stop"
-$Project = (Resolve-Path "$PSScriptRoot\..\..\..").Path
+$Project = (Resolve-Path "$PSScriptRoot\..\..").Path
 $Content = Join-Path $Project "Content"
-$Manifest = Join-Path $PSScriptRoot "..\Docs\InportAssetsDependencies.json"
+$Manifest = Join-Path $PSScriptRoot "InportAssetsDependencies.json"
 $PristineDir = Join-Path $Project "Saved\RetroRender\MaterialBackup"
 
 function PackageFile([string] $Package) { Join-Path $Content (($Package -replace '^/Game/', '') + ".uasset") }

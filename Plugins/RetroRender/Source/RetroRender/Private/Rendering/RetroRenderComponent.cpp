@@ -1,4 +1,5 @@
 #include "Rendering/RetroRenderComponent.h"
+#include "Rendering/RetroRenderSettings.h"
 #include "Components/PostProcessComponent.h"
 #include "Components/VolumetricCloudComponent.h"
 #include "Engine/Engine.h"
@@ -79,11 +80,11 @@ URetroRenderComponent::URetroRenderComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	bTickInEditor = false;
-	Material = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/Art/Rendering/Retro/M_RetroPost.M_RetroPost")));
-	PresetData = TSoftObjectPtr<URetroRenderPresetData>(FSoftObjectPath(TEXT("/Game/Art/Rendering/Retro/DA_RetroPresets.DA_RetroPresets")));
-	ParameterCollection = TSoftObjectPtr<UMaterialParameterCollection>(FSoftObjectPath(TEXT("/Game/Art/Rendering/Retro/MPC_Retro.MPC_Retro")));
-	// Optional (InportAssets, not in git): skipped silently when the LowPoly pack is not installed.
-	SharedCollections.Add(TSoftObjectPtr<UMaterialParameterCollection>(FSoftObjectPath(TEXT("/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength.MPC_UnlitStrength"))));
+	// 共有アセットはプラグインのコンテンツ（/RetroRender/）に同梱。プロジェクト固有の MPC は
+	// URetroRenderSettings::AdditionalParameterCollections（DefaultGame.ini）で追加する。
+	Material = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/RetroRender/M_RetroPost.M_RetroPost")));
+	PresetData = TSoftObjectPtr<URetroRenderPresetData>(FSoftObjectPath(TEXT("/RetroRender/DA_RetroPresets.DA_RetroPresets")));
+	ParameterCollection = TSoftObjectPtr<UMaterialParameterCollection>(FSoftObjectPath(TEXT("/RetroRender/MPC_Retro.MPC_Retro")));
 }
 
 bool URetroRenderComponent::IsGameWorld() const
@@ -146,7 +147,11 @@ void URetroRenderComponent::Setup()
 	Collection = ParameterCollection.LoadSynchronous();
 	Collections.Reset();
 	if (Collection) Collections.Add(Collection);
-	for (const TSoftObjectPtr<UMaterialParameterCollection>& Shared : SharedCollections)
+	// プロジェクト設定の追加 MPC → コンポーネント個別の追加 MPC の順。存在しないパッケージは黙って飛ばす
+	// （git 管理外のアセットパックが無い環境でも動くように）。
+	TArray<TSoftObjectPtr<UMaterialParameterCollection>> AllShared = GetDefault<URetroRenderSettings>()->AdditionalParameterCollections;
+	AllShared.Append(SharedCollections);
+	for (const TSoftObjectPtr<UMaterialParameterCollection>& Shared : AllShared)
 	{
 		if (Shared.IsNull() || !FPackageName::DoesPackageExist(Shared.ToSoftObjectPath().GetLongPackageName())) continue;
 		if (UMaterialParameterCollection* Loaded = Shared.LoadSynchronous()) Collections.AddUnique(Loaded);
@@ -154,7 +159,7 @@ void URetroRenderComponent::Setup()
 	UMaterialInterface* Base = Material.LoadSynchronous();
 	if (!Base || Base->GetMaterial()->MaterialDomain != MD_PostProcess)
 	{
-		UE_LOG(LogRetroRender, Error, TEXT("Post process material missing/invalid. Run Plugins/RetroRender/Scripts/SetupRetroAssets.py."));
+		UE_LOG(LogRetroRender, Error, TEXT("Post process material missing/invalid. Check that the RetroRender plugin content (/RetroRender/M_RetroPost) is present."));
 		RetroRenderState::Owners().Remove(World);
 		return;
 	}
