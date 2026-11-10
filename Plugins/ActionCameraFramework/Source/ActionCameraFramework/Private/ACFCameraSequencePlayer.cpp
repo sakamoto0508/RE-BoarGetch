@@ -269,7 +269,8 @@ bool FACFCameraSequencePlayer::GetState(const UACFCameraDirector& Director, FACF
 	OutState.bHeld = Playback->HoldCount > 0;
 	OutState.bUsingFallback = Playback->bUsingFallback;
 	OutState.ShotRequest = Playback->Request;
-	OutState.bInControl = Playback->Request.IsValid() && Director.GetActiveRequest() == Playback->Request;
+	// Phase 5A: 出力抑制・出力バイパス中（Sequencer などが画面を握っている）は「握っていない」扱い。
+	OutState.bInControl = Playback->Request.IsValid() && Director.GetActiveRequest() == Playback->Request && !Director.IsViewOwnedExternally();
 	OutState.NumOwnedEffects = Playback->Effects.Num();
 	if (Shots.IsValidIndex(Playback->ShotIndex))
 	{
@@ -378,7 +379,8 @@ void FACFCameraSequencePlayer::TickPlayback(UACFCameraDirector& Director, int32 
 
 	// 3. Interruption by a higher priority camera.
 	FACFCameraSequencePlayback& Live = Playbacks[Index];
-	const bool bInControl = Director.GetBestRequest() == Live.Request;
+	// Phase 5A: 外部（Sequencer の Camera Cut、出力抑制）に画面を奪われた場合も、同じ Interrupt Policy に従う。
+	const bool bInControl = Director.GetBestRequest() == Live.Request && !Context.bOutputBypassed && !Director.IsOutputSuppressed();
 	if (!bInControl && Sequence->InterruptPolicy == EACFCameraSequenceInterruptPolicy::Cancel)
 	{
 		EndPlayback(Director, Index, EACFCameraSequenceEndReason::Interrupted, nullptr, true);

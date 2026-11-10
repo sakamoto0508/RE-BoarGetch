@@ -222,6 +222,64 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Action Camera|Authority")
 	bool IsOutputSuppressed() const;
 
+	/** 現在の出力抑制要求の数（Source ごとに 1 つ）。0 になったときにだけ出力が戻る。 */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Authority", meta = (DisplayName = "Get Num ACF Output Suppressions"))
+	int32 GetNumOutputSuppressions() const;
+
+	/**
+	 * 現在の ViewTarget が Camera Modifier を通さないため、ACF の結果が画面に出ていないか
+	 * （Sequencer の Camera Cut が Camera Actor を映している間など）。この間も ACF は裏で評価を続ける。
+	 */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Authority", meta = (DisplayName = "Is ACF Output Bypassed"))
+	bool IsOutputBypassed() const;
+
+	/**
+	 * 外部カメラの姿勢（Sequencer の最終フレームなど）から、いま有効な ACF カメラへ Blend で戻る。
+	 * 要求や Rig の状態は変えない。要求が無い / Blend が Cut のときは何もせず false。
+	 * PCM が ViewTarget Blend で戻している最中には呼ばないこと（二重ブレンドになる）。
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Authority", meta = (DisplayName = "Blend ACF Camera From Pose"))
+	bool BlendFromPose(const FACFCameraPose& FromPose, const FACFCameraBlendSettings& Blend);
+
+	/** すべての要求の Orbital Follow の向きを設定する（Input Source = Camera Input の Preset を外部カメラの向きに揃える）。 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera", meta = (DisplayName = "Set All ACF Orbit Rotations"))
+	int32 SetAllOrbitRotations(FRotator Rotation, bool bInstant = true);
+
+	/**
+	 * Director の評価の直前に、ローカルプレイヤー（Subsystem）ごとに 1 フレーム 1 回呼ばれる（Modifier 経由でも裏評価でも）。
+	 * 外部の所有権管理（ActionCameraFrameworkSequencer モジュール）が、カメラ更新と同じフレームで状態を確定するために使う。
+	 * ハンドラの中で SuppressOutput / BlendFromPose などを呼んでよい。
+	 */
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPreEvaluate, UACFCameraSubsystem& /*Subsystem*/, float /*DeltaTime*/);
+	static FOnPreEvaluate OnPreEvaluate;
+
+	// --- 外部 ViewTarget（ACF を乗せないカメラ）-----------------------------------------------------------------
+	//
+	// UE 5.8 の PCM は、ViewTarget が Camera Actor でも Camera Modifier を適用する。そのままだと Sequencer や
+	// ゲーム独自のカットシーンカメラの上に ACF が乗ってしまうので、「この Actor が ViewTarget の間は ACF を出力しない」
+	// という登録を持つ。判定は ViewTarget 単位: PCM の ViewTarget Blend 中は、ゲームプレイ側の ViewTarget には
+	// ACF が 100%、外部 ViewTarget には 0% で乗り、両者を混ぜるのは PCM のブレンドだけになる（ACF の Weight は動かない
+	// = 二重ブレンドにならない）。外部 ViewTarget だけが映っている間、ACF は裏で評価を続ける（Is ACF Output Bypassed）。
+
+	/** ViewTarget を「ACF を乗せないカメラ」として登録する。Source（登録者）か ViewTarget が破棄されると自動で無効になる。 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Authority", meta = (DisplayName = "Add ACF External View Target", DefaultToSelf = "Source"))
+	void AddExternalViewTarget(AActor* ViewTarget, UObject* Source);
+
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Authority", meta = (DisplayName = "Remove ACF External View Target", DefaultToSelf = "Source"))
+	void RemoveExternalViewTarget(AActor* ViewTarget, UObject* Source);
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Authority", meta = (DisplayName = "Is ACF External View Target"))
+	bool IsExternalViewTarget(const AActor* ViewTarget) const;
+
+	/** Source が登録している外部 ViewTarget を Targets で置き換える（空でクリア）。 */
+	void SetExternalViewTargets(const UObject* Source, TConstArrayView<AActor*> Targets);
+
+	/**
+	 * Output Modifier が、ViewTarget の更新ごとに最初に呼ぶ。OnPreEvaluate を（1 フレーム 1 回）発行してから、
+	 * この ViewTarget に ACF を出力してよいかを返す。ViewTarget が分からない場合は null を渡す（出力する）。
+	 */
+	bool BeginOutputForViewTarget(AActor* ViewTarget, float DeltaTime);
+
 	/**
 	 * Gameplay camera pose (for aiming / traces): UE camera + ACF, without camera shakes or visual
 	 * effects. ACF never sends camera data to the server; replicate gameplay aim explicitly.
@@ -327,6 +385,31 @@ private:
 	 * Cost while idle: one pointer check; while ACF is in use: a short scan of the PCM modifier list.
 	 */
 	void HandleWorldTickStart(UWorld* World, ELevelTick TickType, float DeltaSeconds);
+
+	/**
+	 * 裏評価（Phase 5A）。カメラ更新の直後に呼ばれ、このフレームに Director が 1 度も評価されなかった場合
+	 * （映っているのが外部 ViewTarget だけ = Sequencer の Camera Cut など）に Director を評価する。
+	 * これにより、外部カメラが映っている間も Damping・ブレンド・Finisher の時間・要求の自動解除が進み、
+	 * 復帰した最初のフレームから最新の構図を出せる。
+	 */
+	void HandleWorldPostActorTick(UWorld* World, ELevelTick TickType, float DeltaSeconds);
+
+	const FACFCameraEvaluationResult& EvaluateInternal(float DeltaTime, const FMinimalViewInfo& UpstreamPOV, bool bOutputBypassed);
+
+	FDelegateHandle WorldPostActorTickHandle;
+
+	void BroadcastPreEvaluate(float DeltaTime);
+
+	/** ACF を出力した最後の ViewTarget（= 戻り先のゲームプレイカメラ）。裏評価の Upstream（UE カメラ）をここから求める。 */
+	TWeakObjectPtr<AActor> LastOutputViewTarget;
+
+	struct FExternalViewTarget
+	{
+		TWeakObjectPtr<const AActor> Target;
+		TWeakObjectPtr<const UObject> Source;
+	};
+	TArray<FExternalViewTarget> ExternalViewTargets;
+	uint64 LastPreEvaluateFrame = MAX_uint64;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UACFCameraDirector> Director;

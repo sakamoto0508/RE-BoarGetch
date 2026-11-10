@@ -7,6 +7,9 @@ Presets in /ActionCameraFramework/Samples (used by the console command ACF.Sampl
   DA_ACFSample_Composer    Orbital Follow + Rotation Composer (dead / soft zone on the ACFLookTarget pillar) + Collision
   DA_ACFSample_LockOn      Lock-On + Combat Camera + Group Framing (player + locked enemy) + Collision (solver)  (ACF.Sample.LockOn)
   DA_ACFSample_Group       Orbital Follow + Rotation Composer (Target Group) + Group Framing + Collision (ACF.Sample.Group)
+Phase 4C: DA_ACFSample_Shot_* (Shot Anchor), DA_ACFSample_Finisher* (effects, sequence) for ACF.Sample.Finisher.
+Phase 5A: LS_ACFSample_Cut (two hard-cut shots, ends with a cut) and LS_ACFSample_Blend (one dolly shot with 1 s ease in / out)
+  for ACF.Sample.Sequencer Play Cut | Blend (cameras are Spawnables inside the sequences).
 Map /ActionCameraFramework/Samples/L_ACFCameraTest: open floor, single wall, narrow corridor with a low ceiling,
 pillars, a tall pillar tagged ACFLookTarget and six cylinders tagged ACFEnemy (near, far, boss behind the wall, small, behind the pillars, in the corridor). Uses the project's default game mode / pawn (nothing in
 REBoarGetch is changed). Writes Saved/ACFVerification/CreateManualTestAssets.json."""
@@ -259,6 +262,87 @@ def finisher_assets():
     OUT['finisher'] = [a.get_path_name() for a in (p, p_strike, p_over, p_fb, hit, tension, seq)]
 
 
+# --- Phase 5A: sample Level Sequences (ACF.Sample.Sequencer Play Cut / Blend) --------------------------------
+# Cameras are Spawnables inside the sequence (no binding to a level actor), placed for L_ACFCameraTest around the start.
+
+def ensure_level_sequence(name):
+    path = FOLDER + '/' + name
+    seq = unreal.load_asset(path + '.' + name)
+    if seq:
+        # 既存のアセットを再利用し、中身（Binding と Track）だけ作り直す（冪等）。
+        for binding in seq.get_bindings():
+            binding.remove()
+        for track in seq.get_tracks():
+            seq.remove_track(track)
+        return seq
+    return unreal.AssetToolsHelpers.get_asset_tools().create_asset(name, FOLDER, unreal.LevelSequence, unreal.LevelSequenceFactoryNew())
+
+
+def spawn_camera(seq, label, keys, fps):
+    """keys: [(seconds, (x, y, z), (pitch, yaw)), ...] -> spawnable Cine Camera with a transform track."""
+    binding = seq.add_spawnable_from_class(unreal.CineCameraActor)
+    binding.set_display_name(label)
+    track = binding.add_track(unreal.MovieScene3DTransformTrack)
+    section = track.add_section()
+    section.set_range(0, int(seq.get_playback_end()) + 1)  # 全区間（範囲外では Spawnable が既定の位置に戻ってしまう）
+    ch = section.get_all_channels()  # Location X Y Z, Rotation X(roll) Y(pitch) Z(yaw), Scale X Y Z
+    for seconds, loc, rot in keys:
+        frame = unreal.FrameNumber(int(round(seconds * fps)))
+        for i, v in enumerate(loc):
+            ch[i].add_key(frame, v)
+        ch[3].add_key(frame, 0.0)
+        ch[4].add_key(frame, rot[0])
+        ch[5].add_key(frame, rot[1])
+    for i in (6, 7, 8):
+        ch[i].set_default(1.0)
+    return binding
+
+
+def camera_cut(seq, cut_track, binding, start, end, fps, ease_in=0.0, ease_out=0.0):
+    section = cut_track.add_section()
+    section.set_range(int(start * fps), int(end * fps))
+    section.set_camera_binding_id(seq.get_binding_id(binding))
+    section.set_completion_mode(unreal.MovieSceneCompletionMode.RESTORE_STATE)  # back to the gameplay view target
+    if ease_in > 0 or ease_out > 0:
+        # Sequencer Scripting の API（Easing の各項目は Python から直接書けない）。Section は既定で組み込みの
+        # Easing 関数を持つので、Camera Cut はそれを PCM の ViewTarget Blend に変換する。
+        ticks = seq.get_tick_resolution().numerator / seq.get_tick_resolution().denominator
+        if ease_in > 0:
+            section.set_ease_in_duration(int(ease_in * ticks))
+        if ease_out > 0:
+            section.set_ease_out_duration(int(ease_out * ticks))
+    return section
+
+
+def level_sequences():
+    fps = 30
+    # Cut: two shots with a hard cut between them, then the playback ends with a cut back (ACF Return Blend).
+    seq = ensure_level_sequence('LS_ACFSample_Cut')
+    seq.set_display_rate(unreal.FrameRate(fps, 1))
+    seq.set_playback_start(0)
+    seq.set_playback_end(int(3.0 * fps))
+    a = spawn_camera(seq, 'Cam_Wide', [(0.0, (900, -900, 500), (-25, 135)), (1.5, (800, -700, 450), (-25, 140))], fps)
+    b = spawn_camera(seq, 'Cam_Low', [(1.5, (-500, 450, 80), (8, -40)), (3.0, (-450, 300, 90), (6, -30))], fps)
+    cut = seq.add_track(unreal.MovieSceneCameraCutTrack)
+    camera_cut(seq, cut, a, 0.0, 1.5, fps)
+    camera_cut(seq, cut, b, 1.5, 3.0, fps)
+    E.save_loaded_asset(seq, False)
+    OUT['LS_ACFSample_Cut'] = seq.get_path_name()
+
+    # Blend: one dolly shot that eases in from and out to the gameplay camera (PCM view target blend, 1 s each).
+    seq = ensure_level_sequence('LS_ACFSample_Blend')
+    seq.set_display_rate(unreal.FrameRate(fps, 1))
+    seq.set_playback_start(0)
+    seq.set_playback_end(int(4.0 * fps))
+    c = spawn_camera(seq, 'Cam_Dolly', [(0.0, (-700, -600, 350), (-20, 40)), (4.0, (-200, -800, 450), (-25, 75))], fps)
+    cut = seq.add_track(unreal.MovieSceneCameraCutTrack)
+    # Camera Cut Track の Can Blend（bCanBlend）は Python から設定できない（UPROPERTY() のみ）。UE 5.8 の実行時は Section の
+    # Ease In / Out をこのフラグに関係なく使うので再生には影響しない。Sequencer で編集するときは Can Blend を ON にすること。
+    camera_cut(seq, cut, c, 0.0, 4.0, fps, ease_in=1.0, ease_out=1.0)
+    E.save_loaded_asset(seq, False)
+    OUT['LS_ACFSample_Blend'] = seq.get_path_name()
+
+
 def subject(radius):
     s = unreal.ACFCameraFramingSubjectSettings()
     s.set_editor_property('include', True)
@@ -359,6 +443,7 @@ def build_map():
 try:
     presets()
     finisher_assets()
+    level_sequences()
     build_map()
 except Exception:
     OUT['error'] = traceback.format_exc()

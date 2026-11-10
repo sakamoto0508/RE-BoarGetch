@@ -42,6 +42,8 @@ namespace ACFTests
 		FRotator ControlRotation = FRotator::ZeroRotator;
 		bool bHasControlRotation = false;
 		float AspectRatio = 16.f / 9.f;
+		/** Phase 5A: 出力バイパス（ViewTarget が Modifier を通さない間の裏評価）として評価する。 */
+		bool bOutputBypassed = false;
 
 		void Fill(FACFCameraEvaluationContext& Context) const
 		{
@@ -49,6 +51,7 @@ namespace ACFTests
 			Context.ControlRotation = ControlRotation;
 			Context.bHasControlRotation = bHasControlRotation;
 			Context.AspectRatio = AspectRatio;
+			Context.bOutputBypassed = bOutputBypassed;
 		}
 
 		const FACFCameraEvaluationResult& Step(UACFCameraDirector* Director, float DeltaTime)

@@ -14,12 +14,86 @@
 #include "Nodes/ACFCameraNode_Collision.h"
 #include "Effects/ACFCameraBuiltinEffects.h"
 
+UACFCameraSubsystem::FOnPreEvaluate UACFCameraSubsystem::OnPreEvaluate;
+
+// -------------------------------------------------------------------------------------------------
+// 外部 ViewTarget（Phase 5A）: ACF を乗せない ViewTarget の集合と、ViewTarget 単位の出力ゲート
+
+void UACFCameraSubsystem::SetExternalViewTargets(const UObject* Source, TConstArrayView<AActor*> Targets)
+{
+	if (!Source)
+	{
+		return;
+	}
+	ExternalViewTargets.RemoveAll([Source](const FExternalViewTarget& Entry) { return Entry.Source.Get() == Source || !Entry.Source.IsValid() || !Entry.Target.IsValid(); });
+	for (AActor* Target : Targets)
+	{
+		if (Target)
+		{
+			ExternalViewTargets.Add({ Target, Source });
+		}
+	}
+}
+
+void UACFCameraSubsystem::AddExternalViewTarget(AActor* ViewTarget, UObject* Source)
+{
+	if (!ViewTarget || !Source)
+	{
+		return;
+	}
+	const bool bExists = ExternalViewTargets.ContainsByPredicate([&](const FExternalViewTarget& Entry) { return Entry.Target.Get() == ViewTarget && Entry.Source.Get() == Source; });
+	if (!bExists)
+	{
+		ExternalViewTargets.Add({ ViewTarget, Source });
+	}
+}
+
+void UACFCameraSubsystem::RemoveExternalViewTarget(AActor* ViewTarget, UObject* Source)
+{
+	ExternalViewTargets.RemoveAll([&](const FExternalViewTarget& Entry) { return Entry.Target.Get() == ViewTarget && Entry.Source.Get() == Source; });
+}
+
+bool UACFCameraSubsystem::IsExternalViewTarget(const AActor* ViewTarget) const
+{
+	if (!ViewTarget)
+	{
+		return false;
+	}
+	// Source か Target が破棄された登録は無効（次の SetExternalViewTargets で掃除される）。
+	return ExternalViewTargets.ContainsByPredicate([ViewTarget](const FExternalViewTarget& Entry) { return Entry.Target.Get() == ViewTarget && Entry.Source.IsValid(); });
+}
+
+void UACFCameraSubsystem::BroadcastPreEvaluate(float DeltaTime)
+{
+	if (LastPreEvaluateFrame != GFrameCounter)
+	{
+		LastPreEvaluateFrame = GFrameCounter;
+		OnPreEvaluate.Broadcast(*this, DeltaTime);
+	}
+}
+
+bool UACFCameraSubsystem::BeginOutputForViewTarget(AActor* ViewTarget, float DeltaTime)
+{
+	// ゲートの判定より前に、外部の所有権管理（Sequencer モジュール）に状態を確定させる。
+	BroadcastPreEvaluate(DeltaTime);
+	if (IsExternalViewTarget(ViewTarget))
+	{
+		return false;
+	}
+	if (ViewTarget)
+	{
+		LastOutputViewTarget = ViewTarget; // 裏評価の Upstream（戻り先のゲームプレイカメラ）
+	}
+	return true;
+}
+
 void UACFCameraSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	Director = NewObject<UACFCameraDirector>(this, TEXT("ACFCameraDirector"));
 	OutputModifierClass = GetDefault<UACFCameraSettings>()->ResolveOutputModifierClass();
 	WorldTickStartHandle = FWorldDelegates::OnWorldTickStart.AddUObject(this, &ThisClass::HandleWorldTickStart);
+	WorldPostActorTickHandle = FWorldDelegates::OnWorldPostActorTick.AddUObject(this, &ThisClass::HandleWorldPostActorTick);
 #if !UE_BUILD_SHIPPING
 	DebugDrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateUObject(this, &ThisClass::HandleDebugDraw));
 #endif
@@ -29,6 +103,8 @@ void UACFCameraSubsystem::Deinitialize()
 {
 	FWorldDelegates::OnWorldTickStart.Remove(WorldTickStartHandle);
 	WorldTickStartHandle.Reset();
+	FWorldDelegates::OnWorldPostActorTick.Remove(WorldPostActorTickHandle);
+	WorldPostActorTickHandle.Reset();
 #if !UE_BUILD_SHIPPING
 	UDebugDrawService::Unregister(DebugDrawHandle);
 	DebugDrawHandle.Reset();
@@ -190,6 +266,64 @@ bool UACFCameraSubsystem::IsOutputSuppressed() const
 	return Director && Director->IsOutputSuppressed();
 }
 
+int32 UACFCameraSubsystem::GetNumOutputSuppressions() const
+{
+	return Director ? Director->GetNumOutputSuppressions() : 0;
+}
+
+bool UACFCameraSubsystem::IsOutputBypassed() const
+{
+	return Director && Director->GetLastResult().bOutputBypassed;
+}
+
+bool UACFCameraSubsystem::BlendFromPose(const FACFCameraPose& FromPose, const FACFCameraBlendSettings& Blend)
+{
+	if (!Director || !Director->BlendFromPose(FromPose, Blend))
+	{
+		return false;
+	}
+	EnsureOutputAttached();
+	return true;
+}
+
+int32 UACFCameraSubsystem::SetAllOrbitRotations(FRotator Rotation, bool bInstant)
+{
+	return Director ? Director->SetAllOrbitRotations(Rotation, bInstant) : 0;
+}
+
+void UACFCameraSubsystem::HandleWorldPostActorTick(UWorld* World, ELevelTick TickType, float DeltaSeconds)
+{
+	// このフレームに Modifier 経由で評価済みなら何もしない（通常のゲームプレイ中のコストは比較 1 回だけ）。
+	// 評価されていないのは、更新された ViewTarget がすべて外部 ViewTarget だった（Sequencer の Camera Cut 中など）か、
+	// デバッグ用の CameraStyle で Modifier 自体が呼ばれなかった場合。
+	if (!Director || !Director->IsInfluencingOutput() || Director->GetLastEvaluatedFrame() == GFrameCounter)
+	{
+		return;
+	}
+	const APlayerCameraManager* CameraManager = GetCurrentCameraManager();
+	if (!CameraManager || CameraManager->GetWorld() != World || World->IsPaused())
+	{
+		return; // 別のワールド、カメラ未生成、または Pause 中（カメラ更新自体が走っていない）
+	}
+
+	// Upstream（ACF が乗る UE カメラ）: 最後に ACF が映っていた ViewTarget のカメラを、PCM と同じ手順で求める。
+	// これは外部カメラではなく「戻り先のゲームプレイカメラ」なので、素通し Preset や Aim Pose も戻り先基準で進む。
+	FMinimalViewInfo UpstreamPOV;
+	const FACFCameraPose& LastUpstream = Director->GetLastResult().UpstreamPose;
+	UpstreamPOV.Location = LastUpstream.Location;
+	UpstreamPOV.Rotation = LastUpstream.Rotation;
+	UpstreamPOV.FOV = CameraManager->DefaultFOV;
+	if (AActor* GameplayTarget = LastOutputViewTarget.Get())
+	{
+		GameplayTarget->CalcCamera(DeltaSeconds, UpstreamPOV);
+	}
+	else if (Director->GetLastResult().FrameNumber != 0)
+	{
+		UpstreamPOV.FOV = LastUpstream.FieldOfView;
+	}
+	EvaluateInternal(DeltaSeconds, UpstreamPOV, /*bOutputBypassed*/ true);
+}
+
 FACFCameraPose UACFCameraSubsystem::GetAimCameraPose() const
 {
 	if (Director && Director->GetLastResult().FrameNumber != 0)
@@ -215,12 +349,21 @@ FACFCameraPose UACFCameraSubsystem::GetVisualCameraPose() const
 
 const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateForOutput(float DeltaTime, const FMinimalViewInfo& UpstreamPOV)
 {
+	return EvaluateInternal(DeltaTime, UpstreamPOV, /*bOutputBypassed*/ false);
+}
+
+const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateInternal(float DeltaTime, const FMinimalViewInfo& UpstreamPOV, bool bOutputBypassed)
+{
 	check(Director);
+
+	// 外部の所有権管理（Sequencer モジュール）に、評価の前に状態を確定させる。1 フレーム 1 回。
+	BroadcastPreEvaluate(DeltaTime);
 
 	// Stage 1: context collection.
 	FACFCameraEvaluationContext Context;
 	Context.DeltaTime = DeltaTime;
 	Context.FrameNumber = GFrameCounter;
+	Context.bOutputBypassed = bOutputBypassed;
 	Context.UpstreamPose.Location = UpstreamPOV.Location;
 	Context.UpstreamPose.Rotation = UpstreamPOV.Rotation;
 	Context.UpstreamPose.FieldOfView = UpstreamPOV.FOV;

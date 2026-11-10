@@ -142,6 +142,29 @@ public:
 	bool ReleaseOutputSuppression(const UObject* Source, float BlendTime);
 	bool IsOutputSuppressed() const { return SuppressionSources.Num() > 0; }
 
+	/** 現在の抑制要求の数（Source ごとに 1 つ。同じ Source の重複は数えない）。 */
+	int32 GetNumOutputSuppressions() const { return SuppressionSources.Num(); }
+
+	/**
+	 * 画面を ACF 以外が握っているか（出力抑制中、または直前の評価が出力バイパス）。
+	 * Camera Sequence の Interrupt Policy はこれを「割り込み」として扱う。
+	 */
+	bool IsViewOwnedExternally() const { return IsOutputSuppressed() || LastResult.bOutputBypassed; }
+
+	/**
+	 * 外部カメラ（Sequencer の最終姿勢など）から、いま有効な ACF カメラへブレンドして戻る（Phase 5A）。
+	 * 次の Evaluate で「FromPose のスナップショット → 有効な要求」の遷移を開始する。要求の優先度・Rig の状態は
+	 * 変えない（ゲームプレイカメラを破棄しない）。要求が 1 つも無い、または Blend が Cut なら false。
+	 * PCM が ViewTarget Blend で戻している間は呼ばないこと（二重ブレンドになる）。
+	 */
+	bool BlendFromPose(const FACFCameraPose& FromPose, const FACFCameraBlendSettings& Blend);
+
+	/** すべての要求の Orbital Follow Node の向きを設定する（Sequencer 復帰時に ControlRotation と揃える用途）。 */
+	int32 SetAllOrbitRotations(const FRotator& Rotation, bool bInstant);
+
+	/** 最後に評価したフレーム（GFrameCounter）。未評価なら MAX_uint64。 */
+	uint64 GetLastEvaluatedFrame() const { return LastEvaluatedFrame; }
+
 	/**
 	 * Engine-agnostic camera input (X = yaw, Y = pitch, input units; nodes apply sensitivity).
 	 * AddCameraInput accumulates deltas (mouse); SetCameraInputRate holds a per-second rate (stick)
@@ -267,6 +290,12 @@ private:
 	UPROPERTY()
 	FACFCameraBlendSettings PendingReturnBlend;
 	bool bHasPendingReturnBlend = false;
+
+	/** BlendFromPose の予約（次の Evaluate で消費）。 */
+	UPROPERTY()
+	FACFCameraBlendSettings PendingEntryBlend;
+	FACFCameraPose PendingEntryPose;
+	bool bHasPendingEntryBlend = false;
 
 	UPROPERTY()
 	FACFCameraEvaluationResult LastResult;

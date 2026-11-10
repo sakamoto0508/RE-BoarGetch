@@ -364,6 +364,12 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationContext
 
 	/** Combat state of this local player (filled by the director from SetCombatState). */
 	FACFCameraCombatState Combat;
+
+	/**
+	 * 出力バイパス中の評価（Phase 5A）。現在の ViewTarget が Camera Modifier を通さない（Sequencer の Camera Cut が
+	 * ACameraActor を映している等）ため、この評価結果は画面に出ない。内部状態を最新に保つための裏評価である。
+	 */
+	bool bOutputBypassed = false;
 };
 
 /** Final result of the director for one frame (stage 6 of the pipeline). */
@@ -391,6 +397,13 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationResult
 	/** True while some source suppresses ACF output (it still evaluates so it can resume cleanly). */
 	UPROPERTY(BlueprintReadOnly, Category = "Camera")
 	bool bOutputSuppressed = false;
+
+	/**
+	 * 現在の ViewTarget が Camera Modifier を通さないため、ACF の結果が画面に出ていない（Sequencer の Camera Cut など）。
+	 * Weight は変えない（PCM の ViewTarget Blend と二重にフェードしないため）。評価は裏で続いている。
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Camera")
+	bool bOutputBypassed = false;
 
 	/**
 	 * Gameplay camera: upstream UE pose combined with Pose by Weight, BEFORE camera shakes and any

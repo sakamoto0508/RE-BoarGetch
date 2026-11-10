@@ -14,7 +14,8 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4A（Lock-On、Target Group / Group Framing）完了
 - Phase 4B（Combat Camera、Deoccluder、カメラ制約の調停 = Constraint Solver）完了
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
-- 次は Phase 5
+- Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
+- 次は Phase 5B
 
 ---
 
@@ -509,7 +510,8 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 
 - **Camera Shake**: そのまま使えます。壁際で Shake がカメラを壁へ押しても、Guard が手前で止めます。
 - **Guard の注意**: PCM の `SetViewTarget(..., BlendTime)` によるブレンドは Guard の後に PCM が行うので、Guard では防げません。ACF の使用中は PCM の ViewTarget ブレンドを使わないでください。
-- **Sequencer など**: 原則として ACF の出力を抑えます。自動検出はまだないので、`Suppress Output (Source=Self)` と `Release Output Suppression` を自分で呼んでください。抑制中も ACF は内部で評価を続けます。
+- **Sequencer（Level Sequence）**: Camera Cut を自動で検出し、Sequencer のカメラには ACF を乗せません（14 章）。`Suppress Output` を自分で呼ぶ必要はありません。
+- **ゲーム独自のカットシーンカメラ**: `Add ACF External View Target (カメラ Actor, Source)` で登録すると、その Actor が ViewTarget の間は ACF を乗せません（14 章）。
 - **照準と見た目**:
   - `Get Aim Camera Pose`
     - 値: `Lerp(UE カメラ, ACF(位置の演出 + Collision 後), Weight)`
@@ -664,6 +666,33 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - `ACF.Sample.Finisher Notify <Advance|Hold|Release|Finish|Cancel>`: Pawn を Actor として `Send ACF Camera Sequence Command For Actor` を呼びます（Anim Notify と同じ経路）
 - `ACF.Sample.Goto <Finisher|CorridorFinisher>`: Enemy_6 の 3.5m 手前 / 通路の中で Enemy_5 の 3m 手前
 
+**Level Sequencer（Phase 5A）**
+
+サンプルの Level Sequence が 2 本あります（`Scripts/CreateManualTestAssets.py` で再生成。カメラは Sequence 内の Spawnable なので、どのマップでも再生できますが、位置は `L_ACFCameraTest` のスタート地点に合わせてあります）。
+
+| アセット | 内容 | 終わり方 |
+|----------|------|----------|
+| `LS_ACFSample_Cut`（3 秒） | `Cam_Wide`（スタート地点を高い位置から見下ろす、1.5 秒）→ カット → `Cam_Low`（低い位置からあおる、1.5 秒） | カットで終わる → ACF の Return Blend（既定 EaseInOut 0.5 秒） |
+| `LS_ACFSample_Blend`（4 秒） | `Cam_Dolly`（左後方から右へ移動するドリー）。Camera Cut Section に Ease In / Out 各 1 秒 | Sequencer の Ease Out（PCM の ViewTarget Blend）で戻る。ACF は何も重ねない |
+
+準備: `ACF.Sample.Goto Start` → `ACF.Sample.Use ThirdPerson` → `ACF.Debug.Draw 2`（必要なら `showdebug camera`）。
+
+| 確認項目 | 手順 | 期待する見た目 |
+|----------|------|----------------|
+| カットで入って戻る | `ACF.Sample.Sequencer Play Cut` | すぐに高い位置のカメラに切り替わり（ACF のカメラは混ざらない）、1.5 秒後に低い位置のカメラへカット。終わると 0.5 秒でゲームプレイカメラへ滑らかに戻る。戻りの最初のフレームで跳ばない |
+| Ease In / Out | `ACF.Sample.Sequencer Play Blend` | 1 秒かけてゲームプレイカメラからドリーへ滑らかに移り、最後の 1 秒で戻る。速度は一定に上がって下がり、途中で段がついたり二重にブレンドしたりしない |
+| 途中停止・一時停止 | `Play Blend` の途中で `ACF.Sample.Sequencer Pause` → `Resume` → `Stop` | Pause 中はそのカメラで止まる。Stop でその場の姿勢から 0.5 秒で ACF カメラへ戻る |
+| 連続再生 | 再生中にもう一度 `ACF.Sample.Sequencer Play Cut` | 破綻せず、最後は ACF カメラへ戻る |
+| ロックオン中 | `ACF.Sample.LockOn 0` → `ACF.Sample.Sequencer Play Cut` → 終わるまで待つ | ロックオンのカメラ（Enemy_0 を捉えた構図）へ戻る。再生中に `ACF.Sample.Enemy Kill` すると、戻り先は通常カメラになる |
+| Finisher 中 | `ACF.Sample.Goto Finisher` → `ACF.Sample.LockOn 6` → `ACF.Sample.Finisher Play` → すぐ `ACF.Sample.Sequencer Play Cut` | 既定（Continue）では裏で Finisher の時間が進み、戻ると続きの Shot（終わっていればロックオン）が映る |
+| 戻り方の調整 | `ACF.Sample.Sequencer ReturnBlend 0` / `2`、`ControlRotation Match` / `Keep`、`Reset` | 0 でカット、2 で 2 秒かけて戻る。Match では Sequence の最後の向きのまま操作に戻る |
+| 状態 | `ACF.Sample.Sequencer Status` | `phase=InControl bypassed=1 suppressed=0` など（再生中）。終わると `phase=None bypassed=0` |
+| 外部 ViewTarget（Sequencer なし） | （コマンドはありません）BP で `Add ACF External View Target` → `Set View Target with Blend` | 自動テスト `.Sequencer.ExternalViewTargetCoreApiAndViewTargetBlend` で確認済み。登録した Camera Actor はそのまま映り、PCM のブレンドだけで行き来する |
+
+コマンド:
+- `ACF.Sample.Sequencer Play <Cut|Blend|アセットパス> [PlayRate=1]`: Level Sequence Actor を作って再生します（前の再生は止めます）
+- `ACF.Sample.Sequencer <Stop|Pause|Resume|Status|Reset>`、`ReturnBlend <秒>`、`ControlRotation <Keep|Match>`
+
 ## 10. 拡張（プログラマー向け）
 
 `UACFCameraNode` を継承し、`GetStage()`（Body / Aim / Framing / PostBlend）と `Evaluate` を実装します。
@@ -689,7 +718,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - Fallback は Shot ごとに 1 つです。Fallback 自体が成立するかは確認しません（Collision で寄せたまま再生します）。
 - Finisher の終了・Cancel 以外で、戻り先カメラのブレンドを再生側から指定する API はありません（ロックオン解除と同じく、通常の要求の解除は戻り先の Blend In）。
 - 通知（On Camera Sequence Event）はカメラ更新の直後にまとめて送られます（Finish / Cancel は呼んだ直後）。カメラ更新の途中には送りません。
-- Sequencer（Level Sequence）との連携は Phase 5 の予定です。今は Sequencer 側で `Suppress Output` を呼んでください。
+- Finisher の再生中に Level Sequence の Camera Cut が割り込むと、Interrupt Policy に従います（14 章）。
 - 実機での演出の見栄え（各 Shot の構図・ブレンド時間の既定値）は、サンプルのスクリーンショットでしか確認していません。
 
 **Combat / Deoccluder / Constraint Solver**
@@ -714,7 +743,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - ブレンド中に割り込むと、割り込まれた側の動きはそれ以降反映されません。
 - Collision は「ピボット → カメラ」の線上だけを見ます。視線上の遮蔽物は Deoccluder（Collision Node の設定）で扱います。
 - SpringArm と一致することは、静止時（Lag 収束後）と障害物ありで確認しました。移動中の過渡応答（Lag の式）は異なります。
-- Sequencer の自動検出、Blueprint 製の Node / Effect は未対応です。
+- Blueprint 製の Node / Effect は未対応です。
 - 演出は ACF カメラにかかります。UE カメラだけの場面では、素通し Preset を要求してください（6 章）。
 - Shake の PostProcess 出力は PCM に渡します。ただし PCM が作り直されると、それ以降の PostProcess は失われます（位置・回転・FOV は影響を受けない）。
 - 演出のステージは 2 つ（Collision の前と後）で固定です。演出ごとに段を選ぶことはできません（位置は前、回転・FOV は後）。
@@ -723,11 +752,11 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
-  - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 84 件です。
-  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*`（55 件）: Editor とゲームの両方で実行できます。
-  - `.Integration.*`（24 件）: `-game` でのみ実行されます。
-  - `.Samples.*`（5 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
+  - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
+- 自動テストは 102 件です。
+  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
+  - `.Integration.*`（24 件）、`.Sequencer.*`（14 件。実際の Level Sequence・PCM を使う）: `-game` でのみ実行されます。
+  - `.Samples.*`（6 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
   - ロック開始・解除（ブレンド中に 1 フレーム 40cm 超の飛びがない）、敵が周回・プレイヤーが移動しても両方が画面内
   - 近距離・遠距離のアーム長と FOV、重なり・真上でも NaN にならず Yaw を保持
@@ -751,6 +780,13 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
   - 実際の PCM: Shot Anchor の動的ショット（追従）と固定ショット（動かない）、対象の破棄で終了、狭い場所の Fallback / Skip / 寄せたまま再生、Shot ごとの Deoccluder（柱の裏の対象が実際の視線で見える / OFF では見えないまま）、Finisher 中の Collision Guard
   - Anim Notify / Notify State での進行・保持・終了（Actor 経由のルーティング）、攻撃者の Custom Time Dilation、Pause 中は時間が止まる
   - テストマップで 4C のコンソールコマンド一式（3 Shot の構図で攻撃者と敵が画面内、ロックオンへ戻る、演出が残らない、通路では Fallback、Cancel でカット）
+- Phase 5A のテスト（`.Sequencer.*` 14 件、`.Authority.*` 3 件、`.Samples.SequencerOnTestMap`）の確認内容:
+  - カットで入り / 戻る Sequence（裏で毎フレーム評価、Weight は 1 のまま、Return Blend の最初のフレームで跳ばない）、Ease In / Out（PCM のブレンド 1 本だけ。プローブ Modifier で ViewTarget ごとの出力を確認）
+  - Pause / Stop / 連続再生 / Level Sequence Actor の破棄、Keep State で終わる Sequence（ゲームがブレンド / カットで戻す）、終了と次の Camera Cut が同じフレーム（Stop + Play、OnFinished から再生）、重なる Sequence
+  - Camera Cut Track の無い Sequence、Camera Cut がゲームプレイの ViewTarget を指す Sequence、Camera Component を持つ普通の Actor、出力抑制の重複と解除順序
+  - Core の外部 ViewTarget API（Sequencer なし。未登録の Camera Actor、登録・Source の破棄、`SetViewTargetWithBlend` での出入り、`Blend ACF Camera From Pose`）
+  - Lock-On・Finisher（Continue / Pause / Cancel）との併用、ControlRotation、PCM の作り直し、ローカルプレイヤー 2 人の独立
+  - テストマップで `LS_ACFSample_Cut` / `LS_ACFSample_Blend` とロックオン中の再生（描画あり、スクリーンショット `ACF_5A_*`）
 
 ```bash
 UnrealEditor-Cmd.exe <project>.uproject -unattended -NullRHI -nosplash "-ExecCmds=Automation RunTests ActionCameraFramework.Director+ActionCameraFramework.Nodes+ActionCameraFramework.ThirdPerson" "-TestExit=Automation Test Queue Empty"
@@ -772,8 +808,122 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramewor
 | `Source/ActionCameraFramework/Public/Nodes/` | FixedPose / Follow / LookAt / OrbitalFollow / Composers / LockOn / ShotAnchor / Combat / GroupFraming / Collision と、共通部品の TargetTracking（Damping・Lookahead・テレポート）/ Framing（画面座標の計算）/ TargetGroup（グループの解決） |
 | `Source/ActionCameraFramework/Public/Effects/` | `ACFCameraEffect`（Layer 基底・Effect Preset）、`ACFCameraBuiltinEffects`（Punch / Recoil / Impulse / Shake / Speed FOV / Roll）、`ACFCameraEffectStack`（Instance・Envelope・合成）、`ACFCameraEffectTypes` |
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`、`ACFCameraDebugShake`（サンプル用 Shake）、`Tests/` |
+| `Source/ActionCameraFrameworkSequencer/` | Level Sequencer 連携（Phase 5A）。`ACFSequencerCameraSubsystem`（検出・復帰処理）、`ACFSequencerBlueprintLibrary`、`ACFSequencerSettings`、`ACFSequencerTypes`、`ACF.Sample.Sequencer` コマンド、`Tests/`。LevelSequence / MovieScene に依存するのはこのモジュールだけです |
 | `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 6 のツール置き場） |
 | `Content/Verification/` | 自動テスト用アセット |
-| `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence とテストマップ `L_ACFCameraTest` |
+| `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト |
 | `Docs/`（Git 管理外） | 引き継ぎ用の詳細資料（設計判断、監査結果、Effect Pipeline 設計） |
+
+## 14. Level Sequencer との連携（Phase 5A）
+
+Level Sequence の Camera Cut がカメラを握っている間、ACF は出力を止めて裏で評価を続け、終わるとゲームプレイカメラへ戻ります。
+設定なしで動きます（`ActionCameraFrameworkSequencer` モジュール。基本の Runtime モジュールは Sequencer に依存しません）。
+
+> **状態**: 完了。自動テスト（`.Sequencer.*` 14 件、`.Authority.*` 3 件、`.Samples.SequencerOnTestMap`）と Phase 1〜4C の回帰テストは全件合格しています（12 章）。
+> 描画ありのテストマップでカメラの切替と復帰を確認しました。Editor（PIE）で人が操作して見る確認は未実施です（9 章の手順）。
+
+**実際の呼び出し経路（UE 5.8 のソースとテストで確認）**
+- `APlayerCameraManager::DoUpdateCamera` は ViewTarget と、ブレンド中なら PendingViewTarget について `UpdateViewTarget` を 1 回ずつ呼び、どちらも最後に `ApplyCameraModifiers(DeltaTime, VT.POV)` で **その ViewTarget の POV を参照のまま** 全 Modifier に渡します。ViewTarget が Camera Actor でも Modifier は呼ばれます（デバッグ用の CameraStyle を除く）。
+- そのため ACF の Output Modifier は「いま更新している POV が ViewTarget / PendingViewTarget のどちらか」をアドレスで判別し、外部 ViewTarget の POV には書き込みません。テストでは ACF の直後（Priority 65）に置いたプローブ Modifier で、Ease In / Out・`SetViewTargetWithBlend` の間、1 フレームに 2 回呼ばれ、ゲームプレイ側の POV には ACF の姿勢が 100%、外部カメラ側の POV は手つかずで次の Modifier に届くことを確認しています。
+- Camera Cut は `MovieSceneCameraCutGameHandler` が `PC->SetViewTarget(カメラ, TransitionParams)` を呼びます（Ease In / Out は PCM の ViewTarget Blend）。カットで終わるときは保存した ViewTarget へ `SetViewTarget` で戻し、`bClientSimulatingViewTarget` を下ろします。Ease Out で戻るときは、ブレンド中も `bClientSimulatingViewTarget` が立ったままです。
+- 外部 ViewTarget しか更新されなかったフレームは、カメラ更新の後（`OnWorldPostActorTick`。UE 5.8 ではカメラ更新より後に呼ばれ、Pause 中は呼ばれない）に 1 回だけ裏評価します。
+
+**仕組み（UE 5.8 の実装に基づく）**
+- Camera Cut は `PlayerController::SetViewTarget` で PCM の ViewTarget を Sequencer のカメラに差し替えます。対象のプレイヤーは Level Sequence Actor の Owner（PlayerController のとき）、無ければ最初のローカルプレイヤーです。
+- UE 5.8 の PCM は、ViewTarget が Camera Actor でも Camera Modifier を適用します。何もしなければ ACF が Sequencer のカメラを上書きします。
+- そこで Sequencer のカメラを ACF の「**外部 ViewTarget**」として登録し、ACF はその ViewTarget にだけ出力しません。
+- 判定は ViewTarget 単位です。Camera Cut の Ease In / Ease Out（PCM の ViewTarget Blend）の間も、ゲームプレイ側の ViewTarget には ACF が 100% で乗り続け、2 つを混ぜるのは PCM のブレンドだけです。ACF の Weight は動かさないので、**ブレンドが二重になりません**。
+- Sequencer を ACF の Camera Sequence へ変換することはしません。ACF の要求・Rig の状態にも触れません。
+
+**カメラの所有権**
+
+| 状態（Phase） | 画面 | ACF |
+|---------------|------|-----|
+| None | ゲームプレイカメラ | 通常どおり出力 |
+| Blending In（Ease In） | PCM がゲームプレイ → Sequencer へブレンド | ゲームプレイ側の ViewTarget にだけ 100% で出力 |
+| In Control | Sequencer のカメラ | 出力なし。**裏で評価を続ける**（`Is ACF Output Bypassed` = true） |
+| Blending Out（Ease Out） | PCM が Sequencer → ゲームプレイへブレンド | ゲームプレイ側の ViewTarget にだけ 100% で出力 |
+
+**Sequencer 中の ACF の内部状態（継続方式を採用）**
+- 「評価を止めて復帰時に作り直す」方式と比べ、継続方式は復帰した最初のフレームから最新の構図を出せます（Damping が収束済みで、戻ってからカメラが追いかけて滑らない）。PCM がブレンドで戻る場合は、ブレンドの最初のフレームから正しい戻り先が必要なので、継続が必須です。
+- 裏で進むもの: Damping、要求間のブレンド、Lock-On の追従と対象破棄による自動解除、Combat の切替、演出の寿命、Instigator の破棄による解除。
+- コスト: ゲームプレイ中と同じ評価（Collision のトレースを含む）が Sequence 中も 1 フレーム 1 回走ります。
+- 裏評価の UE カメラ（Upstream）は、最後に ACF を出力した ViewTarget（通常は Pawn）のカメラです。`Get Aim Camera Pose` もその間はゲームプレイカメラを返します。画面の姿勢は `Get Visual Camera Pose` を使ってください。
+
+**Lock-On / Combat / Finisher との関係**
+- Lock-On・Combat の要求と状態は Sequence の間も残り、終わるとそのカメラへ戻ります。
+- Finisher（Camera Sequence）は、Sequencer に画面を奪われると **Interrupt Policy** に従います: Continue（時間は進む）/ Pause（止まる）/ Cancel（終了）。`Suppress Output` による抑制も同じ扱いです。
+
+**終了時の戻り方**
+
+| Sequencer の戻り方 | ACF の動作 | Return Kind |
+|--------------------|-----------|-------------|
+| Camera Cut の Ease Out（ブレンド） | 何も重ねない（PCM のブレンドだけ） | Sequencer Blend |
+| カット（再生終了の Restore、Stop、途中停止、Level Sequence Actor の破棄） | **Return Blend**（既定 EaseInOut 0.5 秒）で「前フレームに映っていた Sequencer の姿勢 → ACF カメラ」を補間 | Acf Return Blend |
+| カット、かつ Return Blend が Cut / ACF の要求が無い | そのままカット | Cut |
+
+- どの終わり方でも「ViewTarget がゲームプレイ側へ戻った」ことで復帰を処理するので、終わり方ごとの呼び出しは不要です。一時停止（Pause、Pause At End）中は Sequencer が握ったままです。
+- **ControlRotation**: 既定（Keep）は変更しません。ゲームプレイカメラは開始前の向きのまま戻ります。`Match Sequencer Camera` にすると、ゲームプレイカメラが見え始める時点で Sequencer の最後の向き（Roll 0、Pitch は PCM の制限内）を ControlRotation に入れ、Orbital Follow（Input Source = Camera Input）の向きも合わせます。
+
+**設定**（優先順: Level Sequence Actor 単位 > プレイヤー単位 > Project Settings > Plugins > Action Camera Framework - Sequencer）
+
+| 項目 | 意味 |
+|------|------|
+| Automatic Handling（Project Settings のみ） | OFF にすると検出も通知も行いません |
+| Enabled | OFF にすると、その対象では ACF が Sequencer のカメラの上にそのまま出力され、復帰処理も行いません |
+| Return Blend | カットで戻ったときに ACF が補うブレンド。Cut にすると Sequencer のカットを尊重します |
+| Control Rotation Policy | Keep / Match Sequencer Camera |
+| Suppress Output While Playing / Output Blend Time | Camera Cut が無くても、その Sequence の再生中は ACF の出力を抑制します（プレイヤー自身の Camera Component を Sequencer で直接動かす演出向け。Level Sequence Actor 単位の設定でだけ有効） |
+
+**Blueprint / C++ API**
+
+| ノード | 内容 |
+|--------|------|
+| `Get ACF Sequencer Camera State` (Player Controller) | Phase、再生中の Sequence 数、握っている Level Sequence Actor、Sequencer の ViewTarget、戻り先の ViewTarget、抑制中か、バイパス中か |
+| `Is Sequencer Controlling ACF Camera` (Player Controller) | Camera Cut が画面を握っているか（ブレンド中を含む） |
+| `Set / Clear ACF Sequencer Options For Player` | プレイヤー単位の設定の上書き |
+| `Set / Clear ACF Sequencer Options For Sequence` | Level Sequence Actor 単位の設定の上書き（Play の前に呼ぶ） |
+| `Get ACF Sequencer Camera Subsystem` → `On Sequencer Camera Started` / `On Sequencer Camera Ended` | 開始 / 終了（Return Kind つき）のイベント |
+| `Add / Remove ACF External View Target` (View Target, Source)、`Is ACF External View Target` | ゲーム独自のカットシーンカメラを「ACF を乗せないカメラ」として登録（Subsystem のノード） |
+| `Blend ACF Camera From Pose` (Pose, Blend) | 任意の姿勢から、いま有効な ACF カメラへブレンドして戻る |
+| `Is ACF Output Bypassed` / `Get Num ACF Output Suppressions` / `Set All ACF Orbit Rotations` | 状態の確認、Orbit の向きの一括設定 |
+
+```cpp
+// 状態とイベント
+UACFSequencerCameraSubsystem* Sequencer = UACFSequencerCameraSubsystem::Get(this);
+Sequencer->OnSequencerCameraEnded.AddDynamic(this, &AMyGameMode::OnCinematicEnded);
+// この Sequence だけ、カットで戻り、最後の向きから操作を再開する
+FACFSequencerCameraOptions Options;
+Options.ReturnBlend = FACFCameraBlendSettings::MakeCut();
+Options.ControlRotationPolicy = EACFSequencerControlRotationPolicy::MatchSequencerCamera;
+Sequencer->SetSequenceOptions(SequenceActor, Options);
+// ゲーム独自のカットシーンカメラ（Sequencer を使わない場合）
+Cameras->AddExternalViewTarget(CutsceneCameraActor, this);
+PlayerController->SetViewTargetWithBlend(CutsceneCameraActor, 1.f);   // PCM のブレンドだけで移る
+```
+
+**出力抑制が重なる場合**: 抑制は Source ごとに数えます（同じ Source の重複は 1 つ）。どの順番で解除しても、最後の 1 つが外れるまで出力は戻りません。破棄された Source は自動で外れます。Camera Cut では抑制を使わない（外部 ViewTarget）ので、ゲーム側の `Suppress Output` と干渉しません。
+
+**ローカルプレイヤー**: 状態・設定・外部 ViewTarget の登録はローカルプレイヤーごとに独立です。PlayerController / PCM が作り直されると、そのプレイヤーの判定だけをやり直します。
+
+**手動確認**: 9 章の「Level Sequencer（Phase 5A）」（サンプル `LS_ACFSample_Cut` / `LS_ACFSample_Blend`）。任意の Level Sequence も `ACF.Sample.Sequencer Play <アセットパス>` で再生できます。レベルに置いた Level Sequence Actor を普通に再生しても同じように検出されます。
+
+**自動テストの実行**
+
+```bash
+MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /Game/Level/L_Lobby -game -unattended -NullRHI -nosplash -nosound "-ExecCmds=Automation RunTests ActionCameraFramework.Sequencer+ActionCameraFramework.Authority" "-TestExit=Automation Test Queue Empty"
+```
+
+**制限**
+- 検出は PCM の ViewTarget と、Camera Cut が立てる `bClientSimulatingViewTarget`、追跡している Level Sequence Actor の再生状態から行います。Level Sequence Actor を使わない再生（独自の MovieScene プレイヤー）は検出しません。その場合は `Add ACF External View Target` を使ってください。
+- Camera Cut が ViewTarget を戻さない設定（Keep State）で終わった場合、同じカメラが映っている限り「握っている」とみなします。ゲームが ViewTarget を戻した時点で復帰を処理します。
+- Camera Cut がプレイヤーの Pawn 自身（ゲームプレイの ViewTarget）を指す場合は、Sequencer のカメラとはみなしません（ACF が乗ったままです）。必要なら Suppress Output While Playing を使ってください。
+- 外部 ViewTarget の判定は、PCM が ViewTarget の POV を参照のまま Modifier へ渡すことに依存しています。`UpdateViewTarget` を独自に書き換えた PCM の派生クラスでは働かない場合があります。
+- PCM が作り直された直後は、Sequencer が Camera Cut を掛け直すまでの 1 フレームほどゲームプレイカメラが見えます。
+- Return Blend は ACF の要求があるときだけ働きます（UE カメラだけの場面ではカットのままです）。
+- ゲームが登録せずに `SetViewTarget` / `SetViewTargetWithBlend` で Camera Actor へ切り替えた場合、ACF はその Camera Actor の上にも乗ります（ACF は ViewTarget に関係なく上に乗るレイヤー。Phase 4C までと同じ）。ACF を乗せたくないカメラは `Add ACF External View Target` で登録してください。
+- ゲーム独自の外部 ViewTarget からカットで戻した場合、ACF は自動では補間しません（Sequencer 連携だけが行う）。滑らかにしたい場合は `Blend ACF Camera From Pose` を呼ぶか、`SetViewTargetWithBlend` で戻してください。
+- Sequence が重なって再生された場合（A の再生中に B）、どのカメラを映すかは UE の Camera Cut の規則（後から始まった Sequence が優先、全部終わるとまとめて戻る）に従います。ACF は「最初の開始 → 最後の終了」を 1 組の Started / Ended として扱います。
+- サンプル `LS_ACFSample_Blend` の Camera Cut Track は、スクリプトから `Can Blend` を ON にできません（UE の内部プロパティ）。UE 5.8 の実行時は Section の Ease In / Out をこのフラグに関係なく使うので再生には影響しませんが、Sequencer でこのアセットを編集する場合は Track の `Can Blend` を ON にしてください（OFF のまま Section を動かすと Ease が消えます）。
+- Sequencer を Editor で開いて再生するプレビュー（PIE / ゲーム以外）は対象外です（Camera Cut がビューポートを直接動かし、PCM を使わないため）。

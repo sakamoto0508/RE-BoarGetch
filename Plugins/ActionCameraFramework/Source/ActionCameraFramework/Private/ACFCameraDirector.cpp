@@ -106,6 +106,7 @@ void UACFCameraDirector::RemoveAllRequests(bool bImmediate)
 		LastEvaluatedFrame = MAX_uint64; // the next evaluation in this frame must not reuse the cache
 		OutputConstraint.bValid = false;
 		bHasPendingReturnBlend = false;
+		bHasPendingEntryBlend = false;
 	}
 	else
 	{
@@ -326,6 +327,26 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 		BeginTransition(BestIndex, Context);
 	}
 
+	// Phase 5A: 外部カメラ（Sequencer など）からの復帰ブレンド。上の遷移より後に置くので、復帰と同じフレームに
+	// 有効な要求が替わっていても「外部の最終姿勢 → 新しく有効になった要求」になる。
+	if (bHasPendingEntryBlend)
+	{
+		bHasPendingEntryBlend = false;
+		if (ActiveHandle.IsValid() && !PendingEntryBlend.IsCut())
+		{
+			Transition.FromPose = PendingEntryPose;
+			Transition.FromWeight = 1.f; // 直前の画面は 100% 外部カメラ
+			Transition.ToWeight = 1.f;
+			Transition.Elapsed = 0.f;
+			Transition.LiveSource.Invalidate();
+			Transition.bBlendPose = true;
+			Transition.bActive = true;
+			TransitionBlend = PendingEntryBlend;
+			RetiredRequests.Reset();
+			ACFDirector::LogEvent(FString::Printf(TEXT("BlendFromPose -> %s (blend %.2fs)"), *ActiveHandle.ToString(), TransitionBlend.Duration));
+		}
+	}
+
 	// Stage 4 (time): advance the transition once for this frame.
 	const float Alpha = AdvanceTransition(Context.DeltaTime);
 	FACFCameraRequestEntry* LiveSource = Transition.bActive ? FindLiveEntry(Transition.LiveSource) : nullptr;
@@ -410,6 +431,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	const float OutputFactor = AdvanceSuppressionFade(Context.DeltaTime);
 	Result.Weight = Result.RequestWeight * OutputFactor;
 	Result.bOutputSuppressed = IsOutputSuppressed();
+	Result.bOutputBypassed = Context.bOutputBypassed;
 	Result.UpstreamPose = Context.UpstreamPose;
 	Result.AimPose = FACFCameraPose::Blend(Context.UpstreamPose, AimSource, Result.Weight);
 	Result.ActiveRequest = ActiveHandle;
@@ -488,6 +510,39 @@ bool UACFCameraDirector::SetOrbitRotation(FACFCameraRequestHandle Handle, const 
 		}
 	});
 	return bFound;
+}
+
+bool UACFCameraDirector::BlendFromPose(const FACFCameraPose& FromPose, const FACFCameraBlendSettings& Blend)
+{
+	if (Requests.IsEmpty() || Blend.IsCut())
+	{
+		return false;
+	}
+	PendingEntryPose = FromPose;
+	PendingEntryBlend = Blend;
+	bHasPendingEntryBlend = true;
+	return true;
+}
+
+int32 UACFCameraDirector::SetAllOrbitRotations(const FRotator& Rotation, bool bInstant)
+{
+	int32 Count = 0;
+	auto Apply = [&](FACFCameraRequestEntry& Entry)
+	{
+		Entry.Rig.ForEachNode([&](const UACFCameraNode& Node, FInstancedStruct* State)
+		{
+			if (const UACFCameraNode_OrbitalFollow* Orbit = Cast<UACFCameraNode_OrbitalFollow>(&Node))
+			{
+				Orbit->SetOrbitRotation(State, Rotation, bInstant);
+				++Count;
+			}
+		});
+	};
+	for (FACFCameraRequestEntry& Entry : Requests)
+	{
+		Apply(Entry);
+	}
+	return Count;
 }
 
 void UACFCameraDirector::PruneLostInstigators()

@@ -126,13 +126,14 @@ namespace ACFSequenceTests
 	}
 }
 
-using namespace ACFSequenceTests;
+// 注意: ファイルスコープの using namespace は Unity ビルドで後続のファイルへ漏れる（C4459）ので、各テストの中で行う。
 
 // -------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequenceFinisherStartEndTest, "ActionCameraFramework.Sequence.FinisherStartAndEnd", ACFTests::Flags)
 bool FACFSequenceFinisherStartEndTest::RunTest(const FString& Parameters)
 {
+	using namespace ACFSequenceTests;
 	FRig R;
 	const FACFCameraRequestHandle Gameplay = R.Gameplay();
 	R.Step();
@@ -190,6 +191,7 @@ bool FACFSequenceFinisherStartEndTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequenceShotsCutBlendTest, "ActionCameraFramework.Sequence.ShotsCutAndBlend", ACFTests::Flags)
 bool FACFSequenceShotsCutBlendTest::RunTest(const FString& Parameters)
 {
+	using namespace ACFSequenceTests;
 	FRig R;
 	const FACFCameraRequestHandle Gameplay = R.Gameplay();
 	R.Step();
@@ -250,6 +252,7 @@ bool FACFSequenceShotsCutBlendTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequenceEventsTest, "ActionCameraFramework.Sequence.EventsSkipHold", ACFTests::Flags)
 bool FACFSequenceEventsTest::RunTest(const FString& Parameters)
 {
+	using namespace ACFSequenceTests;
 	FRig R;
 	R.Gameplay();
 	UACFCameraSequence* Sequence = R.NewSequence();
@@ -335,6 +338,7 @@ bool FACFSequenceEventsTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequenceCancelEffectsTest, "ActionCameraFramework.Sequence.CancelAndEffectOwnership", ACFTests::Flags)
 bool FACFSequenceCancelEffectsTest::RunTest(const FString& Parameters)
 {
+	using namespace ACFSequenceTests;
 	FRig R;
 	const FACFCameraRequestHandle Gameplay = R.Gameplay();
 	R.Step();
@@ -434,6 +438,7 @@ bool FACFSequenceCancelEffectsTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequenceInterruptTest, "ActionCameraFramework.Sequence.InterruptAndReturn", ACFTests::Flags)
 bool FACFSequenceInterruptTest::RunTest(const FString& Parameters)
 {
+	using namespace ACFSequenceTests;
 	for (const EACFCameraSequenceInterruptPolicy Policy : { EACFCameraSequenceInterruptPolicy::Continue, EACFCameraSequenceInterruptPolicy::Pause, EACFCameraSequenceInterruptPolicy::Cancel })
 	{
 		const FString Name = UEnum::GetValueAsString(Policy);
@@ -505,6 +510,7 @@ bool FACFSequenceInterruptTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequenceLocalPlayersTest, "ActionCameraFramework.Sequence.LocalPlayersIndependent", ACFTests::Flags)
 bool FACFSequenceLocalPlayersTest::RunTest(const FString& Parameters)
 {
+	using namespace ACFSequenceTests;
 	FRig P1;
 	FRig P2;
 	P1.Gameplay();

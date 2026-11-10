@@ -18,6 +18,14 @@ public:
 	APlayerCameraManager* GetOwningCameraManager() const { return CameraOwner; }
 
 protected:
+	/**
+	 * いま PCM が更新している ViewTarget。APlayerCameraManager::UpdateViewTarget は ViewTarget の POV を参照のまま
+	 * Modifier へ渡すので、アドレスの一致で正確に分かる（ViewTarget Blend 中は切替元と行き先で 1 回ずつ呼ばれる）。
+	 * 分からない場合（PCM の派生クラスが別の POV を渡したなど）は null。
+	 */
+	AActor* GetViewTargetBeingUpdated(const FMinimalViewInfo& POV) const;
+
+protected:
 	TWeakObjectPtr<UACFCameraSubsystem> Subsystem;
 };
 

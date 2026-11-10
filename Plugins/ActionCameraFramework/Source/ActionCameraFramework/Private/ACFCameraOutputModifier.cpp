@@ -1,6 +1,7 @@
 #include "ACFCameraOutputModifier.h"
 #include "ACFCameraSubsystem.h"
 #include "Camera/CameraTypes.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Engine/Canvas.h"
 
 UACFCameraOutputModifier::UACFCameraOutputModifier()
@@ -19,6 +20,22 @@ UACFCameraSubsystem* UACFCameraModifierBase::GetSubsystem() const
 	return Subsystem.Get();
 }
 
+AActor* UACFCameraModifierBase::GetViewTargetBeingUpdated(const FMinimalViewInfo& POV) const
+{
+	if (CameraOwner)
+	{
+		if (&POV == &CameraOwner->PendingViewTarget.POV)
+		{
+			return CameraOwner->PendingViewTarget.Target;
+		}
+		if (&POV == &CameraOwner->ViewTarget.POV)
+		{
+			return CameraOwner->ViewTarget.Target;
+		}
+	}
+	return nullptr;
+}
+
 bool UACFCameraOutputModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& InOutPOV)
 {
 	// Deliberately does not call Super: the base class steps its own Alpha by DeltaTime on every
@@ -26,6 +43,13 @@ bool UACFCameraOutputModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& I
 	// comes from the director, which evaluates once per frame.
 	UACFCameraSubsystem* OwnerSubsystem = Subsystem.Get();
 	if (!OwnerSubsystem)
+	{
+		return false;
+	}
+
+	// Phase 5A: 外部 ViewTarget（Sequencer のカメラなど）には何も書かない。評価もしない:
+	// 同じフレームにゲームプレイ側の ViewTarget が更新されればそこで、されなければカメラ更新後の裏評価で 1 回だけ進む。
+	if (!OwnerSubsystem->BeginOutputForViewTarget(GetViewTargetBeingUpdated(InOutPOV), DeltaTime))
 	{
 		return false;
 	}
@@ -67,8 +91,8 @@ void UACFCameraOutputModifier::DisplayDebug(UCanvas* Canvas, const FDebugDisplay
 	const FACFCameraEvaluationResult Result = OwnerSubsystem->GetLastEvaluationResult();
 	FDisplayDebugManager& DisplayDebugManager = Canvas->DisplayDebugManager;
 	DisplayDebugManager.SetDrawColor(FColor::Cyan);
-	DisplayDebugManager.DrawString(FString::Printf(TEXT("   ACF active=%s requests=%d weight=%.3f (request %.3f, suppressed=%d) blending=%d alpha=%.3f"),
-		*Result.ActiveRequest.ToString(), Result.NumRequests, Result.Weight, Result.RequestWeight, Result.bOutputSuppressed ? 1 : 0, Result.bIsBlending ? 1 : 0, Result.BlendAlpha));
+	DisplayDebugManager.DrawString(FString::Printf(TEXT("   ACF active=%s requests=%d weight=%.3f (request %.3f, suppressed=%d, bypassed=%d) blending=%d alpha=%.3f"),
+		*Result.ActiveRequest.ToString(), Result.NumRequests, Result.Weight, Result.RequestWeight, Result.bOutputSuppressed ? 1 : 0, Result.bOutputBypassed ? 1 : 0, Result.bIsBlending ? 1 : 0, Result.BlendAlpha));
 	DisplayDebugManager.DrawString(FString::Printf(TEXT("   ACF pose loc=%s rot=%s fov=%.2f"),
 		*Result.Pose.Location.ToCompactString(), *Result.Pose.Rotation.ToCompactString(), Result.Pose.FieldOfView));
 }
@@ -84,7 +108,8 @@ UACFCameraCollisionGuardModifier::UACFCameraCollisionGuardModifier()
 
 bool UACFCameraCollisionGuardModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& InOutPOV)
 {
-	if (UACFCameraSubsystem* OwnerSubsystem = Subsystem.Get())
+	UACFCameraSubsystem* OwnerSubsystem = Subsystem.Get();
+	if (OwnerSubsystem && !OwnerSubsystem->IsExternalViewTarget(GetViewTargetBeingUpdated(InOutPOV)))
 	{
 		OwnerSubsystem->ApplyOutputCollisionGuard(InOutPOV.Location);
 	}
