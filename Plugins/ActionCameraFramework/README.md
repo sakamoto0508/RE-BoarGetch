@@ -15,7 +15,30 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4B（Combat Camera、Deoccluder、カメラ制約の調停 = Constraint Solver）完了
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
-- 次は Phase 5B
+- Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。設計リスクは再現しておらず、性能は未計測
+- 次は Phase 6B（監査結果の修正）。今後の計画は下の「開発ロードマップ」
+
+**開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
+
+| Phase | 内容 | ステータス |
+|-------|------|-----------|
+| 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
+| 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
+| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Not Started（次に着手） |
+| 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Not Started |
+| 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
+| 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
+| 7D | Advanced Occlusion Handling（複数点の遮蔽判定、可視率、一時透過。Trace 数を計測） | Not Started |
+| 7E | Camera Recorder / Replay（カメラ出力の再生。ゲームプレイの完全再現とは区別） | Not Started |
+| 7F | Spline / Rail Camera（Sequencer と重複する機能は実装しない） | Not Started |
+| 8 | 独立プラグインとしての完成検証（新規プロジェクトへの導入、パッケージビルド、手動操作テスト） | Not Started |
+
+Phase 6B の範囲と順序は、Phase 6A の監査結果で確定しています。Phase 7 以降の設計は、各 Phase の開始時に見直します。
+
+**決定済みの方針**（Phase 6A）
+- 対応する PlayerCameraManager: 正式なサポート対象は標準の `APlayerCameraManager` です。派生クラスは、`ApplyCameraModifiers` に ViewTarget / PendingViewTarget の POV を参照のまま渡すものが対象です（14 章の制限）。判定できない場合の表示と警告は Phase 6B で追加します。
+- モジュール: Core / Sequencer / Editor / Tests / Samples の責務分離を目標にします。Sequencer の別プラグイン化は Phase 8 で再評価します。
+- 保留: State-Driven Camera、Lens / Post Process、Editor Preview、専用の Preset 編集 UI。
 
 ---
 
@@ -709,7 +732,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - シーケンス: `FACFCameraSequencePlayer`（Director が所有し、Evaluate の中で 1 フレーム 1 回 Tick）。Shot は普通の要求なので、Shot 用の Node も通常の Node と同じ作り方です。Shot の成立判定には `UACFCameraDirector::ProbeCamera`（状態を持たない一時的な Rig で 1 回評価）を使えます。要求の削除で戻りのブレンドを指定するには `RemoveRequest(Handle, &Blend, /*bOverrideAnyReturn*/ true)`。
 - 新しい演出: `UACFCameraEffect` を継承し、`Evaluate` で `FACFCameraEffectOutput`（チャンネル・値・空間）を返します。状態は `GetRuntimeStateType`、後始末は `OnEnd` で行います。Envelope・Weight・減衰・合成はスタック側が行います。
 
-## 11. 制限（Phase 4C 時点）
+## 11. 制限（Phase 5A 時点）
 
 **Finisher / Camera Sequence**
 - シーケンス時間は Montage の再生位置を読みません（ACF はアニメーションに依存しない）。Duration だけで進む Shot は、Montage の速度変更に Play Rate で合わせる必要があります。正確に合わせたい切替は Anim Notify（イベント）で行ってください。
@@ -809,11 +832,11 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramewor
 | `Source/ActionCameraFramework/Public/Effects/` | `ACFCameraEffect`（Layer 基底・Effect Preset）、`ACFCameraBuiltinEffects`（Punch / Recoil / Impulse / Shake / Speed FOV / Roll）、`ACFCameraEffectStack`（Instance・Envelope・合成）、`ACFCameraEffectTypes` |
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`、`ACFCameraDebugShake`（サンプル用 Shake）、`Tests/` |
 | `Source/ActionCameraFrameworkSequencer/` | Level Sequencer 連携（Phase 5A）。`ACFSequencerCameraSubsystem`（検出・復帰処理）、`ACFSequencerBlueprintLibrary`、`ACFSequencerSettings`、`ACFSequencerTypes`、`ACF.Sample.Sequencer` コマンド、`Tests/`。LevelSequence / MovieScene に依存するのはこのモジュールだけです |
-| `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 6 のツール置き場） |
+| `Source/ActionCameraFrameworkEditor/` | Editor モジュール（現状は空。Phase 7A の Editor 専用機能の置き場） |
 | `Content/Verification/` | 自動テスト用アセット |
 | `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト |
-| `Docs/`（Git 管理外） | 引き継ぎ用の詳細資料（設計判断、監査結果、Effect Pipeline 設計） |
+| `Docs/`（Git 管理外） | 引き継ぎ用の詳細資料（`Roadmap.md` = 開発ロードマップ、`Audit_Phase6A.md` = 監査結果と Phase 6B の計画、設計判断、Effect Pipeline 設計） |
 
 ## 14. Level Sequencer との連携（Phase 5A）
 
