@@ -6,6 +6,7 @@
 #include "ACFSequencerCameraSubsystem.h"
 #include "ACFSequencerTestListener.h"
 #include "ACFSequencerTestProbeModifier.h"
+#include "ACFSequencerTestCameraManager.h"
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraDirector.h"
 #include "ACFCameraOutputModifier.h"
@@ -99,6 +100,8 @@ namespace ACFSeqTest
 		TWeakObjectPtr<UACFSequencerTestProbeModifier> Probe;
 		TWeakObjectPtr<AActor> GameplayViewTarget;
 		TWeakObjectPtr<APlayerCameraManager> OldCameraManager;
+		TSubclassOf<APlayerCameraManager> SavedCameraManagerClass; // B-2: テストが PCM のクラスを差し替えた場合の元のクラス
+		bool bSwappedCameraManager = false;
 		FVector SavedLocation = FVector::ZeroVector;
 		double Value = 0.0;
 		int32 Counter = 0;
@@ -286,6 +289,18 @@ namespace ACFSeqTest
 		void Cleanup()
 		{
 			FScenario& S = *State;
+			if (S.bSwappedCameraManager && S.Controller.IsValid())
+			{
+				// B-2: 差し替えた PCM を元のクラスで作り直す（後続のテストは標準 PCM で動く）。
+				APlayerCameraManager* Swapped = S.PCM();
+				S.Controller->PlayerCameraManagerClass = S.SavedCameraManagerClass;
+				S.Controller->SpawnPlayerCameraManager();
+				if (Swapped && S.PCM() != Swapped)
+				{
+					Swapped->Destroy();
+				}
+				S.bSwappedCameraManager = false;
+			}
 			if (APlayerCameraManager* M = S.PCM())
 			{
 				if (S.Probe.IsValid())
@@ -1920,6 +1935,384 @@ bool FACFSampleSequencerTest::RunTest(const FString& Parameters)
 	Shot(Steps, TEXT("ACF_5A_LockOnReturn"));
 	Exec(Steps, TEXT("ACF.Sample.LockOff 0"));
 	Exec(Steps, TEXT("ACF.Sample.Release 0"));
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+// =================================================================================================
+// Phase 6B / B-2: PlayerCameraManager の互換性。POV をコピーして Modifier に渡す派生 PCM（GameplayCameras など）では、
+// ACF は POV のアドレスで ViewTarget を判定できない。最終的な画面の姿勢と、ACF が書き込んだかどうかを確認する。
+
+namespace ACFSeqTest
+{
+	/** PCM を指定クラスで作り直す（後片付けで元のクラスに戻す）。 */
+	static bool UseCameraManagerClass(FScenario& S, UClass* Class)
+	{
+		APlayerCameraManager* Old = S.PCM();
+		if (!S.bSwappedCameraManager)
+		{
+			S.SavedCameraManagerClass = S.Controller->PlayerCameraManagerClass;
+			S.bSwappedCameraManager = true;
+		}
+		S.Controller->PlayerCameraManagerClass = Class;
+		S.Controller->SpawnPlayerCameraManager();
+		if (Old && S.PCM() != Old)
+		{
+			Old->Destroy();
+		}
+		return S.Test->TestTrue(FString::Printf(TEXT("PCM recreated as %s"), *GetNameSafe(Class)), S.PCM() && S.PCM()->IsA(Class));
+	}
+
+	/** 点 P と線分 AB の距離、と線分上の位置（0..1）。 */
+	static double DistanceToSegment(const FVector& P, const FVector& A, const FVector& B, double& OutAlpha)
+	{
+		const FVector AB = B - A;
+		OutAlpha = FMath::Clamp(FVector::DotProduct(P - A, AB) / AB.SizeSquared(), 0.0, 1.0);
+		return FVector::Dist(P, A + AB * OutAlpha);
+	}
+
+	/** Camera Cut（Ease なし）の再生中も Sequencer のカメラが映り、終了後は ACF の Return Blend で戻ること。 */
+	static void AddCameraCutRoundTrip(TArray<FStep>& Steps, EACFViewTargetResolution Expected)
+	{
+		Steps.Add([](FScenario& S)
+		{
+			S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+			S.SequenceA = MakeSequence(S, S.ActorA.Get(), 1.0);
+			SetReturnBlend(S, 0.5f);
+			return S.Test->TestNotNull(TEXT("sequence actor created"), S.SequenceA.Get());
+		});
+		WaitFrames(Steps, 5);
+		Steps.Add([Expected](FScenario& S)
+		{
+			S.CameraNear(GameplayLoc, 0.1, TEXT("Before the cut: ACF gameplay camera"));
+			const FACFCameraOutputDiagnostics D = S.Acf->GetOutputDiagnostics();
+			S.Test->TestTrue(FString::Printf(TEXT("Before the cut: view target resolved by %s"), *UEnum::GetValueAsString(D.LastResolution)), D.LastResolution == Expected);
+			S.Test->TestTrue(FString::Printf(TEXT("Before the cut: ACF wrote every pass (%d of %d)"), D.Writes, D.Passes), D.Passes >= 1 && D.Writes == D.Passes);
+			S.Test->TestEqual(TEXT("Before the cut: no unresolved pass"), D.UnresolvedPasses, 0);
+			Player(S.SequenceA)->Play();
+			return true;
+		});
+		RetryUntil(Steps, [](FScenario& S) { return S.Phase() == EACFSequencerCameraPhase::InControl; });
+		Steps.Add([](FScenario& S) { S.ResetSamples(); return true; });
+		WaitFrames(Steps, 20);
+		Steps.Add([Expected](FScenario& S)
+		{
+			S.CameraNear(CineLoc, 0.1, TEXT("Camera Cut: the Sequencer camera is on screen (ACF does not overwrite it)"));
+			S.Test->TestEqual(TEXT("Camera Cut: Sequencer FOV"), S.PCM()->GetFOVAngle(), CineFov, 0.01f);
+			S.Test->TestTrue(TEXT("Camera Cut: ACF output bypassed"), S.Acf->IsOutputBypassed());
+			S.Test->TestTrue(FString::Printf(TEXT("Camera Cut: ACF keeps evaluating in the background (lag %d)"), S.MaxEvaluationLag), S.MaxEvaluationLag <= 1);
+			S.Test->TestTrue(TEXT("Camera Cut: ACF pose is the gameplay camera"), S.Acf->GetLastEvaluationResult().Pose.Location.Equals(GameplayLoc, 0.1));
+			const FACFCameraOutputDiagnostics D = S.Acf->GetOutputDiagnostics();
+			S.Test->TestTrue(FString::Printf(TEXT("Camera Cut: view target resolved by %s"), *UEnum::GetValueAsString(D.LastResolution)), D.LastResolution == Expected);
+			S.Test->TestTrue(FString::Printf(TEXT("Camera Cut: ACF wrote nothing (%d writes, %d passes)"), D.Writes, D.Passes), D.Writes == 0);
+			S.Test->TestEqual(TEXT("Camera Cut: no unresolved pass"), D.UnresolvedPasses, 0);
+			return true;
+		});
+		RetryUntil(Steps, [](FScenario& S) { return S.Phase() == EACFSequencerCameraPhase::None; });
+		Steps.Add([](FScenario& S)
+		{
+			S.Test->TestTrue(TEXT("Return: ACF return blend"), S.Listener->LastReturnKind == EACFSequencerReturnKind::AcfReturnBlend);
+			S.CameraNear(CineLoc, GameplayToCine * 0.2, TEXT("Return, first frame: close to the Sequencer's last pose"));
+			S.ResetSamples();
+			return true;
+		});
+		RetryUntil(Steps, [](FScenario& S) { return !S.Acf->GetLastEvaluationResult().bIsBlending; });
+		Steps.Add([](FScenario& S)
+		{
+			S.CameraNear(GameplayLoc, 0.1, TEXT("After the return blend: gameplay camera"));
+			S.Test->TestTrue(FString::Printf(TEXT("Return: smooth (max %.1f cm / frame)"), S.MaxFrameJump), S.MaxFrameJump < GameplayToCine * 0.2);
+			return true;
+		});
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFPcmCompatCopyCutTest, "ActionCameraFramework.Sequencer.PcmCompat.CopyingPcmCameraCut", ACFSeqTest::Flags)
+bool FACFPcmCompatCopyCutTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		if (!UseCameraManagerClass(S, AACFSequencerTestCameraManager::StaticClass()))
+		{
+			return false;
+		}
+		S.Handle = RequestGameplay(S);
+		return true;
+	});
+	AddCameraCutRoundTrip(Steps, EACFViewTargetResolution::SingleViewTarget);
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFPcmCompatSingleViewCutTest, "ActionCameraFramework.Sequencer.PcmCompat.SingleViewPcmCameraCut", ACFSeqTest::Flags)
+bool FACFPcmCompatSingleViewCutTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		if (!UseCameraManagerClass(S, AACFSequencerTestCameraManager_Single::StaticClass()))
+		{
+			return false;
+		}
+		S.Handle = RequestGameplay(S);
+		return true;
+	});
+	AddCameraCutRoundTrip(Steps, EACFViewTargetResolution::SingleViewTarget);
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFPcmCompatGameplayCamerasTest, "ActionCameraFramework.Sequencer.PcmCompat.GameplayCamerasPcmCameraCut", ACFSeqTest::Flags)
+bool FACFPcmCompatGameplayCamerasTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	// GameplayCameras プラグインには依存しない（クラスを名前で探す）。プラグインが無効なら何もしない。
+	UClass* GameplayCamerasPcm = FindObject<UClass>(nullptr, TEXT("/Script/GameplayCameras.GameplayCamerasPlayerCameraManager"));
+	if (!GameplayCamerasPcm)
+	{
+		AddWarning(TEXT("Skipped: GameplayCameras plugin is not loaded."));
+		return true;
+	}
+	TArray<FStep> Steps;
+	Steps.Add([GameplayCamerasPcm](FScenario& S)
+	{
+		if (!UseCameraManagerClass(S, GameplayCamerasPcm))
+		{
+			return false;
+		}
+		S.Handle = RequestGameplay(S);
+		return true;
+	});
+	AddCameraCutRoundTrip(Steps, EACFViewTargetResolution::SingleViewTarget);
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFPcmCompatCopyBlendTest, "ActionCameraFramework.Sequencer.PcmCompat.CopyingPcmViewTargetBlend", ACFSeqTest::Flags)
+bool FACFPcmCompatCopyBlendTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	// 判定できないブレンドの警告は PCM ごとに 1 回だけ（毎フレームではない）。
+	AddExpectedMessagePlain(TEXT("cannot tell which view target the modifier pass belongs to"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		if (!UseCameraManagerClass(S, AACFSequencerTestCameraManager::StaticClass()))
+		{
+			return false;
+		}
+		S.Handle = RequestGameplay(S);
+		S.GameplayViewTarget = S.PCM()->GetViewTarget();
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot); // 外部 ViewTarget
+		S.ActorB = SpawnPoint(S, CineLocB);               // 登録しない普通の ViewTarget
+		S.Acf->AddExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
+		return true;
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.1, TEXT("Single view target: ACF camera"));
+		S.ResetSamples();
+		S.Controller->SetViewTargetWithBlend(S.ActorB.Get(), 1.f, VTBlend_Linear); // 外部でない ViewTarget 同士のブレンド
+		return true;
+	});
+	WaitFrames(Steps, 20);
+	Steps.Add([](FScenario& S)
+	{
+		const AACFSequencerTestCameraManager* M = Cast<AACFSequencerTestCameraManager>(S.PCM());
+		S.Test->TestTrue(TEXT("Gameplay -> gameplay blend: two modifier passes"), M && M->PassesThisFrame == 2);
+		S.CameraNear(GameplayLoc, 0.1, TEXT("Gameplay -> gameplay blend: ACF on both passes (same as the standard PCM)"));
+		const FACFCameraOutputDiagnostics D = S.Acf->GetOutputDiagnostics();
+		S.Test->TestTrue(TEXT("Gameplay -> gameplay blend: SameDecision"), D.LastResolution == EACFViewTargetResolution::SameDecision);
+		S.Test->TestTrue(FString::Printf(TEXT("Gameplay -> gameplay blend: ACF wrote both passes (%d of %d)"), D.Writes, D.Passes), D.Passes == 2 && D.Writes == 2);
+		S.Test->TestEqual(TEXT("Gameplay -> gameplay blend: nothing unresolved"), D.UnresolvedPasses, 0);
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.PCM()->PendingViewTarget.Target == nullptr; });
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.1, TEXT("After the gameplay blend: ACF camera"));
+		S.Controller->SetViewTargetWithBlend(S.ActorA.Get(), 1.f, VTBlend_Linear); // 外部 ViewTarget へのブレンド
+		return true;
+	});
+	WaitFrames(Steps, 20);
+	Steps.Add([](FScenario& S)
+	{
+		// 2 回の Modifier 呼び出しのどちらが外部 ViewTarget のものか分からない。ACF は外部カメラを上書きしないよう、
+		// どちらにも書かない（ゲームプレイ側は UE のカメラ = ActorB の位置のまま）。画面は ActorB と外部カメラの間。
+		double Alpha = 0.0;
+		const double Off = DistanceToSegment(S.Camera(), CineLocB, CineLoc, Alpha);
+		S.Test->TestTrue(FString::Printf(TEXT("Gameplay -> external blend (ambiguous): screen on the UE blend line, not the ACF camera (off %.2f cm, alpha %.2f)"), Off, Alpha),
+			Off < 1.0 && Alpha > 0.05 && Alpha < 0.95);
+		S.Test->TestFalse(TEXT("Ambiguous: the camera is not the ACF camera"), S.Camera().Equals(GameplayLoc, 1.0));
+		S.Test->TestEqual(TEXT("Ambiguous: ACF weight untouched"), S.Acf->GetLastEvaluationResult().Weight, 1.f);
+		const FACFCameraOutputDiagnostics D = S.Acf->GetOutputDiagnostics();
+		S.Test->TestTrue(TEXT("Ambiguous: reported as Unresolved"), D.LastResolution == EACFViewTargetResolution::Unresolved);
+		S.Test->TestTrue(FString::Printf(TEXT("Ambiguous: ACF wrote no pass (%d writes, %d passes)"), D.Writes, D.Passes), D.Passes == 2 && D.Writes == 0);
+		S.Test->TestTrue(FString::Printf(TEXT("Ambiguous: unresolved passes counted (%d)"), D.UnresolvedPasses), D.UnresolvedPasses >= 2);
+		S.Test->TestTrue(TEXT("Ambiguous: the POV copy is reported"), D.bPOVCopied);
+		S.Test->TestTrue(TEXT("Ambiguous: ACF keeps evaluating in the background"), S.Acf->IsOutputBypassed() && S.Acf->IsActiveCamera(S.Handle));
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.PCM()->PendingViewTarget.Target == nullptr; });
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(CineLoc, 0.1, TEXT("External view target only: its own camera (ACF does not overwrite it)"));
+		S.Test->TestTrue(TEXT("External view target only: ACF bypassed"), S.Acf->IsOutputBypassed());
+		S.Test->TestTrue(TEXT("External view target only: SingleViewTarget, nothing written"), S.Acf->GetOutputDiagnostics().LastResolution == EACFViewTargetResolution::SingleViewTarget && S.Acf->GetOutputDiagnostics().Writes == 0);
+		S.Acf->RemoveExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.1, TEXT("Registration removed: ACF camera again"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+namespace ACFSeqTest
+{
+	/**
+	 * ViewTarget が正確に分かる PCM（標準 PCM / 連携 API を使う派生 PCM）: ゲームプレイ → 外部カメラへの SetViewTargetWithBlend で、
+	 * ゲームプレイ側の呼び出しには ACF が 100%、外部カメラ側には 0%。画面は ACF カメラと外部カメラの間（ブレンドは PCM の 1 本だけ）。
+	 */
+	static void AddExactBlendIntoExternal(TArray<FStep>& Steps, EACFViewTargetResolution Expected)
+	{
+		Steps.Add([](FScenario& S)
+		{
+			S.Handle = RequestGameplay(S);
+			S.GameplayViewTarget = S.PCM()->GetViewTarget();
+			S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+			S.Acf->AddExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
+			return true;
+		});
+		WaitFrames(Steps, 5);
+		Steps.Add([](FScenario& S)
+		{
+			S.CameraNear(GameplayLoc, 0.1, TEXT("Before the blend: ACF camera"));
+			S.ResetSamples();
+			S.Controller->SetViewTargetWithBlend(S.ActorA.Get(), 1.f, VTBlend_Linear);
+			return true;
+		});
+		WaitFrames(Steps, 20);
+		Steps.Add([Expected](FScenario& S)
+		{
+			double Alpha = 0.0;
+			const double Off = DistanceToSegment(S.Camera(), GameplayLoc, CineLoc, Alpha);
+			S.Test->TestTrue(FString::Printf(TEXT("Blend: screen between the ACF camera and the external camera (off %.2f cm, alpha %.2f)"), Off, Alpha), Off < 1.0 && Alpha > 0.05 && Alpha < 0.95);
+			const FACFCameraOutputDiagnostics D = S.Acf->GetOutputDiagnostics();
+			S.Test->TestTrue(FString::Printf(TEXT("Blend: view target resolved by %s"), *UEnum::GetValueAsString(D.LastResolution)), D.LastResolution == Expected);
+			S.Test->TestTrue(FString::Printf(TEXT("Blend: ACF wrote the gameplay pass only (%d writes, %d passes)"), D.Writes, D.Passes), D.Passes == 2 && D.Writes == 1);
+			S.Test->TestEqual(TEXT("Blend: nothing unresolved"), D.UnresolvedPasses, 0);
+			S.Test->TestEqual(TEXT("Blend: ACF weight untouched (single PCM blend)"), S.MinAcfWeight, 1.f);
+			S.Test->TestFalse(TEXT("Blend: ACF does not blend on its own"), S.bAcfBlended);
+			return true;
+		});
+		RetryUntil(Steps, [](FScenario& S) { return S.PCM()->PendingViewTarget.Target == nullptr; });
+		Steps.Add([](FScenario& S)
+		{
+			S.CameraNear(CineLoc, 0.1, TEXT("After the blend: the external camera"));
+			S.Test->TestTrue(FString::Printf(TEXT("Blend: smooth (max %.1f cm / frame)"), S.MaxFrameJump), S.MaxFrameJump < GameplayToCine * 0.05);
+			S.Test->TestEqual(TEXT("After the blend: ACF wrote nothing"), S.Acf->GetOutputDiagnostics().Writes, 0);
+			S.Acf->RemoveExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
+			return true;
+		});
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFPcmCompatExplicitTest, "ActionCameraFramework.Sequencer.PcmCompat.ExplicitViewTargetApi", ACFSeqTest::Flags)
+bool FACFPcmCompatExplicitTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S) { return UseCameraManagerClass(S, AACFSequencerTestCameraManager_Explicit::StaticClass()); });
+	AddExactBlendIntoExternal(Steps, EACFViewTargetResolution::Explicit);
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFPcmCompatStandardTest, "ActionCameraFramework.Sequencer.PcmCompat.StandardPcmUnchanged", ACFSeqTest::Flags)
+bool FACFPcmCompatStandardTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	AddExactBlendIntoExternal(Steps, EACFViewTargetResolution::POVAddress);
+	Steps.Add([](FScenario& S)
+	{
+		S.Controller->SetViewTarget(S.GameplayViewTarget.Get());
+		S.Acf->ReleaseAllCameras(true);
+		S.Handle = RequestGameplay(S);
+		S.Test->TestFalse(TEXT("Standard PCM: the POV is never a copy"), S.Acf->GetOutputDiagnostics().bPOVCopied);
+		return true;
+	});
+	AddCameraCutRoundTrip(Steps, EACFViewTargetResolution::POVAddress);
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFPcmCompatLocalPlayersTest, "ActionCameraFramework.Sequencer.PcmCompat.LocalPlayersKeepTheirOwnDiagnostics", ACFSeqTest::Flags)
+bool FACFPcmCompatLocalPlayersTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	// 2 人目の PlayerController の BeginPlay でホストプロジェクトの HUD が出すエラー（LocalPlayersAreIndependent と同じ。ACF とは無関係）。
+	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		// 1 人目: POV をコピーする PCM。2 人目: 標準 PCM。
+		if (!UseCameraManagerClass(S, AACFSequencerTestCameraManager::StaticClass()))
+		{
+			return false;
+		}
+		S.Handle = RequestGameplay(S);
+		FString Error;
+		S.SecondPlayer = S.World()->GetGameInstance()->CreateLocalPlayer(FPlatformUserId::CreateFromInternalId(1), Error, true);
+		return S.Test->TestTrue(FString::Printf(TEXT("second local player created %s"), *Error), S.SecondPlayer.IsValid());
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		UACFCameraSubsystem* Acf2 = S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>();
+		if (!S.Test->TestNotNull(TEXT("second ACF subsystem"), Acf2))
+		{
+			return false;
+		}
+		S.HandleB = Acf2->RequestCamera(MakeFixedPreset(S, SecondLoc, FRotator(0.f, 180.f, 0.f), 70.f), FACFCameraRequestParams());
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+		S.SequenceA = MakeSequence(S, S.ActorA.Get(), 30.0); // Owner なし → 1 人目
+		Player(S.SequenceA)->Play();
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.Phase() == EACFSequencerCameraPhase::InControl; });
+	WaitFrames(Steps, 10);
+	Steps.Add([](FScenario& S)
+	{
+		const APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		const UACFCameraSubsystem* Acf2 = S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>();
+		S.CameraNear(CineLoc, 0.1, TEXT("Player 1 (POV-copying PCM): Sequencer camera"));
+		const FACFCameraOutputDiagnostics D1 = S.Acf->GetOutputDiagnostics();
+		S.Test->TestTrue(TEXT("Player 1: SingleViewTarget, nothing written"), D1.LastResolution == EACFViewTargetResolution::SingleViewTarget && D1.Writes == 0 && D1.bPOVCopied);
+		const FACFCameraOutputDiagnostics D2 = Acf2->GetOutputDiagnostics();
+		S.Test->TestTrue(FString::Printf(TEXT("Player 2 (standard PCM): own diagnostics (%s, %s)"), *D2.CameraManagerClass.ToString(), *UEnum::GetValueAsString(D2.LastResolution)),
+			D2.LastResolution == EACFViewTargetResolution::POVAddress && !D2.bPOVCopied && D2.UnresolvedPasses == 0);
+		S.Test->TestTrue(FString::Printf(TEXT("Player 2: ACF wrote every pass (%d of %d)"), D2.Writes, D2.Passes), D2.Passes >= 1 && D2.Writes == D2.Passes);
+		S.Test->TestTrue(TEXT("Player 2: its ACF camera on screen"), PC2 && PC2->PlayerCameraManager && PC2->PlayerCameraManager->GetCameraLocation().Equals(SecondLoc, 0.1));
+		S.Test->TestFalse(TEXT("Player 2: not bypassed"), Acf2->IsOutputBypassed());
+		Player(S.SequenceA)->Stop();
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.Phase() == EACFSequencerCameraPhase::None && !S.Acf->GetLastEvaluationResult().bIsBlending; });
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.1, TEXT("Player 1 back on the ACF camera"));
+		return true;
+	});
 	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
 	return true;
 }

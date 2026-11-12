@@ -22,6 +22,8 @@ protected:
 	 * いま PCM が更新している ViewTarget。APlayerCameraManager::UpdateViewTarget は ViewTarget の POV を参照のまま
 	 * Modifier へ渡すので、アドレスの一致で正確に分かる（ViewTarget Blend 中は切替元と行き先で 1 回ずつ呼ばれる）。
 	 * 分からない場合（PCM の派生クラスが別の POV を渡したなど）は null。
+	 * ACF 自身の Modifier は Phase 6B / B-2 から UACFCameraSubsystem::BeginOutputForModifierPass（PCM の状態や
+	 * FACFScopedOutputViewTarget からも判定する）を使う。これは派生クラス向けに残している。
 	 */
 	AActor* GetViewTargetBeingUpdated(const FMinimalViewInfo& POV) const;
 

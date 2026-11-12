@@ -16,7 +16,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。設計リスクは再現しておらず、性能は未計測
-- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測、`Docs/Phase6B_B1_Measurement.md`）が完了し、次は B-2。今後の計画は下の「開発ロードマップ」
+- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測）と B-2（PlayerCameraManager の互換性、15 章）が完了し、次は B-3。今後の計画は下の「開発ロードマップ」
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -24,7 +24,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 |-------|------|-----------|
 | 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
-| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1 計測の土台と実測: Completed。次は B-2） |
+| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1 計測・B-2 PCM 互換性: Completed。次は B-3） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Not Started |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
@@ -36,7 +36,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 Phase 6B の範囲と順序は、Phase 6A の監査結果で確定しています。Phase 7 以降の設計は、各 Phase の開始時に見直します。
 
 **決定済みの方針**（Phase 6A）
-- 対応する PlayerCameraManager: 正式なサポート対象は標準の `APlayerCameraManager` です。派生クラスは、`ApplyCameraModifiers` に ViewTarget / PendingViewTarget の POV を参照のまま渡すものが対象です（14 章の制限）。判定できない場合の表示と警告は Phase 6B で追加します。
+- 対応する PlayerCameraManager: 標準の `APlayerCameraManager` と、その派生クラスです。POV をコピーして Modifier に渡す派生クラス（GameplayCameras の PCM など）は条件つきで対応します。条件・導入方法・診断は 15 章を参照してください。
 - モジュール: Core / Sequencer / Editor / Tests / Samples の責務分離を目標にします。Sequencer の別プラグイン化は Phase 8 で再評価します。
 - 保留: State-Driven Camera、Lens / Post Process、Editor Preview、専用の Preset 編集 UI。
 
@@ -787,10 +787,10 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 108 件です。
+- 自動テストは 115 件です。
   - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
   - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
-  - `.Integration.*`（24 件）、`.Sequencer.*`（14 件。実際の Level Sequence・PCM を使う）: `-game` でのみ実行されます。
+  - `.Integration.*`（24 件）、`.Sequencer.*`（21 件。実際の Level Sequence・PCM を使う。うち `.Sequencer.PcmCompat.*` 7 件は Phase 6B / B-2 の PCM 互換性、15 章）: `-game` でのみ実行されます。
   - `.Samples.*`（6 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
   - ロック開始・解除（ブレンド中に 1 フレーム 40cm 超の飛びがない）、敵が周回・プレイヤーが移動しても両方が画面内
@@ -954,7 +954,7 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /Game/Level/L_Lobby -
 - 検出は PCM の ViewTarget と、Camera Cut が立てる `bClientSimulatingViewTarget`、追跡している Level Sequence Actor の再生状態から行います。Level Sequence Actor を使わない再生（独自の MovieScene プレイヤー）は検出しません。その場合は `Add ACF External View Target` を使ってください。
 - Camera Cut が ViewTarget を戻さない設定（Keep State）で終わった場合、同じカメラが映っている限り「握っている」とみなします。ゲームが ViewTarget を戻した時点で復帰を処理します。
 - Camera Cut がプレイヤーの Pawn 自身（ゲームプレイの ViewTarget）を指す場合は、Sequencer のカメラとはみなしません（ACF が乗ったままです）。必要なら Suppress Output While Playing を使ってください。
-- 外部 ViewTarget の判定は、PCM が ViewTarget の POV を参照のまま Modifier へ渡すことに依存しています。`UpdateViewTarget` を独自に書き換えた PCM の派生クラスでは働かない場合があります。
+- 外部 ViewTarget の判定は、PCM が ViewTarget の POV を参照のまま Modifier へ渡すときに正確です。POV をコピーして渡す派生 PCM での判定と制限は 15 章を参照してください。
 - PCM が作り直された直後は、Sequencer が Camera Cut を掛け直すまでの 1 フレームほどゲームプレイカメラが見えます。
 - Return Blend は ACF の要求があるときだけ働きます（UE カメラだけの場面ではカットのままです）。
 - ゲームが登録せずに `SetViewTarget` / `SetViewTargetWithBlend` で Camera Actor へ切り替えた場合、ACF はその Camera Actor の上にも乗ります（ACF は ViewTarget に関係なく上に乗るレイヤー。Phase 4C までと同じ）。ACF を乗せたくないカメラは `Add ACF External View Target` で登録してください。
@@ -962,3 +962,59 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /Game/Level/L_Lobby -
 - Sequence が重なって再生された場合（A の再生中に B）、どのカメラを映すかは UE の Camera Cut の規則（後から始まった Sequence が優先、全部終わるとまとめて戻る）に従います。ACF は「最初の開始 → 最後の終了」を 1 組の Started / Ended として扱います。
 - サンプル `LS_ACFSample_Blend` の Camera Cut Track は、スクリプトから `Can Blend` を ON にできません（UE の内部プロパティ）。UE 5.8 の実行時は Section の Ease In / Out をこのフラグに関係なく使うので再生には影響しませんが、Sequencer でこのアセットを編集する場合は Track の `Can Blend` を ON にしてください（OFF のまま Section を動かすと Ease が消えます）。
 - Sequencer を Editor で開いて再生するプレビュー（PIE / ゲーム以外）は対象外です（Camera Cut がビューポートを直接動かし、PCM を使わないため）。
+
+## 15. PlayerCameraManager の互換性（Phase 6B / B-2）
+
+ACF は PCM の Camera Modifier として出力します。外部 ViewTarget（Sequencer のカメラなど）に書き込まないため、Modifier の呼び出しごとに「どの ViewTarget の POV か」を判定します。
+
+### 判定の方法
+
+| 順 | 条件 | 判定（`EACFViewTargetResolution`） | ACF の書き込み |
+|---|---|---|---|
+| 1 | PCM が `FACFScopedOutputViewTarget` で ViewTarget を伝えた | Explicit（正確） | その ViewTarget が外部でなければ書く |
+| 2 | POV が `ViewTarget.POV` / `PendingViewTarget.POV` そのもの（標準 PCM） | POVAddress（正確） | 同上 |
+| 3 | POV がコピーで、PCM に ViewTarget が 1 つだけ（`PendingViewTarget` なし） | SingleViewTarget | 同上 |
+| 4 | POV がコピーで ViewTarget Blend 中。両方とも外部、または両方とも外部でない | SameDecision | 両方外部でなければ書く（どちらの呼び出しでも結論が同じ） |
+| 5 | POV がコピーで、外部とゲームプレイの間の ViewTarget Blend 中 | Unresolved（判定できない） | **書かない**（外部カメラを上書きしないため）。PCM ごとに 1 回だけ警告 |
+
+- 判定できないことを正常とは扱いません。5 の場合は推測で書かず、診断と警告で知らせます。出力を止めるのはこの場合だけで、ACF は裏で評価を続けます（復帰時に最新の構図）。
+- 標準 PCM では常に 2 で判定され、Phase 5A までと動作は同じです。
+
+### 対応表
+
+| PCM | 対応 | 内容 |
+|---|---|---|
+| 標準 `APlayerCameraManager` とその派生（POV を参照のまま渡すもの） | 対応 | すべての機能。ViewTarget Blend 中も正確 |
+| POV をコピーして渡す派生 PCM | 条件つき | ViewTarget が 1 つの間は正確（Camera Cut、通常の更新）。外部 ViewTarget との ViewTarget Blend 中は ACF が書かない（ゲームプレイ側に ACF が乗らないので、ブレンドの始まりと終わりで ACF 分の差が出る）。`FACFScopedOutputViewTarget` を使えば完全に対応 |
+| `AGameplayCamerasPlayerCameraManager`（GameplayCameras プラグイン） | 条件つき | PendingViewTarget を使わない（ブレンドは GameplayCameras の内部）ので、常に 3 で判定され、Sequencer の Camera Cut 中は ACF が書かない。ただし下の制限がある |
+
+**GameplayCameras の PCM の制限**（実際の PCM で自動テスト済みなのは Ease なしの Camera Cut だけ。以下の 2 点は UE 5.8 のソースからの判断で、実行では確認していません）
+- ACF は GameplayCameras のカメラシステムの評価の後に Modifier として乗ります。GameplayCameras 内部のブレンド（Ease In / Out を含む）の間も ViewTarget は行き先に切り替わっているので、ACF の出力は切り替わった瞬間に付く / 外れます（ブレンドされません）。
+- Sequencer の Ease Out は ACF からはカットに見えるため、ACF の Return Blend が GameplayCameras のブレンドに重なります。この PCM では Return Blend を 0（カット）にしてください（`Set ACF Sequencer Options` の Return Blend）。
+- ACF の機能を GameplayCameras のカメラリグとして組み込む（Camera Output Adapter）ことはしていません。
+
+### 導入方法（POV をコピーする独自の PCM）
+
+`ApplyCameraModifiers` を呼ぶ間、その呼び出しがどの ViewTarget のものかを ACF に伝えます。GameplayCameras など他のプラグインへの依存はありません。
+
+```cpp
+#include "ACFCameraSubsystem.h"
+
+void AMyCameraManager::ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& InOutPOV)
+{
+    FACFScopedOutputViewTarget Scope(this, ViewTargetOfThisPass); // この呼び出しの ViewTarget
+    Super::ApplyCameraModifiers(DeltaTime, InOutPOV);
+}
+```
+
+- PCM の LocalPlayer に ACF のサブシステムが無ければ何もしません。Blueprint の PCM からは使えません（C++ のみ）。
+
+### 診断
+
+- `Get ACF Camera Output Diagnostics`（`UACFCameraSubsystem::GetOutputDiagnostics`）: PCM のクラス、最後の判定方法、最後のフレームの Modifier の呼び出し回数と ACF が書き込んだ回数、POV がコピーされたか、判定できなかった回数（PCM ごと）。
+- `showdebug camera`: 上の内容を 1 行で表示します（判定できなかった回数があるとオレンジ）。
+- ログ: POV のコピーを初めて検出したとき（PCM ごと 1 回、Log）、判定できないブレンドを初めて検出したとき（PCM ごと 1 回、Warning）。毎フレームは出しません。
+
+### 検証
+
+- 自動テスト `.Sequencer.PcmCompat.*`（7 件、`-game`）: POV をコピーする最小の派生 PCM（Camera Cut と ViewTarget Blend）、PendingViewTarget を使わない派生 PCM、連携 API を使う派生 PCM、実際の `AGameplayCamerasPlayerCameraManager`（プラグインが無効ならスキップ）、標準 PCM（判定と出力が従来どおり）、ローカルプレイヤー 2 人（PCM の種類が違っても診断が混ざらない）。どれも画面の最終的な位置・FOV と、ACF の書き込み回数を確認します。

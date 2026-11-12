@@ -49,7 +49,8 @@ bool UACFCameraOutputModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& I
 
 	// Phase 5A: 外部 ViewTarget（Sequencer のカメラなど）には何も書かない。評価もしない:
 	// 同じフレームにゲームプレイ側の ViewTarget が更新されればそこで、されなければカメラ更新後の裏評価で 1 回だけ進む。
-	if (!OwnerSubsystem->BeginOutputForViewTarget(GetViewTargetBeingUpdated(InOutPOV), DeltaTime))
+	// Phase 6B / B-2: POV がコピーの PCM でも、PCM の状態から ViewTarget を判定する（判定できない場合は外部カメラを守る）。
+	if (!OwnerSubsystem->BeginOutputForModifierPass(CameraOwner, InOutPOV, DeltaTime))
 	{
 		return false;
 	}
@@ -61,6 +62,7 @@ bool UACFCameraOutputModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& I
 		return false;
 	}
 
+	OwnerSubsystem->NoteOutputWritten();
 	const FACFCameraPose& Pose = Result.Pose;
 	if (Result.Weight >= 1.f)
 	{
@@ -95,6 +97,11 @@ void UACFCameraOutputModifier::DisplayDebug(UCanvas* Canvas, const FDebugDisplay
 		*Result.ActiveRequest.ToString(), Result.NumRequests, Result.Weight, Result.RequestWeight, Result.bOutputSuppressed ? 1 : 0, Result.bOutputBypassed ? 1 : 0, Result.bIsBlending ? 1 : 0, Result.BlendAlpha));
 	DisplayDebugManager.DrawString(FString::Printf(TEXT("   ACF pose loc=%s rot=%s fov=%.2f"),
 		*Result.Pose.Location.ToCompactString(), *Result.Pose.Rotation.ToCompactString(), Result.Pose.FieldOfView));
+	const FACFCameraOutputDiagnostics Diagnostics = OwnerSubsystem->GetOutputDiagnostics();
+	DisplayDebugManager.SetDrawColor(Diagnostics.UnresolvedPasses > 0 ? FColor::Orange : FColor::Cyan);
+	DisplayDebugManager.DrawString(FString::Printf(TEXT("   ACF output: view target by %s, passes %d, writes %d, POV copied %d, unresolved passes %d"),
+		*StaticEnum<EACFViewTargetResolution>()->GetNameStringByValue(static_cast<int64>(Diagnostics.LastResolution)), Diagnostics.Passes, Diagnostics.Writes,
+		Diagnostics.bPOVCopied ? 1 : 0, Diagnostics.UnresolvedPasses));
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -109,7 +116,7 @@ UACFCameraCollisionGuardModifier::UACFCameraCollisionGuardModifier()
 bool UACFCameraCollisionGuardModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& InOutPOV)
 {
 	UACFCameraSubsystem* OwnerSubsystem = Subsystem.Get();
-	if (OwnerSubsystem && !OwnerSubsystem->IsExternalViewTarget(GetViewTargetBeingUpdated(InOutPOV)))
+	if (OwnerSubsystem && OwnerSubsystem->ShouldGuardModifierPass(CameraOwner, InOutPOV))
 	{
 		OwnerSubsystem->ApplyOutputCollisionGuard(InOutPOV.Location);
 	}

@@ -91,6 +91,161 @@ bool UACFCameraSubsystem::BeginOutputForViewTarget(AActor* ViewTarget, float Del
 	return true;
 }
 
+// -------------------------------------------------------------------------------------------------
+// PlayerCameraManager の互換性（Phase 6B / B-2）: Modifier の呼び出しがどの ViewTarget のものかの判定と診断
+
+UACFCameraSubsystem::FModifierPassTarget UACFCameraSubsystem::ResolveModifierPass(const APlayerCameraManager* CameraManager, const FMinimalViewInfo& POV) const
+{
+	FModifierPassTarget Out;
+	if (!CameraManager)
+	{
+		return Out; // None: 判定材料が無い。外部 ViewTarget を知りようがないので従来どおり書く。
+	}
+	// 1. PCM が明示した ViewTarget（最後に積まれたもの）。
+	for (int32 Index = ExplicitOutputViewTargets.Num() - 1; Index >= 0; --Index)
+	{
+		if (ExplicitOutputViewTargets[Index].CameraManager.Get() == CameraManager)
+		{
+			Out.ViewTarget = ExplicitOutputViewTargets[Index].ViewTarget.Get();
+			Out.Resolution = EACFViewTargetResolution::Explicit;
+			Out.bWrite = !IsExternalViewTarget(Out.ViewTarget);
+			Out.bPOVCopied = &POV != &CameraManager->ViewTarget.POV && &POV != &CameraManager->PendingViewTarget.POV;
+			return Out;
+		}
+	}
+	// 2. 標準 PCM: UpdateViewTarget は ViewTarget の POV を参照のまま渡す（Blend 中は切替元と行き先で 1 回ずつ）。
+	if (&POV == &CameraManager->PendingViewTarget.POV)
+	{
+		Out.ViewTarget = CameraManager->PendingViewTarget.Target;
+		Out.Resolution = EACFViewTargetResolution::POVAddress;
+	}
+	else if (&POV == &CameraManager->ViewTarget.POV)
+	{
+		Out.ViewTarget = CameraManager->ViewTarget.Target;
+		Out.Resolution = EACFViewTargetResolution::POVAddress;
+	}
+	if (Out.Resolution == EACFViewTargetResolution::POVAddress)
+	{
+		Out.bWrite = !IsExternalViewTarget(Out.ViewTarget);
+		return Out;
+	}
+	// POV はコピー（GameplayCameras の PCM、独自の PCM など）。PCM の状態から判断する。
+	Out.bPOVCopied = true;
+	AActor* Current = CameraManager->ViewTarget.Target;
+	AActor* Pending = CameraManager->PendingViewTarget.Target;
+	if (!Pending)
+	{
+		// 3. ViewTarget が 1 つだけ: この呼び出しはその ViewTarget のもの。
+		Out.ViewTarget = Current;
+		Out.Resolution = EACFViewTargetResolution::SingleViewTarget;
+		Out.bWrite = !IsExternalViewTarget(Current);
+		return Out;
+	}
+	const bool bCurrentExternal = IsExternalViewTarget(Current);
+	const bool bPendingExternal = IsExternalViewTarget(Pending);
+	if (bCurrentExternal == bPendingExternal)
+	{
+		// 4. どちらの呼び出しでも結論は同じ。裏評価の戻り先は行き先（Pending）にしておく。
+		Out.ViewTarget = Pending;
+		Out.Resolution = EACFViewTargetResolution::SameDecision;
+		Out.bWrite = !bCurrentExternal;
+		return Out;
+	}
+	// 5. 外部カメラとゲームプレイカメラの間のブレンドで、この呼び出しがどちらのものか分からない。
+	//    推測で書くと外部カメラ（Sequencer など）を上書きしうるので、書かない。
+	Out.Resolution = EACFViewTargetResolution::Unresolved;
+	Out.bWrite = false;
+	return Out;
+}
+
+bool UACFCameraSubsystem::BeginOutputForModifierPass(const APlayerCameraManager* CameraManager, const FMinimalViewInfo& POV, float DeltaTime)
+{
+	// ゲートの判定より前に、外部の所有権管理（Sequencer モジュール）に状態を確定させる。
+	BroadcastPreEvaluate(DeltaTime);
+
+	if (DiagnosedCameraManager.Get() != CameraManager)
+	{
+		// PCM が変わった（作り直し、別クラスへの差し替え）: 診断はその PCM ごと。
+		DiagnosedCameraManager = CameraManager;
+		OutputDiagnostics = FACFCameraOutputDiagnostics();
+		OutputDiagnostics.CameraManagerClass = CameraManager ? CameraManager->GetClass()->GetFName() : NAME_None;
+		bCompatibilityWarned = false;
+	}
+	const FModifierPassTarget Pass = ResolveModifierPass(CameraManager, POV);
+	if (OutputDiagnostics.Frame != static_cast<int64>(GFrameCounter))
+	{
+		OutputDiagnostics.Frame = static_cast<int64>(GFrameCounter);
+		OutputDiagnostics.Passes = 0;
+		OutputDiagnostics.Writes = 0;
+	}
+	++OutputDiagnostics.Passes;
+	OutputDiagnostics.LastResolution = Pass.Resolution;
+	if (Pass.bPOVCopied && !OutputDiagnostics.bPOVCopied)
+	{
+		OutputDiagnostics.bPOVCopied = true;
+		UE_LOG(LogActionCamera, Log, TEXT("ACF: %s passes a copy of the camera POV to camera modifiers; %s (README: PlayerCameraManager compatibility)."),
+			*GetNameSafe(CameraManager ? CameraManager->GetClass() : nullptr),
+			Pass.Resolution == EACFViewTargetResolution::Explicit ? TEXT("the camera manager reports the view target (FACFScopedOutputViewTarget)") : TEXT("ACF resolves the view target from the camera manager's state"));
+	}
+	if (Pass.Resolution == EACFViewTargetResolution::Unresolved)
+	{
+		++OutputDiagnostics.UnresolvedPasses;
+		if (!bCompatibilityWarned)
+		{
+			bCompatibilityWarned = true; // PCM ごとに 1 回だけ
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF: %s passes a copy of the camera POV to camera modifiers while blending between an external view target and a gameplay view target (%s -> %s). ACF cannot tell which view target the modifier pass belongs to, so it does not write its camera during this blend. Wrap ApplyCameraModifiers in FACFScopedOutputViewTarget in the camera manager (README: PlayerCameraManager compatibility)."),
+				*GetNameSafe(CameraManager->GetClass()), *GetNameSafe(CameraManager->ViewTarget.Target), *GetNameSafe(CameraManager->PendingViewTarget.Target));
+		}
+	}
+	if (Pass.bWrite && Pass.ViewTarget)
+	{
+		LastOutputViewTarget = Pass.ViewTarget; // 裏評価の Upstream（戻り先のゲームプレイカメラ）
+	}
+	return Pass.bWrite;
+}
+
+void UACFCameraSubsystem::NoteOutputWritten()
+{
+	++OutputDiagnostics.Writes;
+}
+
+bool UACFCameraSubsystem::ShouldGuardModifierPass(const APlayerCameraManager* CameraManager, const FMinimalViewInfo& POV) const
+{
+	return ResolveModifierPass(CameraManager, POV).bWrite;
+}
+
+void UACFCameraSubsystem::PushExplicitOutputViewTarget(const APlayerCameraManager* CameraManager, AActor* ViewTarget)
+{
+	ExplicitOutputViewTargets.Add({ CameraManager, ViewTarget });
+}
+
+void UACFCameraSubsystem::PopExplicitOutputViewTarget()
+{
+	if (!ExplicitOutputViewTargets.IsEmpty())
+	{
+		ExplicitOutputViewTargets.Pop(EAllowShrinking::No);
+	}
+}
+
+FACFScopedOutputViewTarget::FACFScopedOutputViewTarget(const APlayerCameraManager* CameraManager, AActor* ViewTarget)
+{
+	const APlayerController* Controller = CameraManager ? CameraManager->GetOwningPlayerController() : nullptr;
+	const ULocalPlayer* LocalPlayer = Controller ? Controller->GetLocalPlayer() : nullptr;
+	if (UACFCameraSubsystem* Found = LocalPlayer ? LocalPlayer->GetSubsystem<UACFCameraSubsystem>() : nullptr)
+	{
+		Subsystem = Found;
+		Found->PushExplicitOutputViewTarget(CameraManager, ViewTarget);
+	}
+}
+
+FACFScopedOutputViewTarget::~FACFScopedOutputViewTarget()
+{
+	if (UACFCameraSubsystem* Found = Subsystem.Get())
+	{
+		Found->PopExplicitOutputViewTarget();
+	}
+}
+
 void UACFCameraSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);

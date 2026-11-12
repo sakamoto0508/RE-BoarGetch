@@ -372,6 +372,62 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationContext
 	bool bOutputBypassed = false;
 };
 
+/**
+ * How ACF decided which view target a camera modifier pass of the PlayerCameraManager belongs to (Phase 6B / B-2).
+ * ACF must know it to keep its camera off external view targets (Sequencer cameras, cutscene cameras).
+ */
+UENUM(BlueprintType)
+enum class EACFViewTargetResolution : uint8
+{
+	/** No modifier pass yet (or no camera manager). */
+	None,
+	/** Standard APlayerCameraManager: the POV is ViewTarget.POV / PendingViewTarget.POV itself (exact). */
+	POVAddress,
+	/** The camera manager said which view target the pass is for (FACFScopedOutputViewTarget) (exact). */
+	Explicit,
+	/** The POV is a copy, but the camera manager has only one view target (no PendingViewTarget): the pass is for it. */
+	SingleViewTarget,
+	/** The POV is a copy during a view target blend, and both view targets get the same decision (both external or neither). */
+	SameDecision,
+	/** The POV is a copy during a blend between an external and a non-external view target: unknown. ACF does not write. */
+	Unresolved,
+};
+
+/** Compatibility diagnostics of ACF's output on the current PlayerCameraManager (Phase 6B / B-2). */
+USTRUCT(BlueprintType)
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraOutputDiagnostics
+{
+	GENERATED_BODY()
+
+	/** Class of the camera manager the diagnostics are for. */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	FName CameraManagerClass;
+
+	/** Resolution of the last output modifier pass. */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	EACFViewTargetResolution LastResolution = EACFViewTargetResolution::None;
+
+	/** Engine frame of the last camera update that ran the output modifier. */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int64 Frame = 0;
+
+	/** Output modifier passes in that frame (standard PCM: 1, or 2 during a view target blend). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 Passes = 0;
+
+	/** Passes of that frame into which ACF wrote its camera. */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 Writes = 0;
+
+	/** True once the camera manager has passed a copy of the POV (not ViewTarget.POV / PendingViewTarget.POV). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	bool bPOVCopied = false;
+
+	/** Passes ACF skipped because the view target was unknown (since this camera manager was created). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 UnresolvedPasses = 0;
+};
+
 /** Final result of the director for one frame (stage 6 of the pipeline). */
 USTRUCT(BlueprintType)
 struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationResult

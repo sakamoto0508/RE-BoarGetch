@@ -275,10 +275,39 @@ public:
 	void SetExternalViewTargets(const UObject* Source, TConstArrayView<AActor*> Targets);
 
 	/**
-	 * Output Modifier が、ViewTarget の更新ごとに最初に呼ぶ。OnPreEvaluate を（1 フレーム 1 回）発行してから、
-	 * この ViewTarget に ACF を出力してよいかを返す。ViewTarget が分からない場合は null を渡す（出力する）。
+	 * ViewTarget が分かっている呼び出し元用。OnPreEvaluate を（1 フレーム 1 回）発行してから、この ViewTarget に ACF を
+	 * 出力してよいかを返す（外部 ViewTarget なら false）。null は「外部ではない」として扱う。
+	 * Output Modifier は BeginOutputForModifierPass を使う（Phase 6B / B-2）。
 	 */
 	bool BeginOutputForViewTarget(AActor* ViewTarget, float DeltaTime);
+
+	// --- PlayerCameraManager の互換性（Phase 6B / B-2）-------------------------------------------------------------
+	//
+	// ACF は Camera Modifier として PCM に乗るので、Modifier の呼び出しが「どの ViewTarget の POV か」を知る必要がある
+	// （外部 ViewTarget に書かないため）。判定の順序:
+	//   1. PCM が FACFScopedOutputViewTarget で明示した ViewTarget（Explicit）
+	//   2. POV が ViewTarget.POV / PendingViewTarget.POV そのもの（標準 PCM。POVAddress）
+	//   3. POV がコピーで、PCM の ViewTarget が 1 つだけ（PendingViewTarget なし）: その ViewTarget（SingleViewTarget）
+	//   4. POV がコピーで ViewTarget Blend 中: 両方が外部 / 両方が外部でないなら、どちらの呼び出しでも結論は同じ（SameDecision）
+	//   5. それ以外（外部とゲームプレイの間のブレンドで POV がコピー）: 判定できない。外部カメラを上書きしないよう
+	//      ACF はその呼び出しに書かない（Unresolved）。PCM ごとに 1 回だけ警告を出す。
+
+	/** Output Modifier が呼び出しごとに最初に呼ぶ。OnPreEvaluate を発行し、ViewTarget を判定して、ACF を書いてよいかを返す。 */
+	bool BeginOutputForModifierPass(const APlayerCameraManager* CameraManager, const FMinimalViewInfo& POV, float DeltaTime);
+
+	/** Output Modifier が実際に ACF の姿勢を書き込んだときに呼ぶ（診断用）。 */
+	void NoteOutputWritten();
+
+	/** Collision Guard Modifier 用: この呼び出しの POV に ACF の出力位置の補正をしてよいか（Begin と同じ判定。状態は変えない）。 */
+	bool ShouldGuardModifierPass(const APlayerCameraManager* CameraManager, const FMinimalViewInfo& POV) const;
+
+	/** いまの PCM での互換性の診断（判定方法、最後のフレームの呼び出し・書き込み回数、判定できなかった回数）。 */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Authority", meta = (DisplayName = "Get ACF Camera Output Diagnostics"))
+	FACFCameraOutputDiagnostics GetOutputDiagnostics() const { return OutputDiagnostics; }
+
+	/** FACFScopedOutputViewTarget が使う。 */
+	void PushExplicitOutputViewTarget(const APlayerCameraManager* CameraManager, AActor* ViewTarget);
+	void PopExplicitOutputViewTarget();
 
 	/**
 	 * Gameplay camera pose (for aiming / traces): UE camera + ACF, without camera shakes or visual
@@ -403,6 +432,26 @@ private:
 	/** ACF を出力した最後の ViewTarget（= 戻り先のゲームプレイカメラ）。裏評価の Upstream（UE カメラ）をここから求める。 */
 	TWeakObjectPtr<AActor> LastOutputViewTarget;
 
+	/** Modifier の 1 回の呼び出しの判定結果（B-2）。 */
+	struct FModifierPassTarget
+	{
+		AActor* ViewTarget = nullptr;
+		EACFViewTargetResolution Resolution = EACFViewTargetResolution::None;
+		bool bWrite = true;
+		bool bPOVCopied = false;
+	};
+	FModifierPassTarget ResolveModifierPass(const APlayerCameraManager* CameraManager, const FMinimalViewInfo& POV) const;
+
+	FACFCameraOutputDiagnostics OutputDiagnostics;
+	TWeakObjectPtr<const APlayerCameraManager> DiagnosedCameraManager;
+	bool bCompatibilityWarned = false;
+	struct FExplicitOutputViewTarget
+	{
+		TWeakObjectPtr<const APlayerCameraManager> CameraManager;
+		TWeakObjectPtr<AActor> ViewTarget;
+	};
+	TArray<FExplicitOutputViewTarget, TInlineAllocator<2>> ExplicitOutputViewTargets;
+
 	struct FExternalViewTarget
 	{
 		TWeakObjectPtr<const AActor> Target;
@@ -443,4 +492,29 @@ private:
 	TWeakObjectPtr<UACFCameraModifierBase> GuardModifier;
 	float LastGuardCorrection = 0.f;
 	uint64 LastGuardFrame = 0;
+};
+
+/**
+ * 連携 API（Phase 6B / B-2）: POV のコピーを Camera Modifier に渡す PlayerCameraManager の派生クラス用。
+ * ApplyCameraModifiers を呼ぶ間、この呼び出しがどの ViewTarget の POV かを ACF に伝える（ViewTarget Blend 中も正確になる）。
+ *
+ *   void AMyCameraManager::ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& InOutPOV)
+ *   {
+ *       FACFScopedOutputViewTarget Scope(this, ViewTargetOfThisPass);
+ *       Super::ApplyCameraModifiers(DeltaTime, InOutPOV);
+ *   }
+ *
+ * PCM の LocalPlayer に ACF のサブシステムが無ければ何もしない。GameplayCameras など他のプラグインへの依存は無い。
+ */
+class ACTIONCAMERAFRAMEWORK_API FACFScopedOutputViewTarget
+{
+public:
+	FACFScopedOutputViewTarget(const APlayerCameraManager* CameraManager, AActor* ViewTarget);
+	~FACFScopedOutputViewTarget();
+
+	FACFScopedOutputViewTarget(const FACFScopedOutputViewTarget&) = delete;
+	FACFScopedOutputViewTarget& operator=(const FACFScopedOutputViewTarget&) = delete;
+
+private:
+	TWeakObjectPtr<UACFCameraSubsystem> Subsystem;
 };

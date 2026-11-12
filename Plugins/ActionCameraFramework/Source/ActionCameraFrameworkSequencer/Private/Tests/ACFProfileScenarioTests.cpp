@@ -391,6 +391,49 @@ namespace ACFProfileScenarios
 				A->Destroy();
 			}
 		}
+
+		// Phase 6B / B-2: output gate of one modifier pass on the standard PCM, before (POV address + BeginOutputForViewTarget,
+		// the Phase 5A code path) vs after (BeginOutputForModifierPass). Same process, interleaved rounds.
+		APlayerCameraManager* CameraManager = PC.IsValid() ? PC->PlayerCameraManager.Get() : nullptr;
+		if (CameraManager && Acf.IsValid())
+		{
+			UACFCameraSubsystem* Subsystem = Acf.Get();
+			const FMinimalViewInfo& POV = CameraManager->ViewTarget.POV;
+			constexpr int32 Calls = 200000;
+			int32 Sink = 0;
+			auto OldGate = [&]() -> double
+			{
+				const uint64 T0 = FPlatformTime::Cycles64();
+				for (int32 I = 0; I < Calls; ++I)
+				{
+					AActor* Target = &POV == &CameraManager->PendingViewTarget.POV ? CameraManager->PendingViewTarget.Target.Get()
+						: (&POV == &CameraManager->ViewTarget.POV ? CameraManager->ViewTarget.Target.Get() : nullptr);
+					Sink += Subsystem->BeginOutputForViewTarget(Target, 1.f / 60.f) ? 1 : 0;
+				}
+				return FPlatformTime::ToMilliseconds64(FPlatformTime::Cycles64() - T0) * 1.0e6 / Calls; // ns per pass
+			};
+			auto NewGate = [&]() -> double
+			{
+				const uint64 T0 = FPlatformTime::Cycles64();
+				for (int32 I = 0; I < Calls; ++I)
+				{
+					Sink += Subsystem->BeginOutputForModifierPass(CameraManager, POV, 1.f / 60.f) ? 1 : 0;
+				}
+				return FPlatformTime::ToMilliseconds64(FPlatformTime::Cycles64() - T0) * 1.0e6 / Calls;
+			};
+			TArray<double> OldNs, NewNs;
+			for (int32 Round = 0; Round < 9; ++Round)
+			{
+				OldNs.Add(OldGate());
+				NewNs.Add(NewGate());
+			}
+			const FACFCameraProfileStats SOld = FACFCameraProfileStats::Compute(OldNs);
+			const FACFCameraProfileStats SNew = FACFCameraProfileStats::Compute(NewNs);
+			OverheadText += FString::Printf(TEXT("\nOutput gate per modifier pass on the standard PCM (%s), 9 rounds x %d calls, ns per pass (median / min / max):\n")
+				TEXT("| Gate | median | min | max |\n|---|---|---|---|\n| before B-2 (POV address + BeginOutputForViewTarget) | %.1f | %.1f | %.1f |\n| after B-2 (BeginOutputForModifierPass) | %.1f | %.1f | %.1f |\n")
+				TEXT("Difference (median): %+.1f ns per pass (%d passes accepted).\n"),
+				*GetNameSafe(CameraManager->GetClass()), Calls, SOld.Median, OldNs[0], OldNs.Last(), SNew.Median, NewNs[0], NewNs.Last(), SNew.Median - SOld.Median, Sink);
+		}
 	}
 
 	bool FRunner::Update()
