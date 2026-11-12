@@ -259,6 +259,12 @@ void UACFCameraDirector::StartSuppressionFade(float BlendTime)
 {
 	SuppressionFade.From = SuppressionFade.Value;
 	SuppressionFade.To = SuppressionSources.IsEmpty() ? 1.f : 0.f;
+	if (!FMath::IsFinite(BlendTime))
+	{
+		// An infinite / NaN fade would never finish (B-4).
+		Health.Report(EACFCameraHealthIssue::RejectedInput, NAME_None, TEXT("output suppression blend time"), TEXT("cut"));
+		BlendTime = 0.f;
+	}
 	SuppressionFade.Duration = FMath::Max(BlendTime, 0.f);
 	SuppressionFade.Elapsed = 0.f;
 	if (SuppressionFade.Duration <= 0.f)
@@ -290,6 +296,14 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	{
 		return LastResult;
 	}
+	// Phase 6B / B-4: this director is the health sink while it evaluates (target / node reports land here).
+	FACFCameraHealth::FActiveScope HealthScope(&Health);
+	if (Health.OwnerName.IsEmpty())
+	{
+		Health.OwnerName = FString::Printf(TEXT("%s.%s"), *GetNameSafe(GetOuter()), *GetName());
+	}
+	Health.CurrentFrame = InContext.FrameNumber;
+	Health.CurrentRequest = ActiveHandle;
 #if ACF_WITH_PROFILER
 	// Measurement only (never changes the result): this player's profiler is active for the whole evaluation.
 	SyncProfiler();
@@ -302,6 +316,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	// zero-delta call (InitializeFor) followed by the real one in the same frame never loses or
 	// doubles it, and cached repeat calls never see it again.
 	FACFCameraEvaluationContext Context = InContext;
+	SanitizeContext(Context); // B-4: delta time, UE camera pose, control rotation
 	Context.Combat = CombatState;
 	if (Context.DeltaTime > 0.f)
 	{
@@ -403,14 +418,30 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	{
 		Result.Pose = TargetPose;
 	}
+	Health.CurrentRequest = ActiveHandle;
+
+	// B-4: the blended pose seeds the next transition (LastBlendedPose): never store an invalid one.
+	bool bHasValidOutput = !bUpstreamUnusable;
+	if (bHasValidOutput && !ACFCameraValidation::IsValidPose(Result.Pose))
+	{
+		bHasValidOutput = RepairPose(Result.Pose, Context, TEXT("request blend"));
+	}
 
 	// Stage 5a: effects. Evaluated once per frame (inside the frame guard); location before Collision.
-	LastBlendedPose = Result.Pose;
+	if (bHasValidOutput)
+	{
+		LastBlendedPose = Result.Pose;
+	}
 	const FACFCameraPose EffectCamera = Result.Pose;
 	{
 		ACF_PROFILE_SCOPE(Effects);
 		Effects.Evaluate(Context, EffectCamera);
 		Effects.ApplyPreCollision(Result.Pose, EffectCamera);
+	}
+	if (bHasValidOutput && !ACFCameraValidation::IsValidPose(Result.Pose))
+	{
+		Result.Pose = EffectCamera; // B-4: drop this frame's location effects
+		Health.Report(EACFCameraHealthIssue::InvalidEffectOutput, NAME_None, TEXT("location effects (pre-collision)"), TEXT("effects dropped for this frame"));
 	}
 
 	// Stage 5 (corrections of the final pose): PostBlend nodes (Collision) of the camera in control.
@@ -420,10 +451,14 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 		ACF_PROFILE_SCOPE(PostBlend);
 		const FACFCameraNodeContext PostContext(Context, TargetEntry->Params);
 		PostContext.Scratch = TargetScratch;
+		Health.CurrentRequest = TargetEntry->Handle;
 		TargetEntry->Rig.EvaluatePostBlend(PostContext, Result.Pose);
+		Health.CurrentRequest = ActiveHandle;
 		TargetScratch = PostContext.Scratch;
 	}
-	OutputConstraint.bValid = TargetScratch.Constraint.bValid;
+	// B-4: the output guard sweeps from this pivot every frame; an invalid one would move the camera to NaN.
+	OutputConstraint.bValid = TargetScratch.Constraint.bValid && ACFCameraValidation::IsFinite(TargetScratch.Constraint.Pivot)
+		&& FMath::IsFinite(TargetScratch.Constraint.ProbeRadius);
 	if (OutputConstraint.bValid)
 	{
 		OutputConstraint.Pivot = TargetScratch.Constraint.Pivot;
@@ -442,18 +477,48 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 		ACF_PROFILE_SCOPE(Effects);
 		Effects.ApplyPostCollision(Result.Pose, Settings->EffectFovMin, Settings->EffectFovMax);
 	}
+	if (bHasValidOutput && !ACFCameraValidation::IsValidPose(Result.Pose))
+	{
+		Result.Pose = AimSource; // B-4: drop this frame's rotation / FOV effects
+		Health.Report(EACFCameraHealthIssue::InvalidEffectOutput, NAME_None, TEXT("rotation / FOV effects (post-collision)"), TEXT("effects dropped for this frame"));
+	}
 #if !UE_BUILD_SHIPPING
 	LastDebug = TargetScratch.Debug;
 #endif
 
 	// Stage 6: final result.
+	// B-4: the last line before the PCM. Anything still invalid falls back (last known good pose of this context, else
+	// the UE camera); without a fallback ACF does not output this frame (weight 0).
+	if (bHasValidOutput && !ACFCameraValidation::IsValidPose(Result.Pose))
+	{
+		bHasValidOutput = RepairPose(Result.Pose, Context, TEXT("final pose"));
+	}
+	Result.Pose.FieldOfView = FMath::Max(Result.Pose.FieldOfView, ACFCameraValidation::MinFieldOfView); // UE's own lower bound
 	Result.RequestWeight = Transition.bActive ? FMath::Lerp(Transition.FromWeight, Transition.ToWeight, Alpha) : Transition.ToWeight;
 	const float OutputFactor = AdvanceSuppressionFade(Context.DeltaTime);
 	Result.Weight = Result.RequestWeight * OutputFactor;
+	if (!bHasValidOutput || !FMath::IsFinite(Result.Weight))
+	{
+		if (bHasValidOutput)
+		{
+			Health.Report(EACFCameraHealthIssue::InvalidFinalPose, NAME_None, TEXT("output weight"), TEXT("ACF output skipped (weight 0)"));
+		}
+		Result.Weight = 0.f;
+		Result.RequestWeight = FMath::IsFinite(Result.RequestWeight) ? Result.RequestWeight : 0.f;
+	}
+	else
+	{
+		LastGoodPose = Result.Pose;
+		bHasLastGoodPose = true;
+	}
 	Result.bOutputSuppressed = IsOutputSuppressed();
 	Result.bOutputBypassed = Context.bOutputBypassed;
 	Result.UpstreamPose = Context.UpstreamPose;
 	Result.AimPose = FACFCameraPose::Blend(Context.UpstreamPose, AimSource, Result.Weight);
+	if (!ACFCameraValidation::IsValidPose(Result.AimPose))
+	{
+		Result.AimPose = Result.Pose; // B-4: aim pose from an invalid source (rare: no fallback / invalid UE camera)
+	}
 	Result.ActiveRequest = ActiveHandle;
 	Result.bIsBlending = Transition.bActive;
 	Result.BlendAlpha = Transition.bActive ? Alpha : 1.f;
@@ -478,6 +543,7 @@ FACFCameraPose UACFCameraDirector::EvaluateEntry(FACFCameraRequestEntry& Entry, 
 	ACF_PROFILE_SCOPE(RigEvaluate);
 	FACFCameraPose Pose = Context.UpstreamPose;
 	const FACFCameraNodeContext NodeContext(Context, Entry.Params);
+	Health.CurrentRequest = Entry.Handle; // node reports name this request
 	Entry.Rig.Evaluate(NodeContext, Pose);
 	OutScratch = NodeContext.Scratch;
 	++LastRigEvaluationCount;
@@ -489,11 +555,22 @@ FACFCameraPose UACFCameraDirector::EvaluateEntry(FACFCameraRequestEntry& Entry, 
 
 void UACFCameraDirector::AddCameraInput(const FVector2D& Delta)
 {
+	if (!ACFCameraValidation::IsFinite(Delta))
+	{
+		// B-4: one NaN delta would stay in the orbit state for good.
+		Health.Report(EACFCameraHealthIssue::RejectedInput, NAME_None, TEXT("camera input delta"), TEXT("input ignored"));
+		return;
+	}
 	PendingInputDelta += Delta;
 }
 
 void UACFCameraDirector::SetCameraInputRate(const FVector2D& Rate)
 {
+	if (!ACFCameraValidation::IsFinite(Rate))
+	{
+		Health.Report(EACFCameraHealthIssue::RejectedInput, NAME_None, TEXT("camera input rate"), TEXT("input ignored (previous rate kept)"));
+		return;
+	}
 	InputRate = Rate;
 }
 
@@ -516,6 +593,11 @@ void UACFCameraDirector::NotifyTeleport(bool bCutBlend)
 
 bool UACFCameraDirector::SetOrbitRotation(FACFCameraRequestHandle Handle, const FRotator& Rotation, bool bInstant)
 {
+	if (!ACFCameraValidation::IsFinite(Rotation))
+	{
+		Health.Report(EACFCameraHealthIssue::RejectedInput, NAME_None, TEXT("orbit rotation"), TEXT("rotation ignored"));
+		return false;
+	}
 	FACFCameraRequestEntry* Entry = FindLiveEntry(Handle);
 	if (!Entry)
 	{
@@ -535,6 +617,12 @@ bool UACFCameraDirector::SetOrbitRotation(FACFCameraRequestHandle Handle, const 
 
 bool UACFCameraDirector::BlendFromPose(const FACFCameraPose& FromPose, const FACFCameraBlendSettings& Blend)
 {
+	if (!ACFCameraValidation::IsValidPose(FromPose) || (Blend.Curve != EACFCameraBlendCurve::Cut && !FMath::IsFinite(Blend.Duration)))
+	{
+		Health.Report(EACFCameraHealthIssue::RejectedInput, NAME_None, !ACFCameraValidation::IsValidPose(FromPose) ? TEXT("Blend From Pose: pose") : TEXT("Blend From Pose: duration"),
+			TEXT("blend rejected (cut)"));
+		return false;
+	}
 	if (Requests.IsEmpty() || Blend.IsCut())
 	{
 		return false;
@@ -547,6 +635,11 @@ bool UACFCameraDirector::BlendFromPose(const FACFCameraPose& FromPose, const FAC
 
 int32 UACFCameraDirector::SetAllOrbitRotations(const FRotator& Rotation, bool bInstant)
 {
+	if (!ACFCameraValidation::IsFinite(Rotation))
+	{
+		Health.Report(EACFCameraHealthIssue::RejectedInput, NAME_None, TEXT("orbit rotation (all)"), TEXT("rotation ignored"));
+		return 0;
+	}
 	int32 Count = 0;
 	auto Apply = [&](FACFCameraRequestEntry& Entry)
 	{
@@ -584,9 +677,7 @@ void UACFCameraDirector::PruneLostInstigators()
 		bool bLookAtLost = false;
 		if (Entry.Params.bReleaseWhenLookAtTargetLost && Entry.Params.LookAtTarget.IsSet())
 		{
-			FTransform Unused;
-			const UObject* Object = nullptr;
-			bLookAtLost = !Entry.Params.LookAtTarget.Resolve(Unused, Object);
+			bLookAtLost = !Entry.Params.LookAtTarget.IsAlive(); // an invalid transform for a frame is not "lost" (B-4)
 		}
 		if ((Entry.bTracksInstigator && !Entry.Params.Instigator.IsValid()) || bLookAtLost)
 		{
@@ -725,6 +816,11 @@ void UACFCameraDirector::BeginTransition(int32 NewActiveIndex, const FACFCameraE
 	RetiredRequests.RemoveAll([Keep](const FACFCameraRequestEntry& Entry) { return Entry.Handle != Keep; });
 
 	PendingBlendOut = FACFCameraBlendSettings();
+	if (TransitionBlend.Curve != EACFCameraBlendCurve::Cut && !FMath::IsFinite(TransitionBlend.Duration))
+	{
+		// B-4: IsCut() treats a NaN / Inf duration as a cut (it would never end); say so.
+		Health.Report(EACFCameraHealthIssue::InvalidBlend, NAME_None, TEXT("blend duration"), TEXT("cut"));
+	}
 	Transition.bActive = !TransitionBlend.IsCut();
 	if (!Transition.bActive)
 	{
@@ -839,3 +935,133 @@ void UACFCameraDirector::SyncProfiler()
 	}
 }
 #endif
+
+// -------------------------------------------------------------------------------------------------
+// Health (Phase 6B / B-4)
+
+bool UACFCameraDirector::IsSameCameraContext(const FACFCameraEvaluationContext& Context) const
+{
+	// The fallback pose only makes sense for the same World and PlayerController (map travel, seamless travel and a
+	// recreated controller start over). View target changes are signalled by the subsystem (InvalidateLastGoodPose).
+	return LastGoodWorld.Get() == Context.World && LastGoodController.Get() == Context.PlayerController;
+}
+
+void UACFCameraDirector::SanitizeContext(FACFCameraEvaluationContext& Context)
+{
+	if (!FMath::IsFinite(Context.DeltaTime) || Context.DeltaTime < 0.f)
+	{
+		// Time never runs backwards or by NaN: evaluate as a zero-time update (state is reported, not advanced).
+		Health.Report(EACFCameraHealthIssue::InvalidDeltaTime, NAME_None, TEXT("delta time"), TEXT("evaluated as zero time"));
+		Context.DeltaTime = 0.f;
+	}
+
+	if (!IsSameCameraContext(Context))
+	{
+		InvalidateLastGoodPose();
+		bHasLastGoodControlRotation = false;
+		LastGoodWorld = Context.World;
+		LastGoodController = Context.PlayerController;
+	}
+
+	// UE camera (upstream): rigs start from it and the weight blend mixes with it.
+	FACFCameraPose& Upstream = Context.UpstreamPose;
+	bUpstreamUnusable = false;
+	if (ACFCameraValidation::IsValidPose(Upstream))
+	{
+		LastGoodUpstream = Upstream;
+		bHasLastGoodUpstream = true;
+	}
+	else
+	{
+		const FACFCameraPose* Fallback = bHasLastGoodUpstream ? &LastGoodUpstream : (bHasLastGoodPose ? &LastGoodPose : nullptr);
+		const bool bLocation = !ACFCameraValidation::IsFinite(Upstream.Location);
+		const bool bRotation = !ACFCameraValidation::IsFinite(Upstream.Rotation);
+		if (Fallback)
+		{
+			Upstream.Location = bLocation ? Fallback->Location : Upstream.Location;
+			Upstream.Rotation = bRotation ? Fallback->Rotation : Upstream.Rotation;
+		}
+		else if (bLocation || bRotation)
+		{
+			// No valid UE camera in this context yet: the rigs still run (their state keeps up) from a neutral seed so no
+			// node computes with NaN, but nothing from this frame is output or remembered (weight 0, see Evaluate).
+			Upstream.Location = bLocation ? FVector::ZeroVector : Upstream.Location;
+			Upstream.Rotation = bRotation ? FRotator::ZeroRotator : Upstream.Rotation;
+			bUpstreamUnusable = true;
+		}
+		if (!ACFCameraValidation::IsValidFov(Upstream.FieldOfView))
+		{
+			Upstream.FieldOfView = Fallback ? Fallback->FieldOfView : 90.f; // 90 = APlayerCameraManager::DefaultFOV default
+		}
+		Health.Report(EACFCameraHealthIssue::InvalidUpstream, NAME_None, TEXT("UE camera pose (upstream)"),
+			Fallback ? (bHasLastGoodUpstream ? TEXT("last valid UE camera pose") : TEXT("last known good ACF pose"))
+			: (bUpstreamUnusable ? TEXT("none: evaluated from a neutral pose, ACF output skipped (weight 0)") : TEXT("FOV 90")));
+	}
+
+	if (Context.bHasControlRotation)
+	{
+		if (ACFCameraValidation::IsFinite(Context.ControlRotation))
+		{
+			LastGoodControlRotation = Context.ControlRotation;
+			bHasLastGoodControlRotation = true;
+		}
+		else
+		{
+			Health.Report(EACFCameraHealthIssue::InvalidControlRotation, NAME_None, TEXT("control rotation"),
+				bHasLastGoodControlRotation ? TEXT("last valid control rotation") : TEXT("treated as no control rotation"));
+			Context.ControlRotation = LastGoodControlRotation;
+			Context.bHasControlRotation = bHasLastGoodControlRotation;
+		}
+	}
+}
+
+bool UACFCameraDirector::RepairPose(FACFCameraPose& Pose, const FACFCameraEvaluationContext& Context, const TCHAR* Stage)
+{
+	const bool bLocation = !ACFCameraValidation::IsFinite(Pose.Location);
+	const bool bRotation = !ACFCameraValidation::IsFinite(Pose.Rotation);
+	const bool bFov = !ACFCameraValidation::IsValidFov(Pose.FieldOfView);
+	const FACFCameraPose* Fallback = nullptr;
+	const TCHAR* FallbackName = TEXT("none: ACF output skipped (weight 0)");
+	if (bHasLastGoodPose && IsSameCameraContext(Context))
+	{
+		Fallback = &LastGoodPose;
+		FallbackName = TEXT("last known good pose");
+	}
+	else if (ACFCameraValidation::IsValidPose(Context.UpstreamPose))
+	{
+		Fallback = &Context.UpstreamPose;
+		FallbackName = TEXT("UE camera pose");
+	}
+	const FString Parameter = FString::Printf(TEXT("%s:%s%s%s"), Stage, bLocation ? TEXT(" location") : TEXT(""), bRotation ? TEXT(" rotation") : TEXT(""), bFov ? TEXT(" FOV") : TEXT(""));
+	Health.Report(EACFCameraHealthIssue::InvalidFinalPose, NAME_None, *Parameter, FallbackName);
+	if (!Fallback)
+	{
+		return false;
+	}
+	if (bLocation)
+	{
+		Pose.Location = Fallback->Location;
+	}
+	if (bRotation)
+	{
+		Pose.Rotation = Fallback->Rotation;
+	}
+	if (bFov)
+	{
+		Pose.FieldOfView = Fallback->FieldOfView;
+	}
+	if (bLocation || bRotation)
+	{
+		// The invalid value did not come from one node (those are caught in RigInstance): drop every interpolation
+		// history so nothing invalid survives in a rig. Side effect: damped cameras snap to their goal on the next frame.
+		for (FACFCameraRequestEntry& Entry : Requests)
+		{
+			Entry.Rig.ResetInterpolation();
+		}
+		for (FACFCameraRequestEntry& Entry : RetiredRequests)
+		{
+			Entry.Rig.ResetInterpolation();
+		}
+	}
+	return true;
+}

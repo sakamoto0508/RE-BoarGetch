@@ -3,6 +3,41 @@
 #include "ACFCameraPreset.h"
 #include "Algo/StableSort.h"
 #include "ACFCameraProfiler.h"
+#include "ACFCameraHealth.h"
+
+namespace ACFRigHealth
+{
+	/**
+	 * Phase 6B / B-4: a node turned a valid pose invalid. Drop the invalid components (keep the pose from before the node:
+	 * "reject the node's output" per component) and, if location / rotation were invalid, reset the node's interpolation
+	 * state (its damping history may hold the invalid value; without the reset it would never recover).
+	 */
+	static void RejectInvalidNodeOutput(const UACFCameraNode& Node, FInstancedStruct* State, const FACFCameraPose& Before, FACFCameraPose& InOutPose)
+	{
+		const bool bLocation = !ACFCameraValidation::IsFinite(InOutPose.Location);
+		const bool bRotation = !ACFCameraValidation::IsFinite(InOutPose.Rotation);
+		const bool bFov = !ACFCameraValidation::IsValidFov(InOutPose.FieldOfView);
+		if (bLocation)
+		{
+			InOutPose.Location = Before.Location;
+		}
+		if (bRotation)
+		{
+			InOutPose.Rotation = Before.Rotation;
+		}
+		if (bFov)
+		{
+			InOutPose.FieldOfView = Before.FieldOfView;
+		}
+		if (bLocation || bRotation)
+		{
+			Node.ResetInterpolation(State);
+		}
+		const TCHAR* Parameter = bLocation ? (bRotation ? TEXT("location + rotation") : TEXT("location")) : (bRotation ? TEXT("rotation") : TEXT("field of view"));
+		FACFCameraHealth::ReportActive(EACFCameraHealthIssue::InvalidNodeOutput, Node.GetClass()->GetFName(), Parameter,
+			(bLocation || bRotation) ? TEXT("node output dropped for the invalid components, node interpolation reset") : TEXT("node field of view dropped"));
+	}
+}
 
 void FACFCameraRigInstance::Initialize(const UACFCameraPreset* InPreset)
 {
@@ -89,6 +124,8 @@ void FACFCameraRigInstance::RunNodes(const FACFCameraNodeContext& Context, FACFC
 	// Every node is measured here, in the one loop that runs nodes, so new node classes need no profiling code.
 	FACFCameraProfiler* const Profiler = FACFCameraProfiler::GetActive();
 #endif
+	// B-4: only a node that turns a valid pose invalid is blamed (an invalid input pose is handled by the director).
+	bool bPoseValid = ACFCameraValidation::IsValidPose(InOutPose);
 	for (int32 Position = Begin; Position < End; ++Position)
 	{
 		const int32 Index = Order[Position];
@@ -101,7 +138,16 @@ void FACFCameraRigInstance::RunNodes(const FACFCameraNodeContext& Context, FACFC
 #if ACF_WITH_PROFILER
 			const uint64 Start = Profiler ? FPlatformTime::Cycles64() : 0;
 #endif
+			const FACFCameraPose Before = InOutPose;
 			Node->Evaluate(Context, InOutPose, State.IsValid() ? &State : nullptr);
+			if (bPoseValid && !ACFCameraValidation::IsValidPose(InOutPose))
+			{
+				ACFRigHealth::RejectInvalidNodeOutput(*Node, State.IsValid() ? &State : nullptr, Before, InOutPose);
+			}
+			else if (!bPoseValid)
+			{
+				bPoseValid = ACFCameraValidation::IsValidPose(InOutPose); // a node may produce a valid pose from an invalid input
+			}
 #if ACF_WITH_PROFILER
 			if (Profiler)
 			{

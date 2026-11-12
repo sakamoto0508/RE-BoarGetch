@@ -8,6 +8,7 @@
 #include "Effects/ACFCameraEffectStack.h"
 #include "ACFCameraSequencePlayer.h"
 #include "ACFCameraProfiler.h"
+#include "ACFCameraHealth.h"
 #include "ACFCameraDirector.generated.h"
 
 class UACFCameraPreset;
@@ -233,7 +234,39 @@ public:
 	void SetProfilerForced(bool bForced) { bProfilerForced = bForced; }
 #endif
 
+	// --- Health (Phase 6B / B-4) ---------------------------------------------------------------------------------------
+
+	/** Invalid values detected and kept out of this player's camera state and output. */
+	FACFCameraHealthDiagnostics GetHealthDiagnostics() const { return Health.GetDiagnostics(); }
+	FACFCameraHealth& GetHealth() { return Health; }
+
+	/**
+	 * Forgets the last known good pose (the fallback for an invalid final pose). Called when the camera context changes
+	 * (the subsystem: output view target changed). The director also forgets it when the World or PlayerController changes.
+	 */
+	void InvalidateLastGoodPose() { bHasLastGoodPose = false; bHasLastGoodUpstream = false; }
+
+	/** True while a last known good pose exists for the current camera context (tests / debugging). */
+	bool HasLastGoodPose() const { return bHasLastGoodPose; }
+
 private:
+	/** Valid evaluation context for this frame (delta time, upstream pose, control rotation). */
+	void SanitizeContext(FACFCameraEvaluationContext& Context);
+	/** Replaces invalid components of Pose with the fallback (last known good of this context, else the UE camera). False if no fallback. */
+	bool RepairPose(FACFCameraPose& Pose, const FACFCameraEvaluationContext& Context, const TCHAR* Stage);
+	bool IsSameCameraContext(const FACFCameraEvaluationContext& Context) const;
+
+	FACFCameraHealth Health;
+	FACFCameraPose LastGoodPose;
+	bool bHasLastGoodPose = false;
+	FACFCameraPose LastGoodUpstream;
+	bool bHasLastGoodUpstream = false;
+	FRotator LastGoodControlRotation = FRotator::ZeroRotator;
+	bool bHasLastGoodControlRotation = false;
+	/** This frame's UE camera was invalid with no fallback: evaluate, but do not output or remember the result. */
+	bool bUpstreamUnusable = false;
+	TWeakObjectPtr<const UWorld> LastGoodWorld;
+	TWeakObjectPtr<const APlayerController> LastGoodController;
 	struct FTransition
 	{
 		FACFCameraPose FromPose;

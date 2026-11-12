@@ -9,6 +9,8 @@
 #include "ACFSequencerBlueprintLibrary.h"
 #include "ACFSequencerCameraSubsystem.h"
 #include "Nodes/ACFCameraNode_Collision.h"
+#include "Nodes/ACFCameraNode_FixedPose.h"
+#include "ACFCameraHealth.h"
 #include "Nodes/ACFCameraNode_LookAt.h"
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
 #include "Camera/PlayerCameraManager.h"
@@ -433,6 +435,58 @@ namespace ACFProfileScenarios
 				TEXT("| Gate | median | min | max |\n|---|---|---|---|\n| before B-2 (POV address + BeginOutputForViewTarget) | %.1f | %.1f | %.1f |\n| after B-2 (BeginOutputForModifierPass) | %.1f | %.1f | %.1f |\n")
 				TEXT("Difference (median): %+.1f ns per pass (%d passes accepted).\n"),
 				*GetNameSafe(CameraManager->GetClass()), Calls, SOld.Median, OldNs[0], OldNs.Last(), SNew.Median, NewNs[0], NewNs.Last(), SNew.Median - SOld.Median, Sink);
+		}
+
+		// Phase 6B / B-4: cost of the health checks. (a) one check = what RunNodes adds per node (pose copy + validity);
+		// (b) a director with N nodes, to see how the evaluation scales with the node count.
+		{
+			constexpr int32 Checks = 2000000;
+			TArray<double> CheckNs;
+			int32 Valid = 0;
+			for (int32 Round = 0; Round < 9; ++Round)
+			{
+				FACFCameraPose Pose;
+				Pose.Location = FVector(1.0, 2.0, 3.0);
+				const uint64 T0 = FPlatformTime::Cycles64();
+				for (int32 I = 0; I < Checks; ++I)
+				{
+					Pose.Location.X += 1.0e-3; // keep the work in the loop
+					const FACFCameraPose Before = Pose;
+					Valid += ACFCameraValidation::IsValidPose(Pose) && Before.FieldOfView > 0.f ? 1 : 0;
+				}
+				CheckNs.Add(FPlatformTime::ToMilliseconds64(FPlatformTime::Cycles64() - T0) * 1.0e6 / Checks);
+			}
+			const FACFCameraProfileStats SCheck = FACFCameraProfileStats::Compute(CheckNs);
+			FString Scaling;
+			for (const int32 NumNodes : { 1, 8, 24 })
+			{
+				TStrongObjectPtr<UACFCameraPreset> Preset(NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient));
+				for (int32 N = 0; N < NumNodes; ++N)
+				{
+					UACFCameraNode_FixedPose* Node = NewObject<UACFCameraNode_FixedPose>(Preset.Get());
+					Node->Location = FVector(N, 0.0, 300.0);
+					Preset->Nodes.Add(Node);
+				}
+				TStrongObjectPtr<UACFCameraDirector> D(NewObject<UACFCameraDirector>());
+				D->AddRequest(Preset.Get(), FACFCameraRequestParams());
+				FACFCameraEvaluationContext Context;
+				Context.DeltaTime = 1.f / 60.f;
+				TArray<double> EvalUs;
+				for (int32 Round = 0; Round < 7; ++Round)
+				{
+					const uint64 T0 = FPlatformTime::Cycles64();
+					for (int32 I = 0; I < 20000; ++I)
+					{
+						Context.FrameNumber = 80000000ull + Round * 100000ull + I;
+						D->Evaluate(Context);
+					}
+					EvalUs.Add(FPlatformTime::ToMilliseconds64(FPlatformTime::Cycles64() - T0) * 1000.0 / 20000);
+				}
+				Scaling += FString::Printf(TEXT("| %d | %.3f |\n"), NumNodes, FACFCameraProfileStats::Compute(EvalUs).Median);
+			}
+			OverheadText += FString::Printf(TEXT("\nHealth checks (B-4): one per-node check (pose copy + validity) %.2f ns median (min %.2f, max %.2f; %d valid).\n")
+				TEXT("Standalone director evaluation by node count (Fixed Pose nodes, includes the node work and every check), us per evaluation (median of 7 x 20000):\n| Nodes | us |\n|---|---|\n%s"),
+				SCheck.Median, CheckNs[0], CheckNs.Last(), Valid, *Scaling);
 		}
 	}
 

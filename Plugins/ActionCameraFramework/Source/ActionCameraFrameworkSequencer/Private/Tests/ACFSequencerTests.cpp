@@ -7,6 +7,7 @@
 #include "ACFSequencerTestListener.h"
 #include "ACFSequencerTestProbeModifier.h"
 #include "ACFSequencerTestCameraManager.h"
+#include "ACFCameraHealth.h"
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraDirector.h"
 #include "ACFCameraOutputModifier.h"
@@ -2311,6 +2312,163 @@ bool FACFPcmCompatLocalPlayersTest::RunTest(const FString& Parameters)
 	Steps.Add([](FScenario& S)
 	{
 		S.CameraNear(GameplayLoc, 0.1, TEXT("Player 1 back on the ACF camera"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+// =================================================================================================
+// Phase 6B / B-4: 不正値に対する出力の健全性を実際の PCM 上で確認する（PCM の最終出力、ローカルプレイヤー間、外部 ViewTarget）。
+
+namespace ACFSeqTest
+{
+	static bool IsFiniteCamera(const APlayerCameraManager* M)
+	{
+		const FMinimalViewInfo& View = M->GetCameraCacheView();
+		return ACFCameraValidation::IsFinite(View.Location) && ACFCameraValidation::IsFinite(View.Rotation) && ACFCameraValidation::IsValidFov(View.FOV);
+	}
+
+	// The target is a bare (unregistered) scene component: writing NaN into a registered component trips the engine's own
+	// ensure (SceneComponent.cpp, NewTransform.IsValid()), which is the engine's diagnostic, not ACF's.
+	static void ForceTargetTransform(USceneComponent* Component, const FVector& Location)
+	{
+		FTransform Transform;
+		Transform.SetLocation(Location);
+		Component->SetComponentToWorld(Transform);
+	}
+	static void ForceNaNTransform(USceneComponent* Component)
+	{
+		const double NaN = std::numeric_limits<double>::quiet_NaN();
+		ForceTargetTransform(Component, FVector(NaN, NaN, NaN));
+	}
+
+	static USceneComponent* HealthTarget(FScenario& S)
+	{
+		return Cast<USceneComponent>(S.Keep[0].Get()); // the target is the first object the scenario keeps
+	}
+
+	static UACFCameraPreset* MakeTrackingPreset(FScenario& S)
+	{
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_Follow* Follow = NewObject<UACFCameraNode_Follow>(Preset);
+		Follow->Offset = FVector(-300.0, 0.0, 100.0);
+		Follow->OffsetSpace = EACFCameraOffsetSpace::World;
+		Follow->Damping = FACFCameraPositionDamping::Uniform(0.2f);
+		Preset->Nodes.Add(Follow);
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		S.Keep.Emplace(Preset);
+		return Preset;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFHealthPcmOutputTest, "ActionCameraFramework.Sequencer.Health.PcmOutputStaysFiniteAndPlayersStaySeparate", ACFSeqTest::Flags)
+bool FACFHealthPcmOutputTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	// 2 人目の PlayerController の BeginPlay でホストプロジェクトの HUD が出すエラー（ACF とは無関係。LocalPlayersAreIndependent と同じ）。
+	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
+	static const FVector TargetLoc = Base + FVector(500.f, 0.f, 0.f);
+	static const FVector NewTargetLoc = Base + FVector(900.f, 300.f, 0.f);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		USceneComponent* Target = NewObject<USceneComponent>(GetTransientPackage(), NAME_None, RF_Transient);
+		S.Keep.Emplace(Target);
+		ForceTargetTransform(Target, TargetLoc);
+		S.Value = 0.0;
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Component = Target;
+		S.Handle = S.Acf->RequestCamera(MakeTrackingPreset(S), Params);
+		FString Error;
+		S.SecondPlayer = S.World()->GetGameInstance()->CreateLocalPlayer(FPlatformUserId::CreateFromInternalId(1), Error, true);
+		return S.Test->TestTrue(FString::Printf(TEXT("second local player created %s"), *Error), S.SecondPlayer.IsValid());
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		UACFCameraSubsystem* Acf2 = S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>();
+		if (!S.Test->TestNotNull(TEXT("second ACF subsystem"), Acf2))
+		{
+			return false;
+		}
+		S.HandleB = Acf2->RequestCamera(MakeFixedPreset(S, SecondLoc, FRotator(0.f, 180.f, 0.f), 70.f), FACFCameraRequestParams());
+		return true;
+	});
+	WaitFrames(Steps, 30);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(TargetLoc + FVector(-300.0, 0.0, 100.0), 1.0, TEXT("Before: following the target"));
+		S.Counter = 0;
+		S.Value = 0.0; // frames with a non-finite camera
+		ForceNaNTransform(HealthTarget(S));
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		// The previous frame's camera update read the NaN target.
+		S.Value += IsFiniteCamera(S.PCM()) ? 0.0 : 1.0;
+		const APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		S.Value += (PC2 && PC2->PlayerCameraManager && IsFiniteCamera(PC2->PlayerCameraManager)) ? 0.0 : 1.0;
+		if (++S.Counter < 15)
+		{
+			ForceNaNTransform(HealthTarget(S));
+			S.bRetry = true;
+		}
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("NaN target: the PCM camera of both players stayed finite with a valid FOV"), S.Value, 0.0);
+		S.CameraNear(TargetLoc + FVector(-300.0, 0.0, 100.0), 1.0, TEXT("NaN target: the camera holds the last valid target"));
+		const FACFCameraHealthDiagnostics D1 = S.Acf->GetHealthDiagnostics();
+		const FACFCameraHealthDiagnostics D2 = S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>()->GetHealthDiagnostics();
+		S.Test->TestTrue(FString::Printf(TEXT("Player 1: invalid target reported (%d, last: %s)"), D1.InvalidTargets, *D1.LastIssue), D1.InvalidTargets >= 15);
+		S.Test->TestEqual(TEXT("Player 2: nothing reported (diagnostics are per local player)"), D2.TotalIssues, 0);
+		const APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		S.Test->TestTrue(TEXT("Player 2: its own camera unaffected"), PC2 && PC2->PlayerCameraManager->GetCameraLocation().Equals(SecondLoc, 0.1));
+		ForceTargetTransform(HealthTarget(S), NewTargetLoc); // valid again
+		return true;
+	});
+	WaitFrames(Steps, 120);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(NewTargetLoc + FVector(-300.0, 0.0, 100.0), 1.0, TEXT("Valid again: the camera recovered (damping not stuck)"));
+		S.Test->TestTrue(TEXT("Valid again: the request is still active (an invalid transform is not a lost target)"), S.Acf->IsActiveCamera(S.Handle));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFHealthExternalViewTargetTest, "ActionCameraFramework.Sequencer.Health.ExternalViewTargetUntouched", ACFSeqTest::Flags)
+bool FACFHealthExternalViewTargetTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		// ACF in a broken state: its camera has a NaN FOV and a NaN location (both dropped by ACF).
+		const double NaN = std::numeric_limits<double>::quiet_NaN();
+		S.Handle = S.Acf->RequestCamera(MakeFixedPreset(S, FVector(NaN, 0.0, 0.0), GameplayRot, static_cast<float>(NaN)), FACFCameraRequestParams());
+		S.GameplayViewTarget = S.PCM()->GetViewTarget();
+		// External camera with an extreme but valid FOV: ACF must not "correct" it.
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot, 175.f);
+		S.Acf->AddExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
+		S.Controller->SetViewTarget(S.ActorA.Get());
+		return true;
+	});
+	WaitFrames(Steps, 10);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(CineLoc, 0.001, TEXT("External view target: its own location, unchanged"));
+		S.Test->TestEqual(TEXT("External view target: its own FOV (175), not clamped by ACF"), S.PCM()->GetFOVAngle(), 175.f);
+		S.Test->TestEqual(TEXT("External view target: ACF wrote nothing"), S.Acf->GetOutputDiagnostics().Writes, 0);
+		S.Test->TestTrue(TEXT("ACF still evaluates in the background with a valid pose"), S.Acf->IsOutputBypassed()
+			&& ACFCameraValidation::IsValidPose(S.Acf->GetLastEvaluationResult().Pose));
+		S.Acf->RemoveExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));

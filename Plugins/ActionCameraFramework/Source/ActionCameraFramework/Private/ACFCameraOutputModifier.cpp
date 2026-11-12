@@ -1,5 +1,6 @@
 #include "ACFCameraOutputModifier.h"
 #include "ACFCameraSubsystem.h"
+#include "ACFCameraHealth.h"
 #include "Camera/CameraTypes.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/Canvas.h"
@@ -57,14 +58,22 @@ bool UACFCameraOutputModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& I
 
 	// Stage 7: output.
 	const FACFCameraEvaluationResult& Result = OwnerSubsystem->EvaluateForOutput(DeltaTime, InOutPOV);
-	if (!Result.HasInfluence())
+	// B-4: the director guarantees a valid pose whenever it has influence; checked once more where ACF writes into UE.
+	if (!Result.HasInfluence() || !ACFCameraValidation::IsValidPose(Result.Pose))
 	{
 		return false;
 	}
 
 	OwnerSubsystem->NoteOutputWritten();
 	const FACFCameraPose& Pose = Result.Pose;
-	if (Result.Weight >= 1.f)
+	const bool bUpstreamValid = ACFCameraValidation::IsFinite(InOutPOV.Location) && ACFCameraValidation::IsFinite(InOutPOV.Rotation)
+		&& ACFCameraValidation::IsValidFov(InOutPOV.FOV);
+	if (!bUpstreamValid && Result.Weight < 1.f)
+	{
+		// The pose UE gave ACF for this (non-external) view target is invalid: a partial blend would carry it to the screen.
+		OwnerSubsystem->NoteInvalidOutputUpstream();
+	}
+	if (Result.Weight >= 1.f || !bUpstreamValid)
 	{
 		InOutPOV.Location = Pose.Location;
 		InOutPOV.Rotation = Pose.Rotation;
@@ -102,6 +111,14 @@ void UACFCameraOutputModifier::DisplayDebug(UCanvas* Canvas, const FDebugDisplay
 	DisplayDebugManager.DrawString(FString::Printf(TEXT("   ACF output: view target by %s, passes %d, writes %d, POV copied %d, unresolved passes %d"),
 		*StaticEnum<EACFViewTargetResolution>()->GetNameStringByValue(static_cast<int64>(Diagnostics.LastResolution)), Diagnostics.Passes, Diagnostics.Writes,
 		Diagnostics.bPOVCopied ? 1 : 0, Diagnostics.UnresolvedPasses));
+	const FACFCameraHealthDiagnostics Health = OwnerSubsystem->GetHealthDiagnostics();
+	if (Health.TotalIssues > 0)
+	{
+		DisplayDebugManager.SetDrawColor(FColor::Orange);
+		DisplayDebugManager.DrawString(FString::Printf(TEXT("   ACF health: %d issues (targets %d, delta %d, upstream %d, inputs %d, nodes %d, effects %d, final %d). Last: %s"),
+			Health.TotalIssues, Health.InvalidTargets, Health.InvalidDeltaTimes, Health.InvalidUpstreamPoses, Health.RejectedInputs, Health.InvalidNodeOutputs,
+			Health.InvalidEffectOutputs, Health.InvalidFinalPoses, *Health.LastIssue));
+	}
 }
 
 // -------------------------------------------------------------------------------------------------

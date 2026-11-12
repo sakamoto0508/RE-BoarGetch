@@ -1,7 +1,24 @@
 #include "ACFCameraTypes.h"
+#include "ACFCameraHealth.h"
 #include "Curves/CurveFloat.h"
 #include "Components/SceneComponent.h"
 #include "GameFramework/Actor.h"
+
+namespace ACFTargetImpl
+{
+	/** Phase 6B / B-4: the one input boundary for target transforms (every node resolves targets here). */
+	static bool AcceptTransform(const FTransform& Transform, const UObject* Object)
+	{
+		if (ACFCameraValidation::IsValidTransform(Transform))
+		{
+			return true;
+		}
+		const TCHAR* What = !ACFCameraValidation::IsFinite(Transform.GetLocation()) ? TEXT("target location")
+			: (!ACFCameraValidation::IsValidQuat(Transform.GetRotation()) ? TEXT("target rotation") : TEXT("target scale"));
+		FACFCameraHealth::ReportActive(EACFCameraHealthIssue::InvalidTarget, Object ? Object->GetFName() : NAME_None, What, TEXT("target not resolved this frame (last valid transform held)"));
+		return false;
+	}
+}
 
 bool FACFCameraTarget::Resolve(FTransform& OutTransform, const UObject*& OutObject) const
 {
@@ -9,7 +26,7 @@ bool FACFCameraTarget::Resolve(FTransform& OutTransform, const UObject*& OutObje
 	{
 		OutTransform = SocketName.IsNone() ? SceneComponent->GetComponentTransform() : SceneComponent->GetSocketTransform(SocketName);
 		OutObject = SceneComponent;
-		return true;
+		return ACFTargetImpl::AcceptTransform(OutTransform, SceneComponent);
 	}
 	if (const AActor* TargetActor = Actor.Get())
 	{
@@ -23,7 +40,7 @@ bool FACFCameraTarget::Resolve(FTransform& OutTransform, const UObject*& OutObje
 			OutTransform = TargetActor->GetActorTransform();
 		}
 		OutObject = TargetActor;
-		return true;
+		return ACFTargetImpl::AcceptTransform(OutTransform, TargetActor);
 	}
 	OutObject = nullptr;
 	return false;
@@ -109,8 +126,6 @@ int32 FACFCameraTargetGroup::RemoveLostMembers()
 {
 	return Members.RemoveAll([](const FACFCameraTargetGroupMember& M)
 	{
-		FTransform Unused;
-		const UObject* Object = nullptr;
-		return !M.Target.Resolve(Unused, Object);
+		return !M.Target.IsAlive(); // alive but with an invalid transform this frame is not "lost" (B-4)
 	});
 }

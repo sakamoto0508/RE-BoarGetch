@@ -298,12 +298,19 @@ public:
 	/** Output Modifier が実際に ACF の姿勢を書き込んだときに呼ぶ（診断用）。 */
 	void NoteOutputWritten();
 
+	/** Output Modifier: the PCM pose ACF blends with was invalid; ACF wrote its own pose at full weight (B-4, diagnostics). */
+	void NoteInvalidOutputUpstream();
+
 	/** Collision Guard Modifier 用: この呼び出しの POV に ACF の出力位置の補正をしてよいか（Begin と同じ判定。状態は変えない）。 */
 	bool ShouldGuardModifierPass(const APlayerCameraManager* CameraManager, const FMinimalViewInfo& POV) const;
 
 	/** いまの PCM での互換性の診断（判定方法、最後のフレームの呼び出し・書き込み回数、判定できなかった回数）。 */
 	UFUNCTION(BlueprintPure, Category = "Action Camera|Authority", meta = (DisplayName = "Get ACF Camera Output Diagnostics"))
 	FACFCameraOutputDiagnostics GetOutputDiagnostics() const { return OutputDiagnostics; }
+
+	/** Invalid values (NaN / Inf / invalid FOV ...) detected and kept out of this player's camera state and output (Phase 6B / B-4). */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Debug", meta = (DisplayName = "Get ACF Camera Health Diagnostics"))
+	FACFCameraHealthDiagnostics GetHealthDiagnostics() const;
 
 	/** FACFScopedOutputViewTarget が使う。 */
 	void PushExplicitOutputViewTarget(const APlayerCameraManager* CameraManager, AActor* ViewTarget);
@@ -444,6 +451,7 @@ private:
 
 	FACFCameraOutputDiagnostics OutputDiagnostics;
 	TWeakObjectPtr<const APlayerCameraManager> DiagnosedCameraManager;
+	TWeakObjectPtr<const AActor> HealthViewTarget; // B-4: view target of the last known good pose
 	bool bCompatibilityWarned = false;
 	struct FExplicitOutputViewTarget
 	{

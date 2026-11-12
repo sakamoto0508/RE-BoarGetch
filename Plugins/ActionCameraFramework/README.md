@@ -787,9 +787,10 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 115 件です。
+- 自動テストは 127 件です。
   - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
   - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
+  - `.Health.*`（10 件。Editor とゲームの両方）と `.Sequencer.Health.*`（2 件、`-game`）: 不正値（NaN / Inf / 不正な FOV / 不正な DeltaTime など）の対策（16 章）。正常な入力で姿勢が修正前とビット単位で一致すること、ランダム化した不正入力を含む。
   - `.Integration.*`（24 件）、`.Sequencer.*`（21 件。実際の Level Sequence・PCM を使う。うち `.Sequencer.PcmCompat.*` 7 件は Phase 6B / B-2 の PCM 互換性、15 章）: `-game` でのみ実行されます。
   - `.Samples.*`（6 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
@@ -1018,3 +1019,42 @@ void AMyCameraManager::ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& I
 ### 検証
 
 - 自動テスト `.Sequencer.PcmCompat.*`（7 件、`-game`）: POV をコピーする最小の派生 PCM（Camera Cut と ViewTarget Blend）、PendingViewTarget を使わない派生 PCM、連携 API を使う派生 PCM、実際の `AGameplayCamerasPlayerCameraManager`（プラグインが無効ならスキップ）、標準 PCM（判定と出力が従来どおり）、ローカルプレイヤー 2 人（PCM の種類が違っても診断が混ざらない）。どれも画面の最終的な位置・FOV と、ACF の書き込み回数を確認します。
+
+## 16. 不正値への対策（Phase 6B / B-4）
+
+NaN・Infinity・不正な FOV・不正な DeltaTime などが入っても、ACF の内部状態（Damping、ブレンド、Node の前フレームの状態）と PCM への出力に残らないようにしています。**正常な入力では、出力は修正前とビット単位で同じです**（自動テストで確認）。
+
+### どこで止めるか
+
+| 入口 | 検査 | 不正だったときの扱い |
+|---|---|---|
+| 対象の Transform（`FACFCameraTarget::Resolve`。全 Node の共通の入口） | 位置・回転・スケールが有限で、回転が正規化できる | そのフレームは「解決できない」扱い。対象が存在する間は、追従系（Follow / Orbit / Lock-On / Composer）が最後の正常な Transform を保持する。存在するので「対象の喪失」（自動解除）にはならない |
+| 計算された追従点（グループの中心、ロック点） | 同上 | 最後の正常な点を保持 |
+| 評価の文脈（Director） | DeltaTime が有限で 0 以上 / UE カメラ（Upstream）の姿勢 / ControlRotation | DeltaTime は 0 秒として評価（時間を進めない・戻さない）。UE カメラは最後の正常な値、ControlRotation は最後の正常な値（無ければ「無し」） |
+| 実行時の入力 | カメラ入力・入力レート・Orbit の回転・`Blend ACF Camera From Pose` の姿勢と時間・出力抑制のブレンド時間 | 入力を拒否（`Blend From Pose` は false を返す） |
+| ブレンド時間（Preset / 要求 / Sequence） | 有限 | NaN / Inf はカット（そのままでは遷移が終わらない） |
+| Node の出力（`RigInstance`。Node ごと） | 正常な姿勢を不正にした Node | 不正になった成分（位置・回転・FOV）だけ Node の前の値に戻す。位置か回転なら、その Node の補間状態をリセット（Damping に NaN が残ると二度と戻らないため。副作用: その Node の Damping が次のフレームで目標に一度スナップする） |
+| 演出（Effect Stack） | 演出を足した姿勢 | そのフレームの演出を捨てる（演出そのものは止めない） |
+| 最終の姿勢（PCM に渡す直前） | 位置・回転が有限、FOV が有効 | 最後の正常な姿勢（同じ World・PlayerController・ViewTarget の中だけ）→ 無ければ UE カメラ → それも無ければ **ACF は出力しない（Weight 0）** |
+| Output Modifier | 書き込む姿勢を再確認 / ACF の下の PCM の姿勢 | 不正な姿勢は書かない。PCM の姿勢が不正で Weight < 1 なら、ACF の姿勢を 100% で書く（混ぜると不正値が画面に出るため） |
+| Collision Guard | 出力位置と拘束の中心が有限 | Guard を掛けない（PCM の姿勢はそのまま） |
+
+- **FOV の有効範囲**: 有限で 0 より大きく 180 未満。UE 5.8 は投影を `Max(0.001, FOV)` から作り（`CameraStackTypes.cpp`）、180 度以上では投影が成り立たないためです。0 < FOV < 0.001 は UE と同じく 0.001 に揃えます。170 度など大きいが有効な値はそのまま通します。
+- **最後の正常な姿勢（Fallback）**: ローカルプレイヤーごとに 1 つ。World・PlayerController・PCM の ViewTarget が変わると捨てます（マップ移動の前の姿勢を使わない）。UE カメラも不正で Fallback も無いフレームは、Rig を中立の姿勢から評価して状態だけ進め、出力も記録もしません。
+- **外部 ViewTarget**（Sequencer のカメラなど）: ACF が書かない呼び出しでは、何も検査・補正しません（外部カメラの FOV 175 などもそのまま）。B-2 の判定は変えていません。
+
+### 診断
+
+- `Get ACF Camera Health Diagnostics`（`UACFCameraSubsystem::GetHealthDiagnostics`）: 種類別の回数（対象、DeltaTime、UE カメラ、拒否した入力、Node の出力、演出、最終の姿勢）と、最後の問題（種類・Node のクラス・要求の Handle・パラメータ・Fallback・フレーム）。
+- ログ: `LogActionCamera` の Warning を、種類ごとに 1・10・100・1000 回目に出します（毎フレームは出さない。再発は回数で分かる）。
+- `ACF.Debug.Health`: 全ローカルプレイヤーの回数と最後の問題をログに出します。`showdebug camera` にも 1 行出ます（問題があるときだけ）。
+- Shipping では回数と診断は動きますが、ログは UE の設定に従います（既定では出ません）。
+
+### 対応していない・限定的な入力（制限）
+
+- 対象を直接読む Node（Collision の視線、Combat、Shot Anchor、Group Framing のメンバー）は、不正な Transform のフレームでは対象が「無い」ものとして動きます（保持はしない）。グループのメンバーはそのフレームだけ外れます。Lock-On のロック対象は、既存の仕組みで最後に分かっているロック点を保持します。
+- 有限だが意味のない Node のパラメータ（負の Damping、極端に大きい Offset など）は検査しません（各 Node の既存の扱いのまま）。
+- 非有限のパラメータを持つ演出は、終わるまで毎フレーム捨てられます（自動では止めません。回数で分かります）。
+- Collision のパラメータ（Probe 半径など）が非有限の場合、Collision Node の出力が捨てられますが、エンジンの問い合わせ自体は行われます。
+- 出力しないフレーム（Fallback 無し）の `Get Aim Camera Pose` は中立の姿勢です。評価結果の Weight が 0 であることで判別してください。
+- 登録済みの Scene Component に NaN の Transform を設定すると、UE 自身が ensure を出します（UE の診断。ACF の外）。

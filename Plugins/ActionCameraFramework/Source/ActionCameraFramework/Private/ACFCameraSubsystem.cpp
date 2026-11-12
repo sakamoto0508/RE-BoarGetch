@@ -1,5 +1,6 @@
 #include "ACFCameraSubsystem.h"
 #include "ACFCameraDirector.h"
+#include "ACFCameraHealth.h"
 #include "ACFCameraOutputModifier.h"
 #include "ACFCameraPreset.h"
 #include "ACFCameraSettings.h"
@@ -172,6 +173,12 @@ bool UACFCameraSubsystem::BeginOutputForModifierPass(const APlayerCameraManager*
 		bCompatibilityWarned = false;
 	}
 	const FModifierPassTarget Pass = ResolveModifierPass(CameraManager, POV);
+	if (Director && CameraManager && CameraManager->ViewTarget.Target != HealthViewTarget.Get())
+	{
+		// B-4: the fallback pose belongs to one camera context; a new view target starts over.
+		HealthViewTarget = CameraManager->ViewTarget.Target;
+		Director->InvalidateLastGoodPose();
+	}
 	if (OutputDiagnostics.Frame != static_cast<int64>(GFrameCounter))
 	{
 		OutputDiagnostics.Frame = static_cast<int64>(GFrameCounter);
@@ -658,7 +665,7 @@ bool UACFCameraSubsystem::ApplyOutputCollisionGuard(FVector& InOutLocation)
 	const FACFCameraOutputConstraint& Constraint = Director->GetOutputConstraint();
 	const APlayerCameraManager* CameraManager = GetCurrentCameraManager();
 	const UWorld* World = CameraManager ? CameraManager->GetWorld() : nullptr;
-	if (!Constraint.bValid || !World)
+	if (!Constraint.bValid || !World || !ACFCameraValidation::IsFinite(InOutLocation)) // B-4: never sweep from / to NaN (the PCM pose is left as it is)
 	{
 		return false;
 	}
@@ -1016,4 +1023,21 @@ void UACFCameraSubsystem::FlushSequenceEvents()
 		OnCameraSequenceEvent.Broadcast(Event);
 	}
 	SequenceEventScratch.Reset();
+}
+
+// -------------------------------------------------------------------------------------------------
+// Health (Phase 6B / B-4)
+
+FACFCameraHealthDiagnostics UACFCameraSubsystem::GetHealthDiagnostics() const
+{
+	return Director ? Director->GetHealthDiagnostics() : FACFCameraHealthDiagnostics();
+}
+
+void UACFCameraSubsystem::NoteInvalidOutputUpstream()
+{
+	if (Director)
+	{
+		Director->GetHealth().Report(EACFCameraHealthIssue::InvalidOutputUpstream, NAME_None, TEXT("PCM pose under ACF (view target / earlier modifiers)"),
+			TEXT("ACF pose written at full weight"));
+	}
 }

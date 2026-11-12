@@ -89,7 +89,8 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraBlendSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blend", meta = (EditCondition = "Curve == EACFCameraBlendCurve::Custom"))
 	TObjectPtr<UCurveFloat> CustomCurve = nullptr;
 
-	bool IsCut() const { return Curve == EACFCameraBlendCurve::Cut || Duration <= 0.f; }
+	/** A non-finite duration (NaN / Inf) is a cut too: such a blend would never end (Phase 6B / B-4). */
+	bool IsCut() const { return Curve == EACFCameraBlendCurve::Cut || !(Duration > 0.f) || !FMath::IsFinite(Duration); }
 
 	/** Maps normalized time [0,1] to blend alpha [0,1]. */
 	float EvaluateAlpha(float NormalizedTime) const;
@@ -151,7 +152,15 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraTarget
 	/** True if a target was assigned at all (even if it has since been destroyed). */
 	bool IsSet() const { return !Actor.IsExplicitlyNull() || !Component.IsExplicitlyNull(); }
 
-	/** World transform of the live target. False if unset or destroyed. OutObject identifies it. */
+	/** True while the assigned actor / component exists (whatever its transform). Use this for "target lost" decisions. */
+	bool IsAlive() const { return Component.IsValid() || Actor.IsValid(); }
+
+	/**
+	 * World transform of the live target. False if unset or destroyed, and (Phase 6B / B-4) also for this frame when the
+	 * transform is not finite or its rotation cannot be normalized: the camera then treats the target as not resolved
+	 * (Hold Last Known keeps the last valid transform) instead of storing NaN in its damping state. Reported as a health issue.
+	 * OutObject identifies the target in both cases.
+	 */
 	bool Resolve(FTransform& OutTransform, const UObject*& OutObject) const;
 };
 
@@ -391,6 +400,51 @@ enum class EACFViewTargetResolution : uint8
 	SameDecision,
 	/** The POV is a copy during a blend between an external and a non-external view target: unknown. ACF does not write. */
 	Unresolved,
+};
+
+/** Invalid values (NaN / Inf / invalid FOV ...) ACF detected and kept out of its state and output (Phase 6B / B-4). Counts since the director was created. */
+USTRUCT(BlueprintType)
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraHealthDiagnostics
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 TotalIssues = 0;
+
+	/** Target transforms that were not finite (treated as not resolved for that frame). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 InvalidTargets = 0;
+
+	/** Delta times that were NaN / Inf / negative (evaluated as zero time). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 InvalidDeltaTimes = 0;
+
+	/** UE camera poses (upstream), control rotations or PCM poses under ACF that were not valid. */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 InvalidUpstreamPoses = 0;
+
+	/** Rejected runtime inputs (camera input, orbit rotation, Blend From Pose, blend / suppression times). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 RejectedInputs = 0;
+
+	/** Node outputs that were invalid (the node's invalid components were dropped). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 InvalidNodeOutputs = 0;
+
+	/** Frames whose effect output was invalid (effects dropped for that frame). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 InvalidEffectOutputs = 0;
+
+	/** Final / blended poses that still were invalid (fallback pose used). */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int32 InvalidFinalPoses = 0;
+
+	/** Description of the last issue: what, node, request, parameter, fallback, frame. */
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	FString LastIssue;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Action Camera")
+	int64 LastIssueFrame = 0;
 };
 
 /** Compatibility diagnostics of ACF's output on the current PlayerCameraManager (Phase 6B / B-2). */

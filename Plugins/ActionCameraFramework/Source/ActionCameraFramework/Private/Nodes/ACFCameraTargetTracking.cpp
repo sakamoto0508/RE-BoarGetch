@@ -1,4 +1,5 @@
 #include "Nodes/ACFCameraTargetTracking.h"
+#include "ACFCameraHealth.h"
 #include "Components/SceneComponent.h"
 #include "GameFramework/Actor.h"
 
@@ -31,6 +32,13 @@ bool FACFCameraTargetTrackingState::ResolveTarget(const FACFCameraTarget& Target
 		return true;
 	}
 
+	// Phase 6B / B-4: the target still exists but its transform is invalid this frame (Resolve rejected it): it is not
+	// lost, so keep the last valid transform whatever the lost behavior (nothing invalid reaches the damping state).
+	if (OutObject && OutObject == LastTargetObject.Get() && bHasLastKnownTarget)
+	{
+		OutTransform = LastKnownTargetTransform;
+		return true;
+	}
 	if (Target.IsSet() && LostBehavior == EACFCameraTargetLostBehavior::HoldLastKnown && bHasLastKnownTarget)
 	{
 		OutTransform = LastKnownTargetTransform;
@@ -54,6 +62,20 @@ bool FACFCameraTargetTrackingState::Track(const FACFCameraTarget& Target, const 
 
 bool FACFCameraTargetTrackingState::TrackPoint(bool bValid, const FTransform& Transform, const FACFCameraTargetMotionSettings& Settings, float DeltaTime, bool bDetectTeleport, FACFCameraTrackedTarget& Out)
 {
+	if (bValid && !ACFCameraValidation::IsValidTransform(Transform))
+	{
+		// A computed point (group center, lock-on point) built from invalid data: hold the last valid one (B-4).
+		FACFCameraHealth::ReportActive(EACFCameraHealthIssue::InvalidTarget, NAME_None, TEXT("tracked point"), TEXT("last valid point held"));
+		if (bHasLastKnownTarget)
+		{
+			Out.Transform = LastKnownTargetTransform;
+			Out.Transform.SetScale3D(FVector::OneVector);
+			Out.Actor = nullptr;
+			UpdateMotion(Settings, DeltaTime, bDetectTeleport, Out);
+			return true;
+		}
+		return false;
+	}
 	if (bValid)
 	{
 		LastKnownTargetTransform = Transform;
