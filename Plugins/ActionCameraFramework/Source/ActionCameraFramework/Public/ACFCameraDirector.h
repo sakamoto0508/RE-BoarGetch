@@ -7,6 +7,7 @@
 #include "ACFCameraNode.h"
 #include "Effects/ACFCameraEffectStack.h"
 #include "ACFCameraSequencePlayer.h"
+#include "ACFCameraProfiler.h"
 #include "ACFCameraDirector.generated.h"
 
 class UACFCameraPreset;
@@ -222,6 +223,16 @@ public:
 	const FACFCameraRigDebug& GetLastDebug() const { return LastDebug; }
 #endif
 
+#if ACF_WITH_PROFILER
+	/**
+	 * Profiler of this player (Phase 6B / B-1). Records while ACF.Profile is 1, or while forced on (tests, tools).
+	 * Recording never changes the evaluation result.
+	 */
+	FACFCameraProfiler& GetProfiler() { return Profiler; }
+	const FACFCameraProfiler& GetProfiler() const { return Profiler; }
+	void SetProfilerForced(bool bForced) { bProfilerForced = bForced; }
+#endif
+
 private:
 	struct FTransition
 	{
@@ -319,5 +330,11 @@ private:
 	FVector2D InputRate = FVector2D::ZeroVector;
 #if !UE_BUILD_SHIPPING
 	FACFCameraRigDebug LastDebug;
+#endif
+#if ACF_WITH_PROFILER
+	/** Starts / stops recording to follow the console variable (or the forced state). Called outside any profiler scope. */
+	void SyncProfiler();
+	FACFCameraProfiler Profiler;
+	bool bProfilerForced = false;
 #endif
 };

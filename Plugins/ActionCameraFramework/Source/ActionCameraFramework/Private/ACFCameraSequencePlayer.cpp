@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "CollisionQueryParams.h"
+#include "ACFCameraProfiler.h"
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
 #endif
@@ -628,6 +629,8 @@ bool FACFCameraSequencePlayer::IsShotFeasible(UACFCameraDirector& Director, cons
 	}
 	if (Shot.Fallback.bRequireLineOfSight && Context.World)
 	{
+		ACF_PROFILE_SCOPE(ShotProbe);
+		ACF_PROFILE_PURPOSE(ShotProbe);
 		AActor* Attacker = Playback.Params.Attacker.Get();
 		AActor* Target = Playback.Params.Target.Get();
 		FCollisionQueryParams Params(SCENE_QUERY_STAT(ACFShotProbe), false);
@@ -645,6 +648,7 @@ bool FACFCameraSequencePlayer::IsShotFeasible(UACFCameraDirector& Director, cons
 				continue;
 			}
 			FHitResult Hit;
+			ACF_PROFILE_QUERY(Line);
 			if (Context.World->LineTraceSingleByChannel(Hit, Probe.Pose.Location, Subject->GetActorLocation(), Probe.Channel, Params)
 				&& Hit.GetActor() != Subject && Hit.GetActor() != Attacker && Hit.GetActor() != Target)
 			{

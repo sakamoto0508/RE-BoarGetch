@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
+#include "ACFCameraProfiler.h"
 
 void UACFCameraNode_Collision::ResetInterpolation(FInstancedStruct* RuntimeState) const
 {
@@ -155,6 +156,14 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 		auto IsBlocked = [World, &Params, Channel, LosRadius](const FVector& From, const FACFCameraFramingSubject& Subject) -> bool
 		{
 			FHitResult LosHit;
+			if (LosRadius > 0.f)
+			{
+				ACF_PROFILE_QUERY(Sweep);
+			}
+			else
+			{
+				ACF_PROFILE_QUERY(Line);
+			}
 			const bool bHit = LosRadius > 0.f
 				? World->SweepSingleByChannel(LosHit, From, Subject.Location, FQuat::Identity, Channel, FCollisionShape::MakeSphere(LosRadius), Params)
 				: World->LineTraceSingleByChannel(LosHit, From, Subject.Location, Channel, Params);
@@ -234,6 +243,7 @@ bool ACFCameraCollision::SweepCamera(const UWorld& World, const FVector& Origin,
 	ECollisionChannel Channel, FCollisionQueryParams& Params, FHitResult& OutHit)
 {
 	const FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
+	ACF_PROFILE_QUERY(Sweep); // purpose comes from the caller's scope (Collision, Deoccluder*, OutputGuard, ShotProbe)
 	bool bHit = World.SweepSingleByChannel(OutHit, Origin, Desired, FQuat::Identity, Channel, Sphere, Params);
 	if (bHit && OutHit.bStartPenetrating)
 	{
@@ -243,6 +253,7 @@ bool ACFCameraCollision::SweepCamera(const UWorld& World, const FVector& Origin,
 		{
 			Params.AddIgnoredComponent(Started);
 		}
+		ACF_PROFILE_QUERY(Sweep);
 		bHit = World.SweepSingleByChannel(OutHit, Origin, Desired, FQuat::Identity, Channel, Sphere, Params);
 		if (bHit && OutHit.bStartPenetrating)
 		{

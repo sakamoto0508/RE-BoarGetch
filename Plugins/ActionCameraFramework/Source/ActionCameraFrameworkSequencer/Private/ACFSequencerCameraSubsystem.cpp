@@ -13,6 +13,7 @@
 #include "LevelSequenceActor.h"
 #include "LevelSequencePlayer.h"
 #include "Modules/ModuleManager.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 
 IMPLEMENT_MODULE(FDefaultModuleImpl, ActionCameraFrameworkSequencer)
 
@@ -308,6 +309,7 @@ APlayerController* UACFSequencerCameraSubsystem::ResolveSequenceController(const
 
 void UACFSequencerCameraSubsystem::RefreshAll()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(ACF_SequencerRefreshAll); // Unreal Insights only (runs in the world tick, outside ACF's camera update)
 	const UWorld* World = GetWorld();
 	UGameInstance* GameInstance = World ? World->GetGameInstance() : nullptr;
 	if (!GameInstance)
@@ -384,6 +386,7 @@ void UACFSequencerCameraSubsystem::ApplyControlRotationPolicy(const FPlayerState
 
 void UACFSequencerCameraSubsystem::RefreshPlayer(ULocalPlayer* LocalPlayer)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(ACF_SequencerRefreshPlayer);
 	UWorld* World = GetWorld();
 	if (!World || !LocalPlayer)
 	{

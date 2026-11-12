@@ -290,6 +290,12 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	{
 		return LastResult;
 	}
+#if ACF_WITH_PROFILER
+	// Measurement only (never changes the result): this player's profiler is active for the whole evaluation.
+	SyncProfiler();
+	FACFCameraProfiler::FActiveScope ProfileActive(&Profiler, InContext.FrameNumber, InContext.DeltaTime, /*bIsEvaluation*/ true, InContext.bOutputBypassed);
+#endif
+	ACF_PROFILE_SCOPE(Evaluate);
 	LastRigEvaluationCount = 0;
 
 	// Stage 1 (input): camera input is consumed only by an evaluation that advances time, so a
@@ -310,9 +316,15 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 
 	// Stage 2a: camera sequences (finishers) advance once per frame and switch their shot requests now, so the
 	// request chosen below already reflects this frame's shot.
-	Sequences.Tick(*this, Context);
+	{
+		ACF_PROFILE_SCOPE(SequenceTick);
+		Sequences.Tick(*this, Context);
+	}
 
 	// Stage 2: resolve which request is in control, and who owns the output.
+	int32 BestIndex = INDEX_NONE;
+	{
+	ACF_PROFILE_SCOPE(ResolveRequests);
 	PruneLostInstigators();
 	PruneLostSuppressionSources();
 	if (bSuppressionDirty)
@@ -320,7 +332,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 		StartSuppressionFade(PendingSuppressionBlendTime);
 		bSuppressionDirty = false;
 	}
-	const int32 BestIndex = FindBestRequestIndex();
+	BestIndex = FindBestRequestIndex();
 	const FACFCameraRequestHandle BestHandle = BestIndex != INDEX_NONE ? Requests[BestIndex].Handle : FACFCameraRequestHandle();
 	if (BestHandle != ActiveHandle)
 	{
@@ -346,6 +358,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 			ACFDirector::LogEvent(FString::Printf(TEXT("BlendFromPose -> %s (blend %.2fs)"), *ActiveHandle.ToString(), TransitionBlend.Duration));
 		}
 	}
+	} // ResolveRequests
 
 	// Stage 4 (time): advance the transition once for this frame.
 	const float Alpha = AdvanceTransition(Context.DeltaTime);
@@ -394,13 +407,17 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	// Stage 5a: effects. Evaluated once per frame (inside the frame guard); location before Collision.
 	LastBlendedPose = Result.Pose;
 	const FACFCameraPose EffectCamera = Result.Pose;
-	Effects.Evaluate(Context, EffectCamera);
-	Effects.ApplyPreCollision(Result.Pose, EffectCamera);
+	{
+		ACF_PROFILE_SCOPE(Effects);
+		Effects.Evaluate(Context, EffectCamera);
+		Effects.ApplyPreCollision(Result.Pose, EffectCamera);
+	}
 
 	// Stage 5 (corrections of the final pose): PostBlend nodes (Collision) of the camera in control.
 	// Phase 3 visual effects will be inserted before this so they cannot push the camera into walls.
 	if (TargetEntry && TargetEntry->Rig.HasPostBlendNodes())
 	{
+		ACF_PROFILE_SCOPE(PostBlend);
 		const FACFCameraNodeContext PostContext(Context, TargetEntry->Params);
 		PostContext.Scratch = TargetScratch;
 		TargetEntry->Rig.EvaluatePostBlend(PostContext, Result.Pose);
@@ -421,7 +438,10 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	// Stage 5c: rotation / FOV effects after Collision (they do not move the camera). The aim pose excludes them.
 	const FACFCameraPose AimSource = Result.Pose;
 	const UACFCameraSettings* Settings = GetDefault<UACFCameraSettings>();
-	Effects.ApplyPostCollision(Result.Pose, Settings->EffectFovMin, Settings->EffectFovMax);
+	{
+		ACF_PROFILE_SCOPE(Effects);
+		Effects.ApplyPostCollision(Result.Pose, Settings->EffectFovMin, Settings->EffectFovMax);
+	}
 #if !UE_BUILD_SHIPPING
 	LastDebug = TargetScratch.Debug;
 #endif
@@ -455,6 +475,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 
 FACFCameraPose UACFCameraDirector::EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context, FACFCameraRigScratch& OutScratch)
 {
+	ACF_PROFILE_SCOPE(RigEvaluate);
 	FACFCameraPose Pose = Context.UpstreamPose;
 	const FACFCameraNodeContext NodeContext(Context, Entry.Params);
 	Entry.Rig.Evaluate(NodeContext, Pose);
@@ -751,6 +772,8 @@ bool UACFCameraDirector::ProbeCamera(const UACFCameraPreset* Preset, const FACFC
 	{
 		return false;
 	}
+	ACF_PROFILE_SCOPE(ShotProbe);
+	ACF_PROFILE_PURPOSE(ShotProbe);
 	// A throw-away rig: no damping history, no time (nodes snap and never advance on a zero delta).
 	FACFCameraEvaluationContext ProbeContext = Context;
 	ProbeContext.DeltaTime = 0.f;
@@ -801,3 +824,18 @@ FACFCameraSequenceHandle UACFCameraDirector::PlayFinisherPreset(const UACFCamera
 	Params.Target = Target;
 	return Sequences.Play(*this, Sequence, Params);
 }
+
+#if ACF_WITH_PROFILER
+void UACFCameraDirector::SyncProfiler()
+{
+	const bool bWant = bProfilerForced || ACFCameraProfiling::IsRequestedByConsole();
+	if (bWant && !Profiler.IsRecording())
+	{
+		Profiler.Start(ACFCameraProfiling::GetRequestedCapacity()); // the recorder's only allocation, outside any measured scope
+	}
+	else if (!bWant && Profiler.IsRecording() && FACFCameraProfiler::GetActive() != &Profiler)
+	{
+		Profiler.Stop();
+	}
+}
+#endif

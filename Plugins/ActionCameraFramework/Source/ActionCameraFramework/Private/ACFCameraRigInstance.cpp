@@ -2,6 +2,7 @@
 #include "ACFCameraNode.h"
 #include "ACFCameraPreset.h"
 #include "Algo/StableSort.h"
+#include "ACFCameraProfiler.h"
 
 void FACFCameraRigInstance::Initialize(const UACFCameraPreset* InPreset)
 {
@@ -84,6 +85,10 @@ void FACFCameraRigInstance::SyncStatesWithPreset()
 void FACFCameraRigInstance::RunNodes(const FACFCameraNodeContext& Context, FACFCameraPose& InOutPose, int32 Begin, int32 End)
 {
 	const TArray<TObjectPtr<UACFCameraNode>>& Nodes = Preset->Nodes;
+#if ACF_WITH_PROFILER
+	// Every node is measured here, in the one loop that runs nodes, so new node classes need no profiling code.
+	FACFCameraProfiler* const Profiler = FACFCameraProfiler::GetActive();
+#endif
 	for (int32 Position = Begin; Position < End; ++Position)
 	{
 		const int32 Index = Order[Position];
@@ -91,7 +96,18 @@ void FACFCameraRigInstance::RunNodes(const FACFCameraNodeContext& Context, FACFC
 		if (Node && Node->bEnabled)
 		{
 			FInstancedStruct& State = NodeStates[Index];
+			// Unreal Insights: one event per node class (only emitted while the CPU trace channel is on).
+			TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(Node->GetClass()->GetFName());
+#if ACF_WITH_PROFILER
+			const uint64 Start = Profiler ? FPlatformTime::Cycles64() : 0;
+#endif
 			Node->Evaluate(Context, InOutPose, State.IsValid() ? &State : nullptr);
+#if ACF_WITH_PROFILER
+			if (Profiler)
+			{
+				Profiler->AddNode(Node->GetClass()->GetFName(), static_cast<uint8>(Node->GetStage()), FPlatformTime::Cycles64() - Start);
+			}
+#endif
 		}
 	}
 }

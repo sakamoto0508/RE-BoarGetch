@@ -23,6 +23,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "Containers/Ticker.h"
 #include "ACFCameraBlueprintLibrary.h"
+#include "ACFCameraProfiler.h"
+#include "Engine/GameInstance.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 #if !UE_BUILD_SHIPPING
 
@@ -758,6 +762,113 @@ namespace ACFDebug
 	static FAutoConsoleCommandWithWorldAndArgs GSampleFinisherCmd(TEXT("ACF.Sample.Finisher"),
 		TEXT("Finisher camera sample: <Play [Enemy] [Rate]|Preset [Seconds]|Advance|Jump <Shot>|Hold|Release|Rate <x>|Finish|Cancel|Notify <Cmd>|Status>"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleFinisher));
+}
+
+namespace ACFDebug
+{
+	// ---------------------------------------------------------------------------------------------
+	// Phase 6B / B-1 profiler (README "計測"). Recording itself is switched by the cvar ACF.Profile 0/1.
+	//   ACF.Profile.Report [Name]       summary per local player (+ all players per frame) to the log, CSV to Saved/ACFProfile/
+	//   ACF.Profile.Clear               drops the recorded frames
+	//   ACF.Profile.Allocations <0|1>   counts game-thread allocations inside ACF scopes (installs the counting allocator once)
+	//   ACF.Profile.Sites [N]           call stacks of the allocations counted so far
+
+	static void ForEachDirector(UWorld* World, TFunctionRef<void(int32 PlayerIndex, UACFCameraDirector& Director)> Visit)
+	{
+		const UGameInstance* GameInstance = World ? World->GetGameInstance() : nullptr;
+		if (!GameInstance)
+		{
+			return;
+		}
+		const TArray<ULocalPlayer*>& Players = GameInstance->GetLocalPlayers();
+		for (int32 Index = 0; Index < Players.Num(); ++Index)
+		{
+			const UACFCameraSubsystem* Subsystem = Players[Index] ? Players[Index]->GetSubsystem<UACFCameraSubsystem>() : nullptr;
+			if (UACFCameraDirector* Director = Subsystem ? Subsystem->GetDirector() : nullptr)
+			{
+				Visit(Index, *Director);
+			}
+		}
+	}
+
+	static void ProfileReport(const TArray<FString>& Args, UWorld* World)
+	{
+		const FString Name = Args.IsValidIndex(0) ? Args[0] : TEXT("ACFProfile");
+		const FString Folder = FPaths::ProjectSavedDir() / TEXT("ACFProfile");
+		TMap<uint64, double> TotalUsByFrame;
+		TMap<uint64, int32> QueriesByFrame;
+		ForEachDirector(World, [&](int32 PlayerIndex, UACFCameraDirector& Director)
+		{
+			const FACFCameraProfiler& Profiler = Director.GetProfiler();
+			TArray<const FACFCameraProfileFrame*> Frames;
+			Profiler.GetFrames(Frames);
+			for (const FACFCameraProfileFrame* Frame : Frames)
+			{
+				TotalUsByFrame.FindOrAdd(Frame->FrameNumber) += Frame->GetTotalMicroseconds();
+				QueriesByFrame.FindOrAdd(Frame->FrameNumber) += Frame->GetFrameQueries();
+			}
+			const FACFCameraProfileSummary Summary = FACFCameraProfileSummary::Summarize(Frames);
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Profile.Report %s player %d:\n%s"), *Name, PlayerIndex, *Summary.ToString());
+			const FString Path = Folder / FString::Printf(TEXT("%s_P%d.csv"), *Name, PlayerIndex);
+			FFileHelper::SaveStringToFile(ACFCameraProfiling::BuildCsv(Profiler), *Path);
+		});
+		TArray<double> Totals;
+		TArray<double> Queries;
+		for (const TPair<uint64, double>& Pair : TotalUsByFrame)
+		{
+			Totals.Add(Pair.Value);
+			Queries.Add(QueriesByFrame[Pair.Key]);
+		}
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Profile.Report %s all players per frame: total us %s, queries %s (CSV in %s)"), *Name,
+			*FACFCameraProfileStats::Compute(Totals).ToString(), *FACFCameraProfileStats::Compute(Queries).ToString(), *Folder);
+	}
+
+	static void ProfileClear(const TArray<FString>& Args, UWorld* World)
+	{
+		ForEachDirector(World, [](int32, UACFCameraDirector& Director) { Director.GetProfiler().Clear(); });
+		FACFCameraAllocationCounter::ResetSites();
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Profile.Clear"));
+	}
+
+	static void ProfileAllocations(const TArray<FString>& Args, UWorld* World)
+	{
+		const bool bOn = !Args.IsValidIndex(0) || FCString::Atoi(*Args[0]) != 0;
+		if (bOn && !FACFCameraAllocationCounter::Install())
+		{
+			return;
+		}
+		FACFCameraAllocationCounter::SetCounting(bOn);
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Profile.Allocations %d (counts only while ACF.Profile records)"), bOn ? 1 : 0);
+	}
+
+	static void ProfileSites(const TArray<FString>& Args, UWorld* World)
+	{
+		const bool bWasCounting = FACFCameraAllocationCounter::IsCounting();
+		FACFCameraAllocationCounter::SetCounting(false); // symbolizing allocates
+		TArray<FACFCameraAllocationCounter::FSite> Sites;
+		uint32 Overflow = 0;
+		FACFCameraAllocationCounter::GetSites(Sites, Overflow);
+		Sites.Sort([](const FACFCameraAllocationCounter::FSite& A, const FACFCameraAllocationCounter::FSite& B) { return A.Count > B.Count; });
+		const int32 Max = Args.IsValidIndex(0) ? FCString::Atoi(*Args[0]) : 10;
+		for (int32 I = 0; I < FMath::Min(Max, Sites.Num()); ++I)
+		{
+			const FACFCameraAllocationCounter::FSite& Site = Sites[I];
+			UE_LOG(LogActionCamera, Display, TEXT("ACF allocation site %d: %u allocations, %llu bytes, section %s\n%s"), I, Site.Count, Site.Bytes,
+				Site.Section >= 0 ? LexToString(static_cast<EACFCameraProfileSection>(Site.Section)) : TEXT("(none)"), *FACFCameraAllocationCounter::DescribeSite(Site));
+		}
+		UE_LOG(LogActionCamera, Display, TEXT("ACF allocation sites: %d distinct, %u allocations at sites beyond the table"), Sites.Num(), Overflow);
+		FACFCameraAllocationCounter::SetCounting(bWasCounting);
+	}
+
+	static FAutoConsoleCommandWithWorldAndArgs GProfileReportCmd(TEXT("ACF.Profile.Report"),
+		TEXT("Summarizes the frames recorded with ACF.Profile 1 (log) and writes one CSV per local player to Saved/ACFProfile/. [Name]"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ProfileReport));
+	static FAutoConsoleCommandWithWorldAndArgs GProfileClearCmd(TEXT("ACF.Profile.Clear"),
+		TEXT("Drops the recorded profiler frames and allocation sites."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ProfileClear));
+	static FAutoConsoleCommandWithWorldAndArgs GProfileAllocationsCmd(TEXT("ACF.Profile.Allocations"),
+		TEXT("<0|1> Counts game-thread heap allocations inside ACF scopes while ACF.Profile records."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ProfileAllocations));
+	static FAutoConsoleCommandWithWorldAndArgs GProfileSitesCmd(TEXT("ACF.Profile.Sites"),
+		TEXT("[N] Logs the call stacks of the allocations counted by ACF.Profile.Allocations."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&ProfileSites));
 }
 
 #endif // !UE_BUILD_SHIPPING

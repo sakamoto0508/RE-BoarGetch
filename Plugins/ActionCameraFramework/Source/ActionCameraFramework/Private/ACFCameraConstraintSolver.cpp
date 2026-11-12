@@ -2,6 +2,7 @@
 #include "Nodes/ACFCameraFraming.h"
 #include "Nodes/ACFCameraNode_GroupFraming.h"
 #include "Nodes/ACFCameraTargetTracking.h"
+#include "ACFCameraProfiler.h"
 
 namespace ACFSolver
 {
@@ -90,6 +91,8 @@ void FACFCameraConstraintSolver::Deocclude(const FACFCameraDeoccluderSettings& S
 	float DeltaTime, FACFCameraDeoccluderState& State, const FACFCameraSolverQueries& Queries, FACFCameraPose& InOutPose, FACFCameraSolverReport& Report)
 {
 	using namespace ACFSolver;
+	ACF_PROFILE_SCOPE(Deocclude);
+	ACF_PROFILE_PURPOSE(DeoccluderCheck);
 	FChecked Checked;
 	SelectSubjects(Subjects, Settings.MaxCheckedSubjects, Checked);
 	Report.NumCheckedSubjects = Checked.Num;
@@ -191,6 +194,7 @@ void FACFCameraConstraintSolver::Deocclude(const FACFCameraDeoccluderSettings& S
 	{
 		Report.bSearched = true;
 		State.TimeSinceSearch = 0.f;
+		ACF_PROFILE_PURPOSE(DeoccluderSearch);
 		const float H = Settings.MaxYawOffset;
 		const float P = Settings.MaxPitchOffset;
 		const float L = Settings.MaxPullIn;
@@ -274,6 +278,7 @@ void FACFCameraConstraintSolver::Deocclude(const FACFCameraDeoccluderSettings& S
 void FACFCameraConstraintSolver::RecoverFraming(const FACFCameraFramingRecoverySettings& Settings, const FACFCameraFramingSubjects& Subjects, const FVector2D& FramingSize,
 	float AspectRatio, float DeltaTime, FACFCameraFramingRecoveryState& State, FACFCameraPose& InOutPose, FACFCameraSolverReport& Report)
 {
+	ACF_PROFILE_SCOPE(FramingRecovery);
 	const float InFov = InOutPose.FieldOfView;
 	double GoalFov = InFov;
 	FVector2D GoalRotation = FVector2D::ZeroVector;

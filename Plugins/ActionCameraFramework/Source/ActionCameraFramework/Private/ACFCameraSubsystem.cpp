@@ -68,6 +68,10 @@ void UACFCameraSubsystem::BroadcastPreEvaluate(float DeltaTime)
 	if (LastPreEvaluateFrame != GFrameCounter)
 	{
 		LastPreEvaluateFrame = GFrameCounter;
+#if ACF_WITH_PROFILER
+		FACFCameraProfiler::FActiveScope ProfileActive(Director ? &Director->GetProfiler() : nullptr, GFrameCounter, DeltaTime, /*bIsEvaluation*/ false, false);
+#endif
+		ACF_PROFILE_SCOPE(PreEvaluate);
 		OnPreEvaluate.Broadcast(*this, DeltaTime);
 	}
 }
@@ -315,6 +319,10 @@ void UACFCameraSubsystem::HandleWorldPostActorTick(UWorld* World, ELevelTick Tic
 	UpstreamPOV.FOV = CameraManager->DefaultFOV;
 	if (AActor* GameplayTarget = LastOutputViewTarget.Get())
 	{
+#if ACF_WITH_PROFILER
+		FACFCameraProfiler::FActiveScope ProfileActive(&Director->GetProfiler(), GFrameCounter, DeltaSeconds, /*bIsEvaluation*/ false, true);
+#endif
+		ACF_PROFILE_SCOPE(BackgroundUpstream);
 		GameplayTarget->CalcCamera(DeltaSeconds, UpstreamPOV);
 	}
 	else if (Director->GetLastResult().FrameNumber != 0)
@@ -499,6 +507,11 @@ bool UACFCameraSubsystem::ApplyOutputCollisionGuard(FVector& InOutLocation)
 	{
 		return false;
 	}
+#if ACF_WITH_PROFILER
+	FACFCameraProfiler::FActiveScope ProfileActive(&Director->GetProfiler(), GFrameCounter, 0.f, /*bIsEvaluation*/ false, false);
+#endif
+	ACF_PROFILE_SCOPE(OutputGuard);
+	ACF_PROFILE_PURPOSE(OutputGuard);
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(ACFCameraOutputGuard), false);
 	for (const TWeakObjectPtr<const AActor>& Actor : Constraint.IgnoredActors)
 	{

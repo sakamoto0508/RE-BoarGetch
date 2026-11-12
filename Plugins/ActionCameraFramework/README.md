@@ -16,7 +16,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。設計リスクは再現しておらず、性能は未計測
-- 次は Phase 6B（監査結果の修正）。今後の計画は下の「開発ロードマップ」
+- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測、`Docs/Phase6B_B1_Measurement.md`）が完了し、次は B-2。今後の計画は下の「開発ロードマップ」
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -24,7 +24,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 |-------|------|-----------|
 | 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
-| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Not Started（次に着手） |
+| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1 計測の土台と実測: Completed。次は B-2） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Not Started |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
@@ -569,6 +569,17 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
   - `ACF.Sample.*`（9 章）
 - デバッグ処理とサンプル用コマンドは、Shipping ビルドではコンパイル自体から除外されます。
 
+### 性能の計測（Phase 6B / B-1）
+
+- **`ACF.Profile 1`**: LocalPlayer ごとに、1 フレームごとの CPU 時間（評価・要求解決・Rig・Node 別・演出・Deoccluder・Guard など）、ACF が発行したコリジョンクエリの数（目的別・Sweep / Line 別）を記録します。既定は 0（バッファを確保せず、ほぼコストなし）。
+  - `ACF.Profile.Capacity <フレーム数>`（既定 1024）: 記録するフレーム数（古いものから上書き）。
+  - `ACF.Profile.Report [名前]`: 平均・中央値・P95・最大をログに出し、生データを `Saved/ACFProfile/<名前>_P<番号>.csv` に書きます。
+  - `ACF.Profile.Clear`: 記録を消します。
+  - `ACF.Profile.Allocations 1` → 操作 → `ACF.Profile.Sites [N]`: ACF の計測区間内のアロケーションの回数・サイズ・発生元を調べます（計測専用。評価が数倍遅くなります）。
+- **Unreal Insights**: `-trace=cpu` で起動すると、`ACF_Evaluate` などの区間と Node のクラス名のイベントが見られます（Shipping でも残るのはこのイベントだけ）。
+- **基準値の計測**: サンプルマップで `-ACFProfile` を付けて `ActionCameraFramework.Profile.Scenarios` を実行すると、8 つのシナリオの統計を `Saved/ACFProfile/B1_Results.md` に書きます。手順と結果は `Docs/Phase6B_B1_Measurement.md`。
+- 計測は出力を変えません（記録 ON / OFF で出力が一致することをテストで確認）。記録やコマンドは Shipping ではコンパイルされません。
+
 ## 9. 手動確認（Editor で実際に見る）
 
 自動テストは NullRHI（描画なし）で実行しています。描画結果と操作感は、次の手順で人が確認してください。
@@ -776,8 +787,9 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 102 件です。
+- 自動テストは 108 件です。
   - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
+  - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
   - `.Integration.*`（24 件）、`.Sequencer.*`（14 件。実際の Level Sequence・PCM を使う）: `-game` でのみ実行されます。
   - `.Samples.*`（6 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
@@ -827,7 +839,7 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramewor
 
 | パス | 内容 |
 |------|------|
-| `Source/ActionCameraFramework/Public/` | `ACFCameraSubsystem`（入口）、`ACFCameraDirector`、`ACFCameraSequence`（Sequence / Shot の定義・Handle・状態・通知）、`ACFCameraSequencePlayer`（再生）、`ACFCameraAnimNotifies`（Anim Notify / Notify State）、`ACFCameraConstraintSolver`（Deoccluder / Framing Recovery）、`ACFCameraPreset`、`ACFCameraNode`（段・Scratch）、`ACFCameraRigInstance`、`ACFCameraOutputModifier`（Output と Guard）、`ACFCameraTypes`、`ACFCameraSettings`、`ACFCameraBlueprintLibrary` |
+| `Source/ActionCameraFramework/Public/` | `ACFCameraSubsystem`（入口）、`ACFCameraDirector`、`ACFCameraSequence`（Sequence / Shot の定義・Handle・状態・通知）、`ACFCameraSequencePlayer`（再生）、`ACFCameraAnimNotifies`（Anim Notify / Notify State）、`ACFCameraConstraintSolver`（Deoccluder / Framing Recovery）、`ACFCameraPreset`、`ACFCameraNode`（段・Scratch）、`ACFCameraRigInstance`、`ACFCameraOutputModifier`（Output と Guard）、`ACFCameraTypes`、`ACFCameraSettings`、`ACFCameraBlueprintLibrary`、`ACFCameraProfiler`（計測。Shipping 以外） |
 | `Source/ActionCameraFramework/Public/Nodes/` | FixedPose / Follow / LookAt / OrbitalFollow / Composers / LockOn / ShotAnchor / Combat / GroupFraming / Collision と、共通部品の TargetTracking（Damping・Lookahead・テレポート）/ Framing（画面座標の計算）/ TargetGroup（グループの解決） |
 | `Source/ActionCameraFramework/Public/Effects/` | `ACFCameraEffect`（Layer 基底・Effect Preset）、`ACFCameraBuiltinEffects`（Punch / Recoil / Impulse / Shake / Speed FOV / Roll）、`ACFCameraEffectStack`（Instance・Envelope・合成）、`ACFCameraEffectTypes` |
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`、`ACFCameraDebugShake`（サンプル用 Shake）、`Tests/` |
@@ -836,7 +848,7 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramewor
 | `Content/Verification/` | 自動テスト用アセット |
 | `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト |
-| `Docs/`（Git 管理外） | 引き継ぎ用の詳細資料（`Roadmap.md` = 開発ロードマップ、`Audit_Phase6A.md` = 監査結果と Phase 6B の計画、設計判断、Effect Pipeline 設計） |
+| `Docs/` | 引き継ぎ用の詳細資料（`Roadmap.md` = 開発ロードマップ、`Audit_Phase6A.md` = 監査結果と Phase 6B の計画、`Phase6B_B1_Measurement.md` = 計測の仕組みと性能の基準値、設計判断、Effect Pipeline 設計）。計測の生データは `Saved/ACFProfile/` に出力され、Git 管理しません |
 
 ## 14. Level Sequencer との連携（Phase 5A）
 
