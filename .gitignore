@@ -78,7 +78,8 @@ REBoarGetch.sln.DotSettings.user
 Content/InportAssets/
 Content/LPRiverForest/
 Source/REBoarGetch/Docs/
-# Action Camera Framework: README.md and Docs/ (design, roadmap, audit, measurement reports) are tracked.
+# Action Camera Framework: README.md is the tracked entry point; Docs/ holds local hand-off notes.
+Plugins/ActionCameraFramework/Docs/
 # SourceArt: Blender / FBX / WAV / scripts are tracked (LFS, see .gitattributes); generated output is not.
 SourceArt/**/Logs/
 SourceArt/**/Screenshots/

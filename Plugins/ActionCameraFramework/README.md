@@ -848,7 +848,7 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramewor
 | `Content/Verification/` | 自動テスト用アセット |
 | `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト |
-| `Docs/` | 引き継ぎ用の詳細資料（`Roadmap.md` = 開発ロードマップ、`Audit_Phase6A.md` = 監査結果と Phase 6B の計画、`Phase6B_B1_Measurement.md` = 計測の仕組みと性能の基準値、設計判断、Effect Pipeline 設計）。計測の生データは `Saved/ACFProfile/` に出力され、Git 管理しません |
+| `Docs/`（Git 管理外） | 引き継ぎ用の詳細資料（`Roadmap.md` = 開発ロードマップ、`Audit_Phase6A.md` = 監査結果と Phase 6B の計画、`Phase6B_B1_Measurement.md` = 計測の仕組みと性能の基準値、設計判断、Effect Pipeline 設計）。計測の生データは `Saved/ACFProfile/` に出力され、Git 管理しません |
 
 ## 14. Level Sequencer との連携（Phase 5A）
 
