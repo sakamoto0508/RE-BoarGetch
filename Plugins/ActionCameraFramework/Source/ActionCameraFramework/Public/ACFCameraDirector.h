@@ -60,8 +60,9 @@ struct FACFCameraRequestEntry
  *    currently produced, so there is never a pop.
  *  - The UE camera is the implicit lowest layer: RequestWeight blends 0 -> 1 when ACF takes over
  *    and 1 -> 0 (released request's blend-out) when the last request goes away.
- *  - Output suppression (e.g. Sequencer owns the camera) fades the final Weight without stopping
- *    evaluation, so ACF resumes from an up-to-date state.
+ *  - Output suppression (a game / debug system takes the view) fades the final Weight without stopping
+ *    evaluation, so ACF resumes from an up-to-date state. Level Sequencer camera cuts do not suppress: their
+ *    cameras are external view targets that the output modifier leaves alone (bOutputBypassed evaluations).
  */
 UCLASS(BlueprintType)
 class ACTIONCAMERAFRAMEWORK_API UACFCameraDirector : public UObject
@@ -136,7 +137,7 @@ public:
 
 	/**
 	 * Output authority: while at least one source suppresses output, the final Weight fades to 0
-	 * (the UE camera, e.g. a Sequencer camera cut, shows unmodified). Keyed by a weak source
+	 * (the UE camera shows unmodified; Sequencer camera cuts use external view targets instead). Keyed by a weak source
 	 * object; a destroyed source releases its suppression automatically. Calling twice with the
 	 * same source is harmless.
 	 */

@@ -14,7 +14,8 @@ class ACTIONCAMERAFRAMEWORKSEQUENCER_API UACFSequencerSettings : public UDevelop
 public:
 	/**
 	 * Level Sequence の Camera Cut を自動で検出し、ACF の出力制御と復帰処理を行う。
-	 * OFF にすると、このモジュールは状態の検出も通知も行わない（Suppress Output を自分で呼ぶ従来の運用）。
+	 * OFF にすると、このモジュールは状態の検出も通知も行わない（Sequencer のカメラはゲーム側で
+	 * Add ACF External View Target に登録する。登録しなければ ACF がそのカメラの上に出力される）。
 	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Sequencer")
 	bool bAutomaticHandling = true;

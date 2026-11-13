@@ -208,10 +208,12 @@ public:
 	FACFCameraSequenceEventSignature OnCameraSequenceEvent;
 
 	/**
-	 * Output authority extension point. While suppressed, ACF keeps evaluating but its output weight
-	 * fades to 0 so another system (Sequencer camera cuts, a debug camera, ...) owns the view.
-	 * Keyed by Source (weak): destroying the source releases it. Phase 5 will call this
-	 * automatically for Sequencer; until then call it from the sequence's Play / Stop events.
+	 * Output authority: while suppressed, ACF keeps evaluating but its output weight fades to 0 so another
+	 * system (a debug camera, a game cutscene system, ...) owns the view. Keyed by Source (weak): destroying the
+	 * source releases it; several sources stack and the output returns when the last one is released.
+	 * Level Sequencer Camera Cuts do NOT use this: the Sequencer module registers the cut cameras as external view
+	 * targets instead (AddExternalViewTarget / SetExternalViewTargets), so PCM view target blends stay the only
+	 * blend. It suppresses output only for sequences with bSuppressOutputWhilePlaying (README 14 章).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Action Camera|Authority", meta = (DefaultToSelf = "Source"))
 	void SuppressOutput(UObject* Source, float BlendTime = 0.f);
@@ -336,8 +338,9 @@ public:
 	void PopExplicitOutputViewTarget();
 
 	/**
-	 * Gameplay camera pose (for aiming / traces): UE camera + ACF, without camera shakes or visual
-	 * effects. ACF never sends camera data to the server; replicate gameplay aim explicitly.
+	 * Gameplay camera pose (for aiming / traces): UE camera + ACF after Collision, without UE camera shakes
+	 * and ACF rotation / FOV effects (ACF location effects are included; see FACFCameraEvaluationResult::AimPose).
+	 * ACF never sends camera data to the server; replicate gameplay aim explicitly.
 	 */
 	UFUNCTION(BlueprintPure, Category = "Action Camera")
 	FACFCameraPose GetAimCameraPose() const;

@@ -445,8 +445,9 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 		Health.Report(EACFCameraHealthIssue::InvalidEffectOutput, NAME_None, TEXT("location effects (pre-collision)"), TEXT("effects dropped for this frame"));
 	}
 
-	// Stage 5 (corrections of the final pose): PostBlend nodes (Collision) of the camera in control.
-	// Phase 3 visual effects will be inserted before this so they cannot push the camera into walls.
+	// Stage 5 (corrections of the final pose): PostBlend nodes (Collision) of the camera in control. Location effects
+	// were applied just above, so Collision also keeps them out of walls; rotation / FOV effects come after (5c).
+	// During a blend the incoming camera's PostBlend nodes are used from the first frame.
 	if (TargetEntry && TargetEntry->Rig.HasPostBlendNodes())
 	{
 		ACF_PROFILE_SCOPE(PostBlend);

@@ -71,7 +71,7 @@ struct FACFCameraProbeResult
  *
  * Time: sequence time = camera DeltaTime (game time: global time dilation included, nothing while the world is
  * paused) x PlayRate x attacker Custom Time Dilation (optional). It is NOT read from a montage: shots that must match
- * the animation should end on events (anim notifies), with Duration as a timeout. See README "Finisher / Cinematic".
+ * the animation should end on events (anim notifies), with Duration as a timeout. See README 3 章 "Camera Sequence / Finisher" and 4 章.
  */
 USTRUCT()
 struct ACTIONCAMERAFRAMEWORK_API FACFCameraSequencePlayer

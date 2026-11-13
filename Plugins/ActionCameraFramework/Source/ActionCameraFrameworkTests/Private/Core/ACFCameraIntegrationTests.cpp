@@ -2167,6 +2167,9 @@ bool FACFIntegrationCorridorTest::RunTest(const FString& Parameters)
 		S.StartTime = S.World()->GetTimeSeconds();
 		S.bFlag = true;
 		S.Value = 0.0;   // sign changes of the correction
+		// 0.75 s = the Deoccluder's shortest hysteresis cycle with the default settings (OccludedDelay 0.25 s before a
+		// correction + ClearDelay 0.5 s before it is released): a side change faster than that means the hysteresis was
+		// bypassed (B-11 / audit T-7).
 		S.SavedLocation = FVector(-100.0, 0.0, 0.0); // X = time of the last change, Y = changes less than 0.75 s apart
 		S.SavedRotation = FRotator::ZeroRotator; // .Yaw = last correction sign
 		return true;

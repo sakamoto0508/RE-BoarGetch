@@ -5,7 +5,10 @@ Data Asset（Preset）で作ったカメラを「要求」として出すと、�
 既存の PlayerCameraManager・CameraComponent・SpringArm・Camera Shake はそのまま動きます。
 ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）は置き換えません。
 
-> 使い方と仕様はこの 1 枚にまとめています。`Docs/` は開発の引き継ぎ用の詳細資料で、Git では管理していません。
+> 使い方と仕様はこの 1 枚にまとめています（公開 API・導入手順・制限はすべてここにあります）。`Docs/` は開発の引き継ぎ用の詳細資料で、Git では管理していません。
+>
+> **読む順番**: 初めて使う場合は 1 章（導入）→ 3 章（Preset）→ 4 章（使う）→ 11 章（制限）。Sequencer を使う場合は 14 章。
+> 9〜23 章のうち 15〜23 章は Phase 6B の各改修の仕様と検証の記録で、利用者に関係するのは「仕様」「診断」「制限」の節です。
 
 **現在の状態**:
 - Phase 1（Camera Core + Follow / LookAt）完了
@@ -15,8 +18,8 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4B（Combat Camera、Deoccluder、カメラ制約の調停 = Constraint Solver）完了
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
-- Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。設計リスクは再現しておらず、性能は未計測
-- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測）〜 B-10（Tests / Samples の分離、23 章）が完了し、次は B-11。今後の計画は下の「開発ロードマップ」
+- Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
+- Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。次は Phase 7（下の「開発ロードマップ」）
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -24,7 +27,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 |-------|------|-----------|
 | 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
-| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1〜B-10: Completed。次は B-11） |
+| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Completed（B-1〜B-11） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Not Started |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
@@ -37,19 +40,45 @@ Phase 6B の範囲と順序は、Phase 6A の監査結果で確定していま�
 
 **決定済みの方針**（Phase 6A）
 - 対応する PlayerCameraManager: 標準の `APlayerCameraManager` と、その派生クラスです。POV をコピーして Modifier に渡す派生クラス（GameplayCameras の PCM など）は条件つきで対応します。条件・導入方法・診断は 15 章を参照してください。
-- モジュール: Core / Sequencer / Editor / Tests / Samples の責務分離を目標にします。Sequencer の別プラグイン化は Phase 8 で再評価します。
+- モジュール: Runtime（Core）/ Sequencer / Tests / Editor の 4 つ（B-10、23 章）。サンプル用コマンドは Runtime の中で `ACF_WITH_SAMPLE_COMMANDS` にまとめています。Sequencer の別プラグイン化は Phase 8 で再評価します。
 - 保留: State-Driven Camera、Lens / Post Process、Editor Preview、専用の Preset 編集 UI。
 
 ---
 
 ## 1. 導入
 
+**必要なもの**: Unreal Engine 5.8（このバージョンでだけビルド・テストしています）、C++ のビルド環境（Visual Studio。プラグインはソースで配布）。
+
 1. `Plugins/ActionCameraFramework` をプロジェクトの `Plugins/` に置きます。
-2. `.uproject` の `Plugins` に `{ "Name": "ActionCameraFramework", "Enabled": true }` を追加します。
-3. C++ から使う場合は、`Build.cs` に `"ActionCameraFramework"` を追加します。
+2. `.uproject` の `Plugins` に `{ "Name": "ActionCameraFramework", "Enabled": true }` を追加します（Editor の Plugins 画面で有効にしても同じ）。エンジンの `DataValidation` プラグインも依存として有効になります（既定で有効）。
+3. C++ から使う場合は、`Build.cs` に `"ActionCameraFramework"` を、Sequencer 連携の API（`UACFSequencerBlueprintLibrary` など）も使う場合は `"ActionCameraFrameworkSequencer"` を追加します。Blueprint だけなら不要です。
+
+プラグインを有効にすると、次のモジュールが自動で読み込まれます（個別に有効にする設定はありません。構成は 23 章）。
+
+| モジュール | 役割 | 読み込まれる構成 |
+|---|---|---|
+| `ActionCameraFramework` | カメラ本体（Runtime） | すべて |
+| `ActionCameraFrameworkSequencer` | Level Sequencer 連携（Runtime） | すべて |
+| `ActionCameraFrameworkTests` | 自動テスト（DeveloperTool） | Editor と Debug / Development のゲーム（UE の `bBuildDeveloperTools` が有効な構成）。Test / Shipping には入らない |
+| `ActionCameraFrameworkEditor` | Editor 用（Data Validation のテスト） | Editor のみ |
 
 PlayerCameraManager・GameMode・Character・入力システムの変更は不要です。Enhanced Input にも依存しません。
 最初の要求を出すまで、ACF はカメラに一切関与しません。
+
+**最初の 1 台**（詳細は 3 章・4 章）
+1. Content Browser で Data Asset > `ACFCameraPreset` を作り、`Nodes` に **Orbital Follow** と **Collision** を追加します（TPS カメラ）。
+2. Pawn（または PlayerController）の BeginPlay で `Make Target Request Params`（Follow Target = 自分の Pawn）→ `Request Camera For Player`（Preset）を呼び、返った Handle を保存します。
+3. 視点操作は `Get ACF Camera Subsystem` → `Add Camera Input`（または Preset の Input Source を Control Rotation にして既存の Look 入力のまま）。
+4. 終わるときは `Release Camera For Player`（Handle）。Preset の Default Blend Out で UE のカメラへ戻ります。
+
+**その他の入口**
+- Level Sequence: 何もしなくても Camera Cut を検出して連携します（Project Settings > Plugins > Action Camera Framework - Sequencer、14 章）。
+- デバッグ表示・計測: `ACF.Debug.Draw 2`、`showdebug camera`、`ACF.Profile 1`（8 章）。
+- Preset の検証: 保存時に自動。まとめて確認するときは Content Browser の **Validate Assets**（21 章）。
+- サンプル: Content Browser の Show Plugin Content を ON にし、`/ActionCameraFramework/Samples/L_ACFCameraTest` をプレイ（9 章）。
+- 自動テスト: `Scripts/RunTests.sh`（22 章）。
+
+新しいプロジェクトへの導入は、まだ確認していません（このプロジェクトで開発・テストしています。Phase 8 で確認します）。
 
 ## 2. 仕組み
 
@@ -463,6 +492,16 @@ Cameras->OnCameraSequenceEvent.AddDynamic(this, &AMyCharacter::OnCameraShot);
 | Finisher 中の割り込み | Interrupt Policy に従います（既定は時間を進めたまま裏に回り、割り込みが終わると続きを映す） |
 | 攻撃者・対象の破棄 | Actor Lost Policy に従います（既定は Return Blend で終了）。クラッシュはしません |
 | PlayerController や PCM の作り直し | ACF が次のティックまでに自動で接続し直します |
+| 無効・解除済みの Handle を渡した操作 | 何もせず false を返します（ログは出ません）。Blueprint では戻り値か `Is Valid` で確認してください。Preset が null の要求だけは警告ログを出し、無効な Handle を返します |
+
+**同じことを決める設定が複数ある場合**（上の層ほど優先。矛盾はしません）
+
+| 対象 | 層 | 決まり方 |
+|---|---|---|
+| 入るときのブレンド | Preset の Default Blend In → 要求の `bOverrideBlendIn` / `BlendIn` → Camera Sequence の Shot の Blend In | 要求に上書きがあればそれ、無ければ Preset。Shot の要求は Shot の Blend In |
+| 戻るときのブレンド | Preset の Default Blend Out → `Release Camera With Blend` → `Release ACF Camera With Return Blend` / `Release Camera With Return Blend For Player` / Camera Sequence の Return・Cancel Blend / Sequencer 連携の Return Blend | 通常の解除は、戻り先が下の要求なら戻り先の Blend In、UE カメラなら解除した要求の Blend Out（`With Blend` はこの場合だけ効く）。`With Return Blend` と Sequence の終了は、戻り先に関係なく指定のブレンド。Sequencer 連携の Return Blend は Camera Cut からカットで戻ったときだけ（14 章） |
+| Deoccluder | Collision Node の Deoccluder の Enabled、要求の `bEnableDeoccluder`（既定 ON。`Set ACF Camera Deoccluder Enabled` で実行中に変更。Shot の要求は Shot の Enable Deoccluder = 既定 OFF）、`ACF.Debug.Solver`（開発用） | **すべてが ON のときだけ**動く |
+| 演出の FOV | 演出の値 → Project Settings の Effect FOV Min / Max | 演出は設定の範囲を超えて FOV を動かせない |
 
 ## 6. カメラ演出（Effects）
 
@@ -534,7 +573,7 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 ```
 
 - **Camera Shake**: そのまま使えます。壁際で Shake がカメラを壁へ押しても、Guard が手前で止めます。
-- **Guard の注意**: PCM の `SetViewTarget(..., BlendTime)` によるブレンドは Guard の後に PCM が行うので、Guard では防げません。ACF の使用中は PCM の ViewTarget ブレンドを使わないでください。
+- **Guard の注意**: PCM の `SetViewTarget(..., BlendTime)` によるブレンドは Guard の後に PCM が行うので、その間の壁抜けは Guard では防げません。ACF のカメラ同士の切替は ACF の要求とブレンドで行ってください。外部のカメラ（Sequencer・独自の Camera Actor）との出入りは PCM のブレンドか ACF の戻りのブレンド（20 章）のどちらか一方を使います（14 章・20 章）。
 - **Sequencer（Level Sequence）**: Camera Cut を自動で検出し、Sequencer のカメラには ACF を乗せません（14 章）。`Suppress Output` を自分で呼ぶ必要はありません。
 - **ゲーム独自のカットシーンカメラ**: `Add ACF External View Target (カメラ Actor, Source)` で登録すると、その Actor が ViewTarget の間は ACF を乗せません（14 章）。
 - **照準と見た目**:
@@ -549,8 +588,10 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 ## 8. 設定・デバッグ
 
 - **Project Settings > Plugins > Action Camera Framework**
-  - Output Modifier Class
+  - Output Modifier Class（各ローカルプレイヤーの PCM に追加する Modifier。Priority を変えたいときにサブクラスを指定）
   - Enable Output Collision Guard（既定 ON）
+  - Effect FOV Min / Max（演出が FOV を動かせる範囲。既定 20〜130 度）
+  - Default Impulse Preset / Default Recoil Preset（Preset を渡さない `Play ACF Camera Impulse` / `Recoil` で使う。空なら組み込みの既定値）
   - Log Requests
 - **`ACF.Debug.Draw 1`**: ワールドに描画します。
   - 追従対象（緑）、Lookahead の予測位置（水色）、注視点（黄）
@@ -558,18 +599,18 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
   - Group Framing の対象の球と重み付き中心（マゼンタ）
   - Lock-On のロック点（赤。対象喪失中は灰色）、プレイヤーとの線、注視点（オレンジ）
 - **`ACF.Debug.Draw 2`**: 上の描画に加えて、画面に表示します。
+  - カメラ位置・回転、Orbit の Yaw / Pitch / 距離、Collision の状態
   - Dead Zone（緑枠）、Soft Zone（赤枠）、画面上の対象位置、Framing Size（マゼンタ枠）
   - Group の対象数・前後移動量・FOV 補正、Lock-On の距離と対象喪失の表示
   - Combat（ON / OFF、重み、アーム倍率、FOV、敵との距離）、Solver（確認した対象数、トレース数、探索したか、補正 Yaw / Pitch / Pull、FOV 回復、LIMIT、見えない対象数）
   - Sequence（Handle、Shot 番号 / 数と名前、経過 / 長さ、Play Rate、wait event、HELD、FALLBACK、not in control、所有する演出の数）
 - `ACF.Debug.Draw 1` では Deoccluder の視線も描きます（水色 = 見える、赤 = 遮られている）。
 - **`ACF.Debug.Solver 0`**: Constraint Solver（Deoccluder と Framing Recovery）を一時的に無効にします（比較用。Shipping では存在しません）。
-  - カメラ位置・回転、Orbit の Yaw / Pitch / 距離、Collision の状態
 - **`showdebug camera`**: ACF の要求、Weight、抑制状態を表示します。
 - **コンソール**
   - `ACF.Debug.PushFixed` / `ReleaseLast` / `ReleaseAll` / `Dump`
   - `ACF.Sample.*`（9 章）
-- デバッグ処理とサンプル用コマンドは、Shipping ビルドではコンパイル自体から除外されます。
+- デバッグ処理とサンプル用コマンドは、Shipping ビルドではコンパイル自体から除外されます（サンプル用コマンドはプロジェクトが `ACF_WITH_SAMPLE_COMMANDS=0` を定義すれば他の構成でも除外できます。23 章）。
 
 ### 性能の計測（Phase 6B / B-1）
 
@@ -589,9 +630,9 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 **準備**
 1. Content Browser で Settings > Show Plugin Content を ON にします。
 2. `/ActionCameraFramework/Samples/L_ACFCameraTest` を開いて PIE（Play）します。
-   - Pawn と入力はプロジェクト既定の GameMode のものです。REBoarGetch 側の変更はありません。
+   - マップの World Settings に GameMode が無いので、Pawn と入力はプロジェクト既定の GameMode のものです（自動テストはエンジン標準の GameModeBase / DefaultPawn でも合格。22 章）。
 3. `~` でコンソールを開き、`ACF.Debug.Draw 2` を実行します。
-   - このプロジェクトでは RetroRender の PS1 / CRT ルックが全ゲームワールドに自動でかかります。カメラの動きを素の画面で見たい場合は `Retro.Preset OFF` を実行します（ACF とは無関係）。
+   - （REBoarGetch での確認時のみ）このプロジェクトでは RetroRender の PS1 / CRT ルックが全ゲームワールドに自動でかかります。素の画面で見たい場合は `Retro.Preset OFF`（ACF とは無関係）。
 
 **操作**
 - マウス: プロジェクト既定の Look 入力（ControlRotation）でカメラを旋回します。
@@ -745,14 +786,32 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - シーケンス: `FACFCameraSequencePlayer`（Director が所有し、Evaluate の中で 1 フレーム 1 回 Tick）。Shot は普通の要求なので、Shot 用の Node も通常の Node と同じ作り方です。Shot の成立判定には `UACFCameraDirector::ProbeCamera`（状態を持たない一時的な Rig で 1 回評価）を使えます。要求の削除で戻りのブレンドを指定するには `RemoveRequest(Handle, &Blend, /*bOverrideAnyReturn*/ true)`。
 - 新しい演出: `UACFCameraEffect` を継承し、`Evaluate` で `FACFCameraEffectOutput`（チャンネル・値・空間）を返します。状態は `GetRuntimeStateType`、後始末は `OnEnd` で行います。Envelope・Weight・減衰・合成はスタック側が行います。
 
-## 11. 制限（Phase 5A 時点）
+## 11. 制限
+
+現在の主な制限の一覧です（詳細は各章）。解決済みのものは載せていません。
+
+| 制限 | 内容 | 詳細 |
+|---|---|---|
+| 人による確認 | Editor / PIE で人が操作して見る確認（描画・操作感）は、どの Phase も未実施。自動テストと描画ありのテストマップ（スクリーンショット）で確認 | 9 章 |
+| GameplayCameras の PCM | 実際の PCM で確認したのは Ease なしの Camera Cut だけ。GameplayCameras 内部のブレンド中は ACF の出力が切り替わる瞬間に付く / 外れる（ソースからの判断） | 15 章 |
+| POV をコピーする独自の PCM | 外部 ViewTarget との ViewTarget Blend 中は ACF が書かない（`FACFScopedOutputViewTarget` を入れれば完全に対応） | 15 章 |
+| PCM の ViewTarget ブレンド | その間の壁抜けは Guard でも防げない | 7 章 |
+| Sequencer の通知 | 開始・終了の通知はカメラ更新の中では届かない。Tick の後で起きた変化は同じフレームのカメラ更新の後に、ゲームが手でカメラを更新した場合は次のフレームの Tick で届く。`RefreshNow` はその場では通知しない | 19 章 |
+| 実行時の不正値 | 不正な Transform の対象は Node によって「無い」扱い（保持しない）。非有限の演出は終わるまで毎フレーム捨てる | 16 章 |
+| 実行中の調整 | Runtime Camera Tuning（実行中に Preset を調整する機能）と Debugger の UI は未実装（Phase 7A）。計測（`ACF.Profile`）とデバッグ描画はある | 8 章 |
+| マップ移動・Level Streaming | 実際の `open` / PIE の終了はテスト用 World の破棄で代用。Level Streaming のアンロードは未確認 | 17 章 |
+| 新しいプロジェクト | 別のプロジェクトへの導入・パッケージビルドは未確認（Phase 8） | 1 章・23 章 |
+| Shipping に残るサンプル用クラス | サンプル用 Shake の UCLASS 2 個（`UACFDebugCameraShake` とその Pattern。検証用 Blueprint が参照しているため移していない） | 23 章 |
+| 計測結果 | 時間はマシンの状態で大きく揺れる（同じコードで 1.5〜2 倍）。比べられるのはアロケーション数と、同じ条件で繰り返した計測だけ | 8 章 |
+
+以下は機能ごとの細かい制限です。
 
 **Finisher / Camera Sequence**
 - シーケンス時間は Montage の再生位置を読みません（ACF はアニメーションに依存しない）。Duration だけで進む Shot は、Montage の速度変更に Play Rate で合わせる必要があります。正確に合わせたい切替は Anim Notify（イベント）で行ってください。
 - 攻撃者以外の Actor の Custom Time Dilation（例: 対象だけのヒットストップ）は反映しません。必要なら Hold / Play Rate で制御します。
 - Shot の成立判定（Probe）は Shot の開始時の 1 回だけです。Shot の途中で狭くなっても別の Shot には切り替えず、Collision と（ON なら）Deoccluder で対応します。Probe は「本来の距離の何割まで寄せられたか」と「攻撃者・対象の中心への視線」だけを見ます。
 - Fallback は Shot ごとに 1 つです。Fallback 自体が成立するかは確認しません（Collision で寄せたまま再生します）。
-- Finisher の終了・Cancel 以外で、戻り先カメラのブレンドを再生側から指定する API はありません（ロックオン解除と同じく、通常の要求の解除は戻り先の Blend In）。
+- Finisher 以外の要求の解除で戻り先に関係なくブレンドを決めたいときは、`Release Camera With Return Blend For Player`（20 章）を使います（何も指定しない通常の解除は戻り先の Blend In）。
 - 通知（On Camera Sequence Event）はカメラ更新の直後にまとめて送られます（Finish / Cancel は呼んだ直後）。カメラ更新の途中には送りません。
 - Finisher の再生中に Level Sequence の Camera Cut が割り込むと、Interrupt Policy に従います（14 章）。
 - 実機での演出の見栄え（各 Shot の構図・ブレンド時間の既定値）は、サンプルのスクリーンショットでしか確認していません。
@@ -768,7 +827,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 **Lock-On / Target Group**
 - Collision と Group Framing の競合は Framing Recovery（FOV、上限つき）で補います（Phase 4A の制限を解消）。
 - ロックオン中の移動入力の基準（ControlRotation）は変更しません。解除時にカメラの向きへ合わせるかどうかはゲーム側で決めます（サンプルは合わせます）。
-- ロックオンの解除は戻り先カメラの Blend In を使います。解除専用のブレンドを指定する API はありません。
+- ロックオンの解除は戻り先カメラの Blend In を使います。解除専用のブレンドにしたい場合は `Release Camera With Return Blend For Player`（20 章）。
 - Group Framing はメンバーの位置を平滑化しません（Lock-On のロック点だけは平滑化されたものを使います）。急な追加は Widen Damping Time で滑らかになりますが、メンバー自身の瞬間移動は枠の調整が追いかける形になります。
 - Weight の小さいメンバーは、`Weight / 最大 Weight` の割合で枠に入れる扱いになるので、完全には収まりません（仕様）。
 
@@ -787,17 +846,35 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 ## 12. 検証
 
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
-  - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
+  - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 168 件です（実行方法とテスト環境は 22 章）。
-  - Phase 6B / B-9: `.Effects.SpeedFovAndRollFixedStep`（Editor とゲームの両方。固定 DeltaTime の Speed FOV / Roll）、`.TestEnvironment.*`（2 件、`-game`。状態の復元と LocalPlayer の後始末）、`.Integration.SpeedFovAndRollRepeated.Run1〜3`（同じシナリオの連続実行）。
-  - `.PresetValidation.*`（12 件。Editor とゲームの両方）と `.Editor.*`（2 件。Editor のみ）: Preset の検証（21 章）。
-  - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
-  - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
-  - `.Health.*`（10 件。Editor とゲームの両方）と `.Sequencer.Health.*`（2 件、`-game`）: 不正値（NaN / Inf / 不正な FOV / 不正な DeltaTime など）の対策（16 章）。正常な入力で姿勢が修正前とビット単位で一致すること、ランダム化した不正入力を含む。
-  - `.Lifetime.*`（5 件。Editor とゲームの両方）: Actor の参照と寿命（17 章）。実際の World・Actor・GC を使い、`-DisableGarbageElimination` でも合格すること。 B-5 の演出の寿命（要求の有無と World の変化）を含む。
-  - `.Integration.*`（24 件 + B-9 の 3 件）、`.Sequencer.*`（21 件。実際の Level Sequence・PCM を使う。うち `.Sequencer.PcmCompat.*` 7 件は Phase 6B / B-2 の PCM 互換性、15 章）: `-game` でのみ実行されます。
-  - `.Samples.*`（6 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
+- 自動テストは **168 件が登録**されています（テスト名の数。B-10 時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+
+  | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
+  |---|---|---|---|
+  | `.Director` 8、`.Nodes` 5、`.ThirdPerson` 11、`.Effects` 9、`.Action` 10、`.Constraints` 7、`.Sequence` 6、`.Authority` 3 | 59 | 実行 | 実行 |
+  | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 12、`.Profiler` 3 | 30 | 実行 | 実行 |
+  | `.Editor`（Data Validation、21 章） | 2 | 実行 | — |
+  | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 2 | 4 | — | 実行 |
+  | `.Integration`（実際の PCM） | 27 | — | 実行 |
+  | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5） | 39 | — | 実行 |
+  | `.Samples` | 6 | — | テストマップでだけ検証（他のマップではスキップ） |
+  | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
+  | 合計 | 168 | 91 | 166 |
+
+- **最新の結果（B-10、2026-11-13）**
+
+  | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
+  |---|---|---|---|
+  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 166 | 159 / 0 / 7 | `.Samples` 6 件と `.Profile.Scenarios` は空のマップでは検証しない |
+  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 166 | 159 / 0 / 7 | 同上 |
+  | Editor（`--context editor`） | 91 | 91 / 0 / 0 | |
+  | サンプル（`--context samples`、テストマップ・描画あり） | 6 | 6 / 0 / 0 | |
+  | 性能の基準値（`--context profile`） | 1 | 1 / 0 / 0 | |
+
+  「Skip」は UE の集計では Success になります。`RunTests.sh` はテストが出す `Skipped:` のメッセージで区別します（22 章）。
+- 各カテゴリの内容: `.Health` は不正値の対策（16 章）、`.Lifetime` は Actor の参照と寿命（17 章。実際の World・Actor・GC、`-DisableGarbageElimination` でも合格）、`.PresetValidation` / `.Editor` は Preset の検証（21 章）、`.Profiler` は計測が出力を変えないこと（8 章）、`.Sequencer.PcmCompat` は PCM の互換性（15 章）、`.Sequencer.Events` は通知のタイミング（19 章）、`.Sequencer.ReturnBlend` は戻りのブレンド（20 章）、`.TestEnvironment` と `.Effects.SpeedFovAndRollFixedStep` / `.Integration.SpeedFovAndRollRepeated.*` はテストの土台（22 章）。
+- `.Samples.*`（TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）のスクリーンショットは、描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
   - ロック開始・解除（ブレンド中に 1 フレーム 40cm 超の飛びがない）、敵が周回・プレイヤーが移動しても両方が画面内
   - 近距離・遠距離のアーム長と FOV、重なり・真上でも NaN にならず Yaw を保持
@@ -864,7 +941,7 @@ Scripts/RunTests.sh --context samples
 Level Sequence の Camera Cut がカメラを握っている間、ACF は出力を止めて裏で評価を続け、終わるとゲームプレイカメラへ戻ります。
 設定なしで動きます（`ActionCameraFrameworkSequencer` モジュール。基本の Runtime モジュールは Sequencer に依存しません）。
 
-> **状態**: 完了。自動テスト（`.Sequencer.*` 14 件、`.Authority.*` 3 件、`.Samples.SequencerOnTestMap`）と Phase 1〜4C の回帰テストは全件合格しています（12 章）。
+> **状態**: 完了。Phase 5A の時点で自動テスト（`.Sequencer.*` 14 件、`.Authority.*` 3 件、`.Samples.SequencerOnTestMap`）と回帰テストが全件合格。その後 Phase 6B で通知のタイミング（19 章）・PCM の互換性（15 章）・戻りのブレンド（20 章）を追加し、現在の `.Sequencer.*` は 39 件です（12 章）。
 > 描画ありのテストマップでカメラの切替と復帰を確認しました。Editor（PIE）で人が操作して見る確認は未実施です（9 章の手順）。
 
 **実際の呼び出し経路（UE 5.8 のソースとテストで確認）**
@@ -999,7 +1076,7 @@ ACF は PCM の Camera Modifier として出力します。外部 ViewTarget（S
 
 **GameplayCameras の PCM の制限**（実際の PCM で自動テスト済みなのは Ease なしの Camera Cut だけ。以下の 2 点は UE 5.8 のソースからの判断で、実行では確認していません）
 - ACF は GameplayCameras のカメラシステムの評価の後に Modifier として乗ります。GameplayCameras 内部のブレンド（Ease In / Out を含む）の間も ViewTarget は行き先に切り替わっているので、ACF の出力は切り替わった瞬間に付く / 外れます（ブレンドされません）。
-- Sequencer の Ease Out は ACF からはカットに見えるため、ACF の Return Blend が GameplayCameras のブレンドに重なります。この PCM では Return Blend を 0（カット）にしてください（`Set ACF Sequencer Options` の Return Blend）。
+- Sequencer の Ease Out は ACF からはカットに見えるため、ACF の Return Blend が GameplayCameras のブレンドに重なります。この PCM では Return Blend を 0（カット）にしてください（`Set ACF Sequencer Options For Player` / `For Sequence` の Return Blend）。
 - ACF の機能を GameplayCameras のカメラリグとして組み込む（Camera Output Adapter）ことはしていません。
 
 ### 導入方法（POV をコピーする独自の PCM）
@@ -1061,7 +1138,7 @@ NaN・Infinity・不正な FOV・不正な DeltaTime などが入っても、ACF
 ### 対応していない・限定的な入力（制限）
 
 - 対象を直接読む Node（Collision の視線、Combat、Shot Anchor、Group Framing のメンバー）は、不正な Transform のフレームでは対象が「無い」ものとして動きます（保持はしない）。グループのメンバーはそのフレームだけ外れます。Lock-On のロック対象は、既存の仕組みで最後に分かっているロック点を保持します。
-- 有限だが意味のない Node のパラメータ（負の Damping、極端に大きい Offset など）は検査しません（各 Node の既存の扱いのまま）。
+- 有限だが意味のない Node のパラメータ（負の Damping、範囲外の値など）は、実行時には検査しません（各 Node の既存の扱いのまま）。保存時の Data Validation が報告します（21 章）。
 - 非有限のパラメータを持つ演出は、終わるまで毎フレーム捨てられます（自動では止めません。回数で分かります）。
 - Collision のパラメータ（Probe 半径など）が非有限の場合、Collision Node の出力が捨てられますが、エンジンの問い合わせ自体は行われます。
 - 出力しないフレーム（Fallback 無し）の `Get Aim Camera Pose` は中立の姿勢です。評価結果の Weight が 0 であることで判別してください。
@@ -1204,7 +1281,7 @@ ACF は World の Actor を所有しません。ローカルプレイヤーの A
    - 外部 ViewTarget の登録は、カットで戻した後に外して構いません（戻した時点で画面には出ていない）。
 4. 結果を見る: false なら Result で理由が分かります。
 
-**Sequencer を使う場合との違い**: Level Sequence の Camera Cut は、Sequencer 連携（14 章）が外部 ViewTarget の登録と戻りのブレンドを自動で行います。戻り方は `Set ACF Sequencer Options` の Return Blend で決まり、このノードは不要です。終了の通知（`On Sequencer Camera Ended`、19 章。カメラ更新の外で届く）の中から呼んで、Sequencer がカットで戻した後の戻り方をゲーム側で決めることもできます。
+**Sequencer を使う場合との違い**: Level Sequence の Camera Cut は、Sequencer 連携（14 章）が外部 ViewTarget の登録と戻りのブレンドを自動で行います。戻り方は `Set ACF Sequencer Options For Player` / `For Sequence` の Return Blend で決まり、このノードは不要です。終了の通知（`On Sequencer Camera Ended`、19 章。カメラ更新の外で届く）の中から呼んで、Sequencer がカットで戻した後の戻り方をゲーム側で決めることもできます。
 
 ### 確認していること（自動テスト `.Sequencer.ReturnBlend.*`、5 件、`-game`）
 
@@ -1358,14 +1435,14 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 - 効果の計算自体は `.Effects.SpeedFovAndRollFixedStep` で固定 DeltaTime（30 / 60 / 144 Hz）で確認します。同じ時刻で同じ値、2 回実行してビット単位で同じ、上の 1 フレーム遅れ + 50 ms のフレームで 4.34 度に下がること（原因の再現）と、カメラと同じ時計で動かせば 5 度のままであること。
 - `.Integration.SpeedFovAndRollRepeated.Run1〜3` は同じシナリオを同じプロセスで 3 回続けて実行し、前の実行の状態が残らないことを確認します。
 
-### 確認した実行（B-9）
+### 確認した実行（B-9。最新の結果は 12 章）
 
 | 実行 | 結果 |
 |---|---|
-| `game`（ACF のテスト環境）全件 | 166 / 166 |
-| `host`（REBoarGetch の既定のマップ・GameMode）全件 | 166 / 166（うち 7 件はスキップ） |
-| `editor` 全件 | 91 / 91 |
-| `samples`（描画あり） / `profile` | 6 / 6、1 / 1 |
+| `game`（ACF のテスト環境）全件 | 166 件実行、失敗 0（うち 7 件はテストマップ以外でのスキップ。この時点のスクリプトは Pass と Skip を分けていない） |
+| `host`（REBoarGetch の既定のマップ・GameMode）全件 | 166 件実行: 159 Pass / 0 Fail / 7 Skip |
+| `editor` 全件 | 91 Pass / 0 Fail / 0 Skip |
+| `samples`（描画あり） / `profile` | 6 Pass、1 Pass |
 | Integration・Sequencer・TestEnvironment・Lifetime・Profiler を 1 件ずつ別プロセス（`--isolate`） | 78 / 78 プロセス |
 | カテゴリの組み合わせを変えた実行（Sequencer + TestEnvironment、Integration + Lifetime + Profiler） | 41 / 41、37 / 37 |
 | `SpeedFovAndRoll`（+ 連続 3 回 + 固定ステップ）を 10 回、ホスト環境で 5 回 | 15 / 15 プロセス。Roll は 60 回すべて 5.00 |
@@ -1391,7 +1468,7 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 
 - 依存の向き: `Tests` → `Sequencer` → `ActionCameraFramework`、`Editor` → `ActionCameraFramework`。Runtime の 2 モジュールは `Tests` / `Editor` に依存しません。
 - テストは公開済みの API だけを使っています。モジュールを分けるために公開した API・追加した `_API` はありません。
-- `DeveloperTool` は Editor と Debug / Development のゲームでビルド・ロードされます。`-game`（エディターのバイナリ）でもテストは今までどおり見つかり、実行されます（件数は B-9 と同じ、テスト名の一覧も一致）。
+- `DeveloperTool` は UE の `bBuildDeveloperTools`（Target.cs）が有効な構成でビルド・ロードされます。既定では Editor と Debug / Development のゲームで有効、Test / Shipping で無効です（プロジェクトが Target.cs で変えればそれに従います）。`-game`（エディターのバイナリ）でもテストは今までどおり見つかり、実行されます（件数は B-9 と同じ、テスト名の一覧も一致）。
 
 ### 比較した方式
 

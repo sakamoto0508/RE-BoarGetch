@@ -25,9 +25,9 @@ ACTIONCAMERAFRAMEWORK_API DECLARE_LOG_CATEGORY_EXTERN(LogActionCamera, Log, All)
 /**
  * Minimal camera pose produced by ACF rigs.
  *
- * Deliberately smaller than FMinimalViewInfo (which also carries post process settings).
- * Lens / post process data will be added as separate optional layers in Phase 5 so that the
- * per-frame copies through the director stay cheap.
+ * Deliberately smaller than FMinimalViewInfo (which also carries post process settings), so the per-frame
+ * copies through the director stay cheap. ACF does not drive lens / post process settings: those stay with the
+ * PlayerCameraManager / camera components (Lens / Post Process support is on hold, README roadmap).
  */
 USTRUCT(BlueprintType)
 struct ACTIONCAMERAFRAMEWORK_API FACFCameraPose
@@ -547,7 +547,9 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationResult
 	/**
 	 * How much ACF overrides the upstream UE camera. 0 = UE camera untouched, 1 = fully ACF.
 	 * Applied by the output adapter against each upstream POV it receives.
-	 * Already includes output suppression (e.g. while Sequencer owns the camera).
+	 * Already includes output suppression (Suppress Output; also a Level Sequence with Suppress Output While Playing).
+	 * An external view target on screen (e.g. a Sequencer camera cut) does not change it: the output modifier
+	 * simply writes nothing to that view target (see bOutputBypassed).
 	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Camera")
 	float Weight = 0.f;
@@ -568,9 +570,10 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationResult
 	bool bOutputBypassed = false;
 
 	/**
-	 * Gameplay camera: upstream UE pose combined with Pose by Weight, BEFORE camera shakes and any
-	 * future ACF visual effects. Use this for aiming / interaction traces. The visual camera (what is
-	 * rendered, including shakes) is the PlayerCameraManager's camera cache.
+	 * Gameplay camera: upstream UE pose combined by Weight with the ACF pose after Collision, i.e. including
+	 * ACF location effects (applied before Collision) but WITHOUT ACF rotation / FOV effects and UE camera
+	 * shakes. Use this for aiming / interaction traces. The visual camera (what is rendered, including
+	 * all effects and shakes) is the PlayerCameraManager's camera cache.
 	 * During a PlayerCameraManager view-target blend it is based on the outgoing view target's pose.
 	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Camera")

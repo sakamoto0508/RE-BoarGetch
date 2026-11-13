@@ -555,6 +555,10 @@ namespace ACFSeqTest
 		UACFSequencerBlueprintLibrary::SetSequencerOptionsForPlayer(S.Controller.Get(), Options);
 	}
 
+	// "No jump" threshold used below: a frame may move less than 20 % of GameplayToCine. A cut moves 100 %. The fastest
+	// smooth transition in these tests is a Linear 0.25 s return at the fixed 1/60 s step = 1/15 (6.7 %) per frame
+	// (0.5 s: 3.3 %), and PCM Ease blends of the same length stay in that range, so 20 % keeps a 3x margin over any
+	// tested blend while catching a cut or a half-way pop (B-11 / audit T-7: the rationale of the threshold).
 	static const double GameplayToCine = FVector::Dist(GameplayLoc, CineLoc);
 }
 
