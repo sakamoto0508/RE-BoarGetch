@@ -5,6 +5,8 @@
 #include "Styling/AppStyle.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SCheckBox.h"
+#include "Widgets/Input/SSegmentedControl.h"
+#include "Widgets/Layout/SWidgetSwitcher.h"
 #include "Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SSpinBox.h"
 #include "Widgets/Layout/SBorder.h"
@@ -133,6 +135,7 @@ void SACFCameraTuningPanel::Construct(const FArguments& InArgs)
 	{
 		Model->SetDirectorForTesting(InArgs._DirectorForTesting.Get());
 	}
+	Diagnostics = MakeShared<FACFCameraDiagnosticsModel>(*Model);
 
 	ChildSlot
 	[
@@ -232,8 +235,23 @@ void SACFCameraTuningPanel::Construct(const FArguments& InArgs)
 					.OnClicked(this, &SACFCameraTuningPanel::OnCompare)
 				]
 			]
+			// Phase 7A-4: one target (above), four views of it. Only the visible view is refreshed.
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 4.f)
+			[
+				SNew(SSegmentedControl<int32>)
+				.Value_Lambda([this]() { return static_cast<int32>(ActiveView); })
+				.OnValueChanged_Lambda([this](int32 View) { SetActiveView(static_cast<EView>(View)); })
+				+ SSegmentedControl<int32>::Slot(static_cast<int32>(EView::Tuning)).Text(LOCTEXT("ViewTuning", "Tuning"))
+				+ SSegmentedControl<int32>::Slot(static_cast<int32>(EView::Profiler)).Text(LOCTEXT("ViewProfiler", "Profiler"))
+				+ SSegmentedControl<int32>::Slot(static_cast<int32>(EView::Debugger)).Text(LOCTEXT("ViewDebugger", "Debugger"))
+				+ SSegmentedControl<int32>::Slot(static_cast<int32>(EView::Composition)).Text(LOCTEXT("ViewComposition", "Composition"))
+			]
 			+ SVerticalBox::Slot().FillHeight(1.f)
 			[
+				SNew(SWidgetSwitcher)
+				.WidgetIndex_Lambda([this]() { return static_cast<int32>(ActiveView); })
+				+ SWidgetSwitcher::Slot()
+				[
 				SNew(SSplitter).Orientation(Orient_Vertical)
 				+ SSplitter::Slot().Value(0.25f)
 				[
@@ -275,6 +293,10 @@ void SACFCameraTuningPanel::Construct(const FArguments& InArgs)
 				[
 					MakeChangesSection()
 				]
+				]
+				+ SWidgetSwitcher::Slot()[ MakeProfilerView() ]
+				+ SWidgetSwitcher::Slot()[ MakeDebuggerView() ]
+				+ SWidgetSwitcher::Slot()[ MakeCompositionView() ]
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)
 			[
@@ -296,6 +318,7 @@ EActiveTimerReturnType SACFCameraTuningPanel::OnTimer(double CurrentTime, float 
 void SACFCameraTuningPanel::Refresh()
 {
 	Model->Validate();
+	Diagnostics->Validate(); // Phase 7A-4: profiling follows the target (released when it changes)
 
 	// PIE Worlds (auto-select the only one, and its first player, for the common single-player case).
 	TArray<FACFCameraTuningPanelModel::FWorldEntry> Worlds;
@@ -434,6 +457,7 @@ void SACFCameraTuningPanel::Refresh()
 		ChangesShape = NewChangesShape;
 		RebuildChangesBox();
 	}
+	RefreshDiagnostics(); // Phase 7A-4: only the visible diagnostics view
 }
 
 // --- Phase 7A-3: changes for the preset assets -------------------------------------------------------------------------
@@ -824,6 +848,7 @@ FReply SACFCameraTuningPanel::OnStop()
 FReply SACFCameraTuningPanel::OnResetAll()
 {
 	Model->ResetAll();
+	Diagnostics->NotifyTuningChanged();
 	Refresh();
 	return FReply::Handled();
 }
@@ -831,6 +856,7 @@ FReply SACFCameraTuningPanel::OnResetAll()
 FReply SACFCameraTuningPanel::OnCompare()
 {
 	Model->ToggleCompare();
+	Diagnostics->NotifyTuningChanged();
 	Refresh();
 	return FReply::Handled();
 }
@@ -838,6 +864,7 @@ FReply SACFCameraTuningPanel::OnCompare()
 FReply SACFCameraTuningPanel::OnResetParameter(EACFCameraTuningParameter Parameter)
 {
 	Model->ResetParameter(Parameter);
+	Diagnostics->NotifyTuningChanged();
 	Refresh();
 	return FReply::Handled();
 }
@@ -845,6 +872,7 @@ FReply SACFCameraTuningPanel::OnResetParameter(EACFCameraTuningParameter Paramet
 void SACFCameraTuningPanel::OnComponentCommitted(double Value, ETextCommit::Type Commit, EACFCameraTuningParameter Parameter, int32 Axis)
 {
 	Model->SetComponent(Parameter, Axis, Value);
+	Diagnostics->NotifyTuningChanged(); // Phase 7A-4: a profile period from here on mixes before / after
 	Refresh();
 }
 

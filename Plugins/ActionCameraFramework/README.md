@@ -19,7 +19,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
-- Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A を実施中（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映が完了。24〜26 章）
+- Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A 完了（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映、7A-4 Profiler / Debugger / Composition が完了。24〜27 章）
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -28,7 +28,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 | 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
 | 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Completed（B-1〜B-11） |
-| 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | In Progress（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 PIE の Camera Tuning パネル: 完了、25 章。7A-3 アセットへの反映（Apply / Undo / Redo / Save）: 完了、26 章。7A-4 Profiler / Debugger は未着手） |
+| 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Done（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 PIE の Camera Tuning パネル: 完了、25 章。7A-3 アセットへの反映（Apply / Undo / Redo / Save）: 完了、26 章。7A-4 Profiler / Debugger / Composition: 完了、27 章） |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
 | 7D | Advanced Occlusion Handling（複数点の遮蔽判定、可視率、一時透過。Trace 数を計測） | Not Started |
@@ -60,7 +60,7 @@ Phase 6B の範囲と順序は、Phase 6A の監査結果で確定していま�
 | `ActionCameraFramework` | カメラ本体（Runtime） | すべて |
 | `ActionCameraFrameworkSequencer` | Level Sequencer 連携（Runtime） | すべて |
 | `ActionCameraFrameworkTests` | 自動テスト（DeveloperTool） | Editor と Debug / Development のゲーム（UE の `bBuildDeveloperTools` が有効な構成）。Test / Shipping には入らない |
-| `ActionCameraFrameworkEditor` | Editor 用（Camera Tuning パネルとアセットへの反映、Data Validation とパネル・反映のテスト） | Editor のみ |
+| `ActionCameraFrameworkEditor` | Editor 用（Camera Tuning パネル・アセットへの反映・Profiler / Debugger / Composition、Data Validation とパネル・反映のテスト） | Editor のみ |
 
 PlayerCameraManager・GameMode・Character・入力システムの変更は不要です。Enhanced Input にも依存しません。
 最初の要求を出すまで、ACF はカメラに一切関与しません。
@@ -848,34 +848,33 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **196 件が登録**されています（テスト名の数。Phase 7A-3 時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **201 件が登録**されています（テスト名の数。Phase 7A-4 時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
   | `.Director` 8、`.Nodes` 5、`.ThirdPerson` 11、`.Effects` 9、`.Action` 10、`.Constraints` 7、`.Sequence` 6、`.Authority` 3 | 59 | 実行 | 実行 |
   | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 12、`.Profiler` 3 | 30 | 実行 | 実行 |
   | `.Tuning`（Runtime Tuning、24 章。FOV の回避策 1 件を含む） | 10 | 実行 | 実行 |
-  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 7 件、26 章。実 PIE 2 件を含む） | 16 | 実行 | — |
+  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 7 件、26 章。診断 `.Editor.Diagnostics` 5 件、27 章。実 PIE 3 件を含む） | 21 | 実行 | — |
   | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 3 | 5 | — | 実行 |
   | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件を含む） | 29 | — | 実行 |
   | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1） | 40 | — | 実行 |
   | `.Samples` | 6 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
-  | 合計 | 196 | 115 | 180 |
+  | 合計 | 201 | 120 | 180 |
 
-- **最新の結果（Phase 7A-3、2026-11-14）**
+- **最新の結果（Phase 7A-4、2026-11-14）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
   | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 180 | 173 / 0 / 7 | `.Samples` 6 件と `.Profile.Scenarios` は空のマップでは検証しない |
   | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 180 | 173 / 0 / 7 | 同上 |
-  | Editor（`--context editor`） | 115 | 115 / 0 / 0 | |
+  | Editor（`--context editor`、`-NullRHI`） | 120 | 120 / 0 / 0 | |
+  | Editor（`--context editor-rendered`、描画あり。`.Editor` 21 件） | 21 | 21 / 0 / 0 | |
   | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 180 | 179 / 0 / 1 | `.Profile.Scenarios`（`-ACFProfile` なし） |
   | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 180 | 179 / 0 / 1 | 同上 |
   | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 180 | 180 / 0 / 0 | |
-  | 繰り返し（Editor）: `.Editor.TuningApply` + `.Editor.TuningPanel` + `.Tuning` + `.PresetValidation` ×3 | 108 | 108 / 0 / 0 | |
-  | 繰り返し（ゲーム）: `.Tuning` + `.PresetValidation` ×3 | 66 | 66 / 0 / 0 | |
-  | 繰り返し（Editor）: `.Editor.TuningApply` ×5（Undo / Redo・保存・実 PIE を含む） | 35 | 35 / 0 / 0 | |
+  | 繰り返し（Editor）: `.Editor.Diagnostics` + `.Editor.TuningApply` + `.Editor.TuningPanel` + `.Tuning` ×2 | 58 | 58 / 0 / 0 | |
 
   全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 で見つけ、7A-1 のコードでも同じ値で再現したもの）は、2 人目のローカルプレイヤーの Pawn が残っていたのが原因で、テスト環境側で修正済みです（22 章「ローカルプレイヤーと Pawn」）。
 
@@ -937,7 +936,7 @@ Scripts/RunTests.sh --context samples
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`（`ACF.Debug.*` / `ACF.Profile.*`）、`ACFCameraSampleCommands`（`ACF.Sample.*`、23 章）、`ACFCameraDebugShake`（サンプル用 Shake） |
 | `Source/ActionCameraFrameworkSequencer/` | Level Sequencer 連携（Phase 5A）。`ACFSequencerCameraSubsystem`（検出・復帰処理）、`ACFSequencerBlueprintLibrary`、`ACFSequencerSettings`、`ACFSequencerTypes`、`ACF.Sample.Sequencer` コマンド（`ACFSequencerSampleCommands`）。LevelSequence / MovieScene に依存するのはこのモジュールだけです |
 | `Source/ActionCameraFrameworkTests/` | 自動テスト（Phase 6B / B-10、23 章）。Core のテスト（`Private/Core/`）、Sequencer のテスト（`Private/Sequencer/`）、テスト専用のクラス（テスト用 Shake、Sequencer のリスナー・プローブ Modifier・テスト用 PCM）、`ACFCameraTestEnvironment.h`（22 章）。Type = DeveloperTool で、Test / Shipping ではビルドされません |
-| `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 7A の Editor 専用機能の置き場。Camera Tuning パネル（25 章: `ACFCameraTuningPanelModel` は Slate を使わないモデル、`SACFCameraTuningPanel` は表示、`ACFCameraTuningChangeSet` はアセットへの反映（26 章））と、Data Validation・パネルのテスト（`Private/Tests/`）。Preset の検証の本体は `ACFCameraPresetValidation`（ランタイムモジュール、`WITH_EDITOR` のみ） |
+| `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 7A の Editor 専用機能の置き場。Camera Tuning パネル（25 章: `ACFCameraTuningPanelModel` は Slate を使わないモデル、`SACFCameraTuningPanel` は表示、`ACFCameraTuningChangeSet` はアセットへの反映（26 章）、`ACFCameraDiagnosticsModel` と `SACFCameraTuningPanelDiagnostics.cpp` は診断のビュー（27 章））と、Data Validation・パネルのテスト（`Private/Tests/`）。Preset の検証の本体は `ACFCameraPresetValidation`（ランタイムモジュール、`WITH_EDITOR` のみ） |
 | `Content/Verification/` | 自動テスト用アセット |
 | `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト |
@@ -1416,7 +1415,7 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 
 - マップはエンジンの空のマップ `/Engine/Maps/Entry`、GameMode はエンジンの `GameModeBase`（URL の `?game=`）、GameInstance はエンジンの `GameInstance`（`-ini:` で上書き）です。PlayerController・Pawn（DefaultPawn）・PCM もエンジン標準なので、ホストプロジェクトのゲームの処理（REBoarGetch の `BP_BoarGameInstance`、`BP_PC_Lobby`、ThirdPerson の Character）は動きません。新しいアセットは追加していません。
 - 統合テストで使う Actor・ターゲット・SpringArm・壁は、各テストが自分でスポーンします（`OrbitMatchesSpringArm` は B-9 から自分の SpringArm を使い、ホストの Pawn の設定に依存しません）。
-- `.Samples.*` はテストマップ `L_ACFCameraTest` を使います。B-10 から、`samples` コンテキストもエンジン標準の GameModeBase / DefaultPawn / GameInstance で実行します（6 件すべて合格を確認）。`samples-host` はホストプロジェクトの既定の GameMode（エディターでマップをプレイしたときと同じ）で実行します。`.Profile.Scenarios` は、B-1〜B-9 の基準値と比べられるよう、ホストの GameMode のままです。
+- `.Samples.*` はテストマップ `L_ACFCameraTest` を使います。B-10 から、`samples` コンテキストもエンジン標準の GameModeBase / DefaultPawn / GameInstance で実行します（6 件すべて合格を確認）。`samples-host` はホストプロジェクトの既定の GameMode（エディターでマップをプレイしたときと同じ）で実行します。`.Profile.Scenarios` は、B-1〜B-9 の基準値と比べられるよう、ホストの GameMode のままです。 `editor-rendered`（Phase 7A-4）は、描画ありの Editor で `.Editor` のテストを実行します（PIE のビューポートに大きさがあるので、構図ガイドの描画を確認できる。27 章）。
 
 ### シナリオの後始末（`ActionCameraFrameworkTests/Private/ACFCameraTestEnvironment.h`）
 
@@ -1474,7 +1473,7 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 | `ActionCameraFramework` | Runtime | カメラ本体（Director・Node・Preset・Subsystem・Effects・Sequence）、診断（16 章の健全性、`ACF.Debug.*`、`ACF.Profile.*`）、サンプル用コマンド `ACF.Sample.*`（`ACFCameraSampleCommands.cpp`） | 本体だけ。`ACF.Debug.*` / `ACF.Profile.*` / `ACF.Sample.*` は入らない |
 | `ActionCameraFrameworkSequencer` | Runtime | Level Sequencer 連携、`ACF.Sample.Sequencer`（`ACFSequencerSampleCommands.cpp`） | 連携だけ |
 | `ActionCameraFrameworkTests` | DeveloperTool | Core と Sequencer の自動テスト、テスト専用のクラス、テスト環境（22 章） | 入らない（Test / Shipping ではビルドされない） |
-| `ActionCameraFrameworkEditor` | Editor | Camera Tuning パネル（25 章）とアセットへの反映（26 章）、Data Validation 経由の検証テスト（21 章）とパネルのテスト | 入らない |
+| `ActionCameraFrameworkEditor` | Editor | Camera Tuning パネル（25 章）、アセットへの反映（26 章）、Profiler / Debugger / Composition（27 章）、Data Validation 経由の検証テスト（21 章）とパネルのテスト | 入らない |
 
 - 依存の向き: `Tests` → `Sequencer` → `ActionCameraFramework`、`Editor` → `ActionCameraFramework`。Runtime の 2 モジュールは `Tests` / `Editor` に依存しません。
 - テストは公開済みの API だけを使っています。モジュールを分けるために公開した API・追加した `_API` はありません。
@@ -1664,7 +1663,7 @@ ACF の FOV は、多くの Preset では **Node が決めていません**。Ri
 
 ### 制限と次の段階
 
-- アセットへの反映（Apply / Undo / Redo / Save）は 26 章（Phase 7A-3）。Profiler / Debugger の表示は Phase 7A-4 です。
+- アセットへの反映（Apply / Undo / Redo / Save）は 26 章（Phase 7A-3）。Profiler / Debugger / Composition の表示は 27 章（Phase 7A-4）。
 - 調整できるのは 24 章の 4 種類だけです。FOV は上のとおり、FOV を決める Node がある要求だけです。
 - PIE だけが対象です（スタンドアロンのゲーム・パッケージ版では、24 章の Blueprint ノードを使います）。
 
@@ -1774,3 +1773,96 @@ Apply は 1 つの `FScopedTransaction`（「Apply ACF Camera Tuning」）です
 - 一覧はパネルが持っています。パネルを閉じる・Editor を終了すると、反映していない変更は消えます。
 - 自動マージ・強制上書き・新しいアセットとしての保存（方式 C）はありません。
 - 調整できるのは 24 章の 4 種類だけです。
+
+## 27. Profiler / Debugger / Composition（Phase 7A-4）
+
+ACF Camera Tuning タブ（25 章）に、PIE 中のカメラの性能・状態・構図を観測するビューを追加しました。Editor 専用で、Shipping やゲームのビルドには入りません。
+
+### 画面の構成
+
+タブの上段（PIE World・Player の選択、状態、Start Tuning などのボタン）は共通です。その下の切り替え（**Tuning / Profiler / Debugger / Composition**）で表示を変えます。
+
+- 4 つのビューは、上で選んだ同じ World・Player・Request を対象にします。調整と診断の対象は必ず一致します（対象が変わると、前の対象の計測は自動で止まります）。
+- Tuning ビューは 7A-2 / 7A-3 のままです（要求・Node・パラメータ・Changes）。
+- 診断の値は、表示しているビューの分だけ、パネルの更新（1 秒に 4 回）で読みます。Profiler の統計は 1 秒に 1 回だけ計算します（ボタンを押した直後はすぐ計算）。
+- 比較した方式: 折りたたみ領域はパラメータ調整の画面が長くなり、別の Dock タブは対象の選択が二重になって食い違うので、同じタブの中での切り替えにしました。
+
+### Profiler（B-1 の計測を表示）
+
+- **Start Profiling** で、選んだプレイヤーの Director の計測（B-1 のリングバッファ）を記録させます。**Stop Profiling** で止めます（最後の統計は残ります）。**Reset Statistics** で記録をクリアし、次のフレームから測り直します。**Pause display** は表示だけを止めます（記録は続きます）。
+- 表示（すべて計測の実測値。測っていない値は「not measured」と表示し、推測で埋めません）:
+  - 統計の期間: フレーム数、エンジンのフレーム番号の範囲、ゲーム時間（秒）。リングバッファの容量を超えた古いフレームは外れます。
+  - ACF の合計時間（Total camera evaluation）と区間別（Evaluate・RigEvaluate・Effects・PostBlend・Deocclude・OutputGuard など）の平均 / P95 / 最大
+  - Node のクラス別の時間と、ACF の時間に占める割合（重い順）
+  - Collision のクエリ数（Sweep / Line、目的別: Collision・Deoccluder・Output Guard・Shot Probe）
+  - アロケーション数（アロケーションカウンター `ACF.Profile.Allocations 1` が動いているときだけ。動いていなければ「not measured」）
+  - 最も重い区間と Node
+- 調整中に値を変えると、変更の前後のフレームが同じ統計に混ざります。その場合は「NOTE: … mix before and after」と表示します。Reset Statistics で、変更後だけを測り直せます。
+- **Mark A (compare)**: その時点のカメラの姿勢と統計（期間つき）を A として覚え、A と現在の差（位置・回転・FOV、時間）を表示します。期間が重なっているときは、その旨を表示します。
+- 計測（Start Profiling）そのものにも小さな負荷があります（B-1 で測定済み）。パネルが計測を止めるのは、Stop / 対象の変更 / PIE の終了 / パネルを閉じたときです。`ACF.Profile 1` で全プレイヤーを計測している場合は、それに従います。
+
+### Debugger（カメラの状態）
+
+| 区分 | 内容 | 取得元 |
+|---|---|---|
+| Output | 画面に出ているのが ACF か（ACF / UE のカメラとのブレンド / 外部 ViewTarget（Sequencer のカメラカットなど）/ 出力抑制 / 要求なし / PCM の ViewTarget ブレンド中）、ViewTarget、PCM のクラス、実際に描画されたカメラの姿勢、出力パスの判定、出力抑制の数とフェード | 評価結果、Subsystem の外部 ViewTarget と出力診断、PCM |
+| Request | 制御中の要求（Handle・Debug Name）、Priority、Preset（調整中なら複製と表示）、Weight（出力 / 要求）、全要求の一覧（Follow / Look At のターゲット名つき） | `GetRequestInfos` |
+| Blend | ブレンド中か、進み具合、経過 / 長さ / 残り時間、元の要求、重み | `GetTransitionInfo`（7A-4 で追加） |
+| Pose | ACF の姿勢、UE のカメラ（上流）の姿勢、描画されたカメラと ACF の差 | 評価結果、PCM |
+| Rig | Lock-On（ターゲットの点・注視点・距離・見失い）、Group Framing（人数・中心・ドリー・FOV・LIMITED）、Combat、Collision（当たり・押し戻した距離）、Follow / Look At のターゲット、Composer、Deoccluder（調べた数・隠れた数・プレイヤーが隠れているか・補正量・トレース数） | Rig のデバッグ情報、ソルバーの報告 |
+| Nodes | 制御中の要求の Node（番号・クラス・計測中なら平均時間） | `GetRequestNodes`、Profiler |
+| Effects / Sequences | 再生中の演出（時間・重み・レイヤー数・停止中）、Camera Sequence（Shot・時間・制御中か） | `GetActiveEffects`、`GetSequenceState` |
+| Health | 異常の回数（種類別）と最後の異常 | `GetHealthDiagnostics`（B-4） |
+
+すべて読み取りだけです。Editor から Director の状態を書き換える API はありません（パネルが変えるのは「計測するかどうか」だけ）。
+
+### Composition（構図のガイド）
+
+- 一覧: 実際に描画されたビューの情報（プレイヤーのビュー矩形・ビューポートの大きさ・縦横比・FOV）と、ターゲットを投影した位置です。ターゲットは、プレイヤーの Pawn、Follow / Look At のターゲット、Lock-On の点と注視点、Group Framing の中心と各メンバーです。位置は NDC とピクセルで、画面内 / 画面外 / カメラの後ろも表示します。
+- 「Draw composition guides in the PIE viewport」を ON にすると、選んだプレイヤーの PIE のビューに次を描きます: 中央、3 分割、セーフエリア（90 % / 80 %）、ターゲットの印（画面内は緑、画面外は赤）、ACF が画面に出ているかどうか。
+- 投影には、レンダラーと同じデータを使います。一覧は `ULocalPlayer::GetProjectionData`（分割画面のビュー矩形、ビューポートのサイズ変更、縦横比の制約、PCM の ViewTarget ブレンド、Sequencer の外部 ViewTarget をすべて含む）、描画はその Canvas の `SceneView` を使います。テストで、両者の位置が一致することを確認しています。
+- 描画は Debug Draw の "Game" チャンネルで、選んだプレイヤーのビューにだけ行います（分割画面ではプレイヤーごとに Canvas が分かれる）。Editor モジュールだけにあるので、パッケージ版の画面には出ません。
+- **描画される FOV は、PCM の FOV と少し違うことがあります**。UE 5.8 の既定（`AspectRatioAxisConstraint = AspectRatio_MaintainYFOV`）では、縦の FOV を「カメラの縦横比（例: 16:9）での横 FOV」から決めます。そのためビューポートが 16:9 でないと、実際の横 FOV が変わります（テストの 1503 x 837 のビューでは、PCM 90° に対して 90.575°）。パネルは両方を表示します。ACF の構図の計算（Composer・Group Framing・ソルバー）は PCM の FOV とビューポートの縦横比を使うので、この場合は描画と約 1 % ずれます（残る制限）。
+
+### 性能（`.Editor.Diagnostics.CostOfTheViews`）
+
+- パネルはカメラのフレームでは何もしません（パネルの更新はタイマーだけ。テストで確認）。カメラの評価に毎フレームの処理は追加していません。
+- 計測結果（Development Editor、Director 単体、1 回の実行）は下の表のとおりです。評価時間の差は測定の揺れの範囲です。計測中の増加分は B-1 の計測そのもの（リングバッファへの記録）の負荷です。
+
+  | 状態 | カメラの評価 | パネルの更新（1 回、1 秒に 4 回） |
+  |---|---|---|
+  | パネルを閉じている | 1.58 µs | — |
+  | 開いている（Tuning ビュー） | 1.57 µs | 0.7 µs |
+  | 開いている（Debugger ビュー） | 1.54 µs | 17.8 µs |
+  | 開いている（Composition ビュー） | 1.54 µs | 1.0 µs |
+  | 開いている（Profiler ビュー、計測中） | 1.92 µs | 1.4 µs |
+
+- Profiler の統計の計算（1024 フレームのリングバッファの集計）は 1 回 277 µs（Editor のゲームスレッド）で、1 秒に 1 回だけ行います。
+- 最終の回帰テストの実行時は、マシンの負荷が高く CPU の実クロックが下がっていました（同じテストで、パネルを閉じた状態が 2.20 µs、統計の計算が 369 µs）。時間はその時々の条件で変わるので、比較は同じ条件で続けて測った値どうしで行ってください。
+- ランタイムへの影響（B-1 の 8 シナリオ）: 7A-3（`3832f6c`）と 7A-4 を同じ条件で続けて測りました。各シナリオの平均時間の差は ±4 % 以内（両方向）で、アロケーションは完全に一致しました。7A-4 で毎フレームの処理は増えていません。
+- 複数のプレイヤー: 計測と表示は選んだプレイヤーの Director だけです（他のプレイヤーには何も追加しません）。
+
+### 寿命と安全性
+
+- PIE の終了（終了直前に計測を止める）、PIE の再開始（新しい World・プレイヤーを選び直す）、World の破棄、ローカルプレイヤーの追加・削除、PCM の作り直し、要求の切り替え・終了、Tuning の Stop、パネルを閉じる（計測とガイドの描画を解除）を扱います。
+- パネルは World・プレイヤー・Director を弱参照で持ち、毎回解決し直します。PIE の後、パネルが PIE の Director を生かしておかないことをテストで確認しています（GC の後に消える）。
+- 7A-3 の Change Set はパネルが持っています。パネルを閉じると、反映していない変更は消えます（現行の仕様）。Editor のセッションが持つ方式への変更は残課題です（下記）。
+
+### テスト（`.Editor.Diagnostics.*`、5 件）
+
+| テスト | 内容 |
+|---|---|
+| `ProfilerStartStopResetAndPlayers` | 選んだプレイヤーの計測だけを表示（2 プレイヤーで混ざらない）、Node 別の時間（Node ごとに全フレーム）、Sweep 数（Collision 1 回 / フレーム、Line 0、Output Guard 0）、Start / Stop / Reset / Pause、調整の前後が混ざった期間の表示、パネルを閉じると計測を解除 |
+| `DebuggerRequestsBlendHealth` | 姿勢・FOV = 評価結果、要求の切り替え（Priority・ブレンドの長さ・経過・残り時間・終了・元に戻る）、Health の回数と最後の異常、PCM が無いときは「画面は不明」 |
+| `CompositionProjection` | 投影の計算が ACF のピンホール投影と一致（16:9・16:9・4:3・分割画面の半分）、ビューの中央、ピクセル座標 |
+| `RealPIEPanel` | 実際のパネルと PIE（2 回）: 計測の対象（マップ名・Player 0）、実際の PCM の Output Guard と Collision の Sweep、ACF が画面に出ている・描画された姿勢 = ACF の姿勢、外部 ViewTarget（Sequencer のカメラカットと同じ登録）で「ACF ではない」と表示、PIE の終了で解除・参照の解放、パネルを閉じる。描画ありの実行では、ビューの中央、Pawn の投影（描画された FOV で）、描画したガイドの位置 = パネルの投影、Canvas の縦横比 |
+| `CostOfTheViews` | 上の性能の表 |
+
+- `Scripts/RunTests.sh --context editor-rendered`（7A-4 で追加）は、描画ありの Editor でテストします。PIE のビューポートに大きさがあるので、構図ガイドの描画も確認できます。`--context editor`（`-NullRHI`）ではビューポートの大きさが 0 なので、実際のビューポートの照合は行わず、その旨を記録します（投影の計算は `CompositionProjection` で確認）。
+
+### 制限と残課題
+
+- ビューポートが 16:9 でなく、`MaintainYFOV`（UE の既定）のとき、ACF の構図の計算は描画と約 1 % ずれます（上記）。ランタイムの Pipeline の変更になるので、7A-4 では直していません。
+- 7A-3 の Change Set はパネルが持っています。パネルを閉じる・Editor を終了すると、反映していない変更は消えます。Editor のセッションが持つ方式（Editor Subsystem）への変更は、Profiler の統合とは別の課題として残します。
+- 構図のガイドは 2D だけです（3D のデバッグ描画は既存の `ACF.Debug.Draw`）。
+- 人が Editor で操作して見る確認はしていません。自動テストで、実際のパネルと PIE、描画ありの Editor を使っています。

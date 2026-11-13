@@ -9,6 +9,8 @@
 #                                GameInstance (nothing of the host project's game logic runs).
 #                       host     -game -NullRHI on the host project's default map and GameMode (the pre-B-9 way).
 #                       editor   editor context (no -game), -NullRHI.
+#                       editor-rendered  editor context with rendering (Phase 7A-4: the PIE viewport has a size, so the
+#                                composition guides are drawn and checked). Filter default .Editor.
 #                       samples  rendered, on /ActionCameraFramework/Samples/L_ACFCameraTest with the same engine
 #                                GameModeBase / DefaultPawn / GameInstance as game (B-10). Filter default .Samples.
 #                       samples-host  the same on the host project's default GameMode (what PIE on the map uses).
@@ -90,6 +92,9 @@ case "$CONTEXT" in
 	editor)
 		[ -z "$FILTER" ] && FILTER=ActionCameraFramework
 		ARGS=(-NullRHI "${ARGS[@]}") ;;
+	editor-rendered)
+		[ -z "$FILTER" ] && FILTER=ActionCameraFramework.Editor
+		ARGS=(-windowed -resx=1280 -resy=720 "${ARGS[@]}") ;;
 	samples)
 		[ -z "$FILTER" ] && FILTER=ActionCameraFramework.Samples
 		ARGS=("/ActionCameraFramework/Samples/L_ACFCameraTest?game=/Script/Engine.GameModeBase" -game

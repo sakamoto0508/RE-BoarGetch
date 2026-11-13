@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "ACFCameraTuningPanelModel.h"
+#include "ACFCameraDiagnosticsModel.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Views/SListView.h"
 
@@ -55,7 +56,38 @@ public:
 	FText GetChangeStateText(int32 ChangeIndex) const;
 	FText GetChangesSummary() const;
 
+	// Phase 7A-4: Profiler / Debugger / Composition views of the same target (README 27 章).
+	enum class EView : uint8 { Tuning, Profiler, Debugger, Composition };
+	void SetActiveView(EView View);
+	EView GetActiveView() const { return ActiveView; }
+	FACFCameraDiagnosticsModel& GetDiagnostics() { return *Diagnostics; }
+	FReply OnStartProfiling();
+	FReply OnStopProfiling();
+	FReply OnResetStatistics();
+	FReply OnCaptureBaseline();
+	/** The text the visible view shows (tests read what the user would read). */
+	const FString& GetProfilerText() const { return ProfilerText; }
+	const FString& GetDebuggerText() const { return DebuggerText; }
+	const FString& GetCompositionText() const { return CompositionText; }
+	/** Diagnostics refreshes done (they run only for the visible view; tests check that). */
+	int32 GetNumDiagnosticsRefreshes() const { return NumDiagnosticsRefreshes; }
+	/** Profile statistics actually recomputed (at most once per second, and after a button). */
+	int32 GetNumProfileComputations() const { return NumProfileComputations; }
+
 private:
+	TSharedRef<SWidget> MakeProfilerView();
+	TSharedRef<SWidget> MakeDebuggerView();
+	TSharedRef<SWidget> MakeCompositionView();
+	void RefreshDiagnostics();
+	EView ActiveView = EView::Tuning;
+	FString ProfilerText;
+	FString DebuggerText;
+	FString CompositionText;
+	int32 NumDiagnosticsRefreshes = 0;
+	double LastProfileUpdate = 0.0;
+	bool bProfileDirty = true;
+	int32 NumProfileComputations = 0;
+
 	TSharedRef<SWidget> MakeChangesSection();
 	void RebuildChangesBox();
 	void ShowReport(const FACFCameraTuningChangeSet::FReport& Report);
@@ -75,6 +107,8 @@ private:
 	FText GetTargetText() const;
 
 	TSharedPtr<FACFCameraTuningPanelModel> Model;
+	/** Declared after Model: destroyed first (it refers to the model and releases the profiler it forced). */
+	TSharedPtr<FACFCameraDiagnosticsModel> Diagnostics;
 
 	TArray<TSharedPtr<FACFCameraTuningPanelModel::FWorldEntry>> WorldItems;
 	TArray<TSharedPtr<FACFCameraTuningPanelModel::FPlayerEntry>> PlayerItems;

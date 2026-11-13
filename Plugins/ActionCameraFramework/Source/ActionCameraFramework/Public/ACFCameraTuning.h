@@ -122,6 +122,13 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestInfo
 	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
 	FSoftObjectPath PresetPath;
 
+	/** Phase 7A-4 (debugger): the request's follow / look-at (lock-on) targets by name; empty if none or gone. */
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	FString FollowTarget;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	FString LookAtTarget;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
 	FName DebugName;
 

@@ -10,12 +10,26 @@
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
 #include "Nodes/ACFCameraNode_ShotAnchor.h"
 #include "UObject/Package.h"
+#include "Components/SceneComponent.h"
+#include "GameFramework/Actor.h"
 
 // Phase 7A-1: runtime tuning (README 24 章). The parameter table is explicit (node class -> member) on purpose: a few
 // parameters, readable, no generic reflection layer. Add a parameter = one enum value + its cases in Access().
 
 namespace ACFTuningImpl
 {
+	/** "Actor (Component)" of a camera target, for tools; empty if none / destroyed. */
+	static FString DescribeTarget(const FACFCameraTarget& Target)
+	{
+		const AActor* Actor = Target.Actor.Get();
+		const USceneComponent* Component = Target.Component.Get();
+		if (Actor && Component)
+		{
+			return FString::Printf(TEXT("%s (%s)"), *Actor->GetActorNameOrLabel(), *Component->GetName());
+		}
+		return Actor ? Actor->GetActorNameOrLabel() : Component ? Component->GetName() : FString();
+	}
+
 	/** The member of Node that holds Parameter: a vector (OutVector) or a float (OutScalar). False if Node does not hold it. */
 	static bool Access(UACFCameraNode& Node, EACFCameraTuningParameter Parameter, FVector*& OutVector, float*& OutScalar, FName& OutProperty)
 	{
@@ -571,6 +585,8 @@ void UACFCameraDirector::GetRequestInfos(TArray<FACFCameraRequestInfo>& Out)
 		const UACFCameraPreset* Asset = Session ? Session->Original.Get() : Entry.Rig.GetPreset();
 		Info.Preset = Asset ? Asset->GetFName() : NAME_None;
 		Info.PresetPath = FSoftObjectPath(Asset);
+		Info.FollowTarget = ACFTuningImpl::DescribeTarget(Entry.Params.FollowTarget);
+		Info.LookAtTarget = ACFTuningImpl::DescribeTarget(Entry.Params.LookAtTarget);
 		Info.DebugName = Entry.Params.DebugName;
 		Info.Priority = Entry.Params.Priority;
 		Info.bActive = Entry.Handle == ActiveHandle;

@@ -14,6 +14,25 @@
 
 class UACFCameraPreset;
 
+/** Phase 7A-4: the request-to-request transition and the output fade, as of the last evaluation (read-only, for tools). */
+struct FACFCameraTransitionInfo
+{
+	bool bActive = false;
+	/** Seconds into the blend / its duration (0 for a cut). */
+	float Elapsed = 0.f;
+	float Duration = 0.f;
+	EACFCameraBlendCurve Curve = EACFCameraBlendCurve::Cut;
+	/** Live source request (invalid: blending from a snapshot pose or from the UE camera). */
+	FACFCameraRequestHandle From;
+	/** ACF weight blended from / to (1 = ACF, 0 = the UE camera). */
+	float FromWeight = 0.f;
+	float ToWeight = 0.f;
+	/** Output suppression fade (1 = not suppressed), its target and duration. */
+	float SuppressionValue = 1.f;
+	float SuppressionTarget = 1.f;
+	float SuppressionDuration = 0.f;
+};
+
 /** Hard position constraint of the camera in control, kept between frames for the final output guard. */
 struct FACFCameraOutputConstraint
 {
@@ -102,6 +121,23 @@ public:
 	bool HasRequest(FACFCameraRequestHandle Handle) const;
 	int32 GetNumRequests() const { return Requests.Num(); }
 	FACFCameraRequestHandle GetActiveRequest() const { return ActiveHandle; }
+
+	/** Phase 7A-4 (debugger): the running transition / output fade. Read-only copy; nothing can be changed through it. */
+	FACFCameraTransitionInfo GetTransitionInfo() const
+	{
+		FACFCameraTransitionInfo Info;
+		Info.bActive = Transition.bActive;
+		Info.Elapsed = Transition.Elapsed;
+		Info.Duration = TransitionBlend.IsCut() ? 0.f : TransitionBlend.Duration;
+		Info.Curve = TransitionBlend.Curve;
+		Info.From = Transition.LiveSource;
+		Info.FromWeight = Transition.FromWeight;
+		Info.ToWeight = Transition.ToWeight;
+		Info.SuppressionValue = SuppressionFade.Value;
+		Info.SuppressionTarget = SuppressionFade.To;
+		Info.SuppressionDuration = SuppressionFade.Duration;
+		return Info;
+	}
 
 	/** Request that would be in control right now (highest priority, newest); the active one changes on the next Evaluate. */
 	FACFCameraRequestHandle GetBestRequest() const;
