@@ -125,8 +125,21 @@ TStatId UACFSequencerCameraSubsystem::GetStatId() const
 void UACFSequencerCameraSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	DispatchPendingEvents(); // B-6: anything left from a camera update outside the world tick
+	// B-6: one of the two delivery points (the other is OnWorldPostActorTick). Both run in the world tick outside the camera
+	// update loop, so a notification can never run inside a PlayerCameraManager update, whatever triggered the change.
+	DispatchPendingEvents(); // left from the previous frame (camera update after the post actor tick, a full pass, paused)
+	const UWorld* World = GetWorld();
+	if (World && World->IsPaused())
+	{
+		return; // ticking while paused only to deliver; the state is decided as before (not while paused)
+	}
 	RefreshAll();
+	DispatchPendingEvents(); // what this pass detected, before the camera update
+}
+
+bool UACFSequencerCameraSubsystem::IsTickableWhenPaused() const
+{
+	return true; // B-6: pending notifications are delivered while paused too (no state refresh then)
 }
 
 void UACFSequencerCameraSubsystem::RefreshNow()
@@ -336,8 +349,6 @@ void UACFSequencerCameraSubsystem::RefreshAll()
 			RefreshPlayer(LocalPlayer);
 		}
 	}
-	// B-6: the world tick runs outside the camera update: deliver what this pass detected (in order).
-	DispatchPendingEvents();
 }
 
 void UACFSequencerCameraSubsystem::ApplySuppression(FPlayerState& State, UACFCameraSubsystem* Acf, bool bWant, bool bForCameraCut, float BlendTime)

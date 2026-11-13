@@ -11,6 +11,7 @@
 #include "Effects/ACFCameraBuiltinEffects.h"
 #include "Effects/ACFCameraEffect.h"
 #include "Kismet/GameplayStatics.h"
+#include "Tests/AutomationCommon.h"
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraDirector.h"
 #include "ACFCameraOutputModifier.h"
@@ -2928,6 +2929,194 @@ bool FACFEventsHandlerStopsAndReleasesTest::RunTest(const FString& Parameters)
 		S.Test->TestEqual(TEXT("No suppression left"), S.Acf->GetNumOutputSuppressions(), 0);
 		S.Listener->OnStarted = nullptr;
 		S.Listener->OnEnded = nullptr;
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEventsQueueOverflowTest, "ActionCameraFramework.Sequencer.Events.QueueOverflowAndChainedEvents", ACFSeqTest::Flags)
+bool FACFEventsQueueOverflowTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	static const EACFSequencerReturnKind Kinds[] = { EACFSequencerReturnKind::Cut, EACFSequencerReturnKind::AcfReturnBlend, EACFSequencerReturnKind::SequencerBlend };
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		ULocalPlayer* LocalPlayer = S.Controller->GetLocalPlayer();
+		for (int32 I = 0; I < 150; ++I)
+		{
+			S.Sequencer->QueueNotificationForTesting(I % 2 == 0, LocalPlayer, S.Controller.Get(), nullptr, Kinds[(I / 2) % 3]);
+		}
+		S.Test->TestEqual(TEXT("Queued, not delivered synchronously"), S.Listener->Events.Num(), 0);
+		S.Test->TestEqual(TEXT("150 pending"), S.Sequencer->GetNumPendingEvents(), 150);
+		S.MarkFrame = GFrameCounter;
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		// No new sequencer activity at all: the remainder after a 64-event pass is delivered by the next delivery points.
+		S.Test->TestEqual(TEXT("All 150 delivered without any new event"), S.Listener->Events.Num(), 150);
+		S.Test->TestEqual(TEXT("Nothing left pending"), S.Sequencer->GetNumPendingEvents(), 0);
+		bool bOrder = S.Listener->Events.Num() == 150;
+		for (int32 I = 0; bOrder && I < 150; ++I)
+		{
+			bOrder = S.Listener->Events[I].bStarted == (I % 2 == 0);
+		}
+		for (int32 I = 0; bOrder && I < S.Listener->ReturnKinds.Num(); ++I)
+		{
+			bOrder = S.Listener->ReturnKinds[I] == Kinds[I % 3];
+		}
+		S.Test->TestTrue(TEXT("Delivered in the queued order"), bOrder);
+		TMap<uint64, int32> PerFrame;
+		for (const UACFSequencerTestListener::FEvent& Event : S.Listener->Events)
+		{
+			++PerFrame.FindOrAdd(Event.Frame);
+		}
+		int32 MaxFrame = 0;
+		for (const TPair<uint64, int32>& Pair : PerFrame)
+		{
+			MaxFrame = FMath::Max(MaxFrame, Pair.Value);
+		}
+		S.Test->TestTrue(FString::Printf(TEXT("Bounded per frame (max %d; 64 per delivery pass, 3 points per frame)"), MaxFrame), MaxFrame <= 64 * 3);
+		S.Test->TestEqual(TEXT("None delivered during a camera update"), S.Listener->DeliveriesDuringCameraUpdate, 0);
+
+		// A handler that keeps queueing new notifications while it is being notified: no recursion, all eventually delivered.
+		S.Listener->Events.Reset();
+		S.Counter = 0;
+		ULocalPlayer* LocalPlayer = S.Controller->GetLocalPlayer();
+		S.Listener->OnStarted = [&S, LocalPlayer](APlayerController* PC, ALevelSequenceActor*)
+		{
+			if (++S.Counter < 200)
+			{
+				S.Sequencer->QueueNotificationForTesting(true, LocalPlayer, PC, nullptr, EACFSequencerReturnKind::Cut);
+			}
+		};
+		S.Sequencer->QueueNotificationForTesting(true, LocalPlayer, S.Controller.Get(), nullptr, EACFSequencerReturnKind::Cut);
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.Counter >= 200 || GFrameCounter - S.MarkFrame > 30; });
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Chained: every notification delivered once"), S.Listener->Events.Num(), 200);
+		S.Test->TestEqual(TEXT("Chained: nothing left pending"), S.Sequencer->GetNumPendingEvents(), 0);
+		TSet<uint64> Frames;
+		for (const UACFSequencerTestListener::FEvent& Event : S.Listener->Events)
+		{
+			Frames.Add(Event.Frame);
+		}
+		S.Test->TestTrue(FString::Printf(TEXT("Chained: spread over the delivery points (%d frames), not one unbounded recursion"), Frames.Num()), Frames.Num() >= 2);
+		S.Listener->OnStarted = nullptr;
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEventsPendingLifetimeTest, "ActionCameraFramework.Sequencer.Events.PendingEventsWithRemovedPlayerListenerAndWorld", ACFSeqTest::Flags)
+bool FACFEventsPendingLifetimeTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		FString Error;
+		S.SecondPlayer = S.World()->GetGameInstance()->CreateLocalPlayer(FPlatformUserId::CreateFromInternalId(1), Error, true);
+		return S.Test->TestTrue(FString::Printf(TEXT("second local player %s"), *Error), S.SecondPlayer.IsValid());
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		ULocalPlayer* Second = S.SecondPlayer.Get();
+		APlayerController* PC2 = Second->GetPlayerController(S.World());
+		// A listener that is garbage collected while a notification is pending.
+		UACFSequencerTestListener* Temp = NewObject<UACFSequencerTestListener>();
+		S.Sequencer->OnSequencerCameraStarted.AddDynamic(Temp, &UACFSequencerTestListener::HandleStarted);
+		S.Sequencer->QueueNotificationForTesting(true, S.Controller->GetLocalPlayer(), S.Controller.Get(), nullptr, EACFSequencerReturnKind::Cut);
+		S.Sequencer->QueueNotificationForTesting(true, Second, PC2, nullptr, EACFSequencerReturnKind::Cut);
+		S.Sequencer->QueueNotificationForTesting(false, Second, PC2, nullptr, EACFSequencerReturnKind::Cut);
+		// Before any delivery point: player 2 is removed and the temporary listener collected.
+		S.World()->GetGameInstance()->RemoveLocalPlayer(Second);
+		Temp->MarkAsGarbage();
+		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+		S.Test->TestEqual(TEXT("Three pending before the delivery point"), S.Sequencer->GetNumPendingEvents(), 3);
+
+		// A pending notification in a world that is destroyed is never delivered.
+		FTestWorldWrapper Wrapper;
+		if (S.Test->TestTrue(TEXT("test world created"), Wrapper.CreateTestWorld(EWorldType::Game)))
+		{
+			UACFSequencerCameraSubsystem* Other = Wrapper.GetTestWorld()->GetSubsystem<UACFSequencerCameraSubsystem>();
+			if (S.Test->TestNotNull(TEXT("sequencer subsystem of the test world"), Other))
+			{
+				UACFSequencerTestListener* OtherListener = NewObject<UACFSequencerTestListener>();
+				S.Keep.Emplace(OtherListener);
+				Other->OnSequencerCameraStarted.AddDynamic(OtherListener, &UACFSequencerTestListener::HandleStarted);
+				Other->QueueNotificationForTesting(true, S.Controller->GetLocalPlayer(), S.Controller.Get(), nullptr, EACFSequencerReturnKind::Cut);
+				S.Test->TestEqual(TEXT("Other world: one pending"), Other->GetNumPendingEvents(), 1);
+				S.Value = 0.0;
+				Wrapper.DestroyTestWorld(false);
+				S.Test->TestEqual(TEXT("World destroyed: its pending notification was never delivered"), OtherListener->NumStarted, 0);
+			}
+		}
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Only player 1's notification delivered (removed player's dropped)"), S.Listener->Events.Num(), 1);
+		S.Test->TestTrue(TEXT("It is player 1's"), S.Listener->Events.Num() == 1 && S.Listener->Events[0].Controller == S.Controller);
+		S.Test->TestEqual(TEXT("Nothing left pending"), S.Sequencer->GetNumPendingEvents(), 0);
+		S.SecondPlayer.Reset();
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEventsRefreshNowPauseTest, "ActionCameraFramework.Sequencer.Events.RefreshNowPauseAndSameFrame", ACFSeqTest::Flags)
+bool FACFEventsRefreshNowPauseTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	AddPlayingSequence(Steps, 0.f);
+	Steps.Add([](FScenario& S)
+	{
+		const int32 EndedBefore = S.Listener->NumEnded;
+		Player(S.SequenceA)->Stop();
+		S.Sequencer->RefreshNow();
+		S.Sequencer->RefreshNow();
+		S.Sequencer->RefreshNow();
+		S.Test->TestTrue(TEXT("RefreshNow: the state is decided at once"), S.Phase() == EACFSequencerCameraPhase::None);
+		S.Test->TestEqual(TEXT("RefreshNow: no synchronous notification"), S.Listener->NumEnded, EndedBefore);
+		S.Test->TestEqual(TEXT("RefreshNow x3: one pending notification"), S.Sequencer->GetNumPendingEvents(), 1);
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Delivered once (no duplicate from repeated refreshes)"), S.Listener->NumEnded, 1);
+		S.Test->TestEqual(TEXT("Order: start, end"), EventOrder(S.Listener.Get()), FString(TEXT("SE")));
+		// Paused: notifications are still delivered (the subsystem ticks while paused only to deliver).
+		UGameplayStatics::SetGamePaused(S.World(), true);
+		S.Listener->Events.Reset();
+		ULocalPlayer* LocalPlayer = S.Controller->GetLocalPlayer();
+		// Start and end detected in the same frame: each carries what it was detected with.
+		S.Sequencer->QueueNotificationForTesting(true, LocalPlayer, S.Controller.Get(), S.SequenceA.Get(), EACFSequencerReturnKind::Cut);
+		S.Sequencer->QueueNotificationForTesting(false, LocalPlayer, S.Controller.Get(), S.SequenceA.Get(), EACFSequencerReturnKind::AcfReturnBlend);
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Paused: delivered while paused"), S.World()->IsPaused() && S.Listener->Events.Num() == 2);
+		S.Test->TestEqual(TEXT("Same frame: start then end"), EventOrder(S.Listener.Get()), FString(TEXT("SE")));
+		S.Test->TestTrue(TEXT("Same frame: both carry the sequence they were detected with"), S.Listener->Events.Num() == 2
+			&& S.Listener->Events[0].Sequence == S.SequenceA && S.Listener->Events[1].Sequence == S.SequenceA);
+		S.Test->TestTrue(TEXT("Same frame: the end carries its own return kind"), S.Listener->LastReturnKind == EACFSequencerReturnKind::AcfReturnBlend);
+		UGameplayStatics::SetGamePaused(S.World(), false);
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));

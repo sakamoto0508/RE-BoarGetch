@@ -789,7 +789,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 140 件です。
+- 自動テストは 143 件です。
   - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
   - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
   - `.Health.*`（10 件。Editor とゲームの両方）と `.Sequencer.Health.*`（2 件、`-game`）: 不正値（NaN / Inf / 不正な FOV / 不正な DeltaTime など）の対策（16 章）。正常な入力で姿勢が修正前とビット単位で一致すること、ランダム化した不正入力を含む。
@@ -1126,26 +1126,36 @@ ACF は World の Actor を所有しません。ローカルプレイヤーの A
 
 ## 19. Sequencer の通知のタイミング（Phase 6B / B-6）
 
-`On Sequencer Camera Started` / `On Sequencer Camera Ended` は、**PlayerCameraManager のカメラ更新の外**で配信します。ハンドラの中で `SetViewTarget` / `SetViewTargetWithBlend`、Sequence の停止・再生、ACF の要求の解除などを呼んでも、更新中の PCM の状態を書き換えることはありません。
+`On Sequencer Camera Started` / `On Sequencer Camera Ended` は、**PlayerCameraManager のカメラ更新の中では配信しません**。ハンドラの中で `SetViewTarget` / `SetViewTargetWithBlend`、Sequence の停止・再生、ACF の要求の解除などを呼んでも、更新中の PCM の状態を書き換えることはありません。
 
 ### 配信のタイミング
 
-| 状態の変化を検出した場所 | 配信 |
-|---|---|
-| World の Tick（Sequencer 連携のサブシステムの Tick。通常はここ） | そのサブシステムの Tick の終わり（同じフレーム、カメラ更新より前） |
-| カメラ更新の直前（ACF の評価前フック。Tick の後に別のシステムが Sequence を止めた場合など） | 同じフレームのカメラ更新の後（`OnWorldPostActorTick`） |
+状態の変化は検出した時点で確定し、通知はキューに入れて、次の 2 か所でだけ配信します。どちらも UE 5.8 の World の Tick（`LevelTick`）の中で、カメラ更新のループ（`UpdateCameraManager`）とは別に呼ばれるので、どの経路で変化が起きても（World の Tick、ACF の評価前フック、ゲームが手で呼んだ `UpdateCamera`、`RefreshNow`）、ハンドラがカメラ更新の中で動くことはありません。
 
-- 変化の検出と ACF の内部処理（出力の抑制、外部 ViewTarget の登録、ACF の Return Blend の開始）は、従来どおり検出した時点で行います。**カメラの結果（Camera Cut、Return Blend）は変わりません。** 変わったのは通知が届く時点だけで、2 行目の場合は「カメラ更新の途中」から「同じフレームのカメラ更新の後」になりました。
-- 順序は検出した順（開始 → 終了）で、1 つの変化につき 1 回です。同じフレームの終了と次の開始、重なった Sequence も、回数と順序は従来どおりです。
-- 通知はキューに入れてから配信します（4 件までは固定領域で、ヒープを確保しません）。ハンドラの中で起きた変化は同じ配信の中で続けて届けますが、1 回の配信は 64 件までで、残りは次の配信点に回します（無限に再帰しない）。配信の途中で配信を呼び直しても、二重には配信しません。
-- 配信しないもの: 対象のローカルプレイヤーが削除された、または World が変わったイベント。World の破棄（サブシステムの終了）で、未配信のイベントは捨てます。PlayerController や Sequence Actor が破棄された場合は、その引数を null にして配信します（開始と終了の組を崩さないため）。
-- `RefreshNow` を呼ぶと、その場で状態を確定し、未配信のイベントも配信します。
+| 配信点 | 時点 | 配信するもの |
+|---|---|---|
+| Sequencer 連携のサブシステムの Tick（`TickObjects`） | カメラ更新より前 | 前のフレームから残っているもの、続けてこの Tick で検出した変化 |
+| `OnWorldPostActorTick` | 同じフレームのカメラ更新の後 | カメラ更新の直前（ACF の評価前フック）で検出した変化など |
 
-### 確認していること
+- 通常は World の Tick で検出するので、通知は従来どおり同じフレームのカメラ更新より前に届きます。Tick の後に別のシステムが Sequence を止めた場合は、従来は**カメラ更新の途中**で届いていましたが、今は**同じフレームのカメラ更新の後**に届きます。カメラ更新が `OnWorldPostActorTick` より後に（ゲームのコードから）行われた場合は、次のフレームの Tick で届きます。
+- `RefreshNow` は状態をその場で確定しますが、**通知はその場では届きません**（次の配信点で届く）。状態は `Get ACF Sequencer Camera State` ですぐに読めます。
+- 一時停止中もサブシステムは配信のためだけに Tick します（状態の判定は従来どおり一時停止中は行いません）。一時停止中にキューに入った通知も届きます。
+- 変化の検出と ACF の内部処理（出力の抑制、外部 ViewTarget の登録、ACF の Return Blend の開始）は、従来どおり検出した時点で行います。**カメラの結果（Camera Cut、Return Blend）は変わりません。**
+- 順序は検出した順（開始 → 終了）で、1 つの変化につき 1 回です。`RefreshNow` を何度呼んでも二重には届きません。
+- 1 回の配信は 64 件までです。残りは次の配信点（同じフレーム内の次、遅くとも次のフレームの Tick）で、新しい変化が無くても必ず届きます。ハンドラの中でさらに通知が積まれても再帰はせず、同じ規則で順に届きます。
+- 通知の引数（PlayerController、Sequence Actor、Return Kind）は検出した時点のものです。開始と終了が同じフレームで検出された場合、開始のハンドラの時点で状態（`Get ACF Sequencer Camera State`）はすでに終了後になっていることがあります。通知の中では、状態の問い合わせより引数を使ってください。
+- 配信しないもの: 対象のローカルプレイヤーが削除されたイベント、別の World のイベント。World の破棄（サブシステムの終了）で未配信のイベントは捨てます。PlayerController や Sequence Actor が配信までに破棄された場合は、その引数を null にして配信します（開始と終了の組を崩さないため）。破棄・GC されたリスナーは呼ばれません（Dynamic Delegate の規則）。
+- キューは 4 件まで固定領域でヒープを確保しません。通知の無いフレームのコストは、配信点ごとの空判定だけです。
 
-- 自動テスト `.Sequencer.Events.*`（3 件、`-game`）: カメラ更新の直前に Sequence が止められても通知はカメラ更新の外で届く（同じフレーム）、通知の中で `SetViewTargetWithBlend` を呼んでも最終的な ViewTarget・画面・ACF の状態が正しい、開始の通知で Sequence を止め終了の通知で要求を解除しても、回数と順序が正しく再帰しない。
-- 修正前は 3 件とも、通知がカメラ更新の途中で届いていました（クラッシュや状態の破綻は再現していません）。
+### 確認していること（自動テスト `.Sequencer.Events.*`、6 件、`-game`）
+
+- カメラ更新の直前に Sequence が止められても、通知はカメラ更新の外で、同じフレームに届く。Return Blend は従来どおり。
+- 通知の中で `SetViewTargetWithBlend` を呼ぶ／開始の通知で Sequence を止め終了の通知で要求を解除しても、最終的な ViewTarget・画面・ACF の状態、回数、順序が正しい。
+- 150 件を一度に積んでも、新しい変化なしに全件が順に届く。ハンドラが通知のたびに次を積む連鎖（200 件）も、再帰せずに全件届く。
+- `RefreshNow` は通知を同期では出さず、3 回呼んでも 1 回だけ届く。一時停止中も届く。同じフレームの開始と終了は、それぞれ検出時の引数で届く。
+- 削除されたローカルプレイヤー宛ての通知は届かない。GC されたリスナーは呼ばれない。未配信の通知を持ったまま World を破棄しても配信されない。
+- 修正前は、カメラ更新の直前に止めたケースなど 3 件で、通知がカメラ更新の途中で届いていました（クラッシュや状態の破綻は再現していません）。
 
 ### 確認していないこと
 
-- 通知の待ち行列にイベントが残ったまま World が破棄される場合と、ローカルプレイヤーが削除される場合は、コードの確認だけです（テストで作れないため）。
+- 「World の破棄で未配信を捨てる」は、ローカルプレイヤーのいないテスト用 World（`FTestWorldWrapper`）で確認しました。実際のマップ移動の最中は確認していません。

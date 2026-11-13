@@ -53,6 +53,7 @@ public:
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	//~ FTickableGameObject（カメラ更新より前に毎フレーム 1 回。評価直前にも ACF 側のフックからもう一度確定する）
 	virtual void Tick(float DeltaTime) override;
+	virtual bool IsTickableWhenPaused() const override;
 	virtual TStatId GetStatId() const override;
 
 	/** PlayerController のローカルプレイヤーについての現在の状態。 */
@@ -94,6 +95,12 @@ public:
 
 	/** Phase 6B / B-6: notifications detected but not delivered yet (delivered outside the camera update). */
 	int32 GetNumPendingEvents() const { return PendingEvents.Num(); }
+
+	/** Testing only (B-6): queues a notification exactly as a detected change would (delivered at the next delivery point). */
+	void QueueNotificationForTesting(bool bStarted, ULocalPlayer* LocalPlayer, APlayerController* Controller, ALevelSequenceActor* Sequence, EACFSequencerReturnKind ReturnKind)
+	{
+		QueueEvent(bStarted, LocalPlayer, Controller, Sequence, ReturnKind);
+	}
 
 	/**
 	 * 配信のタイミング（Phase 6B / B-6）: 開始・終了は状態の変化を検出した時点でキューに入り、カメラ更新の外で配信される。
