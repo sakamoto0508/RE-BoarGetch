@@ -16,7 +16,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。設計リスクは再現しておらず、性能は未計測
-- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測）と B-2（PlayerCameraManager の互換性、15 章）が完了し、次は B-3。今後の計画は下の「開発ロードマップ」
+- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測）〜 B-8（Preset の検証、21 章）が完了し、次は B-9。今後の計画は下の「開発ロードマップ」
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -24,7 +24,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 |-------|------|-----------|
 | 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
-| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1 計測・B-2 PCM 互換性: Completed。次は B-3） |
+| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1〜B-8: Completed。次は B-9） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Not Started |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
@@ -109,7 +109,7 @@ Look At と Rotation Composer の **Target Source** は、Look At Target / Follo
 - 戦闘: 上の TPS / ロックオンに `Combat Camera` を足し、`Collision` の Deoccluder と Framing Recovery を ON（サンプル `DA_ACFSample_ThirdPerson` / `DA_ACFSample_LockOn`）
 - フィニッシャーの Shot: `Shot Anchor` + `Collision`（サンプル `DA_ACFSample_Shot_*`）。Shot を並べる Camera Sequence は下の「Camera Sequence / Finisher」
 
-位置を決める Node（Follow / Orbital Follow / Lock-On / Position Composer）は 1 つだけにしてください。Data Validation が警告を出します（Group Framing の重複、対象が 1 つも設定されていない Group Framing も警告します）。
+位置を決める Node（Follow / Orbital Follow / Lock-On / Position Composer / Shot Anchor / 位置を上書きする Fixed Pose）は 1 つだけにしてください。保存時の Data Validation が、役割の競合・NaN・範囲外の値などを報告します（21 章）。
 
 ### Orbital Follow（FreeLook）の主な設定
 
@@ -292,7 +292,7 @@ Data Asset > **ACFCameraSequence** を作り、`Shots` に Shot を並べます�
 | Use Attacker Time Dilation | シーケンス時間に攻撃者の Custom Time Dilation を掛ける（既定 ON。攻撃者のヒットストップでカメラのタイミングも止まる） |
 | Collision Ignores Role Actors | 攻撃者・対象を Shot の Collision の無視リストに入れる（既定 ON） |
 
-Data Validation は、Preset の無い Shot（エラー）、Collision の無い Preset、タイムアウトの無い Wait For Event、重複した Shot 名（警告）を報告します。
+Data Validation は、Preset の無い Shot（エラー）、Collision の無い Preset、タイムアウトの無い Wait For Event、重複した Shot 名（警告）を報告します。ブレンドでつながる Shot の間で Collision の有無や設定が変わるときは、その注意も出します（Info、21 章）。
 
 ### ブレンドの設定（Default Blend In / Out）
 
@@ -789,7 +789,8 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 148 件です。
+- 自動テストは 162 件です。
+  - `.PresetValidation.*`（12 件。Editor とゲームの両方）と `.Editor.*`（2 件。Editor のみ）: Preset の検証（21 章）。
   - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
   - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
   - `.Health.*`（10 件。Editor とゲームの両方）と `.Sequencer.Health.*`（2 件、`-game`）: 不正値（NaN / Inf / 不正な FOV / 不正な DeltaTime など）の対策（16 章）。正常な入力で姿勢が修正前とビット単位で一致すること、ランダム化した不正入力を含む。
@@ -848,7 +849,7 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramewor
 | `Source/ActionCameraFramework/Public/Effects/` | `ACFCameraEffect`（Layer 基底・Effect Preset）、`ACFCameraBuiltinEffects`（Punch / Recoil / Impulse / Shake / Speed FOV / Roll）、`ACFCameraEffectStack`（Instance・Envelope・合成）、`ACFCameraEffectTypes` |
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`、`ACFCameraDebugShake`（サンプル用 Shake）、`Tests/` |
 | `Source/ActionCameraFrameworkSequencer/` | Level Sequencer 連携（Phase 5A）。`ACFSequencerCameraSubsystem`（検出・復帰処理）、`ACFSequencerBlueprintLibrary`、`ACFSequencerSettings`、`ACFSequencerTypes`、`ACF.Sample.Sequencer` コマンド、`Tests/`。LevelSequence / MovieScene に依存するのはこのモジュールだけです |
-| `Source/ActionCameraFrameworkEditor/` | Editor モジュール（現状は空。Phase 7A の Editor 専用機能の置き場） |
+| `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 7A の Editor 専用機能の置き場。現状は Data Validation 経由の検証テストだけ）。Preset の検証の本体は `ACFCameraPresetValidation`（ランタイムモジュール、`WITH_EDITOR` のみ） |
 | `Content/Verification/` | 自動テスト用アセット |
 | `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト |
@@ -1208,3 +1209,94 @@ ACF は World の Actor を所有しません。ローカルプレイヤーの A
 - ブレンド中の再呼び出し（新しい姿勢からやり直す）、2 人のローカルプレイヤーの独立。
 - 上の使用例の手順そのもの（演出カメラの最後の画面から ACF カメラへ、1 フレームの移動量がブレンドの範囲内）。Sequencer がカットで戻った終了の通知の中から呼ぶ場合。
 - `Release Camera With Return Blend For Player`: 下の要求へ戻るときにも指定のブレンドを使う（指定しない解除は従来どおり下の要求の Blend In）。
+
+## 21. Preset の検証（Phase 6B / B-8）
+
+Camera Preset の設定の誤りを、保存のとき・Validate Assets のときに見つけます。Editor 専用です（`WITH_EDITOR`。ゲームのビルドには入らず、実行中のカメラには何もしません）。Preset を書き換えることはありません（自動修正はしません）。実行中の不正値（NaN のターゲット、Node の出力など）は 16 章の健全性チェックの担当です。
+
+### 使い方
+
+- **保存のとき**: Preset を保存すると、Data Validation（UE 標準の DataValidation プラグイン。既定で有効）が自動で検証します。結果は Message Log の「Asset Validation」に出ます。
+- **まとめて確認**: Content Browser で Preset（またはフォルダ）を右クリック → **Asset Actions → Validate Assets**。コマンドラインでは `-run=DataValidation`。
+- **Camera Sequence**: Sequence を検証すると、ブレンドでつながる Shot どうしの注意（下の「遷移」）も出ます。
+- **C++**: `ACFCameraPresetValidation::ValidatePreset(Preset, Issues)` が結果を配列で返します（`ACFCameraPresetValidation.h`。`ValidateTransition(From, To, Issues)`、`HasCollision(Preset)` も同じファイル）。Data Validation・Sequence・テストはすべてこの 1 つの実装を使います。
+
+1 件の結果は、重大度、ID（例 `ACF.Param.NonFinite`）、Preset、Node（番号とクラス）、項目名、説明、直し方を持ちます。メッセージは `[ID] Node 番号 (クラス) 項目: 説明 Fix: 直し方` の形です。
+
+### 重大度
+
+| 重大度 | 意味 | Data Validation |
+|---|---|---|
+| Error | この設定では動かない（NaN / Inf、UE が描画できない FOV） | エラー。アセットは Invalid |
+| Warning | 動くが、意図した動きではない可能性が高い（役割の競合、範囲外の値、Min > Max など） | 警告。アセットは Valid のまま |
+| Info | 許される設定だが知っておくとよいこと（Collision なし、評価順と並び順の違いなど） | 情報（Message Log に出るだけ） |
+
+### 検出すること
+
+**Node の構成**
+
+| ID | 重大度 | 内容 |
+|---|---|---|
+| `ACF.Preset.NoNodes` | Warning | Node が 1 つもない（UE のカメラがそのまま映る） |
+| `ACF.Preset.EmptyNodeSlot` | Warning | 空のスロット（評価で飛ばされる） |
+| `ACF.Preset.DuplicateNodeReference` | Warning | 同じ Node オブジェクトが 2 つのスロットにある（1 フレームに 2 回評価される） |
+| `ACF.Preset.BodyConflict` | Warning | Body の Node が同じ要素（位置・回転・FOV）をどれも上書きする。最後の Node だけが映る。Fixed Pose・Shot Anchor を含む。位置だけ・FOV だけのように**要素が重ならない組み合わせは報告しません**（例: Orbital Follow + FOV だけの Fixed Pose、位置用と FOV 用の 2 つの Fixed Pose） |
+| `ACF.Preset.AimConflict` | Warning | Aim の Node（Look At / Rotation Composer）が 2 つ以上 |
+| `ACF.Preset.ComposerAim` | Warning | Position Composer の後で Aim の Node が回転を変え、構図が崩れる |
+| `ACF.Preset.DuplicateCombat` / `DuplicateGroupFraming` / `DuplicateCollision` | Warning | 同じ役割の Node が 2 つ以上（効果が重なる / 何度もスイープする） |
+| `ACF.Preset.FramingNoSubjects` | Warning | 対象が 1 つも設定されていない Group Framing |
+| `ACF.Preset.StageOrderClamped` | Warning | 独自 Node の `GetStageOrder()` が ±400000 を超え、丸められる |
+| `ACF.Preset.RotationOverriddenByAim` | Info | Body の Node が回転も決めているが、後の Look At が置き換える（Rotation Composer は受け取った回転を基に補正するので対象外） |
+| `ACF.Preset.EvaluationOrder` | Info | リストの並びと評価順が違う（評価は段の順。リストの順は同じ段の中だけで効く） |
+
+無効（`bEnabled` OFF）の Node は構成の判定に数えません（調整中の比較用に置いた Node で警告しない）。
+
+**パラメーター**（すべての Node と Preset の Default Blend In / Out の値を、プロパティの定義から調べます。範囲は各プロパティの `ClampMin` / `ClampMax`、つまり Details パネルが許す範囲で、検証のための独自の上限はありません）
+
+| ID | 重大度 | 内容 |
+|---|---|---|
+| `ACF.Param.NonFinite` | Error | NaN / Inf。無効な Node や OFF のオプションの値は Warning（今は使われないが、ON にすると壊れる） |
+| `ACF.Param.InvalidFov` | Error | FOV が 0 以下、または 180 以上（UE の透視投影で使えない）。Fixed Pose / Shot Anchor の FOV は Details パネルで 360 まで入力できるので、ここで止めます |
+| `ACF.Param.OutOfRange` | Warning | `ClampMin` / `ClampMax` の範囲外（C++・Blueprint・Python・古いアセットから入った値）。負の Damping（Damping なしと同じ）、負の Collision の半径（UE はライントレースにする）、負のブレンド時間（カット）などは、実際の動きも説明に出ます |
+| `ACF.Param.MinMaxInverted` | Warning | Min > Max（Orbital Follow / Lock-On の Pitch、Group Framing の FOV）。実行時に入れ替えて使われる |
+| `ACF.Param.RangeInverted` | Warning | Near Range ≥ Far Range（Lock-On: 距離で滑らかに変わらず Far Range で切り替わる、Combat: 常に遠い側の値） |
+| `ACF.Param.ZeroDistance` | Warning | カメラが中心に重なる（Orbital Follow の Distance 0、Lock-On の腕の長さが両方 0、Aim At Anchor の Shot Anchor の Camera Offset 0） |
+| `ACF.Param.Normalized` | Info | 実行時に補正される値（Soft Zone < Dead Zone、Pitch の範囲外の Initial Pitch / Base Pitch） |
+| `ACF.Blend.MissingCurve` | Warning | Custom のブレンドに Curve がない（Linear になる） |
+
+機能に依存する値は、その機能が ON のときだけ範囲を調べます（例: `Override Field Of View` が OFF の FOV、Curve = Cut のブレンドの時間、`Use Rings` が OFF のリングの距離）。判定にはプロパティの `EditCondition`（`bFlag` / `!bFlag` / `Enum == 値` / `Enum != 値` と `||` / `&&`）を使い、読めない条件は「ON」とみなします（調べすぎる方に倒す）。
+
+**Collision**
+
+- `ACF.Collision.None`（Info）: ターゲットの周りにカメラを置く Node（Follow / Orbital Follow / Lock-On / Position Composer / Shot Anchor）があるのに Collision がない。壁に入ることがあり、出力の Guard（16 章）もこのカメラには効きません。固定カメラ、ズームだけの Preset、壁に近づかないカメラなど、**Collision なしは正しい構成**なので Warning にはしません。Fixed Pose だけの Preset には何も出しません。
+
+### 遷移（2 つの Preset の間のブレンド）
+
+ブレンド中は、入ってくる側（ブレンド先）の Preset の PostBlend（Collision）が、ブレンドされた姿勢に最初のフレームから使われます（Phase 6A 監査 P-3）。そのため、どちらの Preset からどちらへブレンドするかが分からないと判断できない注意は、単体の Preset の検証では出しません。
+
+| ID | 重大度 | 内容 |
+|---|---|---|
+| `ACF.Transition.CollisionDropped` | Warning | Collision あり → なし。ブレンドの最初から Collision も出力の Guard も効かず、ブレンドの途中で壁を通ることがある |
+| `ACF.Transition.CollisionAdded` | Info | Collision なし → あり。ブレンド先の Collision がブレンドの最初から効く |
+| `ACF.Transition.CollisionSettingsDiffer` | Info | どちらも Collision があるが、チャンネルか半径が違う。ブレンドの間ずっとブレンド先の設定が使われる |
+
+- Camera Sequence の検証は、ブレンドでつながる連続した Shot（Blend In がカットでないもの）にこれを使い、Info として出します（Collision のない Shot の警告は従来どおり別に出ます）。
+- ゲームの中でどの Preset からどの Preset へ切り替えるかはアセットからは分からないので、それ以外の遷移は `ValidateTransition` を自分で呼んで確認してください。
+- Collision の有無をまとめて決める「Collision Policy」のような設定は、将来の候補です（今回は追加していません）。
+
+### 実行時
+
+- 実行時には検証しません。毎フレームの処理も、要求の開始時の処理も追加していません（16 章の健全性チェックが実行時の値を扱います）。
+- 範囲の情報（`ClampMin` などのメタデータ）は Editor にしかないので、パッケージしたゲームでは同じ検証はできません。
+- Preset を一時的に作って使う場合（実行中の調整用の Preset など）も、検証で止められることはありません。保存しない Preset は自動では検証されないので、必要なら `ValidatePreset` を呼びます（Editor のビルドのみ）。
+
+### 確認していること（自動テスト）
+
+- `.PresetValidation.*`（12 件。Editor とゲームの両方）: 正しい Preset で何も出ないこと（意図的な分担・無効にした重複を含む）、Fixed Pose と Shot Anchor の競合、同じ段の問題と評価順、空のスロットと同じ Node の重複（落ちない）、NaN / Inf、負の Damping と負の半径、不正な FOV、Min > Max、Collision なしの Preset が通ること、Collision の設定が違う Preset の遷移（Camera Sequence を含む）、検証で Preset のバイト列が変わらないこと、検証を挟んでもカメラの姿勢がビット単位で同じこと。
+- `.Editor.*`（2 件。Editor のみ）: DataValidation の `UEditorValidatorSubsystem` を通した検証（保存時と手動の両方の用途。エラーで Invalid、警告と Info は Valid のまま）。プロジェクトとプラグインの実際の Preset・Camera Sequence をすべて検証し、エラーが 0 件であること（現在のサンプルは Error 0 / Warning 0。Info は検証用の Collision のない Preset 1 件）。
+
+### 制限
+
+- 組み込みの Node の役割（どの要素を上書きするか）は、検証側の表で判断しています。独自の Node は役割の競合の判定に入りません（パラメーターの NaN / 範囲は独自の Node も調べます）。
+- 値の組み合わせのうち、実行時のターゲットや入力で決まるもの（ターゲットがいるか、Lock-On の対象があるか）は調べられません。
+- Info は保存のときにも Message Log に出ます。

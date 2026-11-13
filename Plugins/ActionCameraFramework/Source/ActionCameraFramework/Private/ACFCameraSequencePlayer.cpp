@@ -8,6 +8,8 @@
 #include "CollisionQueryParams.h"
 #include "ACFCameraProfiler.h"
 #if WITH_EDITOR
+#include "ACFCameraPresetValidation.h"
+#include "Logging/TokenizedMessage.h"
 #include "Misc/DataValidation.h"
 #endif
 
@@ -108,18 +110,7 @@ EDataValidationResult UACFCameraSequence::IsDataValid(FDataValidationContext& Co
 		}
 		auto HasCollision = [](const UACFCameraPreset* Preset)
 		{
-			if (!Preset)
-			{
-				return true;
-			}
-			for (const UACFCameraNode* Node : Preset->Nodes)
-			{
-				if (Node && Node->bEnabled && Node->GetStage() == EACFCameraNodeStage::PostBlend)
-				{
-					return true;
-				}
-			}
-			return false;
+			return !Preset || ACFCameraPresetValidation::HasCollision(Preset); // a missing preset is reported above
 		};
 		if (!HasCollision(Shot.Preset) || !HasCollision(Shot.Fallback.FallbackPreset))
 		{
@@ -128,6 +119,16 @@ EDataValidationResult UACFCameraSequence::IsDataValid(FDataValidationContext& Co
 		if (Shot.AdvanceMode == EACFCameraShotAdvanceMode::WaitForEvent && Shot.Duration <= 0.f)
 		{
 			Context.AddWarning(FText::Format(LOCTEXT("NoTimeout", "Shot {0} waits for an event without a timeout; a missing anim notify leaves the camera on this shot until Finish / Cancel."), Index));
+		}
+		// B-8: preset transitions this sequence blends through. Notes only: the missing Collision itself is the warning above.
+		if (Index > 0 && !Shot.BlendIn.IsCut())
+		{
+			TArray<FACFCameraPresetIssue> Transition;
+			ACFCameraPresetValidation::ValidateTransition(Shots[Index - 1].Preset, Shot.Preset, Transition);
+			for (const FACFCameraPresetIssue& Issue : Transition)
+			{
+				Context.AddMessage(EMessageSeverity::Info, FText::Format(LOCTEXT("ShotTransition", "Shot {0} -> {1}: {2}"), Index - 1, Index, Issue.ToText()));
+			}
 		}
 	}
 	return Result;

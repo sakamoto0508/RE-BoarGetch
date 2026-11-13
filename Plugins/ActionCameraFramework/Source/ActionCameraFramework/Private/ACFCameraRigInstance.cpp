@@ -101,7 +101,7 @@ void FACFCameraRigInstance::SyncStatesWithPreset()
 	}
 	auto StageOf = [&Nodes](int32 Index) -> int64
 	{
-		return Nodes[Index] ? static_cast<int64>(Nodes[Index]->GetStage()) * 1000000 + FMath::Clamp(Nodes[Index]->GetStageOrder(), -400000, 400000) : 0;
+		return GetEvaluationSortKey(Nodes[Index]);
 	};
 	Algo::StableSortBy(Order, StageOf);
 	OrderedNodes.Reset(Nodes.Num());
@@ -199,6 +199,11 @@ bool FACFCameraRigInstance::EvaluatePostBlend(const FACFCameraNodeContext& Conte
 void FACFCameraRigInstance::ResetInterpolation()
 {
 	ForEachNode([](const UACFCameraNode& Node, FInstancedStruct* State) { Node.ResetInterpolation(State); });
+}
+
+int64 FACFCameraRigInstance::GetEvaluationSortKey(const UACFCameraNode* Node)
+{
+	return Node ? static_cast<int64>(Node->GetStage()) * 1000000 + FMath::Clamp(Node->GetStageOrder(), -MaxStageOrder, MaxStageOrder) : 0;
 }
 
 void FACFCameraRigInstance::ForEachNode(TFunctionRef<void(const UACFCameraNode& Node, FInstancedStruct* State)> Visitor)

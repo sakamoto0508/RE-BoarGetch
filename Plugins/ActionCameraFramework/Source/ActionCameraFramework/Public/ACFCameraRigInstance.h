@@ -45,6 +45,12 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRigInstance
 	/** Visits every enabled node with its runtime state (e.g. to push a runtime command). */
 	void ForEachNode(TFunctionRef<void(const UACFCameraNode& Node, FInstancedStruct* State)> Visitor);
 
+	/** GetStageOrder() beyond this is clamped (the stage always comes first). */
+	static constexpr int32 MaxStageOrder = 400000;
+
+	/** Evaluation order of a node: by stage, then GetStageOrder(); a stable sort keeps the array order of ties. Null = 0. */
+	static int64 GetEvaluationSortKey(const UACFCameraNode* Node);
+
 private:
 	/** Matches NodeStates / order to the preset's current node list. Allocates only after edits. */
 	void SyncStatesWithPreset();
