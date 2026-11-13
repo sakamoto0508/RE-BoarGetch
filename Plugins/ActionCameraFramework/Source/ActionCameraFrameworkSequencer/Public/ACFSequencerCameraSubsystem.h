@@ -92,6 +92,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Action Camera|Sequencer")
 	void RefreshNow();
 
+	/** Phase 6B / B-6: notifications detected but not delivered yet (delivered outside the camera update). */
+	int32 GetNumPendingEvents() const { return PendingEvents.Num(); }
+
+	/**
+	 * 配信のタイミング（Phase 6B / B-6）: 開始・終了は状態の変化を検出した時点でキューに入り、カメラ更新の外で配信される。
+	 *   - World の Tick で検出した変化: このサブシステムの Tick の終わり（同じフレーム、カメラ更新より前）。
+	 *   - カメラ更新の直前（ACF の評価前フック）で検出した変化: 同じフレームのカメラ更新の後（OnWorldPostActorTick）。
+	 * ハンドラは PCM の更新中には呼ばれないので、SetViewTarget などを安全に呼べる。ACF の内部処理（出力の抑制・外部 ViewTarget・
+	 * Return Blend の開始）は従来どおり検出した時点で行うので、カメラの結果は変わらない。順序は検出順（開始 → 終了）で、
+	 * 各変化につき 1 回。ローカルプレイヤーが削除された・別の World になったイベントは配信しない。
+	 */
 	/** Sequencer の Camera Cut がプレイヤーの画面を握り始めた。 */
 	UPROPERTY(BlueprintAssignable, Category = "Action Camera|Sequencer")
 	FACFSequencerCameraStartedSignature OnSequencerCameraStarted;
@@ -143,6 +154,19 @@ private:
 	void HandlePreEvaluate(UACFCameraSubsystem& Subsystem, float DeltaTime);
 	void LogStateChange(const FString& Message) const;
 
+	/** B-6: a start / end waiting for a safe point (outside the camera update). */
+	struct FPendingEvent
+	{
+		bool bStarted = false;
+		TWeakObjectPtr<ULocalPlayer> LocalPlayer;
+		TWeakObjectPtr<APlayerController> Controller;
+		TWeakObjectPtr<ALevelSequenceActor> Sequence;
+		EACFSequencerReturnKind ReturnKind = EACFSequencerReturnKind::Cut;
+	};
+	void QueueEvent(bool bStarted, ULocalPlayer* LocalPlayer, APlayerController* Controller, ALevelSequenceActor* Sequence, EACFSequencerReturnKind ReturnKind);
+	void DispatchPendingEvents();
+	void HandleWorldPostActorTick(UWorld* World, ELevelTick TickType, float DeltaSeconds);
+
 	TArray<FPlayerState> PlayerStates;
 	TArray<TWeakObjectPtr<ALevelSequenceActor>> SequenceActors;
 	TMap<TWeakObjectPtr<const ALevelSequenceActor>, FACFSequencerCameraOptions> SequenceOptions;
@@ -150,4 +174,7 @@ private:
 	FDelegateHandle ActorSpawnedHandle;
 	FDelegateHandle LevelAddedHandle;
 	FDelegateHandle PreEvaluateHandle;
+	FDelegateHandle PostActorTickHandle;
+	TArray<FPendingEvent, TInlineAllocator<4>> PendingEvents;
+	bool bDispatchingEvents = false;
 };

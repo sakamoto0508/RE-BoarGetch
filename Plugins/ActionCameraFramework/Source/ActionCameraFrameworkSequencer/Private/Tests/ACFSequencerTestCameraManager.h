@@ -14,6 +14,8 @@ enum class EACFTestPovMode : uint8
 	CopySingleView,
 	/** CopyPerViewTarget, and the PCM tells ACF which view target each pass belongs to (FACFScopedOutputViewTarget). */
 	CopyWithExplicitViewTarget,
+	/** Standard flow, POV passed by reference (only the update hooks below are added; B-6). */
+	Standard,
 };
 
 /**
@@ -36,6 +38,13 @@ public:
 
 	virtual void ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& InOutPOV) override;
 	virtual void SetViewTarget(AActor* NewViewTarget, FViewTargetTransitionParams TransitionParams = FViewTargetTransitionParams()) override;
+	virtual void UpdateCamera(float DeltaTime) override;
+
+	/** B-6: true while any test PCM runs UpdateCamera (events delivered meanwhile are delivered during a camera update). */
+	static bool IsUpdatingCamera() { return UpdateDepth > 0; }
+	/** B-6: runs at the start of UpdateCamera, inside the camera update (e.g. "another system stopped the sequence after the ACF tick"). */
+	TFunction<void()> PreUpdate;
+	static int32 UpdateDepth;
 };
 
 UCLASS(NotBlueprintable, HideDropdown, Transient)
@@ -54,4 +63,13 @@ class AACFSequencerTestCameraManager_Explicit : public AACFSequencerTestCameraMa
 
 public:
 	AACFSequencerTestCameraManager_Explicit() { Mode = EACFTestPovMode::CopyWithExplicitViewTarget; }
+};
+
+UCLASS(NotBlueprintable, HideDropdown, Transient)
+class AACFSequencerTestCameraManager_Standard : public AACFSequencerTestCameraManager
+{
+	GENERATED_BODY()
+
+public:
+	AACFSequencerTestCameraManager_Standard() { Mode = EACFTestPovMode::Standard; }
 };

@@ -28,7 +28,7 @@ namespace ACFTargetGroup
 			Subject.Location = Transform.GetLocation() + Offset;
 			Subject.Radius = FMath::Max(Radius, 0.f);
 			Subject.Weight = Weight;
-			Subject.Actor = ActorOf(Object);
+			Subject.SetActor(ActorOf(Object));
 			Subject.bIsPlayer = bForcePlayer || (PlayerActor && Subject.Actor == PlayerActor);
 		}
 	}
@@ -63,7 +63,7 @@ void ACFTargetGroup::GatherSubjects(const FACFCameraRequestParams& Request, bool
 			Subject.Weight = LookAtSubject.Weight;
 			FTransform Unused;
 			const UObject* LookObject = nullptr;
-			Subject.Actor = Request.LookAtTarget.Resolve(Unused, LookObject) ? ActorOf(LookObject) : nullptr;
+			Subject.SetActor(Request.LookAtTarget.Resolve(Unused, LookObject) ? ActorOf(LookObject) : nullptr);
 		}
 	}
 	else if (LookAtSubject.bInclude)

@@ -386,6 +386,90 @@ namespace ACFProfileScenarios
 			TEXT("Recorder overhead (median on - median off): %.3f us per evaluation (%.1f %%).\n"),
 			SOff.Median, Off[0], Off.Last(), SOn.Median, On[0], On.Last(), SAlloc.Median, OnAlloc[0], OnAlloc.Last(),
 			SOn.Median - SOff.Median, SOff.Median > 0.0 ? 100.0 * (SOn.Median - SOff.Median) / SOff.Median : 0.0);
+
+		// Phase 6B / B-3: the same evaluation with N actors in the collision ignore list (weak references resolved every
+		// frame; 1/3 of them destroyed, so the invalid-entry path is measured too).
+		{
+			TArray<AActor*> Extra;
+			for (int32 I = 0; I < 32; ++I)
+			{
+				FActorSpawnParameters SP;
+				SP.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				Extra.Add(W->SpawnActor<AActor>(AActor::StaticClass(), FTransform(BenchActors[0]->GetActorLocation() + FVector(0.0, 5000.0 + I * 10.0, 0.0)), SP));
+			}
+			FString Rows;
+			for (const int32 Count : { 0, 8, 32 })
+			{
+				TArray<double> Us;
+				for (int32 Round = 0; Round < 7; ++Round)
+				{
+					TStrongObjectPtr<UACFCameraDirector> D(NewObject<UACFCameraDirector>());
+					FACFCameraRequestParams Params;
+					Params.FollowTarget.Actor = BenchActors[0].Get();
+					Params.LookAtTarget.Actor = BenchActors[1].Get();
+					for (int32 I = 0; I < Count; ++I)
+					{
+						Params.CollisionIgnoredActors.Add(Extra[I]);
+					}
+					D->AddRequest(BenchPreset.Get(), Params);
+					FACFCameraEvaluationContext Context;
+					Context.World = W;
+					Context.DeltaTime = 1.f / 60.f;
+					for (int32 I = 0; I < 60; ++I)
+					{
+						Context.FrameNumber = 95000000ull + Round * 10000ull + I;
+						D->Evaluate(Context);
+					}
+					const uint64 T0 = FPlatformTime::Cycles64();
+					for (int32 I = 0; I < 2000; ++I)
+					{
+						Context.FrameNumber = 95100000ull + Round * 10000ull + I;
+						D->Evaluate(Context);
+					}
+					Us.Add(FPlatformTime::ToMilliseconds64(FPlatformTime::Cycles64() - T0) * 1000.0 / 2000);
+				}
+				Rows += FString::Printf(TEXT("| %d | %.3f |\n"), Count, FACFCameraProfileStats::Compute(Us).Median);
+			}
+			for (int32 I = 0; I < Extra.Num(); I += 3)
+			{
+				Extra[I]->Destroy(); // invalid entries for the last row
+			}
+			{
+				TArray<double> Us;
+				for (int32 Round = 0; Round < 7; ++Round)
+				{
+					TStrongObjectPtr<UACFCameraDirector> D(NewObject<UACFCameraDirector>());
+					FACFCameraRequestParams Params;
+					Params.FollowTarget.Actor = BenchActors[0].Get();
+					Params.LookAtTarget.Actor = BenchActors[1].Get();
+					for (AActor* Actor : Extra)
+					{
+						Params.CollisionIgnoredActors.Add(Actor);
+					}
+					D->AddRequest(BenchPreset.Get(), Params);
+					FACFCameraEvaluationContext Context;
+					Context.World = W;
+					Context.DeltaTime = 1.f / 60.f;
+					const uint64 T0 = FPlatformTime::Cycles64();
+					for (int32 I = 0; I < 2000; ++I)
+					{
+						Context.FrameNumber = 96100000ull + Round * 10000ull + I;
+						D->Evaluate(Context);
+					}
+					Us.Add(FPlatformTime::ToMilliseconds64(FPlatformTime::Cycles64() - T0) * 1000.0 / 2000);
+				}
+				Rows += FString::Printf(TEXT("| 32 (11 destroyed) | %.3f |\n"), FACFCameraProfileStats::Compute(Us).Median);
+			}
+			for (AActor* Actor : Extra)
+			{
+				if (IsValid(Actor))
+				{
+					Actor->Destroy();
+				}
+			}
+			OverheadText += FString::Printf(TEXT("\nCollision ignore list (B-3), same evaluation, us per evaluation (median of 7 x 2000):\n| Ignored actors | us |\n|---|---|\n%s"), *Rows);
+		}
+
 		for (const TWeakObjectPtr<AActor>& A : BenchActors)
 		{
 			if (A.IsValid())

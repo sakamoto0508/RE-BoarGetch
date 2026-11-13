@@ -52,6 +52,7 @@ FACFCameraRequestHandle UACFCameraDirector::AddRequest(const UACFCameraPreset* P
 	FACFCameraRequestEntry& Entry = Requests.AddDefaulted_GetRef();
 	Entry.Handle = FACFCameraRequestHandle(ACFDirector::AllocateRequestId());
 	Entry.Params = Params;
+	Entry.Params.MoveIgnoredActorsToWeak(); // B-3: the director keeps no strong reference to World actors
 	Entry.Rig.Initialize(Preset);
 	Entry.Sequence = NextSequence++;
 	// "Explicitly null" means no instigator was supplied. An already-dead instigator still counts
@@ -954,6 +955,16 @@ void UACFCameraDirector::SanitizeContext(FACFCameraEvaluationContext& Context)
 		Health.Report(EACFCameraHealthIssue::InvalidDeltaTime, NAME_None, TEXT("delta time"), TEXT("evaluated as zero time"));
 		Context.DeltaTime = 0.f;
 	}
+
+	// B-5: effects belong to the World they were played in. The director (and its effect stack) outlives map travel, so
+	// effects still running when the camera moves to another World end here, before anything is shown there.
+	if (bHasEffectsWorld && EffectsWorld.Get() != Context.World && Effects.Num() > 0)
+	{
+		ACFDirector::LogEvent(FString::Printf(TEXT("World changed: %d effect(s) of the previous world stopped"), Effects.Num()));
+		Effects.StopAll(true);
+	}
+	EffectsWorld = Context.World;
+	bHasEffectsWorld = true;
 
 	if (!IsSameCameraContext(Context))
 	{

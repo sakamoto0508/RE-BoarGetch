@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "ACFCameraTypes.h"
+#include "Effects/ACFCameraEffectTypes.h"
 #include "ACFCameraSequence.h"
 #include "ACFCameraBlueprintLibrary.generated.h"
 
@@ -74,4 +75,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Action Camera|Sequence", meta = (DisplayName = "Is Valid (ACF Camera Sequence Handle)", CompactNodeTitle = "IsValid"))
 	static bool IsValidSequenceHandle(const FACFCameraSequenceHandle& Handle) { return Handle.IsValid(); }
+
+	/** False for a handle of an effect that was rejected (B-5: no ACF camera) or never played. Use Is ACF Camera Effect Active for "still running". */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Effects", meta = (DisplayName = "Is Valid (ACF Camera Effect Handle)", CompactNodeTitle = "IsValid"))
+	static bool IsValidEffectHandle(const FACFCameraEffectHandle& Handle) { return Handle.IsValid(); }
 };

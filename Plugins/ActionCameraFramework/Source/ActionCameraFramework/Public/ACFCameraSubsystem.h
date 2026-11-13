@@ -354,9 +354,21 @@ public:
 
 	// --- Camera effects (Blueprint names carry "ACF" to stay distinct from UE's camera shake nodes) ---------
 
-	/** Plays an effect preset on this player's ACF camera. Keep the handle to stop this effect only. */
+	/**
+	 * Plays an effect preset on this player's ACF camera. Keep the handle to stop this effect only.
+	 * Phase 6B / B-5: effects only exist on top of an ACF camera. Without one (Can Play ACF Camera Effects is false: no
+	 * camera request and no ACF camera still fading out) the effect is rejected and the returned handle is invalid
+	 * (Is Valid (ACF Camera Effect Handle) = false): it is not kept for later, so it can never start seconds afterwards.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Action Camera|Effects", meta = (DisplayName = "Play ACF Camera Effect", AutoCreateRefTerm = "Params"))
 	FACFCameraEffectHandle PlayCameraEffect(UACFCameraEffectPreset* Preset, const FACFCameraEffectParams& Params);
+
+	/** True while effects can play: a camera request exists, or the ACF camera is still on screen (blending out). */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Effects", meta = (DisplayName = "Can Play ACF Camera Effects"))
+	bool CanPlayCameraEffects() const;
+
+	/** Effects rejected because no ACF camera was there (B-5), since this subsystem was created. */
+	int32 GetNumRejectedCameraEffects() const { return NumRejectedEffects; }
 
 	/** Releases (or cuts) one effect and invalidates the handle. Safe to call twice. */
 	UFUNCTION(BlueprintCallable, Category = "Action Camera|Effects", meta = (DisplayName = "Stop ACF Camera Effect"))
@@ -452,6 +464,7 @@ private:
 	FACFCameraOutputDiagnostics OutputDiagnostics;
 	TWeakObjectPtr<const APlayerCameraManager> DiagnosedCameraManager;
 	TWeakObjectPtr<const AActor> HealthViewTarget; // B-4: view target of the last known good pose
+	int32 NumRejectedEffects = 0; // B-5
 	bool bCompatibilityWarned = false;
 	struct FExplicitOutputViewTarget
 	{

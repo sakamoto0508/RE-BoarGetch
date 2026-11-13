@@ -24,6 +24,11 @@ public:
 	{
 		++NumStarted;
 		LastStartedController = PlayerController;
+		Record(true, PlayerController, SequenceActor);
+		if (OnStarted)
+		{
+			OnStarted(PlayerController, SequenceActor);
+		}
 	}
 
 	UFUNCTION()
@@ -33,7 +38,29 @@ public:
 		LastEndedController = PlayerController;
 		LastReturnKind = ReturnKind;
 		ReturnKinds.Add(ReturnKind);
+		Record(false, PlayerController, SequenceActor);
+		if (OnEnded)
+		{
+			OnEnded(PlayerController, SequenceActor);
+		}
 	}
+
+	/** Phase 6B / B-6: every delivery, in order, with the frame and whether it happened inside a (test PCM) camera update. */
+	struct FEvent
+	{
+		bool bStarted = false;
+		uint64 Frame = 0;
+		bool bDuringCameraUpdate = false;
+		TWeakObjectPtr<APlayerController> Controller;
+		TWeakObjectPtr<ALevelSequenceActor> Sequence;
+	};
+	TArray<FEvent> Events;
+	/** Blueprint-like reactions run inside the handlers (SetViewTarget, Stop, release a request, ...). */
+	TFunction<void(APlayerController*, ALevelSequenceActor*)> OnStarted;
+	TFunction<void(APlayerController*, ALevelSequenceActor*)> OnEnded;
+	int32 DeliveriesDuringCameraUpdate = 0;
+
+	void Record(bool bStarted, APlayerController* PlayerController, ALevelSequenceActor* SequenceActor);
 
 	/** OnFinished に結び付けて「終了と同じフレームに次の Sequence を再生する」ケースを作る。 */
 	UFUNCTION()

@@ -269,11 +269,30 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestParams
 
 	/**
 	 * Extra actors the Collision node ignores (the follow / look-at target actors are ignored
-	 * automatically when the node says so). Destroyed actors are skipped (references to destroyed
-	 * actors are cleared by the garbage collector; this list never keeps an actor from being destroyed).
+	 * automatically when the node says so). Destroyed actors are skipped.
+	 * Phase 6B / B-3: this is the input (Blueprint / C++). ACF does not own these actors: when the director takes the
+	 * request, it moves them into IgnoredActorRefs (weak references) and keeps no strong reference, so the list never
+	 * keeps an actor or its World alive, whatever the GC settings (Blueprint does not support arrays of weak references).
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")
 	TArray<TObjectPtr<AActor>> CollisionIgnoredActors;
+
+	/** Weak copy of CollisionIgnoredActors held by the director (B-3). Filled by MoveIgnoredActorsToWeak; not for Blueprint. */
+	UPROPERTY(Transient)
+	TArray<TWeakObjectPtr<AActor>> IgnoredActorRefs;
+
+	/** Moves CollisionIgnoredActors into IgnoredActorRefs (called by whoever keeps the parameters beyond the call: the director). */
+	void MoveIgnoredActorsToWeak()
+	{
+		for (const TObjectPtr<AActor>& Actor : CollisionIgnoredActors)
+		{
+			if (Actor)
+			{
+				IgnoredActorRefs.AddUnique(Actor.Get());
+			}
+		}
+		CollisionIgnoredActors.Empty();
+	}
 
 	/** Shown in logs and debug output. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Request")

@@ -469,6 +469,8 @@ Cameras->OnCameraSequenceEvent.AddDynamic(this, &AMyCharacter::OnCameraShot);
 Punch / Recoil / Impulse / Shake / Speed FOV / Roll を、ゲームのイベントから 1 ノードで再生できます。
 演出は ACF カメラにかかります。UE 標準のカメラだけを使っている場面で演出を出したい場合は、Node が Collision だけの「素通し Preset」を要求してください。UE カメラがそのまま映り、その上に演出と Collision がかかります。
 
+**ACF カメラが無いときは演出を受け付けません**（Phase 6B / B-5、18 章）。要求が 1 つも無い（または最後の要求がカットで外れた）状態の `Play ACF Camera Effect` などは無効な Handle を返し、演出は保持されません（後から要求を出しても再生されない）。`Can Play ACF Camera Effects` で事前に、`Is Valid (ACF Camera Effect Handle)` で事後に判定できます。
+
 **Effect Preset を作る**: Data Asset > **ACFCameraEffectPreset** を作り、`Layers` に演出を追加します。1 つの Preset に複数の演出を入れることができ、まとめて 1 つの Handle で再生・停止されます（例: 重い着地 = Impulse + Shake + FOV Punch）。
 
 | Layer | チャンネル | 内容 |
@@ -787,10 +789,11 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 127 件です。
+- 自動テストは 140 件です。
   - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
   - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
   - `.Health.*`（10 件。Editor とゲームの両方）と `.Sequencer.Health.*`（2 件、`-game`）: 不正値（NaN / Inf / 不正な FOV / 不正な DeltaTime など）の対策（16 章）。正常な入力で姿勢が修正前とビット単位で一致すること、ランダム化した不正入力を含む。
+  - `.Lifetime.*`（5 件。Editor とゲームの両方）: Actor の参照と寿命（17 章）。実際の World・Actor・GC を使い、`-DisableGarbageElimination` でも合格すること。 B-5 の演出の寿命（要求の有無と World の変化）を含む。
   - `.Integration.*`（24 件）、`.Sequencer.*`（21 件。実際の Level Sequence・PCM を使う。うち `.Sequencer.PcmCompat.*` 7 件は Phase 6B / B-2 の PCM 互換性、15 章）: `-game` でのみ実行されます。
   - `.Samples.*`（6 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
@@ -920,7 +923,7 @@ Level Sequence の Camera Cut がカメラを握っている間、ACF は出力�
 | `Is Sequencer Controlling ACF Camera` (Player Controller) | Camera Cut が画面を握っているか（ブレンド中を含む） |
 | `Set / Clear ACF Sequencer Options For Player` | プレイヤー単位の設定の上書き |
 | `Set / Clear ACF Sequencer Options For Sequence` | Level Sequence Actor 単位の設定の上書き（Play の前に呼ぶ） |
-| `Get ACF Sequencer Camera Subsystem` → `On Sequencer Camera Started` / `On Sequencer Camera Ended` | 開始 / 終了（Return Kind つき）のイベント |
+| `Get ACF Sequencer Camera Subsystem` → `On Sequencer Camera Started` / `On Sequencer Camera Ended` | 開始 / 終了（Return Kind つき）のイベント。カメラ更新の外で配信（19 章） |
 | `Add / Remove ACF External View Target` (View Target, Source)、`Is ACF External View Target` | ゲーム独自のカットシーンカメラを「ACF を乗せないカメラ」として登録（Subsystem のノード） |
 | `Blend ACF Camera From Pose` (Pose, Blend) | 任意の姿勢から、いま有効な ACF カメラへブレンドして戻る |
 | `Is ACF Output Bypassed` / `Get Num ACF Output Suppressions` / `Set All ACF Orbit Rotations` | 状態の確認、Orbit の向きの一括設定 |
@@ -1058,3 +1061,91 @@ NaN・Infinity・不正な FOV・不正な DeltaTime などが入っても、ACF
 - Collision のパラメータ（Probe 半径など）が非有限の場合、Collision Node の出力が捨てられますが、エンジンの問い合わせ自体は行われます。
 - 出力しないフレーム（Fallback 無し）の `Get Aim Camera Pose` は中立の姿勢です。評価結果の Weight が 0 であることで判別してください。
 - 登録済みの Scene Component に NaN の Transform を設定すると、UE 自身が ensure を出します（UE の診断。ACF の外）。
+
+## 17. Actor の参照と寿命（Phase 6B / B-3）
+
+ACF は World の Actor を所有しません。ローカルプレイヤーの ACF（サブシステムと Director）はマップ移動をまたいで生き続けるので、World の Actor を強参照すると、その Actor と World 全体を残してしまいます。
+
+### 参照の種類
+
+| 保持しているもの | 参照 |
+|---|---|
+| 追従・注視の対象、Target Group のメンバー、Instigator、Sequence の攻撃者・対象、演出の発生源、出力 Guard の無視リスト、Sequencer 連携の ViewTarget | 弱参照（`TWeakObjectPtr`） |
+| `Collision Ignored Actors`（要求のパラメータ） | Blueprint / C++ から渡すときは Actor の配列のまま。**Director が受け取った時点で弱参照（`IgnoredActorRefs`）へ移し、強参照は残しません**（Blueprint は弱参照の配列を扱えないため、入力の型は変えていません） |
+| 1 フレームの評価の中だけで使うもの（Collision の無視リスト、Shot の Probe、演出の Motion Target など） | 生ポインタ。フレームをまたいで保持しない |
+| Deoccluder の遮蔽状態 | 対象を解決した時点で記録したオブジェクトの識別子（`FObjectKey` = 番号 + シリアル番号）。参照はせず、比較だけに使う（Actor の無い対象は従来どおり枠の番号） |
+| `Get ACF Sequencer Camera State` の戻り値の ViewTarget | 呼び出し側に返す値（ACF は保持しない） |
+
+- UE の GC には「Garbage になったオブジェクトへの強参照を null にする」機能（`gc.GarbageEliminationEnabled`）がありますが、ini や `-DisableGarbageElimination` で無効にでき、Compact Set を既定にしたエンジンでは常に無効です。ACF はこの設定に依存しません（自動テストは両方の設定で実行）。
+- Deoccluder の遮蔽状態は、以前は Actor のアドレスで照合していました。破棄された Actor のメモリに新しい Actor が確保されると、遮蔽の確定（0.25 秒の待ち）を引き継ぐことがありました。識別子は再利用されないので、新しい Actor は必ず待ちからやり直します。
+
+### 確認していること（自動テスト `.Lifetime.*`、実際の World・Actor・GC）
+
+- 無視リストの Actor を Director が強参照していない（`FReferencerFinder`）。破棄して GC するとメモリが解放される。その後も Collision の評価は続き、残った Actor だけを無視する。
+- 要求と Finisher を出したまま World を破棄（マップ移動・PIE 終了と同じ）すると、World と Actor が解放される。Director はその後も評価を続ける。
+- Deoccluder の状態は、同じアドレスに確保された新しい Actor に引き継がれない。
+- 2 つの Director（2 人のローカルプレイヤー）の無視リストと破棄の影響は混ざらない。正常な Collision の結果は修正前とビット単位で同じ。
+- PlayerController / PCM の作り直し、ローカルプレイヤーの追加・削除、Sequencer の終了は既存のテスト（`.Sequencer.*`、`.Integration.*`）で確認しています。
+
+### 確認していないこと（制限）
+
+- Level Streaming のアンロードは、テスト用の Streaming Level が無いため実行していません。アンロードされたレベルの Actor は破棄と同じ扱い（弱参照が解決できなくなる）になるはずですが、未確認です。
+- 実際のマップ移動（`open`）と PIE の終了は、テスト用 World の破棄で代用しています。
+- 古い型（`TObjectPtr` の配列）でこの構造体を保存したアセットは、このプロジェクトにはありません。入力の型を変えていないので、保存済みのデータもそのまま読めます。
+
+## 18. ACF カメラが無いときの演出（Phase 6B / B-5）
+
+### 仕様
+
+- 演出は ACF カメラの上にかかります。**ACF カメラが無いとき、ゲームからの演出の再生（`Play ACF Camera Effect` / `Impulse` / `Recoil` / `Shake`）は拒否します。**
+  - 「ACF カメラがある」= カメラ要求が 1 つ以上ある、または最後の要求がブレンドで UE カメラへ戻っている途中（`Can Play ACF Camera Effects`）。最後の要求がカットで外れた直後は、同じフレームでも「無い」です。
+  - 拒否した演出は保持しません（予約もしない）。戻り値の Handle は無効で、`Is ACF Camera Effect Active` も false です。拒否は回数を数え（`GetNumRejectedCameraEffects`）、1・10・100・1000 回目… に `LogActionCamera` の Warning を出します。
+- 修正前は、要求が無い状態で再生した演出が止まったまま溜まり、何秒も後に最初の要求を出した瞬間に再生されていました（自動テストで再現）。
+- **受け付けた演出の寿命**: 要求が途中で無くなっても、演出は自分の長さで進んで終わります（出力の Weight は 0 なので画面は UE カメラのまま）。そのために、演出が残っている間は出力 Modifier を接続したまま評価を続けます（PCM が作り直されても）。
+- **World が変わると止まる**: ACF はマップ移動をまたいで残るので、前の World で再生した演出（無限に続く演出を含む）は、次の World で最初に評価する前にすべて止めます。要求そのものはローカルプレイヤーのものなので残ります。
+- 変えていないもの:
+  - 要求の切り替え中・Sequencer のカメラが映っている間（要求は裏で生きている）・一時停止中の再生は、従来どおり受け付けます。一時停止中は演出の時間も止まり、解除すると始まります。
+  - Finisher / Camera Sequence が持つ演出は、Sequence の要求の上で再生するので、この制限の対象外です（従来どおり Shot / Sequence の寿命で止まる）。
+  - Director の C++ API（`UACFCameraDirector::PlayEffect`）は内部用で、判定しません。
+
+### 方式の比較
+
+| 方式 | 内容 | 判断 |
+|---|---|---|
+| A（採用） | ACF カメラが無ければ開始を拒否する | 過去の演出が後から再生されることが無い。演出は ACF カメラにかかるという既存の契約どおり。拒否は Handle と `Can Play` で分かる |
+| B | 要求が無くても時間を進め、終わったら捨てる | 画面に出ない演出を進めるだけで、受け付けたのに映らない。一度も要求の無いプレイヤーにも Modifier を付けることになる |
+| C | 予約した演出だけを後から再生する | 新しい API と、予約の有効期限・所有者の仕様が必要。今の使い方に必要な場面が無い |
+
+受け付けた後で要求が無くなった演出には、B と同じ扱い（時間を進めて終わらせる）を残しています。
+
+### 制限
+
+- ゲームが「要求を出す前に演出を再生」していた場合、その演出は再生されなくなります（要求を先に出すか、素通し Preset を要求してください）。
+- PCM がまだ無いとき（ゲーム開始直後など）に要求と演出を出した場合、両方とも PCM ができた時点から始まります（要求と同じ扱い）。
+- 自動テスト: `.Sequencer.Effects.*`（5 件、`-game`）と `.Lifetime.EffectsNeedAnAcfCameraAndEndWithTheWorld`。
+
+## 19. Sequencer の通知のタイミング（Phase 6B / B-6）
+
+`On Sequencer Camera Started` / `On Sequencer Camera Ended` は、**PlayerCameraManager のカメラ更新の外**で配信します。ハンドラの中で `SetViewTarget` / `SetViewTargetWithBlend`、Sequence の停止・再生、ACF の要求の解除などを呼んでも、更新中の PCM の状態を書き換えることはありません。
+
+### 配信のタイミング
+
+| 状態の変化を検出した場所 | 配信 |
+|---|---|
+| World の Tick（Sequencer 連携のサブシステムの Tick。通常はここ） | そのサブシステムの Tick の終わり（同じフレーム、カメラ更新より前） |
+| カメラ更新の直前（ACF の評価前フック。Tick の後に別のシステムが Sequence を止めた場合など） | 同じフレームのカメラ更新の後（`OnWorldPostActorTick`） |
+
+- 変化の検出と ACF の内部処理（出力の抑制、外部 ViewTarget の登録、ACF の Return Blend の開始）は、従来どおり検出した時点で行います。**カメラの結果（Camera Cut、Return Blend）は変わりません。** 変わったのは通知が届く時点だけで、2 行目の場合は「カメラ更新の途中」から「同じフレームのカメラ更新の後」になりました。
+- 順序は検出した順（開始 → 終了）で、1 つの変化につき 1 回です。同じフレームの終了と次の開始、重なった Sequence も、回数と順序は従来どおりです。
+- 通知はキューに入れてから配信します（4 件までは固定領域で、ヒープを確保しません）。ハンドラの中で起きた変化は同じ配信の中で続けて届けますが、1 回の配信は 64 件までで、残りは次の配信点に回します（無限に再帰しない）。配信の途中で配信を呼び直しても、二重には配信しません。
+- 配信しないもの: 対象のローカルプレイヤーが削除された、または World が変わったイベント。World の破棄（サブシステムの終了）で、未配信のイベントは捨てます。PlayerController や Sequence Actor が破棄された場合は、その引数を null にして配信します（開始と終了の組を崩さないため）。
+- `RefreshNow` を呼ぶと、その場で状態を確定し、未配信のイベントも配信します。
+
+### 確認していること
+
+- 自動テスト `.Sequencer.Events.*`（3 件、`-game`）: カメラ更新の直前に Sequence が止められても通知はカメラ更新の外で届く（同じフレーム）、通知の中で `SetViewTargetWithBlend` を呼んでも最終的な ViewTarget・画面・ACF の状態が正しい、開始の通知で Sequence を止め終了の通知で要求を解除しても、回数と順序が正しく再帰しない。
+- 修正前は 3 件とも、通知がカメラ更新の途中で届いていました（クラッシュや状態の破綻は再現していません）。
+
+### 確認していないこと
+
+- 通知の待ち行列にイベントが残ったまま World が破棄される場合と、ローカルプレイヤーが削除される場合は、コードの確認だけです（テストで作れないため）。

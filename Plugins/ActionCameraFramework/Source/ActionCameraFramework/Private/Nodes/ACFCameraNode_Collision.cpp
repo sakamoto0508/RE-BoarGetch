@@ -88,6 +88,15 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 			Constraint.IgnoredActors.Add(Pawn);
 		}
 	}
+	// B-3: requests held by the director carry weak references only (IgnoredActorRefs); parameters used directly
+	// (probes) may still carry the input list.
+	for (const TWeakObjectPtr<AActor>& Ignored : Context.Request.IgnoredActorRefs)
+	{
+		if (const AActor* Actor = Ignored.Get(); IsValid(Actor)) // destroyed / garbage / GC'd actors resolve to null
+		{
+			Constraint.IgnoredActors.Add(Actor);
+		}
+	}
 	for (const TObjectPtr<AActor>& Ignored : Context.Request.CollisionIgnoredActors)
 	{
 		if (const AActor* Actor = Ignored.Get(); IsValid(Actor))
@@ -121,7 +130,7 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 			FACFCameraFramingSubject& Player = DefaultSubjects.AddDefaulted_GetRef();
 			Player.Location = Origin;
 			Player.Weight = 1.f;
-			Player.Actor = PivotActor;
+			Player.SetActor(PivotActor);
 			Player.bIsPlayer = true;
 			FTransform LookTransform;
 			const UObject* LookObject = nullptr;
@@ -131,7 +140,7 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 				FACFCameraFramingSubject& Look = DefaultSubjects.AddDefaulted_GetRef();
 				Look.Location = Context.Scratch.bHasLockOnTarget ? Context.Scratch.LockOnTargetLocation : LookTransform.GetLocation();
 				Look.Weight = 1.f;
-				Look.Actor = bLookAlive ? ACFCameraCollision::ActorOf(LookObject) : nullptr;
+				Look.SetActor(bLookAlive ? ACFCameraCollision::ActorOf(LookObject) : nullptr);
 			}
 			Subjects = &DefaultSubjects;
 		}

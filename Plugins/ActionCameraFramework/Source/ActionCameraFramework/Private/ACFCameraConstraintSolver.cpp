@@ -46,9 +46,13 @@ namespace ACFSolver
 		}
 	}
 
-	static const void* KeyOf(const FACFCameraFramingSubject& Subject, int32 Slot)
+	/** B-3: the object key (index + serial number) when the subject has one: address reuse after GC cannot match. */
+	static void SetKey(FACFCameraDeoccluderState::FSubjectVisibility& Visibility, const FACFCameraFramingSubject& Subject, int32 Slot)
 	{
-		return Subject.Actor ? static_cast<const void*>(Subject.Actor) : reinterpret_cast<const void*>(static_cast<UPTRINT>(Slot + 1));
+		const bool bHasKey = Subject.ActorKey != FObjectKey();
+		Visibility.Object = Subject.ActorKey;
+		Visibility.Address = bHasKey ? nullptr : static_cast<const void*>(Subject.Actor); // identity only, never dereferenced
+		Visibility.Slot = (bHasKey || Subject.Actor) ? INDEX_NONE : Slot;
 	}
 
 	static float DampAxis(float Current, float Goal, float AwayTime, float ReturnTime, float DeltaTime)
@@ -154,10 +158,10 @@ void FACFCameraConstraintSolver::Deocclude(const FACFCameraDeoccluderSettings& S
 	{
 		const FACFCameraFramingSubject& Subject = Subjects[Checked.Index[K]];
 		FACFCameraDeoccluderState::FSubjectVisibility Visibility;
-		Visibility.Key = KeyOf(Subject, Checked.Index[K]);
+		SetKey(Visibility, Subject, Checked.Index[K]);
 		for (int32 P = 0; P < State.NumSubjects; ++P)
 		{
-			if (State.Subjects[P].Key == Visibility.Key)
+			if (State.Subjects[P].SameSubject(Visibility))
 			{
 				Visibility = State.Subjects[P];
 				break;

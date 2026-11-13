@@ -297,7 +297,9 @@ void UACFCameraSubsystem::PlayerControllerChanged(APlayerController* NewPlayerCo
 
 void UACFCameraSubsystem::HandleWorldTickStart(UWorld* World, ELevelTick TickType, float DeltaSeconds)
 {
-	if (!Director || !Director->IsInfluencingOutput())
+	// B-5: effects that are still running when the last request is gone keep the output attached (weight 0, nothing
+	// visible) so their time advances and they end on schedule instead of waiting for the next request.
+	if (!Director || (!Director->IsInfluencingOutput() && Director->GetNumActiveEffects() == 0))
 	{
 		return;
 	}
@@ -307,6 +309,11 @@ void UACFCameraSubsystem::HandleWorldTickStart(UWorld* World, ELevelTick TickTyp
 		return; // another world (other PIE instance, editor world) or no camera yet
 	}
 	EnsureOutputAttached();
+}
+
+bool UACFCameraSubsystem::CanPlayCameraEffects() const
+{
+	return Director && Director->CanHostEffects();
 }
 
 FACFCameraRequestHandle UACFCameraSubsystem::RequestCamera(UACFCameraPreset* Preset, const FACFCameraRequestParams& Params)
@@ -462,7 +469,8 @@ void UACFCameraSubsystem::HandleWorldPostActorTick(UWorld* World, ELevelTick Tic
 	// このフレームに Modifier 経由で評価済みなら何もしない（通常のゲームプレイ中のコストは比較 1 回だけ）。
 	// 評価されていないのは、更新された ViewTarget がすべて外部 ViewTarget だった（Sequencer の Camera Cut 中など）か、
 	// デバッグ用の CameraStyle で Modifier 自体が呼ばれなかった場合。
-	if (!Director || !Director->IsInfluencingOutput() || Director->GetLastEvaluatedFrame() == GFrameCounter)
+	// B-5: leftover effects (no request any more) also keep advancing while an external view target is on screen.
+	if (!Director || (!Director->IsInfluencingOutput() && Director->GetNumActiveEffects() == 0) || Director->GetLastEvaluatedFrame() == GFrameCounter)
 	{
 		return;
 	}
@@ -752,7 +760,23 @@ void UACFCameraSubsystem::HandleDebugDraw(UCanvas* Canvas, APlayerController* Pl
 
 FACFCameraEffectHandle UACFCameraSubsystem::PlayCameraEffect(UACFCameraEffectPreset* Preset, const FACFCameraEffectParams& Params)
 {
-	return Director ? Director->PlayEffect(Preset, Params) : FACFCameraEffectHandle();
+	if (!Director)
+	{
+		return FACFCameraEffectHandle();
+	}
+	if (!CanPlayCameraEffects())
+	{
+		// B-5: no ACF camera to put the effect on. Keeping it would freeze it until some later request and play it then.
+		++NumRejectedEffects;
+		const int32 Count = NumRejectedEffects;
+		if (Count == 1 || Count == 10 || Count == 100 || Count % 1000 == 0)
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("Play ACF Camera Effect '%s' rejected for %s: no ACF camera request (effects play on top of an ACF camera; request one first, e.g. a pass-through preset). Rejected %d time(s); the returned handle is invalid."),
+				*GetNameSafe(Preset), *GetNameSafe(GetLocalPlayer()), Count);
+		}
+		return FACFCameraEffectHandle();
+	}
+	return Director->PlayEffect(Preset, Params);
 }
 
 bool UACFCameraSubsystem::StopCameraEffect(FACFCameraEffectHandle& Handle, bool bImmediate)

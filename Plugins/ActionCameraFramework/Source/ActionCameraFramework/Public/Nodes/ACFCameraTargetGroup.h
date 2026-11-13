@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "ACFCameraTypes.h"
+#include "UObject/ObjectKey.h"
 #include "ACFCameraTargetGroup.generated.h"
 
 /** Extra framing subject taken from the request's Follow / Look At target (no group setup needed). */
@@ -32,8 +33,20 @@ struct FACFCameraFramingSubject
 	float Weight = 0.f;
 	/** Owning actor (ignored by its own line-of-sight trace). May be null. */
 	const AActor* Actor = nullptr;
+	/**
+	 * Identity of Actor that survives address reuse (object index + serial number; B-3). Set with SetActor where a live
+	 * actor is resolved. The constraint solver matches by it when set, else by the Actor address (identity only).
+	 */
+	FObjectKey ActorKey;
 	/** The player (Follow Target): highest visibility priority in the constraint solver. */
 	bool bIsPlayer = false;
+
+	/** InActor must be a live actor (or null). */
+	void SetActor(const AActor* InActor)
+	{
+		Actor = InActor;
+		ActorKey = InActor ? FObjectKey(InActor) : FObjectKey();
+	}
 };
 
 /** Stack buffer: up to 16 subjects without touching the heap (more is allowed, it then allocates). */

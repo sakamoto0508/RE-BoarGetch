@@ -8,6 +8,9 @@
 #include "ACFSequencerTestProbeModifier.h"
 #include "ACFSequencerTestCameraManager.h"
 #include "ACFCameraHealth.h"
+#include "Effects/ACFCameraBuiltinEffects.h"
+#include "Effects/ACFCameraEffect.h"
+#include "Kismet/GameplayStatics.h"
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraDirector.h"
 #include "ACFCameraOutputModifier.h"
@@ -2469,6 +2472,462 @@ bool FACFHealthExternalViewTargetTest::RunTest(const FString& Parameters)
 		S.Test->TestTrue(TEXT("ACF still evaluates in the background with a valid pose"), S.Acf->IsOutputBypassed()
 			&& ACFCameraValidation::IsValidPose(S.Acf->GetLastEvaluationResult().Pose));
 		S.Acf->RemoveExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+// =================================================================================================
+// Phase 6B / B-5: 有効な要求が無いときの演出。過去の演出が後から再生されないこと、Handle の状態、実際の画面の姿勢。
+// 演出は Punch（カメラ空間で上に 100 cm、Attack 0 / Sustain / Release 0）: 画面の Z の差で効いているかが分かる。
+
+namespace ACFSeqTest
+{
+	static UACFCameraEffectPreset* MakeLiftEffect(FScenario& S, float Seconds)
+	{
+		UACFCameraEffectPreset* Preset = NewObject<UACFCameraEffectPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraEffect_Punch* Punch = NewObject<UACFCameraEffect_Punch>(Preset);
+		Punch->Location = FVector(0.0, 0.0, 100.0);
+		Punch->Envelope.Attack = 0.f;
+		Punch->Envelope.Sustain = Seconds;
+		Punch->Envelope.Release = 0.f;
+		Preset->Layers.Add(Punch);
+		S.Keep.Emplace(Preset);
+		return Preset;
+	}
+
+	static int32 NumEffects(const UACFCameraSubsystem* Acf) { return Acf->GetActiveCameraEffects().Num(); }
+
+	static float EffectTime(const UACFCameraSubsystem* Acf, FACFCameraEffectHandle Handle)
+	{
+		for (const FACFCameraEffectInfo& Info : Acf->GetActiveCameraEffects())
+		{
+			if (Info.Handle == Handle)
+			{
+				return Info.Time;
+			}
+		}
+		return -1.f;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEffectsNoRequestTest, "ActionCameraFramework.Sequencer.Effects.WithoutRequestNotPlayedLater", ACFSeqTest::Flags)
+bool FACFEffectsNoRequestTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Handle = RequestGameplay(S);
+		FString Error;
+		// A fresh local player: its ACF has never had a camera request (nothing attached to its PCM).
+		S.SecondPlayer = S.World()->GetGameInstance()->CreateLocalPlayer(FPlatformUserId::CreateFromInternalId(1), Error, true);
+		return S.Test->TestTrue(FString::Printf(TEXT("second local player %s"), *Error), S.SecondPlayer.IsValid());
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		UACFCameraSubsystem* Acf2 = S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>();
+		const FACFCameraEffectHandle Effect = Acf2->PlayCameraEffect(MakeLiftEffect(S, 2.f), FACFCameraEffectParams());
+		S.Test->TestFalse(TEXT("No request: the effect is rejected (invalid handle)"), Effect.IsValid());
+		S.Test->TestFalse(TEXT("No request: the handle is not active"), Acf2->IsCameraEffectActive(Effect));
+		S.Test->TestEqual(TEXT("No request: nothing queued"), NumEffects(Acf2), 0);
+		S.Test->TestFalse(TEXT("No request: Can Play ACF Camera Effects is false"), Acf2->CanPlayCameraEffects());
+		S.Test->TestEqual(TEXT("No request: the rejection is counted"), Acf2->GetNumRejectedCameraEffects(), 1);
+		S.Test->TestFalse(TEXT("Blueprint: Is Valid (ACF Camera Effect Handle) is false"), UACFCameraBlueprintLibrary::IsValidEffectHandle(Effect));
+		S.Test->TestTrue(TEXT("Player 1 (with a request) can play effects"), S.Acf->CanPlayCameraEffects());
+		S.Test->TestEqual(TEXT("Player 1 has no effect"), NumEffects(S.Acf.Get()), 0);
+		return true;
+	});
+	WaitFrames(Steps, 180); // three seconds later the game requests a camera for player 2
+	Steps.Add([](FScenario& S)
+	{
+		UACFCameraSubsystem* Acf2 = S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>();
+		S.Test->TestEqual(TEXT("3 s later: still nothing queued"), NumEffects(Acf2), 0);
+		S.HandleB = Acf2->RequestCamera(MakeFixedPreset(S, SecondLoc, FRotator(0.f, 180.f, 0.f), 70.f), FACFCameraRequestParams());
+		return true;
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		const APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		UACFCameraSubsystem* Acf2 = S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>();
+		S.Test->TestEqual(TEXT("After the request: the old effect is not played"), NumEffects(Acf2), 0);
+		S.Test->TestTrue(FString::Printf(TEXT("After the request: camera exactly on the preset (%s)"), *PC2->PlayerCameraManager->GetCameraLocation().ToString()),
+			PC2->PlayerCameraManager->GetCameraLocation().Equals(SecondLoc, 0.01));
+		// A new effect on the new request plays normally.
+		const FACFCameraEffectHandle Effect = Acf2->PlayCameraEffect(MakeLiftEffect(S, 0.5f), FACFCameraEffectParams());
+		S.Test->TestTrue(TEXT("With a request: a new effect is accepted"), Effect.IsValid());
+		return true;
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		const APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		S.Test->TestTrue(TEXT("New effect visible on player 2 (+100 cm)"), PC2->PlayerCameraManager->GetCameraLocation().Equals(SecondLoc + FVector(0.0, 0.0, 100.0), 0.5));
+		S.CameraNear(GameplayLoc, 0.01, TEXT("Player 1 is not affected by the effect of player 2"));
+		return true;
+	});
+	WaitFrames(Steps, 60);
+	Steps.Add([](FScenario& S)
+	{
+		const APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		S.Test->TestEqual(TEXT("New effect ended"), NumEffects(S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>()), 0);
+		S.Test->TestTrue(TEXT("Back on the preset"), PC2->PlayerCameraManager->GetCameraLocation().Equals(SecondLoc, 0.01));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEffectsReleaseSwitchTest, "ActionCameraFramework.Sequencer.Effects.AfterReleaseAndDuringSwitch", ACFSeqTest::Flags)
+bool FACFEffectsReleaseSwitchTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S) { S.Handle = RequestGameplay(S); return true; });
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		S.Acf->ReleaseCamera(S.Handle); // the preset blends out with a cut // cut back to the UE camera
+		const FACFCameraEffectHandle Effect = S.Acf->PlayCameraEffect(MakeLiftEffect(S, 2.f), FACFCameraEffectParams());
+		S.Test->TestFalse(TEXT("Right after the last request was released (cut): rejected"), Effect.IsValid());
+		S.Test->TestEqual(TEXT("Nothing queued"), NumEffects(S.Acf.Get()), 0);
+		return true;
+	});
+	WaitFrames(Steps, 30);
+	Steps.Add([](FScenario& S)
+	{
+		S.Handle = RequestGameplay(S);
+		return true;
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("New request: no old effect"));
+		// Switch to another camera with a 1 s blend and play an effect in the middle of it.
+		UACFCameraPreset* Other = MakeFixedPreset(S, FVector(CineLoc.X, CineLoc.Y, GameplayLoc.Z), GameplayRot, GameplayFov); // same height: blended Z stays GameplayLoc.Z
+		Other->DefaultBlendIn.Curve = EACFCameraBlendCurve::Linear;
+		Other->DefaultBlendIn.Duration = 1.f;
+		FACFCameraRequestParams Params;
+		Params.Priority = 10;
+		S.HandleB = S.Acf->RequestCamera(Other, Params);
+		return true;
+	});
+	WaitFrames(Steps, 20);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Switching"), S.Acf->GetLastEvaluationResult().bIsBlending);
+		const FACFCameraEffectHandle Effect = S.Acf->PlayCameraEffect(MakeLiftEffect(S, 0.25f), FACFCameraEffectParams());
+		S.Test->TestTrue(TEXT("During a request switch: accepted"), Effect.IsValid() && S.Acf->IsCameraEffectActive(Effect));
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double Lift = S.Camera().Z - GameplayLoc.Z;
+		S.Test->TestTrue(FString::Printf(TEXT("During the switch: the effect is on screen (+%.1f cm over the blended camera)"), Lift), FMath::IsNearlyEqual(Lift, 100.0, 1.0));
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return !S.Acf->GetLastEvaluationResult().bIsBlending && NumEffects(S.Acf.Get()) == 0; });
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(FVector(CineLoc.X, CineLoc.Y, GameplayLoc.Z), 0.01, TEXT("After the switch: the effect ended, the new camera exactly"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEffectsSequencerTest, "ActionCameraFramework.Sequencer.Effects.WhileSequencerCameraIsShown", ACFSeqTest::Flags)
+bool FACFEffectsSequencerTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Handle = RequestGameplay(S);
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+		S.SequenceA = MakeSequence(S, S.ActorA.Get(), 1.5);
+		SetReturnBlend(S, 0.f);
+		Player(S.SequenceA)->Play();
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.Phase() == EACFSequencerCameraPhase::InControl; });
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEffectHandle Effect = S.Acf->PlayCameraEffect(MakeLiftEffect(S, 0.4f), FACFCameraEffectParams());
+		S.Test->TestTrue(TEXT("Sequencer camera on screen (request alive in the background): accepted"), Effect.IsValid());
+		return true;
+	});
+	WaitFrames(Steps, 10);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(CineLoc, 0.001, TEXT("The Sequencer camera is not moved by the effect"));
+		S.Test->TestTrue(TEXT("The effect advances in the background"), NumEffects(S.Acf.Get()) == 1 && S.Acf->GetActiveCameraEffects()[0].Time > 0.1f);
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.Phase() == EACFSequencerCameraPhase::None; });
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("After the sequence: the effect has run its course (not replayed)"), NumEffects(S.Acf.Get()), 0);
+		S.CameraNear(GameplayLoc, 0.01, TEXT("After the sequence: gameplay camera exactly"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEffectsPcmRecreatedTest, "ActionCameraFramework.Sequencer.Effects.RunningEffectWithoutRequestAndPcmRecreated", ACFSeqTest::Flags)
+bool FACFEffectsPcmRecreatedTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S) { S.Handle = RequestGameplay(S); return true; });
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEffectHandle Effect = S.Acf->PlayCameraEffect(MakeLiftEffect(S, 2.f), FACFCameraEffectParams());
+		S.Value = Effect.GetId();
+		S.Test->TestTrue(TEXT("Accepted with a request"), Effect.IsValid());
+		return true;
+	});
+	WaitFrames(Steps, 10);
+	Steps.Add([](FScenario& S)
+	{
+		S.Acf->ReleaseCamera(S.Handle); // the preset blends out with a cut
+		// The PCM is recreated while the effect (2 s) still runs and no request exists.
+		APlayerCameraManager* Old = S.PCM();
+		S.Controller->SpawnPlayerCameraManager();
+		if (S.PCM() != Old)
+		{
+			Old->Destroy();
+		}
+		return true;
+	});
+	WaitFrames(Steps, 30);
+	Steps.Add([](FScenario& S)
+	{
+		const float Time = EffectTime(S.Acf.Get(), FACFCameraEffectHandle(static_cast<int32>(S.Value)));
+		S.Test->TestTrue(FString::Printf(TEXT("Without a request the running effect keeps advancing (time %.2f s)"), Time), Time > 0.5f);
+		return true;
+	});
+	WaitFrames(Steps, 150);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("It ended on its own"), NumEffects(S.Acf.Get()), 0);
+		S.Handle = RequestGameplay(S);
+		return true;
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("New request: the old effect is not resumed"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEffectsPauseTest, "ActionCameraFramework.Sequencer.Effects.RequestedWhilePaused", ACFSeqTest::Flags)
+bool FACFEffectsPauseTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S) { S.Handle = RequestGameplay(S); return true; });
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		UGameplayStatics::SetGamePaused(S.World(), true);
+		const FACFCameraEffectHandle Effect = S.Acf->PlayCameraEffect(MakeLiftEffect(S, 0.25f), FACFCameraEffectParams());
+		S.Value = Effect.GetId();
+		S.Test->TestTrue(TEXT("Paused with a request: accepted"), Effect.IsValid());
+		return true;
+	});
+	WaitFrames(Steps, 30);
+	Steps.Add([](FScenario& S)
+	{
+		const float Time = EffectTime(S.Acf.Get(), FACFCameraEffectHandle(static_cast<int32>(S.Value)));
+		S.Test->TestEqual(TEXT("Paused: the effect time does not advance (existing pause behavior)"), Time, 0.f);
+		UGameplayStatics::SetGamePaused(S.World(), false);
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		const float Time = EffectTime(S.Acf.Get(), FACFCameraEffectHandle(static_cast<int32>(S.Value)));
+		S.Test->TestTrue(FString::Printf(TEXT("Unpaused: the effect starts (time %.3f)"), Time), Time > 0.f);
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return NumEffects(S.Acf.Get()) == 0; });
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("Ended: gameplay camera exactly"));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+// =================================================================================================
+// Phase 6B / B-6: Sequencer の開始・終了通知（Blueprint の Dynamic Delegate）の配信タイミングと再入。
+// テスト用 PCM（標準の流れ）で、カメラ更新の最初に任意の処理を差し込む（「ACF の Tick の後に、別のシステムが Sequence を止めた」）。
+
+namespace ACFSeqTest
+{
+	static AACFSequencerTestCameraManager* TestPCM(FScenario& S) { return Cast<AACFSequencerTestCameraManager>(S.PCM()); }
+
+	static FString EventOrder(const UACFSequencerTestListener* Listener)
+	{
+		FString Out;
+		for (const UACFSequencerTestListener::FEvent& Event : Listener->Events)
+		{
+			Out += Event.bStarted ? TEXT("S") : TEXT("E");
+		}
+		return Out;
+	}
+
+	/** Standard test PCM, gameplay request, a 30 s Camera Cut sequence playing and in control. */
+	static void AddPlayingSequence(TArray<FStep>& Steps, float ReturnBlend)
+	{
+		Steps.Add([ReturnBlend](FScenario& S)
+		{
+			if (!UseCameraManagerClass(S, AACFSequencerTestCameraManager_Standard::StaticClass()))
+			{
+				return false;
+			}
+			S.Handle = RequestGameplay(S);
+			S.GameplayViewTarget = S.PCM()->GetViewTarget();
+			S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+			S.SequenceA = MakeSequence(S, S.ActorA.Get(), 30.0);
+			SetReturnBlend(S, ReturnBlend);
+			return true;
+		});
+		WaitFrames(Steps, 3);
+		Steps.Add([](FScenario& S) { Player(S.SequenceA)->Play(); return true; });
+		RetryUntil(Steps, [](FScenario& S) { return S.Phase() == EACFSequencerCameraPhase::InControl; });
+		WaitFrames(Steps, 5);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEventsStoppedBeforeCameraUpdateTest, "ActionCameraFramework.Sequencer.Events.StoppedBeforeCameraUpdate", ACFSeqTest::Flags)
+bool FACFEventsStoppedBeforeCameraUpdateTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	AddPlayingSequence(Steps, 0.25f);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Started once"), S.Listener->NumStarted, 1);
+		// Stopped inside the camera update of this frame, after the ACF sequencer tick: only the camera-update path sees it.
+		TestPCM(S)->PreUpdate = [&S]() { S.MarkFrame = GFrameCounter; Player(S.SequenceA)->Stop(); };
+		S.ResetSamples();
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.Phase() == EACFSequencerCameraPhase::None && S.Listener->NumEnded > 0; });
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Ended once"), S.Listener->NumEnded, 1);
+		S.Test->TestEqual(TEXT("Order: start, end"), EventOrder(S.Listener.Get()), FString(TEXT("SE")));
+		S.Test->TestEqual(TEXT("No notification is delivered while the PCM updates the camera"), S.Listener->DeliveriesDuringCameraUpdate, 0);
+		S.Test->TestTrue(TEXT("Return: ACF return blend (unchanged)"), S.Listener->LastReturnKind == EACFSequencerReturnKind::AcfReturnBlend);
+		S.Test->TestEqual(TEXT("Timing: delivered in the frame the sequence stopped (after its camera update)"), S.Listener->Events.Last().Frame, S.MarkFrame);
+		S.Test->TestEqual(TEXT("Nothing left pending"), S.Sequencer->GetNumPendingEvents(), 0);
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return !S.Acf->GetLastEvaluationResult().bIsBlending; });
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("Back on the gameplay camera"));
+		S.Test->TestTrue(FString::Printf(TEXT("Return blend smooth (max %.1f cm / frame)"), S.MaxFrameJump), S.MaxFrameJump < GameplayToCine * 0.2);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEventsHandlerViewTargetTest, "ActionCameraFramework.Sequencer.Events.HandlerChangesViewTarget", ACFSeqTest::Flags)
+bool FACFEventsHandlerViewTargetTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	AddPlayingSequence(Steps, 0.f);
+	Steps.Add([](FScenario& S)
+	{
+		S.ActorB = SpawnPoint(S, CineLocB);
+		// Blueprint-like handler: when the sequencer camera ends, the game blends to another view target.
+		S.Listener->OnEnded = [&S](APlayerController* PC, ALevelSequenceActor*)
+		{
+			++S.Counter;
+			if (PC)
+			{
+				PC->SetViewTargetWithBlend(S.ActorB.Get(), 0.5f, VTBlend_Linear);
+			}
+		};
+		S.Counter = 0;
+		TestPCM(S)->PreUpdate = [&S]() { Player(S.SequenceA)->Stop(); };
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.Counter > 0; });
+	RetryUntil(Steps, [](FScenario& S) { return S.PCM()->PendingViewTarget.Target == nullptr; });
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Handler ran once"), S.Counter, 1);
+		S.Test->TestTrue(TEXT("Final view target: the one set by the handler"), S.PCM()->GetViewTarget() == S.ActorB.Get());
+		S.Test->TestTrue(TEXT("Sequencer state cleaned up"), S.Phase() == EACFSequencerCameraPhase::None && !S.Acf->IsExternalViewTarget(S.ActorA.Get()));
+		S.Test->TestEqual(TEXT("No suppression left"), S.Acf->GetNumOutputSuppressions(), 0);
+		S.CameraNear(GameplayLoc, 0.01, TEXT("ACF camera on the new (non-external) view target"));
+		S.Test->TestEqual(TEXT("Events: start, end (once each)"), EventOrder(S.Listener.Get()), FString(TEXT("SE")));
+		S.Test->TestEqual(TEXT("No notification delivered during a camera update"), S.Listener->DeliveriesDuringCameraUpdate, 0);
+		S.Listener->OnEnded = nullptr;
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEventsHandlerStopsAndReleasesTest, "ActionCameraFramework.Sequencer.Events.HandlerStopsSequenceAndReleasesRequest", ACFSeqTest::Flags)
+bool FACFEventsHandlerStopsAndReleasesTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		if (!UseCameraManagerClass(S, AACFSequencerTestCameraManager_Standard::StaticClass()))
+		{
+			return false;
+		}
+		S.Handle = RequestGameplay(S);
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+		S.SequenceA = MakeSequence(S, S.ActorA.Get(), 30.0);
+		SetReturnBlend(S, 0.f);
+		// The start handler stops the sequence at once; the end handler releases the ACF request.
+		S.Listener->OnStarted = [&S](APlayerController*, ALevelSequenceActor*) { Player(S.SequenceA)->Stop(); };
+		S.Listener->OnEnded = [&S](APlayerController*, ALevelSequenceActor*) { S.Acf->ReleaseCamera(S.Handle); };
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S) { Player(S.SequenceA)->Play(); return true; });
+	WaitFrames(Steps, 10);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Started once"), S.Listener->NumStarted, 1);
+		S.Test->TestEqual(TEXT("Ended once (no recursion, no duplicate)"), S.Listener->NumEnded, 1);
+		S.Test->TestEqual(TEXT("Order: start, end"), EventOrder(S.Listener.Get()), FString(TEXT("SE")));
+		S.Test->TestEqual(TEXT("No notification delivered during a camera update"), S.Listener->DeliveriesDuringCameraUpdate, 0);
+		S.Test->TestTrue(TEXT("Sequencer state: none"), S.Phase() == EACFSequencerCameraPhase::None);
+		S.Test->TestEqual(TEXT("The request was released by the handler"), S.Acf->GetDirector()->GetNumRequests(), 0);
+		S.Test->TestEqual(TEXT("Nothing left pending"), S.Sequencer->GetNumPendingEvents(), 0);
+		S.Test->TestEqual(TEXT("No suppression left"), S.Acf->GetNumOutputSuppressions(), 0);
+		S.Listener->OnStarted = nullptr;
+		S.Listener->OnEnded = nullptr;
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));

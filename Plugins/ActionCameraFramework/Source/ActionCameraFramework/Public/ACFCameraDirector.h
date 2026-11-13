@@ -198,6 +198,29 @@ public:
 	bool IsInfluencingOutput() const { return Requests.Num() > 0 || LastResult.RequestWeight > 0.f; }
 
 	/**
+	 * Phase 6B / B-5: true while an ACF camera is on screen or stays there for a while (a request exists, or the last one
+	 * blends out to the UE camera). False once nothing ACF is left to put an effect on, including right after the last
+	 * request was released with a cut (LastResult still shows the previous frame).
+	 */
+	bool CanHostEffects() const
+	{
+		if (Requests.Num() > 0)
+		{
+			return true;
+		}
+		if (LastResult.RequestWeight <= 0.f)
+		{
+			return false;
+		}
+		if (ActiveHandle.IsValid())
+		{
+			// Released since the last evaluation: the blend out starts with the next one.
+			return !(bHasPendingReturnBlend ? PendingReturnBlend : PendingBlendOut).IsCut();
+		}
+		return Transition.bActive; // blending out to the UE camera now
+	}
+
+	/**
 	 * Runs stages 2-6 of the pipeline (time advances here only). Evaluates at most once per
 	 * Context.FrameNumber: further calls in the same frame return the cached result, so the PCM
 	 * evaluating both its current and pending view target never double-steps damping or blends.
@@ -265,6 +288,9 @@ private:
 	bool bHasLastGoodControlRotation = false;
 	/** This frame's UE camera was invalid with no fallback: evaluate, but do not output or remember the result. */
 	bool bUpstreamUnusable = false;
+	/** B-5: World of the last evaluation; effects still running when it changes are stopped. */
+	TWeakObjectPtr<const UWorld> EffectsWorld;
+	bool bHasEffectsWorld = false;
 	TWeakObjectPtr<const UWorld> LastGoodWorld;
 	TWeakObjectPtr<const APlayerController> LastGoodController;
 	struct FTransition

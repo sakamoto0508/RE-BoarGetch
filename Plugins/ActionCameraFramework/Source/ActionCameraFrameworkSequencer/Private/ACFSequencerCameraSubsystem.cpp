@@ -74,6 +74,7 @@ void UACFSequencerCameraSubsystem::Initialize(FSubsystemCollectionBase& Collecti
 	}
 	LevelAddedHandle = FWorldDelegates::LevelAddedToWorld.AddUObject(this, &ThisClass::HandleLevelAdded);
 	PreEvaluateHandle = UACFCameraSubsystem::OnPreEvaluate.AddUObject(this, &ThisClass::HandlePreEvaluate);
+	PostActorTickHandle = FWorldDelegates::OnWorldPostActorTick.AddUObject(this, &ThisClass::HandleWorldPostActorTick); // B-6: after the camera update
 }
 
 void UACFSequencerCameraSubsystem::Deinitialize()
@@ -91,6 +92,7 @@ void UACFSequencerCameraSubsystem::Deinitialize()
 			}
 		}
 	}
+	PendingEvents.Reset(); // B-6: never delivered once the world is going away
 	PlayerStates.Reset();
 	SequenceActors.Reset();
 	SequenceOptions.Reset();
@@ -101,6 +103,7 @@ void UACFSequencerCameraSubsystem::Deinitialize()
 	}
 	FWorldDelegates::LevelAddedToWorld.Remove(LevelAddedHandle);
 	UACFCameraSubsystem::OnPreEvaluate.Remove(PreEvaluateHandle);
+	FWorldDelegates::OnWorldPostActorTick.Remove(PostActorTickHandle);
 	Super::Deinitialize();
 }
 
@@ -122,6 +125,7 @@ TStatId UACFSequencerCameraSubsystem::GetStatId() const
 void UACFSequencerCameraSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	DispatchPendingEvents(); // B-6: anything left from a camera update outside the world tick
 	RefreshAll();
 }
 
@@ -332,6 +336,8 @@ void UACFSequencerCameraSubsystem::RefreshAll()
 			RefreshPlayer(LocalPlayer);
 		}
 	}
+	// B-6: the world tick runs outside the camera update: deliver what this pass detected (in order).
+	DispatchPendingEvents();
 }
 
 void UACFSequencerCameraSubsystem::ApplySuppression(FPlayerState& State, UACFCameraSubsystem* Acf, bool bWant, bool bForCameraCut, float BlendTime)
@@ -409,7 +415,7 @@ void UACFSequencerCameraSubsystem::RefreshPlayer(ULocalPlayer* LocalPlayer)
 			State.Phase = EACFSequencerCameraPhase::None;
 			State.ControllingSequence.Reset();
 			State.SequencerViewTarget.Reset();
-			OnSequencerCameraEnded.Broadcast(Controller, Sequence, EACFSequencerReturnKind::Cut);
+			QueueEvent(false, LocalPlayer, Controller, Sequence, EACFSequencerReturnKind::Cut);
 		}
 		ApplySuppression(State, Acf, false, false, 0.f);
 		if (Acf)
@@ -542,7 +548,7 @@ void UACFSequencerCameraSubsystem::RefreshPlayer(ULocalPlayer* LocalPlayer)
 	State.Phase = NewPhase;
 	if (OldPhase == EACFSequencerCameraPhase::None && NewPhase != EACFSequencerCameraPhase::None)
 	{
-		OnSequencerCameraStarted.Broadcast(Controller, ControllingSequence);
+		QueueEvent(true, LocalPlayer, Controller, ControllingSequence, EACFSequencerReturnKind::Cut);
 	}
 	else if (NewPhase == EACFSequencerCameraPhase::BlendingOut && OldPhase != EACFSequencerCameraPhase::BlendingOut)
 	{
@@ -568,12 +574,66 @@ void UACFSequencerCameraSubsystem::RefreshPlayer(ULocalPlayer* LocalPlayer)
 		}
 		State.ControllingSequence.Reset();
 		State.SequencerViewTarget.Reset();
-		OnSequencerCameraEnded.Broadcast(Controller, ControllingSequence, Kind);
+		QueueEvent(false, LocalPlayer, Controller, ControllingSequence, Kind);
 	}
 
 	// 6. Sequencer が握っていない間の ViewTarget を「戻り先」として覚える。
 	if (State.Phase == EACFSequencerCameraPhase::None)
 	{
 		State.GameplayViewTarget = Pending ? Pending : Current;
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+// Phase 6B / B-6: notifications are queued when a change is detected and delivered outside the camera update.
+
+void UACFSequencerCameraSubsystem::QueueEvent(bool bStarted, ULocalPlayer* LocalPlayer, APlayerController* Controller, ALevelSequenceActor* Sequence, EACFSequencerReturnKind ReturnKind)
+{
+	FPendingEvent& Event = PendingEvents.AddDefaulted_GetRef();
+	Event.bStarted = bStarted;
+	Event.LocalPlayer = LocalPlayer;
+	Event.Controller = Controller;
+	Event.Sequence = Sequence;
+	Event.ReturnKind = ReturnKind;
+}
+
+void UACFSequencerCameraSubsystem::HandleWorldPostActorTick(UWorld* World, ELevelTick TickType, float DeltaSeconds)
+{
+	if (World == GetWorld())
+	{
+		DispatchPendingEvents(); // after this world's camera update (the camera-update path only queues)
+	}
+}
+
+void UACFSequencerCameraSubsystem::DispatchPendingEvents()
+{
+	if (bDispatchingEvents || PendingEvents.IsEmpty())
+	{
+		return; // a handler that ends up here again does not deliver recursively
+	}
+	TGuardValue<bool> Guard(bDispatchingEvents, true);
+	const UWorld* World = GetWorld();
+	const UGameInstance* GameInstance = World ? World->GetGameInstance() : nullptr;
+	// FIFO: start / end in detection order. Events queued while handlers run (they can only come from a refresh the
+	// handler triggers, e.g. RefreshNow) are delivered in this same pass, up to a bound so it can never loop forever;
+	// anything beyond waits for the next safe point.
+	constexpr int32 MaxPerPass = 64;
+	for (int32 Delivered = 0; Delivered < MaxPerPass && !PendingEvents.IsEmpty(); ++Delivered)
+	{
+		const FPendingEvent Event = PendingEvents[0];
+		PendingEvents.RemoveAt(0, EAllowShrinking::No);
+		const ULocalPlayer* LocalPlayer = Event.LocalPlayer.Get();
+		if (!LocalPlayer || !GameInstance || !GameInstance->GetLocalPlayers().Contains(LocalPlayer))
+		{
+			continue; // the player was removed (or the world changed) since the change was detected
+		}
+		if (Event.bStarted)
+		{
+			OnSequencerCameraStarted.Broadcast(Event.Controller.Get(), Event.Sequence.Get());
+		}
+		else
+		{
+			OnSequencerCameraEnded.Broadcast(Event.Controller.Get(), Event.Sequence.Get(), Event.ReturnKind);
+		}
 	}
 }

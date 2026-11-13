@@ -1,6 +1,8 @@
 #include "ACFSequencerTestCameraManager.h"
 #include "ACFCameraSubsystem.h"
 
+int32 AACFSequencerTestCameraManager::UpdateDepth = 0;
+
 void AACFSequencerTestCameraManager::ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& InOutPOV)
 {
 	if (PassFrame != GFrameCounter)
@@ -9,6 +11,12 @@ void AACFSequencerTestCameraManager::ApplyCameraModifiers(float DeltaTime, FMini
 		PassesThisFrame = 0;
 	}
 	++PassesThisFrame;
+
+	if (Mode == EACFTestPovMode::Standard)
+	{
+		Super::ApplyCameraModifiers(DeltaTime, InOutPOV); // POV by reference, like the base class
+		return;
+	}
 
 	// The modifiers only ever see a copy (ACF cannot match the address against ViewTarget.POV / PendingViewTarget.POV).
 	AActor* PassViewTarget = &InOutPOV == &PendingViewTarget.POV ? PendingViewTarget.Target.Get() : ViewTarget.Target.Get();
@@ -33,4 +41,17 @@ void AACFSequencerTestCameraManager::SetViewTarget(AActor* NewViewTarget, FViewT
 		TransitionParams = FViewTargetTransitionParams();
 	}
 	Super::SetViewTarget(NewViewTarget, TransitionParams);
+}
+
+void AACFSequencerTestCameraManager::UpdateCamera(float DeltaTime)
+{
+	++UpdateDepth;
+	if (PreUpdate)
+	{
+		TFunction<void()> Hook = MoveTemp(PreUpdate); // one shot
+		PreUpdate.Reset();
+		Hook();
+	}
+	Super::UpdateCamera(DeltaTime);
+	--UpdateDepth;
 }

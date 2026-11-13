@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "ACFCameraTypes.h"
 #include "Nodes/ACFCameraTargetGroup.h"
+#include "UObject/ObjectKey.h"
 #include "ACFCameraConstraintSolver.generated.h"
 
 /**
@@ -103,9 +104,19 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraDeoccluderState
 
 	struct FSubjectVisibility
 	{
-		const void* Key = nullptr; // identity only, never dereferenced
+		/**
+		 * Identity of the subject (Phase 6B / B-3), never dereferenced: the actor's object key (index + serial number) when the
+		 * subject carries one (FACFCameraFramingSubject::SetActor). Unlike the raw address, a new actor allocated at a destroyed
+		 * actor's address gets another key, so it never inherits its occlusion state. Without a key: the Actor address as an
+		 * opaque identity; without an actor: the slot.
+		 */
+		FObjectKey Object;
+		const void* Address = nullptr;
+		int32 Slot = INDEX_NONE;
 		float BlockedTime = 0.f;
 		bool bOccluded = false;
+
+		bool SameSubject(const FSubjectVisibility& Other) const { return Object == Other.Object && Address == Other.Address && Slot == Other.Slot; }
 	};
 	FSubjectVisibility Subjects[MaxSubjects];
 	int32 NumSubjects = 0;
