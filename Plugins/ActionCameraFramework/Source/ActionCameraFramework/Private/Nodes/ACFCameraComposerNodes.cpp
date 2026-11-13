@@ -38,7 +38,7 @@ void UACFCameraNode_RotationComposer::Evaluate(const FACFCameraNodeContext& Cont
 		return;
 	}
 	const FVector Point = ACFNodes::ApplyOffset(Target.Predicted, Target.Transform.GetRotation(), TargetOffset, OffsetSpace);
-	const ACFFraming::FLens Lens = ACFFraming::MakeLens(InOutPose.FieldOfView, Context.Evaluation.AspectRatio);
+	const ACFFraming::FLens Lens = ACFFraming::MakeLens(InOutPose.FieldOfView, Context.Evaluation.AspectRatio, Context.Evaluation.HorizontalFovScale);
 	const FRotator Base(InOutPose.Rotation.Pitch, InOutPose.Rotation.Yaw, 0.f);
 	const FVector Camera = InOutPose.Location;
 
@@ -108,7 +108,7 @@ void UACFCameraNode_PositionComposer::Evaluate(const FACFCameraNodeContext& Cont
 		return;
 	}
 	const FVector Point = ACFNodes::ApplyOffset(Target.Predicted, Target.Transform.GetRotation(), TargetOffset, OffsetSpace);
-	const ACFFraming::FLens Lens = ACFFraming::MakeLens(InOutPose.FieldOfView, Context.Evaluation.AspectRatio);
+	const ACFFraming::FLens Lens = ACFFraming::MakeLens(InOutPose.FieldOfView, Context.Evaluation.AspectRatio, Context.Evaluation.HorizontalFovScale);
 	const FRotator Rotation = InOutPose.Rotation;
 	const FVector Forward = Rotation.RotateVector(FVector::ForwardVector);
 	const FVector Right = Rotation.RotateVector(FVector::RightVector);

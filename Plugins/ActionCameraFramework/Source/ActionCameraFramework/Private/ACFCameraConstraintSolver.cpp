@@ -280,7 +280,7 @@ void FACFCameraConstraintSolver::Deocclude(const FACFCameraDeoccluderSettings& S
 }
 
 void FACFCameraConstraintSolver::RecoverFraming(const FACFCameraFramingRecoverySettings& Settings, const FACFCameraFramingSubjects& Subjects, const FVector2D& FramingSize,
-	float AspectRatio, float DeltaTime, FACFCameraFramingRecoveryState& State, FACFCameraPose& InOutPose, FACFCameraSolverReport& Report)
+	float AspectRatio, float DeltaTime, FACFCameraFramingRecoveryState& State, FACFCameraPose& InOutPose, FACFCameraSolverReport& Report, float HorizontalFovScale)
 {
 	ACF_PROFILE_SCOPE(FramingRecovery);
 	const float InFov = InOutPose.FieldOfView;
@@ -289,7 +289,7 @@ void FACFCameraConstraintSolver::RecoverFraming(const FACFCameraFramingRecoveryS
 	if (Settings.bEnabled && !Subjects.IsEmpty())
 	{
 		const double Cap = FMath::Max(static_cast<double>(InFov), FMath::Min(static_cast<double>(Settings.MaxFieldOfView), static_cast<double>(InFov + Settings.MaxFieldOfViewIncrease)));
-		const double Required = UACFCameraNode_GroupFraming::ComputeRequiredFov(Subjects, InOutPose.Location, InOutPose.Rotation, AspectRatio, FramingSize, 0.f, 170.f);
+		const double Required = UACFCameraNode_GroupFraming::ComputeRequiredFov(Subjects, InOutPose.Location, InOutPose.Rotation, AspectRatio, FramingSize, 0.f, 170.f, HorizontalFovScale);
 		if (Required > InFov + 0.05)
 		{
 			GoalFov = FMath::Min(Required, Cap);
@@ -299,7 +299,7 @@ void FACFCameraConstraintSolver::RecoverFraming(const FACFCameraFramingRecoveryS
 		// Last resort for the player (priority 2): if it is off the framing area even at the goal FOV, turn towards it.
 		if (Settings.bKeepPlayerOnScreen)
 		{
-			const ACFFraming::FLens Lens = ACFFraming::MakeLens(static_cast<float>(GoalFov), AspectRatio);
+			const ACFFraming::FLens Lens = ACFFraming::MakeLens(static_cast<float>(GoalFov), AspectRatio, HorizontalFovScale);
 			const FVector2D Half(FMath::Clamp(FramingSize.X, 0.05, 1.0) * 0.5, FMath::Clamp(FramingSize.Y, 0.05, 1.0) * 0.5);
 			for (const FACFCameraFramingSubject& Subject : Subjects)
 			{

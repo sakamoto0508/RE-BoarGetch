@@ -5,6 +5,10 @@
 #include "ACFCameraPreset.h"
 #include "ACFCameraSettings.h"
 #include "Camera/CameraTypes.h"
+#include "SceneView.h"
+#include "HAL/IConsoleManager.h"
+#include "Nodes/ACFCameraFraming.h"
+#include "UnrealClient.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
@@ -598,6 +602,51 @@ const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateForOutput(float D
 	return EvaluateInternal(DeltaTime, UpstreamPOV, /*bOutputBypassed*/ false);
 }
 
+namespace ACFProjection
+{
+	static TAutoConsoleVariable<int32> CVarRenderedLens(
+		TEXT("ACF.Projection.RenderedLens"), 1,
+		TEXT("1 (default): screen-space composition (composers, Lock-On, Group Framing, framing recovery) uses the lens the renderer ")
+		TEXT("really projects with (axis constraint such as MaintainYFOV, split screen, constrained aspect). 0: the pre-7A lens ")
+		TEXT("(the pose FOV as the horizontal FOV over the view aspect), e.g. to compare."),
+		ECVF_Default);
+}
+
+bool UACFCameraSubsystem::ComputeViewProjection(const FMinimalViewInfo& UpstreamPOV, float& OutHorizontalFovScale, float& OutAspectRatio)
+{
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	FViewport* Viewport = LocalPlayer && LocalPlayer->ViewportClient ? LocalPlayer->ViewportClient->Viewport : nullptr;
+	if (!Viewport || UpstreamPOV.ProjectionMode != ECameraProjectionMode::Perspective)
+	{
+		return false; // no viewport (NullRHI / dedicated server) or orthographic: the pose FOV and the default aspect stay
+	}
+	// This player's rectangle exactly as ULocalPlayer::GetProjectionData builds it (split screen origin / size), from the
+	// viewport as it is now (a resize is seen by the next evaluation).
+	const FIntPoint ViewportSize = Viewport->GetSizeXY();
+	const int32 X = FMath::TruncToInt(LocalPlayer->Origin.X * ViewportSize.X);
+	const int32 Y = FMath::TruncToInt(LocalPlayer->Origin.Y * ViewportSize.Y);
+	const int32 SizeX = FMath::TruncToInt(LocalPlayer->Size.X * ViewportSize.X);
+	const int32 SizeY = FMath::TruncToInt(LocalPlayer->Size.Y * ViewportSize.Y);
+	if (SizeX <= 0 || SizeY <= 0)
+	{
+		return false;
+	}
+	// The engine's own projection code (ACFFraming::ComputeRenderedLens) on THIS frame's camera settings: the upstream POV
+	// ACF is evaluating, not the last rendered camera cache (ULocalPlayer::GetProjectionData would give last frame's).
+	FMinimalViewInfo& Probe = ProjectionProbe;
+	Probe.AspectRatio = UpstreamPOV.AspectRatio;
+	Probe.bConstrainAspectRatio = UpstreamPOV.bConstrainAspectRatio;
+	Probe.AspectRatioAxisConstraint = UpstreamPOV.AspectRatioAxisConstraint;
+	Probe.ProjectionMode = ECameraProjectionMode::Perspective;
+	Probe.PerspectiveNearClipPlane = UpstreamPOV.PerspectiveNearClipPlane;
+	Probe.OffCenterProjectionOffset = UpstreamPOV.OffCenterProjectionOffset;
+	Probe.OverscanResolutionFraction = UpstreamPOV.OverscanResolutionFraction;
+	Probe.CropFraction = UpstreamPOV.CropFraction;
+	Probe.AsymmetricCropFraction = UpstreamPOV.AsymmetricCropFraction;
+	return ACFFraming::ComputeRenderedLens(Probe, LocalPlayer->AspectRatioAxisConstraint, FIntRect(X, Y, X + SizeX, Y + SizeY), Viewport,
+		OutHorizontalFovScale, OutAspectRatio);
+}
+
 const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateInternal(float DeltaTime, const FMinimalViewInfo& UpstreamPOV, bool bOutputBypassed)
 {
 	check(Director);
@@ -634,6 +683,21 @@ const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateInternal(float De
 		if (ViewportSize.X > 0.0 && ViewportSize.Y > 0.0)
 		{
 			Context.AspectRatio = static_cast<float>(ViewportSize.X / ViewportSize.Y);
+		}
+	}
+	// Phase 7A: what the renderer will really project with (MaintainYFOV renders a view wider than the camera's aspect with
+	// a wider horizontal FOV than the pose's). The historical values are kept exactly when the projection is the classic one.
+	float HorizontalFovScale = 1.f;
+	float ProjectedAspect = Context.AspectRatio;
+	if (ACFProjection::CVarRenderedLens.GetValueOnGameThread() != 0 && ComputeViewProjection(UpstreamPOV, HorizontalFovScale, ProjectedAspect))
+	{
+		if (!FMath::IsNearlyEqual(HorizontalFovScale, 1.f, 1e-5f))
+		{
+			Context.HorizontalFovScale = HorizontalFovScale;
+		}
+		if (!FMath::IsNearlyEqual(ProjectedAspect, Context.AspectRatio, Context.AspectRatio * 1e-5f))
+		{
+			Context.AspectRatio = ProjectedAspect;
 		}
 	}
 

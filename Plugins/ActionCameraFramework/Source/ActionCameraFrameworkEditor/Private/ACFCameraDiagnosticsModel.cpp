@@ -333,6 +333,8 @@ FACFCameraDiagnosticsModel::FDebugView FACFCameraDiagnosticsModel::ReadDebug() c
 		FMath::Max(0.f, T.Duration - T.Elapsed), T.From.IsValid() ? *T.From.ToString() : TEXT("snapshot / UE camera"), T.FromWeight, T.ToWeight) : TEXT("not blending"));
 	Add(TEXT("Pose"), TEXT("ACF pose"), FString::Printf(TEXT("%s %s FOV %.2f"), *Vec(R.Pose.Location), *Rot(R.Pose.Rotation), R.Pose.FieldOfView));
 	Add(TEXT("Pose"), TEXT("UE camera (upstream)"), FString::Printf(TEXT("%s %s FOV %.2f"), *Vec(R.UpstreamPose.Location), *Rot(R.UpstreamPose.Rotation), R.UpstreamPose.FieldOfView));
+	Add(TEXT("Pose"), TEXT("Composition lens"), FString::Printf(TEXT("view aspect %.4f, horizontal FOV scale %.5f: pose FOV %.2f is framed as %.3f (the renderer's projection; ACF.Projection.RenderedLens)"),
+		R.AspectRatio, R.HorizontalFovScale, R.Pose.FieldOfView, FMath::RadiansToDegrees(2.0 * FMath::Atan(FMath::Tan(FMath::DegreesToRadians(R.Pose.FieldOfView) * 0.5) * R.HorizontalFovScale))));
 	if (View.bHasRenderedView)
 	{
 		Add(TEXT("Pose"), TEXT("Rendered - ACF"), FString::Printf(TEXT("%.2f cm, %.3f deg, FOV %+.2f (effects / shakes / blends / another camera)"),

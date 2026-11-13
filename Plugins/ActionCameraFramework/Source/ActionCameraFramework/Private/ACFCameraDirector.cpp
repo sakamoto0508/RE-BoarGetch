@@ -533,6 +533,8 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 		Result.bFramingLimited = TargetScratch.SolverReport.bFramingLimited;
 	}
 	Result.FrameNumber = Context.FrameNumber;
+	Result.AspectRatio = Context.AspectRatio;
+	Result.HorizontalFovScale = Context.HorizontalFovScale;
 
 	LastResult = Result;
 	LastEvaluatedFrame = Context.FrameNumber;
@@ -950,6 +952,15 @@ bool UACFCameraDirector::IsSameCameraContext(const FACFCameraEvaluationContext& 
 
 void UACFCameraDirector::SanitizeContext(FACFCameraEvaluationContext& Context)
 {
+	// Phase 7A: projection inputs from the subsystem (or a caller). Out of range = the classic projection (pose FOV, 16:9).
+	if (!FMath::IsFinite(Context.HorizontalFovScale) || Context.HorizontalFovScale <= 0.f)
+	{
+		Context.HorizontalFovScale = 1.f;
+	}
+	if (!FMath::IsFinite(Context.AspectRatio) || Context.AspectRatio <= 0.f)
+	{
+		Context.AspectRatio = 16.f / 9.f;
+	}
 	if (!FMath::IsFinite(Context.DeltaTime) || Context.DeltaTime < 0.f)
 	{
 		// Time never runs backwards or by NaN: evaluate as a zero-time update (state is reported, not advanced).

@@ -465,6 +465,14 @@ private:
 	void HandleWorldPostActorTick(UWorld* World, ELevelTick TickType, float DeltaSeconds);
 
 	const FACFCameraEvaluationResult& EvaluateInternal(float DeltaTime, const FMinimalViewInfo& UpstreamPOV, bool bOutputBypassed);
+	/**
+	 * Phase 7A: the renderer's horizontal FOV scale (FACFCameraEvaluationContext::HorizontalFovScale) and projection aspect of
+	 * this player's view, from the engine's projection code on THIS frame's upstream camera settings and viewport (never the
+	 * last rendered frame). False (keep the defaults) without a viewport (NullRHI, no game viewport) or for an orthographic view.
+	 */
+	bool ComputeViewProjection(const FMinimalViewInfo& UpstreamPOV, float& OutHorizontalFovScale, float& OutAspectRatio);
+	/** Reused projection input (no per-frame construction of the large view info). */
+	FMinimalViewInfo ProjectionProbe;
 
 	FDelegateHandle WorldPostActorTickHandle;
 

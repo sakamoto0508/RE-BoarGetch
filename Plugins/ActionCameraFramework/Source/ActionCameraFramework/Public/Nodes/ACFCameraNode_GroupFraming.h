@@ -111,11 +111,14 @@ public:
 
 	/** Required camera move along the view axis (positive = back) so every subject fits. Pure function (tests). */
 	static double ComputeRequiredDolly(const FACFCameraFramingSubjects& Subjects, const FVector& CameraLocation, const FRotator& CameraRotation,
-		float FieldOfView, float AspectRatio, const FVector2D& FramingSize, float NearClearance);
+		float FieldOfView, float AspectRatio, const FVector2D& FramingSize, float NearClearance, float HorizontalFovScale = 1.f);
 
-	/** Field of view at which every subject fits from CameraLocation (MaxFov if a subject is behind the camera). */
+	/**
+	 * Pose field of view at which every subject fits from CameraLocation (MaxFov if a subject is behind the camera).
+	 * HorizontalFovScale: the rendered / pose tangent ratio of the view (FACFCameraEvaluationContext, 1 = MaintainXFOV).
+	 */
 	static double ComputeRequiredFov(const FACFCameraFramingSubjects& Subjects, const FVector& CameraLocation, const FRotator& CameraRotation,
-		float AspectRatio, const FVector2D& FramingSize, float NearClearance, float MaxFov);
+		float AspectRatio, const FVector2D& FramingSize, float NearClearance, float MaxFov, float HorizontalFovScale = 1.f);
 
 	/** Applies the Weight rule: members are pulled towards the weighted centre (in place). False if empty. */
 	static bool ApplyWeights(FACFCameraFramingSubjects& InOutSubjects, FVector& OutCenter);

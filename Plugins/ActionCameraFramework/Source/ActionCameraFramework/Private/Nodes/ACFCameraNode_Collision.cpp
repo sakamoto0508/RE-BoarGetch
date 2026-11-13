@@ -230,7 +230,7 @@ void UACFCameraNode_Collision::Evaluate(const FACFCameraNodeContext& Context, FA
 	if (FramingRecovery.bEnabled && Context.Scratch.bHasFramingSubjects && bSolverAllowed)
 	{
 		FACFCameraConstraintSolver::RecoverFraming(FramingRecovery, Context.Scratch.FramingSubjects, Context.Scratch.FramingSize,
-			Context.Evaluation.AspectRatio, Dt, State->Recovery, InOutPose, Report);
+			Context.Evaluation.AspectRatio, Dt, State->Recovery, InOutPose, Report, Context.Evaluation.HorizontalFovScale);
 		Context.Scratch.bHasSolverReport = true;
 	}
 	else

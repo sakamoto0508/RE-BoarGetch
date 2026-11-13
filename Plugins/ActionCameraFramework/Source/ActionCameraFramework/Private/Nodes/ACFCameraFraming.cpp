@@ -1,9 +1,15 @@
 #include "Nodes/ACFCameraFraming.h"
+#include "Camera/CameraTypes.h"
+#include "SceneView.h"
 
-ACFFraming::FLens ACFFraming::MakeLens(float HorizontalFovDegrees, float AspectRatio)
+ACFFraming::FLens ACFFraming::MakeLens(float HorizontalFovDegrees, float AspectRatio, float HorizontalFovScale)
 {
 	FLens Lens;
 	Lens.TanHalfH = FMath::Tan(FMath::DegreesToRadians(FMath::Clamp(static_cast<double>(HorizontalFovDegrees), 1.0, 170.0)) * 0.5);
+	if (HorizontalFovScale != 1.f && FMath::IsFinite(HorizontalFovScale) && HorizontalFovScale > 0.f)
+	{
+		Lens.TanHalfH *= HorizontalFovScale; // the renderer's projection (exactly 1 keeps the historical arithmetic)
+	}
 	Lens.TanHalfV = Lens.TanHalfH / FMath::Max(static_cast<double>(AspectRatio), 0.1);
 	return Lens;
 }
@@ -62,4 +68,34 @@ FRotator ACFFraming::AimAt(const FRotator& Rotation, const FVector& CameraLocati
 		}
 	}
 	return Result;
+}
+
+bool ACFFraming::ComputeRenderedLens(FMinimalViewInfo& InOutViewSettings, int32 AspectRatioAxisConstraint, const FIntRect& ViewRect, FViewport* Viewport,
+	float& OutHorizontalFovScale, float& OutAspectRatio)
+{
+	if (InOutViewSettings.ProjectionMode != ECameraProjectionMode::Perspective || ViewRect.Width() <= 0 || ViewRect.Height() <= 0)
+	{
+		return false;
+	}
+	InOutViewSettings.FOV = 90.f; // tan(45 deg) = 1: the matrix then holds the scale itself
+	FSceneViewProjectionData Projection;
+	Projection.SetViewRectangle(ViewRect);
+	const TEnumAsByte<EAspectRatioAxisConstraint> Constraint(static_cast<EAspectRatioAxisConstraint>(AspectRatioAxisConstraint));
+	if (Viewport)
+	{
+		FMinimalViewInfo::CalculateProjectionMatrixGivenView(InOutViewSettings, Constraint, Viewport, Projection); // letterbox like the renderer
+	}
+	else
+	{
+		FMinimalViewInfo::CalculateProjectionMatrixGivenViewRectangle(InOutViewSettings, Constraint, ViewRect, Projection);
+	}
+	const double M00 = Projection.ProjectionMatrix.M[0][0];
+	const double M11 = Projection.ProjectionMatrix.M[1][1];
+	if (!FMath::IsFinite(M00) || !FMath::IsFinite(M11) || M00 <= UE_SMALL_NUMBER || M11 <= UE_SMALL_NUMBER)
+	{
+		return false;
+	}
+	OutHorizontalFovScale = static_cast<float>(1.0 / M00);
+	OutAspectRatio = static_cast<float>(M11 / M00);
+	return true;
 }

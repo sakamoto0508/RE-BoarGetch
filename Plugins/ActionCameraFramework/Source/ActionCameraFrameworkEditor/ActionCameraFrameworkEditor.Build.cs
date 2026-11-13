@@ -6,6 +6,6 @@ public class ActionCameraFrameworkEditor : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		PublicDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine" });
-		PrivateDependencyModuleNames.AddRange(new[] { "ActionCameraFramework", "UnrealEd", "AssetRegistry", "DataValidation", "Slate", "SlateCore", "InputCore", "WorkspaceMenuStructure" });
+		PrivateDependencyModuleNames.AddRange(new[] { "ActionCameraFramework", "UnrealEd", "AssetRegistry", "DataValidation", "Slate", "SlateCore", "InputCore", "WorkspaceMenuStructure", "EngineSettings" });
 	}
 }

@@ -19,9 +19,9 @@ bool UACFCameraNode_GroupFraming::ApplyWeights(FACFCameraFramingSubjects& InOutS
 }
 
 double UACFCameraNode_GroupFraming::ComputeRequiredDolly(const FACFCameraFramingSubjects& Subjects, const FVector& CameraLocation, const FRotator& CameraRotation,
-	float FieldOfView, float AspectRatio, const FVector2D& FramingSize, float NearClearance)
+	float FieldOfView, float AspectRatio, const FVector2D& FramingSize, float NearClearance, float HorizontalFovScale)
 {
-	const ACFFraming::FLens Lens = ACFFraming::MakeLens(FieldOfView, AspectRatio);
+	const ACFFraming::FLens Lens = ACFFraming::MakeLens(FieldOfView, AspectRatio, HorizontalFovScale);
 	// Tangent of the framing half-angles: a point (x, y) in camera space is inside when |y| <= F * x.
 	const double Fh = Lens.TanHalfH * FMath::Clamp(FramingSize.X, 0.05, 1.0);
 	const double Fv = Lens.TanHalfV * FMath::Clamp(FramingSize.Y, 0.05, 1.0);
@@ -42,7 +42,7 @@ double UACFCameraNode_GroupFraming::ComputeRequiredDolly(const FACFCameraFraming
 }
 
 double UACFCameraNode_GroupFraming::ComputeRequiredFov(const FACFCameraFramingSubjects& Subjects, const FVector& CameraLocation, const FRotator& CameraRotation,
-	float AspectRatio, const FVector2D& FramingSize, float NearClearance, float MaxFov)
+	float AspectRatio, const FVector2D& FramingSize, float NearClearance, float MaxFov, float HorizontalFovScale)
 {
 	const double Aspect = FMath::Max(static_cast<double>(AspectRatio), 0.1);
 	const double MaxTan = FMath::Tan(FMath::DegreesToRadians(FMath::Clamp(static_cast<double>(MaxFov), 1.0, 170.0)) * 0.5);
@@ -74,7 +74,10 @@ double UACFCameraNode_GroupFraming::ComputeRequiredFov(const FACFCameraFramingSu
 		// The vertical half-angle tangent is the horizontal one divided by the aspect ratio.
 		NeededTanH = FMath::Max(NeededTanH, FMath::Max(TanH / SizeX, TanV / SizeY * Aspect));
 	}
-	return FMath::RadiansToDegrees(2.0 * FMath::Atan(FMath::Min(NeededTanH, MaxTan)));
+	// NeededTanH is in the rendered view; the pose FOV that renders it is smaller / larger by HorizontalFovScale.
+	const double Scale = HorizontalFovScale > 0.f && FMath::IsFinite(HorizontalFovScale) ? static_cast<double>(HorizontalFovScale) : 1.0;
+	const double PoseTan = NeededTanH >= MaxTan || Scale == 1.0 ? NeededTanH : NeededTanH / Scale;
+	return FMath::RadiansToDegrees(2.0 * FMath::Atan(FMath::Min(PoseTan, MaxTan)));
 }
 
 void UACFCameraNode_GroupFraming::ResetInterpolation(FInstancedStruct* RuntimeState) const
@@ -116,7 +119,7 @@ void UACFCameraNode_GroupFraming::Evaluate(const FACFCameraNodeContext& Context,
 	double GoalDolly = 0.0;
 	if (bHasSubjects && Mode != EACFCameraGroupFramingMode::FieldOfView)
 	{
-		const double Required = ComputeRequiredDolly(Subjects, InOutPose.Location, InOutPose.Rotation, InFov, Aspect, FramingSize, NearClearance);
+		const double Required = ComputeRequiredDolly(Subjects, InOutPose.Location, InOutPose.Rotation, InFov, Aspect, FramingSize, NearClearance, Context.Evaluation.HorizontalFovScale);
 		const double MinDolly = Policy == EACFCameraGroupFramingPolicy::KeepInside ? 0.0 : -static_cast<double>(MaxDollyIn);
 		GoalDolly = FMath::Clamp(Required, MinDolly, static_cast<double>(MaxDollyOut));
 	}
@@ -126,7 +129,7 @@ void UACFCameraNode_GroupFraming::Evaluate(const FACFCameraNodeContext& Context,
 	if (bHasSubjects && Mode != EACFCameraGroupFramingMode::Distance)
 	{
 		const FVector GoalLocation = InOutPose.Location - Forward * GoalDolly;
-		const double Required = ComputeRequiredFov(Subjects, GoalLocation, InOutPose.Rotation, Aspect, FramingSize, NearClearance, MaxFov);
+		const double Required = ComputeRequiredFov(Subjects, GoalLocation, InOutPose.Rotation, Aspect, FramingSize, NearClearance, MaxFov, Context.Evaluation.HorizontalFovScale);
 		const double GoalFov = Policy == EACFCameraGroupFramingPolicy::KeepInside
 			? FMath::Max(static_cast<double>(InFov), FMath::Min(Required, static_cast<double>(MaxFov)))
 			: FMath::Clamp(Required, static_cast<double>(MinFov), static_cast<double>(MaxFov));

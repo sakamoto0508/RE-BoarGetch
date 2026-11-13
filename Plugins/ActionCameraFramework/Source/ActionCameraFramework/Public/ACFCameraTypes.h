@@ -393,6 +393,15 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationContext
 	float AspectRatio = 16.f / 9.f;
 
 	/**
+	 * Tangent of the rendered half horizontal FOV per tangent of the pose's half FOV (Phase 7A: projection consistency).
+	 * 1 = the pose FOV is the rendered horizontal FOV (MaintainXFOV, or a view with the camera's own aspect). Under
+	 * MaintainYFOV (UE's default) a view wider than the camera's aspect renders wider: the subsystem sets this from the
+	 * engine's own projection (FMinimalViewInfo::CalculateProjectionMatrixGivenView) for this frame's viewport and camera
+	 * settings, so the composers / Lock-On / Group Framing / framing recovery frame what is really rendered.
+	 */
+	float HorizontalFovScale = 1.f;
+
+	/**
 	 * Camera input (X = yaw, Y = pitch, in "input units") consumed by this evaluation: the deltas
 	 * accumulated since the previous time-advancing evaluation plus rate input * DeltaTime.
 	 * Filled by the director; zero on zero-delta evaluations (input is kept for the next one).
@@ -608,6 +617,13 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationResult
 	/** Group Framing needed more FOV than the recovery allows: some targets may be partly off screen. */
 	UPROPERTY(BlueprintReadOnly, Category = "Camera|Constraints")
 	bool bFramingLimited = false;
+
+	/** Phase 7A: the view the composition was computed for (aspect, rendered / pose horizontal FOV tangent ratio). */
+	UPROPERTY(BlueprintReadOnly, Category = "Camera")
+	float AspectRatio = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Camera")
+	float HorizontalFovScale = 1.f;
 
 	/** Engine frame this result was produced for. */
 	uint64 FrameNumber = 0;

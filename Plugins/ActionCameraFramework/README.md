@@ -848,33 +848,34 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **201 件が登録**されています（テスト名の数。Phase 7A-4 時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **205 件が登録**されています（テスト名の数。Phase 7A 最終安定化の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
   | `.Director` 8、`.Nodes` 5、`.ThirdPerson` 11、`.Effects` 9、`.Action` 10、`.Constraints` 7、`.Sequence` 6、`.Authority` 3 | 59 | 実行 | 実行 |
   | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 12、`.Profiler` 3 | 30 | 実行 | 実行 |
   | `.Tuning`（Runtime Tuning、24 章。FOV の回避策 1 件を含む） | 10 | 実行 | 実行 |
-  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 7 件、26 章。診断 `.Editor.Diagnostics` 5 件、27 章。実 PIE 3 件を含む） | 21 | 実行 | — |
+  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 7 件、26 章。診断 `.Editor.Diagnostics` 5 件、27 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 4 件を含む） | 22 | 実行 | — |
   | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 3 | 5 | — | 実行 |
-  | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件を含む） | 29 | — | 実行 |
+  | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件、投影 1 件を含む） | 30 | — | 実行 |
+  | `.Projection`（構図計算と描画の投影、28 章） | 2 | 実行 | 実行 |
   | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1） | 40 | — | 実行 |
   | `.Samples` | 6 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
-  | 合計 | 201 | 120 | 180 |
+  | 合計 | 205 | 123 | 183 |
 
-- **最新の結果（Phase 7A-4、2026-11-14）**
+- **最新の結果（Phase 7A 最終安定化、2026-11-14）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
-  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 180 | 173 / 0 / 7 | `.Samples` 6 件と `.Profile.Scenarios` は空のマップでは検証しない |
-  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 180 | 173 / 0 / 7 | 同上 |
-  | Editor（`--context editor`、`-NullRHI`） | 120 | 120 / 0 / 0 | |
-  | Editor（`--context editor-rendered`、描画あり。`.Editor` 21 件） | 21 | 21 / 0 / 0 | |
-  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 180 | 179 / 0 / 1 | `.Profile.Scenarios`（`-ACFProfile` なし） |
-  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 180 | 179 / 0 / 1 | 同上 |
-  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 180 | 180 / 0 / 0 | |
-  | 繰り返し（Editor）: `.Editor.Diagnostics` + `.Editor.TuningApply` + `.Editor.TuningPanel` + `.Tuning` ×2 | 58 | 58 / 0 / 0 | |
+  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 183 | 176 / 0 / 7 | `.Samples` 6 件と `.Profile.Scenarios` は空のマップでは検証しない |
+  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 183 | 176 / 0 / 7 | 同上 |
+  | Editor（`--context editor`、`-NullRHI`） | 123 | 123 / 0 / 0 | |
+  | Editor（`--context editor-rendered`、描画あり。`.Editor` 22 件） | 22 | 22 / 0 / 0 | |
+  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 183 | 182 / 0 / 1 | `.Profile.Scenarios`（`-ACFProfile` なし） |
+  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 183 | 182 / 0 / 1 | 同上 |
+  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 183 | 183 / 0 / 0 | |
+  | 繰り返し（Editor）: `.Projection` + `.Tuning` + `.Editor.TuningApply` + `.Editor.Diagnostics` ×2 | 48 | 48 / 0 / 0 | |
 
   全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 で見つけ、7A-1 のコードでも同じ値で再現したもの）は、2 人目のローカルプレイヤーの Pawn が残っていたのが原因で、テスト環境側で修正済みです（22 章「ローカルプレイヤーと Pawn」）。
 
@@ -1822,7 +1823,7 @@ ACF Camera Tuning タブ（25 章）に、PIE 中のカメラの性能・状態�
 - 「Draw composition guides in the PIE viewport」を ON にすると、選んだプレイヤーの PIE のビューに次を描きます: 中央、3 分割、セーフエリア（90 % / 80 %）、ターゲットの印（画面内は緑、画面外は赤）、ACF が画面に出ているかどうか。
 - 投影には、レンダラーと同じデータを使います。一覧は `ULocalPlayer::GetProjectionData`（分割画面のビュー矩形、ビューポートのサイズ変更、縦横比の制約、PCM の ViewTarget ブレンド、Sequencer の外部 ViewTarget をすべて含む）、描画はその Canvas の `SceneView` を使います。テストで、両者の位置が一致することを確認しています。
 - 描画は Debug Draw の "Game" チャンネルで、選んだプレイヤーのビューにだけ行います（分割画面ではプレイヤーごとに Canvas が分かれる）。Editor モジュールだけにあるので、パッケージ版の画面には出ません。
-- **描画される FOV は、PCM の FOV と少し違うことがあります**。UE 5.8 の既定（`AspectRatioAxisConstraint = AspectRatio_MaintainYFOV`）では、縦の FOV を「カメラの縦横比（例: 16:9）での横 FOV」から決めます。そのためビューポートが 16:9 でないと、実際の横 FOV が変わります（テストの 1503 x 837 のビューでは、PCM 90° に対して 90.575°）。パネルは両方を表示します。ACF の構図の計算（Composer・Group Framing・ソルバー）は PCM の FOV とビューポートの縦横比を使うので、この場合は描画と約 1 % ずれます（残る制限）。
+- **描画される FOV は、PCM の FOV と少し違うことがあります**。UE 5.8 の既定（`AspectRatioAxisConstraint = AspectRatio_MaintainYFOV`）では、縦の FOV を「カメラの縦横比（例: 16:9）での横 FOV」から決めます。そのためビューポートが 16:9 でないと、実際の横 FOV が変わります（テストの 1503 x 837 のビューでは、PCM 90° に対して 90.575°）。パネルは両方を表示します。ACF の構図の計算も、Phase 7A の最終安定化（28 章）から実際の描画の投影を使います（Debugger の「Composition lens」に表示）。
 
 ### 性能（`.Editor.Diagnostics.CostOfTheViews`）
 
@@ -1862,7 +1863,58 @@ ACF Camera Tuning タブ（25 章）に、PIE 中のカメラの性能・状態�
 
 ### 制限と残課題
 
-- ビューポートが 16:9 でなく、`MaintainYFOV`（UE の既定）のとき、ACF の構図の計算は描画と約 1 % ずれます（上記）。ランタイムの Pipeline の変更になるので、7A-4 では直していません。
+- 構図の計算と描画の投影のずれ（7A-4 で見つけたもの）は 28 章で修正しました。
 - 7A-3 の Change Set はパネルが持っています。パネルを閉じる・Editor を終了すると、反映していない変更は消えます。Editor のセッションが持つ方式（Editor Subsystem）への変更は、Profiler の統合とは別の課題として残します。
 - 構図のガイドは 2D だけです（3D のデバッグ描画は既存の `ACF.Debug.Draw`）。
 - 人が Editor で操作して見る確認はしていません。自動テストで、実際のパネルと PIE、描画ありの Editor を使っています。
+
+## 28. 構図計算と描画の投影の整合（Phase 7A 最終安定化）
+
+ACF の構図計算（Composer・Lock-On・Group Framing・Framing Recovery）は、カメラの FOV を「横の FOV」、ビューの縦横比で縦を決める投影（UE の `AspectRatio_MaintainXFOV` と同じ）として扱っていました。UE 5.8 の既定は `AspectRatio_MaintainYFOV`（`[/Script/Engine.LocalPlayer] AspectRatioAxisConstraint`）で、この場合の実際の描画は次のとおりです。
+
+- 縦の FOV は「カメラの縦横比（Camera Component の Aspect Ratio、カメラが無い ViewTarget では PCM の Default Aspect Ratio = 4:3）での横 FOV」から決まる
+- ビューがカメラより横長なら、実際の横 FOV は PCM の FOV より広い（縦長なら狭い）
+
+### 影響（実測、Rotation Composer で目標の画面位置 (0.6, 0.4)）
+
+| ビュー（PCM FOV 90°） | 実際の横 FOV | 修正前のずれ |
+|---|---|---|
+| 1503 x 837、16:9 のカメラ | 90.575° | 4.5 / 1.7 px（軽微） |
+| 分割画面 上下（1503 x 418） | 127.4° | 228 / 42 px |
+| 分割画面 左右（751 x 837、縦長） | 53.6° | 221 / 164 px（目標が画面外: NDC 1.19） |
+| 1280 x 720、カメラの無い ViewTarget（DefaultPawn。PCM の既定 4:3） | 106.3° | 構図が中央寄りに約 3 分の 2 |
+| 1280 x 720、16:9 のカメラ（ThirdPerson） | 90° | なし |
+
+16:9 のカメラを 16:9 のビューで使う一般的な構成では影響はありません。分割画面・縦長のビュー・カメラの無い ViewTarget では、構図が描画と大きくずれていました（機能上の不具合）。7A-4 の Composition の表示は、もとから実際の描画を使っていたので正しく、ずれていたのは ACF の構図計算でした。
+
+### 修正（方式 A: UE の投影計算を再利用）
+
+- Subsystem が毎フレーム、評価の前に、UE 自身の投影計算（`FMinimalViewInfo::CalculateProjectionMatrixGivenView`）を **このフレームの** 上流カメラの設定（縦横比・縦横比の制約・軸の制約の上書き・Crop・Off-center・ニアプレーン）と、プレイヤーのビュー矩形（ビューポートの今の大きさ × 分割画面の Origin / Size、`ULocalPlayer::GetProjectionData` と同じ計算）に対して実行します（`ACFFraming::ComputeRenderedLens`）。
+- 結果を評価の文脈の `HorizontalFovScale`（実際の横 FOV の tan ÷ 姿勢の FOV の tan）と `AspectRatio`（投影の縦横比）に入れます。どのモードでも tan は FOV に比例するので、基準の FOV（90°）で 1 回計算すれば、Lock-On や Group Framing が評価の途中で FOV を変えても正確です。
+- `ACFFraming::MakeLens` に `HorizontalFovScale` を渡し、Composer（Position / Rotation）、Lock-On、Group Framing（必要な距離・必要な FOV）、Framing Recovery がそれを使います。Group Framing が求める FOV は「描画で必要な FOV」を姿勢の FOV に換算した値です。
+- **前のフレームを使わない**: 評価中に `GetProjectionData` を呼ぶと、PCM の Camera Cache（前のフレームの姿勢・FOV）を使ってしまいます。修正はビューポートと上流カメラの今の値だけを使います（ビューポートの大きさの変更・分割画面への切り替えは、その直後の評価から反映。テストで確認）。
+- **互換性**: スケールが 1 ± 0.00001、縦横比が従来の値 ± 0.001 % のときは従来の値をそのまま使うので、16:9 のカメラ + 16:9 のビューでは結果がビット単位で同じです（テストで確認）。ビューポートが無い（`-NullRHI`、専用サーバー）・平行投影のときも従来どおりです。プロジェクトの設定は変更しません。
+- `ACF.Projection.RenderedLens 0` で従来の計算に戻せます（比較用・互換性のため。既定 1）。
+- 評価結果（`FACFCameraEvaluationResult`）に `AspectRatio` と `HorizontalFovScale` を載せ、Debugger（27 章）の「Composition lens」に表示します。
+
+### 性能
+
+- 追加は、評価ごとに 1 回の投影行列の計算だけです（アロケーションなし。表示用の大きな構造体は Subsystem が使い回す）。
+- B-1 の 8 シナリオを修正前（`7039125`）と修正後で、同じ条件で続けて測りました: アロケーションとクエリ数（Collision の当たりのフレーム数を含む）は完全に一致、平均時間の差は -4 〜 +6 %（両方向、測定の揺れの範囲）。B-1 のシナリオは 16:9 のカメラで 1280 x 720 なので、カメラの姿勢も変わりません。
+
+### テスト
+
+| テスト | 内容 |
+|---|---|
+| `.Projection.RenderedLensMatchesTheEngine` | ACF のレンズで投影した点が UE の投影行列と一致（1920x1080・1280x720・1503x837・21:9・縦長・分割画面の半分 × MaintainYFOV / MaintainXFOV / MajorAxisFOV × 縦横比の制約あり / なし × r.UseLegacyMaintainYFOV、FOV 55 / 90 / 118）。16:9 はスケール 1、1503x837 は 90.575° |
+| `.Projection.ComposerAndGroupFramingOnAWideView` | 1503x837 の描画で Rotation Composer の目標位置が一致（従来のレンズでは 4.5 px ずれる）、Group Framing の FOV で一番外の対象がちょうど Framing Size に収まる |
+| `.Integration.ProjectionLensIsTheRenderedOne` | 実際の PCM で、ACF のレンズ = 描画の投影（`GetProjectionData`）。`-NullRHI` と 16:9 のカメラでは従来のレンズのまま、`RenderedLens 0` とビット単位で同じカメラ |
+| `.Editor.Projection.RenderedPieComposition`（`--context editor-rendered`） | 描画ありの PIE で、Composer の目標・Lock-On の注視点・Group Framing の外縁が実際の描画と一致。全体のビュー・Tuning で FOV を変えた直後の最初のフレーム・外部 ViewTarget（Sequencer のカメラカット）から戻った後・分割画面（上下 = 横長、左右 = 縦長）の各プレイヤー。分割した直後の最初の評価が新しいビュー矩形を使うこと。従来のレンズでのずれも計測 |
+
+- 既存のテストの測り方も、実際の描画の投影（描画が無いときは従来のレンズ）に揃えました（`.Samples.*` の画面内判定と `ClearanceInFrame`）。Collision と Group Framing の競合のテストは、16:9 のカメラを前提にした場面なので、テストの間だけ PCM の既定の縦横比を 16:9 にします（シナリオの後片付けで戻す）。
+
+### 残る制限
+
+- 上流のカメラより後に、縦横比や投影の設定を変える Camera Modifier がある場合、それは反映しません（ACF は自分が受け取った上流の POV の設定を使う）。
+- Off-center の投影（`OffCenterProjectionOffset`）は FOV のスケールにだけ反映し、画面の中心のずれは構図に入れていません。
+- 立体視（ステレオ）の投影は対象外です。

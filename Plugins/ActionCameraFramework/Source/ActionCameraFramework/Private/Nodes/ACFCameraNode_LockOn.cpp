@@ -134,7 +134,7 @@ void UACFCameraNode_LockOn::Evaluate(const FACFCameraNodeContext& Context, FACFC
 	if (bAimAtFocus && bHasLock)
 	{
 		Focus = FMath::Lerp(Pivot, State->LockPoint, static_cast<double>(FocusBias));
-		const ACFFraming::FLens Lens = ACFFraming::MakeLens(InOutPose.FieldOfView, Context.Evaluation.AspectRatio);
+		const ACFFraming::FLens Lens = ACFFraming::MakeLens(InOutPose.FieldOfView, Context.Evaluation.AspectRatio, Context.Evaluation.HorizontalFovScale);
 		InOutPose.Rotation = ACFFraming::AimAt(OrbitRotation, Camera, Lens, Focus, FocusScreenPosition);
 	}
 	else

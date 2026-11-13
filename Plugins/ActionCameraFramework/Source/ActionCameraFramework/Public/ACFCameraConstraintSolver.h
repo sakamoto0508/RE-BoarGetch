@@ -199,5 +199,6 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraConstraintSolver
 		float DeltaTime, FACFCameraDeoccluderState& State, const FACFCameraSolverQueries& Queries, FACFCameraPose& InOutPose, FACFCameraSolverReport& Report);
 
 	static void RecoverFraming(const FACFCameraFramingRecoverySettings& Settings, const FACFCameraFramingSubjects& Subjects, const FVector2D& FramingSize,
-		float AspectRatio, float DeltaTime, FACFCameraFramingRecoveryState& State, FACFCameraPose& InOutPose, FACFCameraSolverReport& Report);
+		float AspectRatio, float DeltaTime, FACFCameraFramingRecoveryState& State, FACFCameraPose& InOutPose, FACFCameraSolverReport& Report,
+		float HorizontalFovScale = 1.f);
 };

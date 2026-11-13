@@ -8,6 +8,7 @@
 #include "Nodes/ACFCameraNode_FixedPose.h"
 #include "Nodes/ACFCameraNode_Follow.h"
 #include "Nodes/ACFCameraNode_LookAt.h"
+#include "Nodes/ACFCameraNode_Composers.h"
 #include "Camera/CameraModifier_CameraShake.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/SceneComponent.h"
@@ -44,6 +45,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimNotifyQueue.h"
 #include "ACFCameraTestEnvironment.h"
+#include "SceneView.h"
 #include "ACFCameraTuningLibrary.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
@@ -151,6 +153,7 @@ namespace ACFIntegration
 				// B-9: process-wide state is restored at the end (also on abort); diagnostics count from zero.
 				Guard.Capture(PC->GetWorld());
 				SavedControlRotation = PC->GetControlRotation();
+				SavedDefaultAspectRatio = PC->PlayerCameraManager->DefaultAspectRatio;
 				ACFTestEnvironment::BeginScenario(*State->Subsystem);
 				bHavePlayer = true;
 			}
@@ -211,12 +214,17 @@ namespace ACFIntegration
 			{
 				State->Controller->SetControlRotation(SavedControlRotation); // B-9: tests that aim the player restore it here
 			}
+			if (APlayerCameraManager* CameraManager = State->PCM())
+			{
+				CameraManager->DefaultAspectRatio = SavedDefaultAspectRatio; // Phase 7A: tests that pin the camera aspect restore it here
+			}
 			ACFTestEnvironment::EndScenario(*State->Test, State->Subsystem.Get(), State->PCM(), Guard);
 		}
 
 		TSharedRef<FScenario> State = MakeShared<FScenario>();
 		ACFTestEnvironment::FGlobalStateGuard Guard;
 		FRotator SavedControlRotation = FRotator::ZeroRotator;
+		float SavedDefaultAspectRatio = 4.f / 3.f;
 		TArray<FStep> Steps;
 		uint64 WaitFrames;
 		uint64 ResumeFrame = 0;
@@ -1705,11 +1713,35 @@ bool FACFIntegrationLockOnTest::RunTest(const FString& Parameters)
 
 namespace ACFIntegration
 {
+	/**
+	 * Phase 7A: the lens of what the player really sees, measured independently of ACF: the renderer's projection of its view
+	 * (ULocalPlayer::GetProjectionData of the last rendered frame; the scenarios measure after the camera settled). Without
+	 * a rendered viewport (-NullRHI) the classic lens (PCM FOV over FallbackAspect), which is what ACF uses there too.
+	 * (Under UE's default MaintainYFOV a view target without a camera of the viewport's aspect, e.g. the DefaultPawn with the
+	 * PCM's 4:3 default, is rendered wider than the PCM FOV: 106.3 degrees at FOV 90 on a 16:9 view.)
+	 */
+	static ACFFraming::FLens RenderedLens(FScenario& S, float FallbackAspect)
+	{
+		const APlayerCameraManager* M = S.PCM();
+		ULocalPlayer* LocalPlayer = S.Controller.IsValid() ? S.Controller->GetLocalPlayer() : nullptr;
+		const UGameViewportClient* Client = S.World() ? S.World()->GetGameViewport() : nullptr;
+		FSceneViewProjectionData Projection;
+		if (LocalPlayer && Client && Client->Viewport && Client->Viewport->GetSizeXY().X > 0 && LocalPlayer->GetProjectionData(Client->Viewport, Projection)
+			&& Projection.ProjectionMatrix.M[0][0] > 0.0 && Projection.ProjectionMatrix.M[1][1] > 0.0)
+		{
+			ACFFraming::FLens Lens;
+			Lens.TanHalfH = 1.0 / Projection.ProjectionMatrix.M[0][0];
+			Lens.TanHalfV = 1.0 / Projection.ProjectionMatrix.M[1][1];
+			return Lens;
+		}
+		return ACFFraming::MakeLens(M->GetFOVAngle(), FallbackAspect);
+	}
+
 	/** True if the sphere is fully on screen in the PlayerCameraManager's final camera. */
 	static bool SphereOnScreen(FScenario& S, const FVector& Center, float Radius, FVector2D& OutScreen)
 	{
 		const APlayerCameraManager* M = S.PCM();
-		const ACFFraming::FLens Lens = ACFFraming::MakeLens(M->GetFOVAngle(), 16.f / 9.f);
+		const ACFFraming::FLens Lens = RenderedLens(S, 16.f / 9.f);
 		const FVector Local = M->GetCameraRotation().UnrotateVector(Center - M->GetCameraLocation());
 		double Depth = 0.0;
 		ACFFraming::Project(M->GetCameraLocation(), M->GetCameraRotation(), Lens, Center, OutScreen, Depth);
@@ -1923,7 +1955,7 @@ namespace ACFIntegration
 	static double ClearanceInFrame(FScenario& S, const FVector& Center, float Radius, const FVector2D& Size)
 	{
 		const APlayerCameraManager* M = S.PCM();
-		const ACFFraming::FLens Lens = ACFFraming::MakeLens(M->GetFOVAngle(), ViewAspect(S));
+		const ACFFraming::FLens Lens = RenderedLens(S, ViewAspect(S));
 		const FVector Local = M->GetCameraRotation().UnrotateVector(Center - M->GetCameraLocation());
 		const double Fh = Lens.TanHalfH * Size.X;
 		const double Fv = Lens.TanHalfV * Size.Y;
@@ -2048,6 +2080,9 @@ bool FACFIntegrationFramingConflictTest::RunTest(const FString& Parameters)
 	TArray<FStep> Steps;
 	Steps.Add([](FScenario& S)
 	{
+		// Phase 7A: the scenario is built for a 16:9 camera on the 16:9 view (rendered FOV = PCM FOV). A view target without a
+		// camera takes the PCM's 4:3 default, which UE's MaintainYFOV renders wider (106 degrees at 90): pin 16:9.
+		S.PCM()->DefaultAspectRatio = 16.f / 9.f;
 		// Exploration camera framing a group (player + two enemies to the sides); a wall behind the player.
 		S.Pivot = TestArea + FVector(0, 18000, 0);
 		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
@@ -2963,6 +2998,89 @@ bool FACFIntegrationFovOnlyFixedPoseTest::RunTest(const FString& Parameters)
 		const APlayerCameraManager* M = S.PCM();
 		S.Test->TestTrue(TEXT("Back on the base request: same location"), M->GetCameraLocation().Equals(S.SavedLocation, 0.01));
 		S.Test->TestEqual(TEXT("Back on the base request: the UE FOV again"), M->GetFOVAngle(), static_cast<float>(S.Value), 0.01f);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+// Phase 7A (projection consistency), 1 and 12 on the real camera manager: on a 16:9 view (samples context, 1280 x 720) and
+// without a sized viewport (-NullRHI) the composition lens is the classic one, so the camera is bit for bit the same as with
+// ACF.Projection.RenderedLens 0 (the pre-7A behaviour).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationProjectionLensTest, "ActionCameraFramework.Integration.ProjectionLensIsTheRenderedOne",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationProjectionLensTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(8000, -9000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_Follow* Follow = NewObject<UACFCameraNode_Follow>(Preset);
+		Follow->Offset = FVector(-400, 0, 200);
+		Follow->OffsetSpace = EACFCameraOffsetSpace::World;
+		UACFCameraNode_RotationComposer* Composer = NewObject<UACFCameraNode_RotationComposer>(Preset);
+		Composer->Composition.ScreenPosition = FVector2D(0.3, 0.2);
+		Composer->Composition.DeadZoneSize = FVector2D::ZeroVector;
+		Composer->Damping = FVector2D::ZeroVector;
+		// A fixed starting rotation: the composer then lands on the same rotation every frame (deterministic, bit for bit).
+		UACFCameraNode_FixedPose* Start = NewObject<UACFCameraNode_FixedPose>(Preset);
+		Start->bOverrideLocation = false;
+		Start->bOverrideFieldOfView = false;
+		Start->Rotation = FRotator(-10.0, 5.0, 0.0);
+		Preset->Nodes = { Start, Follow, Composer };
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		S.Preset.Reset(Preset);
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		Params.LookAtTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(Preset, Params);
+		return true;
+	});
+	Wait(Steps, 0.2);
+	Steps.Add([](FScenario& S)
+	{
+		const FACFCameraEvaluationResult Result = S.Subsystem->GetLastEvaluationResult();
+		FVector2D Viewport = FVector2D::ZeroVector;
+		if (const UGameViewportClient* Client = S.World()->GetGameViewport())
+		{
+			Client->GetViewportSize(Viewport);
+		}
+		// The renderer's own projection of this player's view (last rendered frame; the scene is static).
+		double RenderedScale = 1.0, RenderedAspect = Result.AspectRatio;
+		FSceneViewProjectionData Projection;
+		ULocalPlayer* LocalPlayer = S.Controller->GetLocalPlayer();
+		const UGameViewportClient* Client = S.World()->GetGameViewport();
+		const bool bRendered = Client && Client->Viewport && Viewport.X > 0.0 && LocalPlayer->GetProjectionData(Client->Viewport, Projection);
+		if (bRendered)
+		{
+			RenderedScale = (1.0 / Projection.ProjectionMatrix.M[0][0]) / FMath::Tan(FMath::DegreesToRadians(S.PCM()->GetFOVAngle()) * 0.5);
+			RenderedAspect = Projection.ProjectionMatrix.M[1][1] / Projection.ProjectionMatrix.M[0][0];
+		}
+		S.Test->AddInfo(FString::Printf(TEXT("Viewport %.0f x %.0f, camera aspect %.4f: ACF lens aspect %.4f / FOV scale %.6f; rendered %.4f / %.6f (pose FOV %.2f renders %.3f)"),
+			Viewport.X, Viewport.Y, S.PCM()->GetCameraCacheView().AspectRatio, Result.AspectRatio, Result.HorizontalFovScale, RenderedAspect, RenderedScale, S.PCM()->GetFOVAngle(),
+			FMath::RadiansToDegrees(2.0 * FMath::Atan(FMath::Tan(FMath::DegreesToRadians(S.PCM()->GetFOVAngle()) * 0.5) * RenderedScale))));
+		S.Test->TestTrue(TEXT("The composition lens is the rendered one"), FMath::IsNearlyEqual(Result.HorizontalFovScale, RenderedScale, 2e-4) && FMath::IsNearlyEqual(Result.AspectRatio, RenderedAspect, 1e-3));
+		// 1 / 12: where the renderer uses the pose FOV (no viewport, or a view with the camera's own aspect), the lens is exactly the classic one.
+		const bool bClassic = !bRendered || FMath::IsNearlyEqual(RenderedScale, 1.0, 1e-5);
+		S.Test->TestTrue(TEXT("1 / 12. Classic projection: the classic lens, exactly"), !bClassic || Result.HorizontalFovScale == 1.f);
+		S.SavedLocation = S.PCM()->GetCameraLocation();
+		S.SavedRotation = S.PCM()->GetCameraRotation();
+		IConsoleManager::Get().FindConsoleVariable(TEXT("ACF.Projection.RenderedLens"))->Set(0, ECVF_SetByCode);
+		S.bFlag = bClassic;
+		return true;
+	});
+	Wait(Steps, 0.2);
+	Steps.Add([](FScenario& S)
+	{
+		if (S.bFlag)
+		{
+			S.Test->TestTrue(TEXT("1. Pre-7A lens: the very same camera (bit for bit)"), S.PCM()->GetCameraLocation() == S.SavedLocation && S.PCM()->GetCameraRotation() == S.SavedRotation);
+		}
+		IConsoleManager::Get().FindConsoleVariable(TEXT("ACF.Projection.RenderedLens"))->Set(1, ECVF_SetByCode);
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
