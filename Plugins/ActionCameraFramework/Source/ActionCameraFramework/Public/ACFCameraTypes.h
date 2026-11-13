@@ -421,6 +421,30 @@ enum class EACFViewTargetResolution : uint8
 	Unresolved,
 };
 
+/** Result of a checked return blend from a pose (Phase 6B / B-7, Blend ACF Camera From Pose / Current View For Player). */
+UENUM(BlueprintType)
+enum class EACFCameraReturnBlendResult : uint8
+{
+	/** The blend from the pose to the ACF camera starts with the next camera update. */
+	Started,
+	/** Blend Time 0 (or a Cut curve): nothing to blend, the ACF camera is shown directly. Counts as success. */
+	Cut,
+	/** No player controller / ACF subsystem for the given player. */
+	NoPlayer,
+	/** The player has no PlayerCameraManager yet (nothing would be evaluated; the blend would start late). */
+	NoCameraManager,
+	/** No ACF camera request: there is no ACF camera to blend to. */
+	NoCameraRequest,
+	/** The PlayerCameraManager is blending view targets (SetViewTargetWithBlend / Sequencer ease): ACF does not add a second blend. */
+	CameraManagerBlending,
+	/** The view target on screen is an external view target (ACF does not output there): switch back to the gameplay view target first. */
+	ExternalViewTargetActive,
+	/** The pose is not finite / its field of view is not valid (counted in the camera health diagnostics). */
+	InvalidPose,
+	/** Blend Time is NaN, infinite or negative. */
+	InvalidBlendTime,
+};
+
 /** Invalid values (NaN / Inf / invalid FOV ...) ACF detected and kept out of its state and output (Phase 6B / B-4). Counts since the director was created. */
 USTRUCT(BlueprintType)
 struct ACTIONCAMERAFRAMEWORK_API FACFCameraHealthDiagnostics

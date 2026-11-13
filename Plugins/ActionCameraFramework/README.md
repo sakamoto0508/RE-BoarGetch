@@ -448,13 +448,13 @@ Cameras->OnCameraSequenceEvent.AddDynamic(this, &AMyCharacter::OnCameraShot);
 | 事象 | 挙動 |
 |------|------|
 | 優先度 | Priority が大きい要求が有効になります。同じ値なら後から出した要求が勝ちます |
-| 切替 / 最後の要求を解除 | 新しい要求の BlendIn / 解除した要求の BlendOut を使います |
+| 切替 / 最後の要求を解除 | 新しい要求の BlendIn / 解除した要求の BlendOut を使います（`Release Camera With Return Blend` は戻り先に関係なく指定のブレンド） |
 | ブレンド中の割り込み | その時点の画面の姿勢から新しいカメラへブレンドします。画面は飛びません |
 | Instigator が破棄 | 次のフレームで自動的に解除されます |
 | 追従・注視対象が破棄 | 要求は残り、Lost Behavior に従います。クラッシュはしません |
 | 対象を差し替え / テレポート | その Node の補間をリセットします。カメラはレベルを滑らずにカットします（Lock-On のロック対象だけは例外で、切替・瞬間移動とも Lock Target Damping Time で滑らかに回り込みます。プレイヤー側のテレポートはカットします） |
 | ロック対象が破棄 | 最後の位置を見続けます。`bReleaseWhenLookAtTargetLost` が ON なら、要求が自動で解除されます |
-| ロックオンの解除 | 戻り先のカメラの BlendIn で戻ります（カメラ間の切替なので、解除した要求の BlendOut は UE カメラへ戻るときだけ使われます） |
+| ロックオンの解除 | 戻り先のカメラの BlendIn で戻ります（カメラ間の切替なので、解除した要求の BlendOut は UE カメラへ戻るときだけ使われます）。戻り先に関係なく決まったブレンドで戻したい場合は `Release Camera With Return Blend For Player`（20 章） |
 | Target Group のメンバーが破棄 | 次の評価でグループから自動的に取り除かれます |
 | 遮蔽 | Occluded Delay 以上続いたときだけカメラを動かします。解決できない対象は通知し、カメラは上限内に留まります |
 | 戦闘状態の変更 | Combat Camera Node が Enter / Exit Time で補間します。ブレンド中の両方のカメラに同時に効きます |
@@ -789,7 +789,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 143 件です。
+- 自動テストは 148 件です。
   - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
   - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
   - `.Health.*`（10 件。Editor とゲームの両方）と `.Sequencer.Health.*`（2 件、`-game`）: 不正値（NaN / Inf / 不正な FOV / 不正な DeltaTime など）の対策（16 章）。正常な入力で姿勢が修正前とビット単位で一致すること、ランダム化した不正入力を含む。
@@ -925,7 +925,7 @@ Level Sequence の Camera Cut がカメラを握っている間、ACF は出力�
 | `Set / Clear ACF Sequencer Options For Sequence` | Level Sequence Actor 単位の設定の上書き（Play の前に呼ぶ） |
 | `Get ACF Sequencer Camera Subsystem` → `On Sequencer Camera Started` / `On Sequencer Camera Ended` | 開始 / 終了（Return Kind つき）のイベント。カメラ更新の外で配信（19 章） |
 | `Add / Remove ACF External View Target` (View Target, Source)、`Is ACF External View Target` | ゲーム独自のカットシーンカメラを「ACF を乗せないカメラ」として登録（Subsystem のノード） |
-| `Blend ACF Camera From Pose` (Pose, Blend) | 任意の姿勢から、いま有効な ACF カメラへブレンドして戻る |
+| `Blend ACF Camera From Pose` (Pose, Blend) | 任意の姿勢から、いま有効な ACF カメラへブレンドして戻る。Blueprint で理由つき・プレイヤー指定で使うなら `Blend ACF Camera From Pose / Current View For Player`（20 章） |
 | `Is ACF Output Bypassed` / `Get Num ACF Output Suppressions` / `Set All ACF Orbit Rotations` | 状態の確認、Orbit の向きの一括設定 |
 
 ```cpp
@@ -962,7 +962,7 @@ MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /Game/Level/L_Lobby -
 - PCM が作り直された直後は、Sequencer が Camera Cut を掛け直すまでの 1 フレームほどゲームプレイカメラが見えます。
 - Return Blend は ACF の要求があるときだけ働きます（UE カメラだけの場面ではカットのままです）。
 - ゲームが登録せずに `SetViewTarget` / `SetViewTargetWithBlend` で Camera Actor へ切り替えた場合、ACF はその Camera Actor の上にも乗ります（ACF は ViewTarget に関係なく上に乗るレイヤー。Phase 4C までと同じ）。ACF を乗せたくないカメラは `Add ACF External View Target` で登録してください。
-- ゲーム独自の外部 ViewTarget からカットで戻した場合、ACF は自動では補間しません（Sequencer 連携だけが行う）。滑らかにしたい場合は `Blend ACF Camera From Pose` を呼ぶか、`SetViewTargetWithBlend` で戻してください。
+- ゲーム独自の外部 ViewTarget からカットで戻した場合、ACF は自動では補間しません（Sequencer 連携だけが行う）。滑らかにしたい場合は `Blend ACF Camera From Pose` を呼ぶか、`SetViewTargetWithBlend` で戻してください。 手順は 20 章。
 - Sequence が重なって再生された場合（A の再生中に B）、どのカメラを映すかは UE の Camera Cut の規則（後から始まった Sequence が優先、全部終わるとまとめて戻る）に従います。ACF は「最初の開始 → 最後の終了」を 1 組の Started / Ended として扱います。
 - サンプル `LS_ACFSample_Blend` の Camera Cut Track は、スクリプトから `Can Blend` を ON にできません（UE の内部プロパティ）。UE 5.8 の実行時は Section の Ease In / Out をこのフラグに関係なく使うので再生には影響しませんが、Sequencer でこのアセットを編集する場合は Track の `Can Blend` を ON にしてください（OFF のまま Section を動かすと Ease が消えます）。
 - Sequencer を Editor で開いて再生するプレビュー（PIE / ゲーム以外）は対象外です（Camera Cut がビューポートを直接動かし、PCM を使わないため）。
@@ -1159,3 +1159,52 @@ ACF は World の Actor を所有しません。ローカルプレイヤーの A
 ### 確認していないこと
 
 - 「World の破棄で未配信を捨てる」は、ローカルプレイヤーのいないテスト用 World（`FTestWorldWrapper`）で確認しました。実際のマップ移動の最中は確認していません。
+
+## 20. Blueprint からの戻りのブレンド（Phase 6B / B-7）
+
+ゲーム独自のカメラや演出から ACF カメラへ滑らかに戻すための Blueprint ノードです。補間は Director の既存の戻りのブレンド（Sequencer の Return Blend と同じもの）に任せ、ノードは対象のプレイヤーの特定と実行条件の確認だけを行います。
+
+### ノード（Blueprint Library、カテゴリ Action Camera | Return Blend）
+
+| ノード | 引数 | 戻り値 |
+|---|---|---|
+| `Blend ACF Camera From Pose For Player` | PlayerController、Pose（`ACF Camera Pose`）、Blend Time（秒）、Curve | 成功したか（bool）と Result |
+| `Blend ACF Camera From Current View For Player` | PlayerController、Blend Time、Curve | 同上。Pose は直前に描画された画面（PCM のカメラキャッシュ） |
+| `Release Camera With Return Blend For Player` | PlayerController、Handle、Blend Time、Curve | 解除できたか。画面に出ている要求なら、戻り先（下の要求でも UE カメラでも）へこのブレンドで戻る |
+
+- 成功は Result = `Started`（次のカメラ更新からブレンド開始）または `Cut`（Blend Time 0 / Curve = Cut。ブレンドせずに ACF カメラをそのまま表示）。
+- それ以外は何もせず false で、Result が理由です。
+
+| Result | 意味 | 対処 |
+|---|---|---|
+| `NoPlayer` | PlayerController / ACF のサブシステムが無い | 対象のプレイヤーを確認 |
+| `NoCameraManager` | PlayerCameraManager がまだ無い（後で始まると古い姿勢から動くので拒否） | PCM ができてから呼ぶ |
+| `NoCameraRequest` | ACF の要求が無い（戻る先の ACF カメラが無い） | 先に要求を出す |
+| `CameraManagerBlending` | PCM が `SetViewTargetWithBlend` などで ViewTarget をブレンド中 | PCM のブレンドだけで戻す（二重にしない。Sequencer 連携と同じ規則） |
+| `ExternalViewTargetActive` | 画面に外部 ViewTarget（ACF が出力しないカメラ）が出ている | 先にゲームプレイの ViewTarget へカットで戻す |
+| `InvalidPose` | 姿勢が非有限、または FOV が無効（16 章の診断に数える） | 正しい姿勢を渡す |
+| `InvalidBlendTime` | Blend Time が NaN / 無限 / 負 | 0 以上の有限値 |
+
+- ブレンド中にもう一度呼ぶと、新しい姿勢からやり直します。最後の呼び出しが優先です（Sequencer の終了と同じフレームに呼んだ場合も、後から呼んだ方）。
+- プレイヤーごとに独立です（他のローカルプレイヤーには影響しない）。姿勢はワールド座標なので、同じ World のものを渡してください。
+- C++ では `UACFCameraSubsystem::TryBlendFromPose` / `TryBlendFromCurrentView` / `ReleaseCameraWithReturnBlend`。既存の `Blend ACF Camera From Pose`（サブシステムのノード）は従来どおりで、条件の確認はしません。
+
+### 使用例: ゲーム独自の Camera Actor で演出し、ACF カメラへ戻る
+
+1. 演出の開始: `Add ACF External View Target`（Camera Actor、Source = 自分）→ `Set View Target`（Camera Actor、Blend Time 0 = カット）。登録したカメラには ACF が乗らないので、Camera Actor の姿勢がそのまま映ります（ACF は裏で評価を続けます）。
+2. 演出の間: Camera Actor を自由に動かします。
+3. 戻す（同じフレームで続けて）: `Set View Target`（Pawn など元の ViewTarget、Blend Time 0 = **カット**）→ `Blend ACF Camera From Current View For Player`（Blend Time 0.5 など）→ `Remove ACF External View Target`。
+   - カットで戻すのは、ブレンドを ACF の 1 本にするためです。`Set View Target with Blend` で戻す場合は PCM のブレンドが画面を動かすので、このノードは呼びません（呼ぶと `CameraManagerBlending` で拒否されます）。
+   - `Current View` は「直前に描画された画面」なので、カットで戻したのと同じフレームに呼ぶと、演出カメラの最後の画面から ACF カメラへ補間されます。自分で姿勢を作る場合は `Blend ACF Camera From Pose For Player`（例: Camera Actor の位置・回転・FOV）。
+   - 外部 ViewTarget の登録は、カットで戻した後に外して構いません（戻した時点で画面には出ていない）。
+4. 結果を見る: false なら Result で理由が分かります。
+
+**Sequencer を使う場合との違い**: Level Sequence の Camera Cut は、Sequencer 連携（14 章）が外部 ViewTarget の登録と戻りのブレンドを自動で行います。戻り方は `Set ACF Sequencer Options` の Return Blend で決まり、このノードは不要です。終了の通知（`On Sequencer Camera Ended`、19 章。カメラ更新の外で届く）の中から呼んで、Sequencer がカットで戻した後の戻り方をゲーム側で決めることもできます。
+
+### 確認していること（自動テスト `.Sequencer.ReturnBlend.*`、5 件、`-game`）
+
+- Blueprint のノードと C++ の既存 `BlendFromPose` で、毎フレームの画面の位置が一致する。
+- Blend Time 0（Cut）、NaN / 無限 / 負、NaN の姿勢、FOV 0 の姿勢、要求なし、PCM なし（コントローラーの無いローカルプレイヤー）、プレイヤーなし、PCM のブレンド中、外部 ViewTarget の表示中。拒否したときは画面も ACF の状態も変わらず、無効な姿勢と時間は 16 章の診断に数えられる。
+- ブレンド中の再呼び出し（新しい姿勢からやり直す）、2 人のローカルプレイヤーの独立。
+- 上の使用例の手順そのもの（演出カメラの最後の画面から ACF カメラへ、1 フレームの移動量がブレンドの範囲内）。Sequencer がカットで戻った終了の通知の中から呼ぶ場合。
+- `Release Camera With Return Blend For Player`: 下の要求へ戻るときにも指定のブレンドを使う（指定しない解除は従来どおり下の要求の Blend In）。

@@ -33,6 +33,37 @@ bool UACFCameraBlueprintLibrary::ReleaseCamera(APlayerController* PlayerControll
 	return false;
 }
 
+// Phase 6B / B-7: return blend entries. The subsystem of the given player checks the conditions and delegates to the
+// director's existing return blend (BlendFromPose / RemoveRequest with an override); nothing is interpolated here.
+
+bool UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(APlayerController* PlayerController, const FACFCameraPose& Pose, float BlendTime, EACFCameraBlendCurve Curve, EACFCameraReturnBlendResult& Result)
+{
+	UACFCameraSubsystem* Subsystem = GetCameraSubsystem(PlayerController);
+	Result = Subsystem ? Subsystem->TryBlendFromPose(Pose, BlendTime, Curve) : EACFCameraReturnBlendResult::NoPlayer;
+	return Result == EACFCameraReturnBlendResult::Started || Result == EACFCameraReturnBlendResult::Cut;
+}
+
+bool UACFCameraBlueprintLibrary::BlendCameraFromCurrentViewForPlayer(APlayerController* PlayerController, float BlendTime, EACFCameraBlendCurve Curve, EACFCameraReturnBlendResult& Result)
+{
+	UACFCameraSubsystem* Subsystem = GetCameraSubsystem(PlayerController);
+	Result = Subsystem ? Subsystem->TryBlendFromCurrentView(BlendTime, Curve) : EACFCameraReturnBlendResult::NoPlayer;
+	return Result == EACFCameraReturnBlendResult::Started || Result == EACFCameraReturnBlendResult::Cut;
+}
+
+bool UACFCameraBlueprintLibrary::ReleaseCameraWithReturnBlendForPlayer(APlayerController* PlayerController, FACFCameraRequestHandle& Handle, float BlendTime, EACFCameraBlendCurve Curve)
+{
+	UACFCameraSubsystem* Subsystem = GetCameraSubsystem(PlayerController);
+	if (!Subsystem)
+	{
+		Handle.Invalidate();
+		return false;
+	}
+	FACFCameraBlendSettings Blend;
+	Blend.Curve = Curve;
+	Blend.Duration = BlendTime; // NaN / Inf / negative behave as a cut (and are reported, B-4)
+	return Subsystem->ReleaseCameraWithReturnBlend(Handle, Blend);
+}
+
 FACFCameraRequestParams UACFCameraBlueprintLibrary::MakeRequestParams(int32 Priority, UObject* Instigator)
 {
 	FACFCameraRequestParams Params;

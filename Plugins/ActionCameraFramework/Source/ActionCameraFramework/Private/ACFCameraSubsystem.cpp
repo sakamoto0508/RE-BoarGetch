@@ -459,6 +459,74 @@ bool UACFCameraSubsystem::BlendFromPose(const FACFCameraPose& FromPose, const FA
 	return true;
 }
 
+EACFCameraReturnBlendResult UACFCameraSubsystem::TryBlendFromPose(const FACFCameraPose& FromPose, float BlendTime, EACFCameraBlendCurve Curve)
+{
+	if (!Director)
+	{
+		return EACFCameraReturnBlendResult::NoPlayer;
+	}
+	const APlayerCameraManager* CameraManager = GetCurrentCameraManager();
+	if (!CameraManager)
+	{
+		return EACFCameraReturnBlendResult::NoCameraManager;
+	}
+	if (Director->GetNumRequests() == 0)
+	{
+		return EACFCameraReturnBlendResult::NoCameraRequest;
+	}
+	FACFCameraBlendSettings Blend;
+	Blend.Curve = Curve;
+	Blend.Duration = BlendTime;
+	if (!FMath::IsFinite(BlendTime) || BlendTime < 0.f)
+	{
+		if (!FMath::IsFinite(BlendTime))
+		{
+			Director->BlendFromPose(FromPose, Blend); // rejected there; reported in the health diagnostics (B-4)
+		}
+		return EACFCameraReturnBlendResult::InvalidBlendTime;
+	}
+	if (!ACFCameraValidation::IsValidPose(FromPose))
+	{
+		Director->BlendFromPose(FromPose, Blend); // rejected there; reported in the health diagnostics (B-4)
+		return EACFCameraReturnBlendResult::InvalidPose;
+	}
+	if (CameraManager->PendingViewTarget.Target)
+	{
+		// The PCM is blending view targets: its blend already moves the picture (same rule as the Sequencer return).
+		return EACFCameraReturnBlendResult::CameraManagerBlending;
+	}
+	if (IsExternalViewTarget(CameraManager->GetViewTarget()))
+	{
+		// ACF does not output on that view target: the blend would run unseen in the background.
+		return EACFCameraReturnBlendResult::ExternalViewTargetActive;
+	}
+	if (Blend.IsCut())
+	{
+		return EACFCameraReturnBlendResult::Cut;
+	}
+	return BlendFromPose(FromPose, Blend) ? EACFCameraReturnBlendResult::Started : EACFCameraReturnBlendResult::NoCameraRequest;
+}
+
+EACFCameraReturnBlendResult UACFCameraSubsystem::TryBlendFromCurrentView(float BlendTime, EACFCameraBlendCurve Curve)
+{
+	if (!Director)
+	{
+		return EACFCameraReturnBlendResult::NoPlayer;
+	}
+	if (!GetCurrentCameraManager())
+	{
+		return EACFCameraReturnBlendResult::NoCameraManager;
+	}
+	return TryBlendFromPose(GetVisualCameraPose(), BlendTime, Curve); // the last rendered picture (camera cache)
+}
+
+bool UACFCameraSubsystem::ReleaseCameraWithReturnBlend(FACFCameraRequestHandle& Handle, const FACFCameraBlendSettings& ReturnBlend)
+{
+	const bool bRemoved = Director && Director->RemoveRequest(Handle, &ReturnBlend, /*bOverrideAnyReturn*/ true);
+	Handle.Invalidate();
+	return bRemoved;
+}
+
 int32 UACFCameraSubsystem::SetAllOrbitRotations(FRotator Rotation, bool bInstant)
 {
 	return Director ? Director->SetAllOrbitRotations(Rotation, bInstant) : 0;

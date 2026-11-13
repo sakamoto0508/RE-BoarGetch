@@ -241,6 +241,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Action Camera|Authority", meta = (DisplayName = "Blend ACF Camera From Pose"))
 	bool BlendFromPose(const FACFCameraPose& FromPose, const FACFCameraBlendSettings& Blend);
 
+	/**
+	 * Phase 6B / B-7: BlendFromPose with its conditions checked and the reason reported (Blueprint: Blend ACF Camera From Pose
+	 * For Player). Delegates to the same director return blend; nothing new is interpolated or stored. Refuses (does nothing)
+	 * when the PCM is blending view targets (the rule the Sequencer integration uses: never two blends at once), when an
+	 * external view target is on screen, without a PCM or an ACF camera request, and for an invalid pose / blend time.
+	 * Calling it again while a return blend runs restarts it from the new pose.
+	 */
+	EACFCameraReturnBlendResult TryBlendFromPose(const FACFCameraPose& FromPose, float BlendTime, EACFCameraBlendCurve Curve = EACFCameraBlendCurve::EaseInOut);
+
+	/** TryBlendFromPose from what was rendered last (the PCM camera cache): call it in the frame you cut back to the gameplay view target. */
+	EACFCameraReturnBlendResult TryBlendFromCurrentView(float BlendTime, EACFCameraBlendCurve Curve = EACFCameraBlendCurve::EaseInOut);
+
+	/**
+	 * Phase 6B / B-7: releases a request; if it is the camera on screen, ReturnBlend is used whichever camera takes over (a
+	 * lower request or the UE camera). Release Camera With Blend only applies its blend when returning to the UE camera.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera", meta = (DisplayName = "Release ACF Camera With Return Blend"))
+	bool ReleaseCameraWithReturnBlend(UPARAM(ref) FACFCameraRequestHandle& Handle, const FACFCameraBlendSettings& ReturnBlend);
+
 	/** すべての要求の Orbital Follow の向きを設定する（Input Source = Camera Input の Preset を外部カメラの向きに揃える）。 */
 	UFUNCTION(BlueprintCallable, Category = "Action Camera", meta = (DisplayName = "Set All ACF Orbit Rotations"))
 	int32 SetAllOrbitRotations(FRotator Rotation, bool bInstant = true);

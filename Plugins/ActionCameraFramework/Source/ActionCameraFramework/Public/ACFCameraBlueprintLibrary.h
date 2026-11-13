@@ -29,6 +29,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Action Camera", meta = (DisplayName = "Release Camera For Player"))
 	static bool ReleaseCamera(APlayerController* PlayerController, UPARAM(ref) FACFCameraRequestHandle& Handle);
 
+	// --- Return blend (Phase 6B / B-7): thin entries over the director's existing return blend ---------------------------
+
+	/**
+	 * After cutting the PlayerController back to its gameplay view target, blends from Pose to the ACF camera of this player
+	 * over Blend Time seconds. True when the blend started (Result = Started) or there was nothing to blend (Blend Time 0,
+	 * Result = Cut). Nothing happens otherwise; Result says why (no camera request, the PCM is blending view targets, an
+	 * external view target is still on screen, invalid pose / time, ...). README "Blueprint からの戻りのブレンド".
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Return Blend", meta = (DisplayName = "Blend ACF Camera From Pose For Player"))
+	static bool BlendCameraFromPoseForPlayer(APlayerController* PlayerController, const FACFCameraPose& Pose, float BlendTime, EACFCameraBlendCurve Curve, EACFCameraReturnBlendResult& Result);
+
+	/**
+	 * Same, from what was on screen in the last rendered frame (the PCM camera cache). Call it in the same frame as the cut back
+	 * (e.g. right after Set View Target to the pawn): the picture of your own camera is still the last rendered one.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Return Blend", meta = (DisplayName = "Blend ACF Camera From Current View For Player"))
+	static bool BlendCameraFromCurrentViewForPlayer(APlayerController* PlayerController, float BlendTime, EACFCameraBlendCurve Curve, EACFCameraReturnBlendResult& Result);
+
+	/** Releases a request with a return blend used whichever camera takes over (a lower request or the UE camera). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Return Blend", meta = (DisplayName = "Release Camera With Return Blend For Player"))
+	static bool ReleaseCameraWithReturnBlendForPlayer(APlayerController* PlayerController, UPARAM(ref) FACFCameraRequestHandle& Handle, float BlendTime, EACFCameraBlendCurve Curve);
+
 	UFUNCTION(BlueprintPure, Category = "Action Camera", meta = (DisplayName = "Is Valid (ACF Camera Request Handle)", CompactNodeTitle = "IsValid"))
 	static bool IsValidHandle(const FACFCameraRequestHandle& Handle) { return Handle.IsValid(); }
 

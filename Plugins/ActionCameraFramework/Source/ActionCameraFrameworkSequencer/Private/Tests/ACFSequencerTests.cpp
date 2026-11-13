@@ -3123,4 +3123,359 @@ bool FACFEventsRefreshNowPauseTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// =================================================================================================
+// Phase 6B / B-7: 戻りのブレンドの Blueprint 入口（Blend ACF Camera From Pose / Current View For Player、Release Camera With
+// Return Blend For Player）。実際の PCM の画面で確認する。
+
+namespace ACFSeqTest
+{
+	static FACFCameraPose CinePose()
+	{
+		FACFCameraPose Pose;
+		Pose.Location = CineLoc;
+		Pose.Rotation = CineRot;
+		Pose.FieldOfView = CineFov;
+		return Pose;
+	}
+
+	static FString ResultName(EACFCameraReturnBlendResult Result) { return UEnum::GetValueAsString(Result); }
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFReturnBlendBlueprintMatchesCppTest, "ActionCameraFramework.Sequencer.ReturnBlend.BlueprintMatchesCpp", ACFSeqTest::Flags)
+bool FACFReturnBlendBlueprintMatchesCppTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	struct FTrack { TArray<FVector> Blueprint; TArray<FVector> Cpp; };
+	TSharedRef<FTrack> Track = MakeShared<FTrack>();
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S) { S.Handle = RequestGameplay(S); return true; });
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		EACFCameraReturnBlendResult Result = EACFCameraReturnBlendResult::NoPlayer;
+		const bool bOk = UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(S.Controller.Get(), CinePose(), 0.5f, EACFCameraBlendCurve::Linear, Result);
+		S.Test->TestTrue(FString::Printf(TEXT("Blueprint entry: started (%s)"), *ResultName(Result)), bOk && Result == EACFCameraReturnBlendResult::Started);
+		S.Counter = 0;
+		return true;
+	});
+	Steps.Add([Track](FScenario& S)
+	{
+		Track->Blueprint.Add(S.Camera());
+		S.bRetry = ++S.Counter < 40;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("Blueprint: back on the ACF camera"));
+		FACFCameraBlendSettings Blend;
+		Blend.Curve = EACFCameraBlendCurve::Linear;
+		Blend.Duration = 0.5f;
+		S.Test->TestTrue(TEXT("C++ entry (existing Blend ACF Camera From Pose): accepted"), S.Acf->BlendFromPose(CinePose(), Blend));
+		S.Counter = 0;
+		return true;
+	});
+	Steps.Add([Track](FScenario& S)
+	{
+		Track->Cpp.Add(S.Camera());
+		S.bRetry = ++S.Counter < 40;
+		return true;
+	});
+	Steps.Add([Track](FScenario& S)
+	{
+		bool bSame = Track->Blueprint.Num() == Track->Cpp.Num();
+		double MaxDiff = 0.0;
+		for (int32 I = 0; bSame && I < Track->Cpp.Num(); ++I)
+		{
+			MaxDiff = FMath::Max(MaxDiff, FVector::Dist(Track->Blueprint[I], Track->Cpp[I]));
+		}
+		S.Test->TestTrue(FString::Printf(TEXT("Blueprint and C++ give the same camera every frame (max diff %.4f cm)"), MaxDiff), bSame && MaxDiff < 0.01);
+		S.Test->TestTrue(FString::Printf(TEXT("First frame near the given pose (%.1f cm from it)"), FVector::Dist(Track->Blueprint[0], CineLoc)),
+			FVector::Dist(Track->Blueprint[0], CineLoc) < GameplayToCine * 0.1);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFReturnBlendConditionsTest, "ActionCameraFramework.Sequencer.ReturnBlend.InvalidInputsAndConditions", ACFSeqTest::Flags)
+bool FACFReturnBlendConditionsTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		EACFCameraReturnBlendResult Result = EACFCameraReturnBlendResult::Started;
+		S.Test->TestFalse(TEXT("No request: refused"), UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(S.Controller.Get(), CinePose(), 0.5f, EACFCameraBlendCurve::Linear, Result));
+		S.Test->TestTrue(FString::Printf(TEXT("No request: NoCameraRequest (%s)"), *ResultName(Result)), Result == EACFCameraReturnBlendResult::NoCameraRequest);
+		S.Test->TestFalse(TEXT("No player: refused"), UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(nullptr, CinePose(), 0.5f, EACFCameraBlendCurve::Linear, Result));
+		S.Test->TestTrue(TEXT("No player: NoPlayer"), Result == EACFCameraReturnBlendResult::NoPlayer);
+		// A local player without a PlayerController (and so without a PlayerCameraManager).
+		FString Error;
+		ULocalPlayer* Bare = S.World()->GetGameInstance()->CreateLocalPlayer(FPlatformUserId::CreateFromInternalId(2), Error, /*bSpawnPlayerController*/ false);
+		if (S.Test->TestNotNull(TEXT("local player without a controller"), Bare))
+		{
+			UACFCameraSubsystem* BareAcf = Bare->GetSubsystem<UACFCameraSubsystem>();
+			S.Test->TestTrue(TEXT("No PCM: NoCameraManager"), BareAcf && BareAcf->TryBlendFromPose(CinePose(), 0.5f) == EACFCameraReturnBlendResult::NoCameraManager);
+			S.World()->GetGameInstance()->RemoveLocalPlayer(Bare);
+		}
+		S.Handle = RequestGameplay(S);
+		return true;
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		const int32 RejectedBefore = S.Acf->GetHealthDiagnostics().RejectedInputs;
+		EACFCameraReturnBlendResult Result = EACFCameraReturnBlendResult::Started;
+		const float NaN = std::numeric_limits<float>::quiet_NaN();
+		const float Inf = std::numeric_limits<float>::infinity();
+		for (const float Bad : { NaN, Inf, -Inf, -1.f })
+		{
+			const bool bOk = UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(S.Controller.Get(), CinePose(), Bad, EACFCameraBlendCurve::Linear, Result);
+			S.Test->TestTrue(FString::Printf(TEXT("Blend time %f: InvalidBlendTime (%s)"), Bad, *ResultName(Result)), !bOk && Result == EACFCameraReturnBlendResult::InvalidBlendTime);
+		}
+		FACFCameraPose BadPose = CinePose();
+		BadPose.Location.X = NaN;
+		S.Test->TestTrue(TEXT("NaN pose: InvalidPose"), !UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(S.Controller.Get(), BadPose, 0.5f, EACFCameraBlendCurve::Linear, Result)
+			&& Result == EACFCameraReturnBlendResult::InvalidPose);
+		BadPose = CinePose();
+		BadPose.FieldOfView = 0.f;
+		S.Test->TestTrue(TEXT("FOV 0 pose: InvalidPose"), !UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(S.Controller.Get(), BadPose, 0.5f, EACFCameraBlendCurve::Linear, Result)
+			&& Result == EACFCameraReturnBlendResult::InvalidPose);
+		S.Test->TestEqual(TEXT("Health (B-4): the invalid pose and non-finite times were reported"), S.Acf->GetHealthDiagnostics().RejectedInputs - RejectedBefore, 5);
+		S.Test->TestTrue(TEXT("Blend time 0: success, nothing to blend (Cut)"), UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(S.Controller.Get(), CinePose(), 0.f, EACFCameraBlendCurve::Linear, Result)
+			&& Result == EACFCameraReturnBlendResult::Cut);
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("After the refused calls and the 0 s call: the ACF camera, untouched"));
+		S.Test->TestFalse(TEXT("No ACF blend was started"), S.Acf->GetLastEvaluationResult().bIsBlending);
+		// The PCM blends view targets: no second blend from ACF.
+		S.GameplayViewTarget = S.PCM()->GetViewTarget();
+		S.ActorB = SpawnPoint(S, CineLocB);
+		S.Controller->SetViewTargetWithBlend(S.ActorB.Get(), 1.f, VTBlend_Linear);
+		return true;
+	});
+	WaitFrames(Steps, 10);
+	Steps.Add([](FScenario& S)
+	{
+		EACFCameraReturnBlendResult Result = EACFCameraReturnBlendResult::Started;
+		S.Test->TestTrue(TEXT("PCM blending: CameraManagerBlending (no double blend)"), !UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(S.Controller.Get(), CinePose(), 0.5f, EACFCameraBlendCurve::Linear, Result)
+			&& Result == EACFCameraReturnBlendResult::CameraManagerBlending);
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.PCM()->PendingViewTarget.Target == nullptr; });
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestFalse(TEXT("PCM blend: ACF never blended on its own"), S.Acf->GetLastEvaluationResult().bIsBlending);
+		// External view target on screen (B-2): refused.
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+		S.Acf->AddExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
+		S.Controller->SetViewTarget(S.ActorA.Get());
+		EACFCameraReturnBlendResult Result = EACFCameraReturnBlendResult::Started;
+		S.Test->TestTrue(TEXT("External view target on screen: ExternalViewTargetActive"), !UACFCameraBlueprintLibrary::BlendCameraFromCurrentViewForPlayer(S.Controller.Get(), 0.5f, EACFCameraBlendCurve::Linear, Result)
+			&& Result == EACFCameraReturnBlendResult::ExternalViewTargetActive);
+		S.Acf->RemoveExternalViewTarget(S.ActorA.Get(), S.Listener.Get());
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFReturnBlendRecallPlayersTest, "ActionCameraFramework.Sequencer.ReturnBlend.RecallDuringBlendAndLocalPlayers", ACFSeqTest::Flags)
+bool FACFReturnBlendRecallPlayersTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Handle = RequestGameplay(S);
+		FString Error;
+		S.SecondPlayer = S.World()->GetGameInstance()->CreateLocalPlayer(FPlatformUserId::CreateFromInternalId(1), Error, true);
+		return S.Test->TestTrue(TEXT("second local player"), S.SecondPlayer.IsValid());
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		S.HandleB = S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>()->RequestCamera(MakeFixedPreset(S, SecondLoc, FRotator(0.f, 180.f, 0.f), 70.f), FACFCameraRequestParams());
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		EACFCameraReturnBlendResult Result;
+		APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		S.Test->TestTrue(TEXT("Player 2: started"), UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(PC2, CinePose(), 1.f, EACFCameraBlendCurve::Linear, Result));
+		return true;
+	});
+	WaitFrames(Steps, 15);
+	Steps.Add([](FScenario& S)
+	{
+		APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		S.CameraNear(GameplayLoc, 0.01, TEXT("Player 1 untouched by player 2's return blend"));
+		S.Test->TestFalse(TEXT("Player 1 not blending"), S.Acf->GetLastEvaluationResult().bIsBlending);
+		S.Test->TestTrue(TEXT("Player 2 blending"), S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>()->GetLastEvaluationResult().bIsBlending);
+		// Called again during its blend: restarts from the new pose (no jump from the old one).
+		FACFCameraPose Again = CinePose();
+		Again.Location = SecondLoc + FVector(0.0, 0.0, 600.0);
+		EACFCameraReturnBlendResult Result;
+		S.Test->TestTrue(TEXT("Player 2: called again during the blend"), UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(PC2, Again, 0.5f, EACFCameraBlendCurve::Linear, Result));
+		S.SavedLocation = Again.Location;
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		const double FromNew = FVector::Dist(PC2->PlayerCameraManager->GetCameraLocation(), S.SavedLocation);
+		S.Test->TestTrue(FString::Printf(TEXT("Restarted from the new pose (%.1f cm from it)"), FromNew), FromNew < 30.0);
+		return true;
+	});
+	WaitFrames(Steps, 40);
+	Steps.Add([](FScenario& S)
+	{
+		APlayerController* PC2 = S.SecondPlayer->GetPlayerController(S.World());
+		S.Test->TestTrue(TEXT("Player 2 back on its ACF camera"), PC2->PlayerCameraManager->GetCameraLocation().Equals(SecondLoc, 0.01));
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFReturnBlendCustomCameraTest, "ActionCameraFramework.Sequencer.ReturnBlend.CustomCameraRoundTripAndSequencerEnd", ACFSeqTest::Flags)
+bool FACFReturnBlendCustomCameraTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	// README example: the game's own camera actor, shown with a cut, then a smooth return to the ACF camera.
+	Steps.Add([](FScenario& S)
+	{
+		S.Handle = RequestGameplay(S);
+		S.GameplayViewTarget = S.PCM()->GetViewTarget();
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		S.Acf->AddExternalViewTarget(S.ActorA.Get(), S.Listener.Get()); // 1. ACF stays off the custom camera
+		S.Controller->SetViewTarget(S.ActorA.Get());                     // 2. cut to it
+		return true;
+	});
+	WaitFrames(Steps, 10);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(CineLoc, 0.001, TEXT("Custom camera on screen, untouched by ACF"));
+		S.Controller->SetViewTarget(S.GameplayViewTarget.Get());          // 3. cut back (same frame as 4)
+		EACFCameraReturnBlendResult Result;
+		const bool bOk = UACFCameraBlueprintLibrary::BlendCameraFromCurrentViewForPlayer(S.Controller.Get(), 0.5f, EACFCameraBlendCurve::Linear, Result); // 4.
+		S.Test->TestTrue(FString::Printf(TEXT("Return blend from the current view started (%s)"), *ResultName(Result)), bOk && Result == EACFCameraReturnBlendResult::Started);
+		S.Acf->RemoveExternalViewTarget(S.ActorA.Get(), S.Listener.Get()); // 5. registration no longer needed
+		S.ResetSamples();
+		S.SavedLocation = S.Camera();
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const double First = FVector::Dist(S.Camera(), S.SavedLocation);
+		S.Test->TestTrue(FString::Printf(TEXT("First frame after the cut back: still at the custom camera picture (%.1f cm)"), First), First <= GameplayToCine / 30.0 * 1.5);
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return !S.Acf->GetLastEvaluationResult().bIsBlending; });
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("Back on the ACF camera"));
+		S.Test->TestTrue(FString::Printf(TEXT("Smooth (max %.1f cm / frame)"), S.MaxFrameJump), S.MaxFrameJump < GameplayToCine / 30.0 * 1.5);
+		// Sequencer: a cut return (Return Blend 0) and the game's own return blend from the Ended notification (B-6).
+		S.SequenceA = MakeSequence(S, S.ActorA.Get(), 0.5);
+		SetReturnBlend(S, 0.f);
+		S.Listener->OnEnded = [&S](APlayerController* PC, ALevelSequenceActor*)
+		{
+			EACFCameraReturnBlendResult Result;
+			S.Counter = UACFCameraBlueprintLibrary::BlendCameraFromPoseForPlayer(PC, CinePose(), 0.5f, EACFCameraBlendCurve::Linear, Result) ? 1 : -1;
+			S.Value = static_cast<double>(static_cast<uint8>(Result));
+		};
+		S.Counter = 0;
+		Player(S.SequenceA)->Play();
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return S.Counter != 0; });
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("From the Ended notification (delivered outside the camera update): started"), S.Counter, 1);
+		S.Test->TestTrue(TEXT("Return kind: the sequencer cut"), S.Listener->LastReturnKind == EACFSequencerReturnKind::Cut);
+		S.Listener->OnEnded = nullptr;
+		S.ResetSamples();
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return !S.Acf->GetLastEvaluationResult().bIsBlending; });
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("After the game's return blend: the ACF camera"));
+		S.Test->TestTrue(FString::Printf(TEXT("Game's return blend after the sequencer cut: no jump after its first frame (max step change %.1f)"), S.MaxStepChange),
+			S.BigJumps <= 1);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFReturnBlendReleaseTest, "ActionCameraFramework.Sequencer.ReturnBlend.ReleaseWithReturnBlend", ACFSeqTest::Flags)
+bool FACFReturnBlendReleaseTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Handle = RequestGameplay(S); // the lower camera (its blend in is a cut)
+		FACFCameraRequestParams High;
+		High.Priority = 10;
+		S.HandleB = S.Acf->RequestCamera(MakeFixedPreset(S, CineLoc, CineRot, CineFov), High);
+		return true;
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(CineLoc, 0.01, TEXT("Higher request on screen"));
+		S.ResetSamples();
+		// Without a return blend the lower request's own blend in (a cut) is used.
+		S.Test->TestTrue(TEXT("Plain release"), S.Acf->ReleaseCamera(S.HandleB));
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("Plain release: cut to the lower camera (unchanged behavior)"));
+		FACFCameraRequestParams High;
+		High.Priority = 10;
+		S.HandleB = S.Acf->RequestCamera(MakeFixedPreset(S, CineLoc, CineRot, CineFov), High);
+		return true;
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([](FScenario& S)
+	{
+		S.ResetSamples();
+		S.Test->TestTrue(TEXT("Release with return blend"), UACFCameraBlueprintLibrary::ReleaseCameraWithReturnBlendForPlayer(S.Controller.Get(), S.HandleB, 0.5f, EACFCameraBlendCurve::Linear));
+		S.Test->TestFalse(TEXT("Handle invalidated"), S.HandleB.IsValid());
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Return blend used for the lower request"), S.Acf->GetLastEvaluationResult().bIsBlending);
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return !S.Acf->GetLastEvaluationResult().bIsBlending; });
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.01, TEXT("Back on the lower camera"));
+		S.Test->TestTrue(FString::Printf(TEXT("Smooth (max %.1f cm / frame)"), S.MaxFrameJump), S.MaxFrameJump < GameplayToCine / 30.0 * 1.5);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
