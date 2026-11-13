@@ -317,18 +317,40 @@ namespace ACFProfilerTests
 				return false;
 			}
 			LastFrame = GFrameCounter;
+			if (!bCaptured)
+			{
+				// Phase 7A-2: the same restore as the scenario runners (B-9). These steps add a local player; a pawn or
+				// player left behind used to break the camera of later tests on the same map.
+				Guard.Capture(ACFTestEnvironment::FindGameWorld());
+				bCaptured = true;
+			}
 			if (GetCurrentRunTime() > 60.0)
 			{
 				Test->AddError(FString::Printf(TEXT("Step %d timed out."), Index));
+				Finish();
 				return true;
 			}
 			if (Steps[Index](*Test))
 			{
 				++Index;
 			}
-			return Index >= Steps.Num();
+			if (Index >= Steps.Num())
+			{
+				Finish();
+				return true;
+			}
+			return false;
 		}
 	private:
+		void Finish()
+		{
+			for (const FString& Leak : Guard.Restore())
+			{
+				Test->AddError(FString::Printf(TEXT("Test environment: the test left %s behind (restored for the next test)."), *Leak));
+			}
+		}
+		ACFTestEnvironment::FGlobalStateGuard Guard;
+		bool bCaptured = false;
 		FAutomationTestBase* Test;
 		TArray<FStep> Steps;
 		int32 Index = 0;
@@ -593,7 +615,7 @@ bool FACFProfilerPauseAndPlayersTest::RunTest(const FString& Parameters)
 		Test.TestTrue(TEXT("Both players recorded the same engine frame"), L1 && L2 && L1->FrameNumber == L2->FrameNumber);
 		Test.TestTrue(TEXT("One evaluation per player per frame"), L1 && L2 && L1->NumEvaluations == 1 && L2->NumEvaluations == 1);
 		// Removing the player destroys its subsystem and director: nothing may stay active.
-		FindGameWorld()->GetGameInstance()->RemoveLocalPlayer(S->Second.Get());
+		ACFTestEnvironment::RemoveLocalPlayer(S->Second.Get()); // also its pawn (Phase 7A-2)
 		S->MarkFrame = GFrameCounter;
 		return true;
 	});

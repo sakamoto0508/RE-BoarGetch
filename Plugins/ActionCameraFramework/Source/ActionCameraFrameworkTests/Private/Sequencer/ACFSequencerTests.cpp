@@ -379,7 +379,7 @@ namespace ACFSeqTest
 				}
 				if (UGameInstance* GameInstance = S.World() ? S.World()->GetGameInstance() : nullptr)
 				{
-					GameInstance->RemoveLocalPlayer(Second);
+					ACFTestEnvironment::RemoveLocalPlayer(Second); // also its pawn (Phase 7A-2)
 				}
 			}
 			if (S.Acf.IsValid())
@@ -3080,7 +3080,7 @@ bool FACFEventsPendingLifetimeTest::RunTest(const FString& Parameters)
 		S.Sequencer->QueueNotificationForTesting(true, Second, PC2, nullptr, EACFSequencerReturnKind::Cut);
 		S.Sequencer->QueueNotificationForTesting(false, Second, PC2, nullptr, EACFSequencerReturnKind::Cut);
 		// Before any delivery point: player 2 is removed and the temporary listener collected.
-		S.World()->GetGameInstance()->RemoveLocalPlayer(Second);
+		ACFTestEnvironment::RemoveLocalPlayer(Second); // also its pawn (Phase 7A-2)
 		Temp->MarkAsGarbage();
 		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
 		S.Test->TestEqual(TEXT("Three pending before the delivery point"), S.Sequencer->GetNumPendingEvents(), 3);
@@ -3257,7 +3257,7 @@ bool FACFReturnBlendConditionsTest::RunTest(const FString& Parameters)
 		{
 			UACFCameraSubsystem* BareAcf = Bare->GetSubsystem<UACFCameraSubsystem>();
 			S.Test->TestTrue(TEXT("No PCM: NoCameraManager"), BareAcf && BareAcf->TryBlendFromPose(CinePose(), 0.5f) == EACFCameraReturnBlendResult::NoCameraManager);
-			S.World()->GetGameInstance()->RemoveLocalPlayer(Bare);
+			ACFTestEnvironment::RemoveLocalPlayer(Bare);
 		}
 		S.Handle = RequestGameplay(S);
 		return true;

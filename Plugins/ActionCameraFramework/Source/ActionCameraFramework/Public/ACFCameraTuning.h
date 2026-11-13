@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "ACFCameraTypes.h"
+#include "ACFCameraNode.h"
 #include "ACFCameraTuning.generated.h"
 
 class UACFCameraNode;
@@ -104,6 +105,59 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraTuningStatus
 	int32 NumTunedRequests = 0;
 };
 
+/** A live camera request of a player, for tools (Phase 7A-2: the tuning panel lists them). */
+USTRUCT(BlueprintType)
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	FACFCameraRequestHandle Handle;
+
+	/** The preset asset of the request (the shared asset also while it runs on a tuning copy). */
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	FName Preset;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	FName DebugName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	int32 Priority = 0;
+
+	/** The request in control (on screen unless output is suppressed / bypassed). */
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	bool bActive = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	bool bTuning = false;
+};
+
+/**
+ * One node of a request's preset, for tools. NodeIndex is the index in the preset's Nodes and is the node identity used by
+ * every tuning call (the tuning copy keeps the same layout, so the index is the same on the asset and on the copy).
+ */
+USTRUCT(BlueprintType)
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraTuningNodeInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	int32 NodeIndex = INDEX_NONE;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	FName NodeClass;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	EACFCameraNodeStage Stage = EACFCameraNodeStage::Body;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	bool bEnabled = true;
+
+	/** Parameters this node holds right now (e.g. Fixed Pose has Field Of View only while its Override is on). */
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	TArray<EACFCameraTuningParameter> Parameters;
+};
+
 /** One tuned request (owned by the director of its local player). */
 USTRUCT()
 struct ACTIONCAMERAFRAMEWORK_API FACFCameraTuningSession
@@ -144,4 +198,15 @@ namespace ACFCameraTuning
 
 	/** Number of tunable values of Copy that differ from Original (same node layout). */
 	ACTIONCAMERAFRAMEWORK_API int32 CountChanged(const UACFCameraPreset& Original, const UACFCameraPreset& Copy);
+
+	/** Valid range of a parameter (per component). Max is +infinity when unbounded; FOV is open at both ends (0, 180). */
+	ACTIONCAMERAFRAMEWORK_API void GetValueRange(EACFCameraTuningParameter Parameter, double& OutMin, double& OutMax);
+	ACTIONCAMERAFRAMEWORK_API bool IsScalar(EACFCameraTuningParameter Parameter);
+	ACTIONCAMERAFRAMEWORK_API FString GetParameterName(EACFCameraTuningParameter Parameter);
+
+	/** Nodes of Preset with their tunable parameters (in Nodes order; empty slots are skipped). */
+	ACTIONCAMERAFRAMEWORK_API void GetNodes(const UACFCameraPreset& Preset, TArray<FACFCameraTuningNodeInfo>& Out);
+
+	/** Why Preset has no tunable Parameter (empty if it has one): which node / toggle is missing. */
+	ACTIONCAMERAFRAMEWORK_API FString GetUnavailableReason(const UACFCameraPreset& Preset, EACFCameraTuningParameter Parameter);
 }

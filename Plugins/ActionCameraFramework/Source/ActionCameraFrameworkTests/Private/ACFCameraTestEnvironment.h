@@ -15,7 +15,11 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
+#include "Engine/LocalPlayer.h"
+#include "EngineUtils.h"
 #include "GameFramework/GameModeBase.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/WorldSettings.h"
 #include "HAL/IConsoleManager.h"
@@ -28,6 +32,30 @@
 
 namespace ACFTestEnvironment
 {
+	/**
+	 * Removes a local player a test added, together with the pawn the game mode spawned for it. UGameInstance::RemoveLocalPlayer
+	 * destroys the player's controller only: the pawn stays in the World at the player start, where it blocks the camera
+	 * collision (and the UE spring arm) of every later test on that map (Phase 7A-2: .Samples.LockOnAndGroupOnTestMap after
+	 * .Profiler.PauseAndLocalPlayers with the host GameMode).
+	 */
+	inline void RemoveLocalPlayer(ULocalPlayer* Player)
+	{
+		if (!Player)
+		{
+			return;
+		}
+		APlayerController* Controller = Player->PlayerController;
+		APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
+		if (UGameInstance* GameInstance = Player->GetGameInstance())
+		{
+			GameInstance->RemoveLocalPlayer(Player);
+		}
+		if (IsValid(Pawn) && !Pawn->IsActorBeingDestroyed())
+		{
+			Pawn->Destroy();
+		}
+	}
+
 	inline UWorld* FindGameWorld()
 	{
 		if (!GEngine)
@@ -75,6 +103,24 @@ namespace ACFTestEnvironment
 			FixedDt = FApp::GetFixedDeltaTime();
 			bPaused = InWorld && UGameplayStatics::IsGamePaused(InWorld);
 			TimeDilation = InWorld && InWorld->GetWorldSettings() ? InWorld->GetWorldSettings()->TimeDilation : 1.f;
+			// Phase 7A-2: local players and pawns. A scenario that adds a player (or spawns a pawn) must remove it; a pawn left
+			// at the player start blocks the camera of the following tests.
+			LocalPlayers.Reset();
+			Pawns.Reset();
+			if (InWorld)
+			{
+				if (const UGameInstance* GameInstance = InWorld->GetGameInstance())
+				{
+					for (ULocalPlayer* Player : GameInstance->GetLocalPlayers())
+					{
+						LocalPlayers.Add(Player);
+					}
+				}
+				for (TActorIterator<APawn> It(InWorld); It; ++It)
+				{
+					Pawns.Add(*It);
+				}
+			}
 		}
 
 		/** Restores what differs from the capture. Returns the names of what had to be restored (empty = nothing leaked). */
@@ -123,6 +169,31 @@ namespace ACFTestEnvironment
 					Restored.Add(TEXT("global time dilation"));
 					WorldSettings->SetTimeDilation(TimeDilation);
 				}
+				if (UGameInstance* GameInstance = W->GetGameInstance())
+				{
+					TArray<ULocalPlayer*> Extra;
+					for (ULocalPlayer* Player : GameInstance->GetLocalPlayers())
+					{
+						if (!LocalPlayers.Contains(Player))
+						{
+							Extra.Add(Player);
+						}
+					}
+					for (ULocalPlayer* Player : Extra)
+					{
+						Restored.Add(FString::Printf(TEXT("local player %s"), *GetNameSafe(Player)));
+						RemoveLocalPlayer(Player);
+					}
+				}
+				for (TActorIterator<APawn> It(W); It; ++It)
+				{
+					APawn* Pawn = *It;
+					if (!Pawn->IsActorBeingDestroyed() && !Pawns.Contains(Pawn))
+					{
+						Restored.Add(FString::Printf(TEXT("pawn %s at %s"), *Pawn->GetName(), *Pawn->GetActorLocation().ToCompactString()));
+						Pawn->Destroy();
+					}
+				}
 			}
 			return Restored;
 		}
@@ -159,6 +230,8 @@ namespace ACFTestEnvironment
 		double FixedDt = 0.0;
 		bool bPaused = false;
 		float TimeDilation = 1.f;
+		TArray<TWeakObjectPtr<ULocalPlayer>> LocalPlayers;
+		TArray<TWeakObjectPtr<APawn>> Pawns;
 	};
 
 	/** Start of a scenario on a real player: diagnostics count from zero, so a check cannot pass on an earlier test's reports. */

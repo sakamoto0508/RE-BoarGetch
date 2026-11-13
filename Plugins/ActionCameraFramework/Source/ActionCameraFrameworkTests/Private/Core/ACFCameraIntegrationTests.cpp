@@ -2882,4 +2882,91 @@ bool FACFIntegrationTuningTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// README 25 章 の FOV の回避策: Follow + Look At + Collision の要求に「FOV だけ Override の Fixed Pose」を足しても、実際の PCM の位置と
+// 回転は変わらず、FOV だけがその Node の値（調整した値）になる。
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationFovOnlyFixedPoseTest, "ActionCameraFramework.Integration.FovOnlyFixedPoseOnTheRealCamera",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationFovOnlyFixedPoseTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	static auto MakeBase = [](bool bWithLens) -> UACFCameraPreset*
+	{
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		if (bWithLens)
+		{
+			UACFCameraNode_FixedPose* Lens = NewObject<UACFCameraNode_FixedPose>(Preset);
+			Lens->bOverrideLocation = false;
+			Lens->bOverrideRotation = false;
+			Lens->FieldOfView = 75.f;
+			Preset->Nodes.Add(Lens); // first in the list: the stage order, not the list order, decides
+		}
+		UACFCameraNode_Follow* Follow = NewObject<UACFCameraNode_Follow>(Preset);
+		Follow->Offset = FVector(-300, 80, 150);
+		Follow->OffsetSpace = EACFCameraOffsetSpace::World;
+		Preset->Nodes.Add(Follow);
+		Preset->Nodes.Add(NewObject<UACFCameraNode_LookAt>(Preset));
+		Preset->Nodes.Add(NewObject<UACFCameraNode_Collision>(Preset));
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		return Preset;
+	};
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(7000, -9000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		S.Preset.Reset(MakeBase(false));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		Params.LookAtTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(S.Preset.Get(), Params);
+		return S.Test->TestTrue(TEXT("Base request accepted"), S.Handle.IsValid());
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const APlayerCameraManager* M = S.PCM();
+		S.SavedLocation = M->GetCameraLocation();
+		S.SavedRotation = M->GetCameraRotation();
+		S.Value = M->GetFOVAngle(); // the UE camera's FOV, passed through
+		S.Test->AddInfo(FString::Printf(TEXT("Base: loc=%s rot=%s fov=%.2f"), *S.SavedLocation.ToCompactString(), *S.SavedRotation.ToCompactString(), S.Value));
+		S.Test->TestTrue(TEXT("Base camera follows the target"), S.SavedLocation.Equals(S.Pivot + FVector(-300, 80, 150), 0.1));
+		S.PresetB.Reset(MakeBase(true));
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		Params.LookAtTarget.Actor = S.ActorA.Get();
+		Params.Priority = 10;
+		S.HandleB = S.Subsystem->RequestCamera(S.PresetB.Get(), Params);
+		return S.Test->TestTrue(TEXT("Workaround request accepted"), S.HandleB.IsValid());
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const APlayerCameraManager* M = S.PCM();
+		S.Test->TestTrue(FString::Printf(TEXT("Same location (%s)"), *M->GetCameraLocation().ToCompactString()), M->GetCameraLocation().Equals(S.SavedLocation, 0.01));
+		S.Test->TestTrue(FString::Printf(TEXT("Same rotation (%s)"), *M->GetCameraRotation().ToCompactString()), M->GetCameraRotation().Equals(S.SavedRotation, 0.001));
+		S.Test->TestEqual(TEXT("FOV from the Fixed Pose"), M->GetFOVAngle(), 75.f, 0.01f);
+		S.Test->TestEqual(TEXT("Tunable: Start"), UACFCameraTuningLibrary::StartCameraTuning(S.Controller.Get(), S.HandleB), EACFCameraTuningResult::Ok);
+		S.Test->TestEqual(TEXT("Tunable: FOV 55"), UACFCameraTuningLibrary::SetCameraTuningValue(S.Controller.Get(), S.HandleB, EACFCameraTuningParameter::FieldOfView, FVector(55, 0, 0)), EACFCameraTuningResult::Ok);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const APlayerCameraManager* M = S.PCM();
+		S.Test->TestTrue(TEXT("Tuned: same location"), M->GetCameraLocation().Equals(S.SavedLocation, 0.01));
+		S.Test->TestTrue(TEXT("Tuned: same rotation"), M->GetCameraRotation().Equals(S.SavedRotation, 0.001));
+		S.Test->TestEqual(TEXT("Tuned: FOV 55"), M->GetFOVAngle(), 55.f, 0.01f);
+		S.Test->TestEqual(TEXT("Stop"), UACFCameraTuningLibrary::StopCameraTuning(S.Controller.Get(), S.HandleB), EACFCameraTuningResult::Ok);
+		S.Test->TestTrue(TEXT("Release the workaround request"), S.Subsystem->ReleaseCamera(S.HandleB));
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		const APlayerCameraManager* M = S.PCM();
+		S.Test->TestTrue(TEXT("Back on the base request: same location"), M->GetCameraLocation().Equals(S.SavedLocation, 0.01));
+		S.Test->TestEqual(TEXT("Back on the base request: the UE FOV again"), M->GetFOVAngle(), static_cast<float>(S.Value), 0.01f);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

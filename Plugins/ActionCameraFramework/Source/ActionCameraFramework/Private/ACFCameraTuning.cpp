@@ -468,3 +468,129 @@ const UACFCameraPreset* UACFCameraDirector::GetRequestPreset(FACFCameraRequestHa
 	const FACFCameraRequestEntry* Entry = FindLiveEntry(ResolveTuningHandle(Handle));
 	return Entry ? Entry->Rig.GetPreset() : nullptr;
 }
+
+// -------------------------------------------------------------------------------------------------
+// Phase 7A-2: read-only information for tools (the editor tuning panel). Available in every build (no state change).
+
+void ACFCameraTuning::GetValueRange(EACFCameraTuningParameter Parameter, double& OutMin, double& OutMax)
+{
+	const double Infinity = std::numeric_limits<double>::infinity();
+	switch (Parameter)
+	{
+	case EACFCameraTuningParameter::FollowDamping: OutMin = 0.0; OutMax = Infinity; break;
+	case EACFCameraTuningParameter::FieldOfView: OutMin = 0.0; OutMax = 180.0; break; // open interval (IsValidFov)
+	case EACFCameraTuningParameter::CollisionRadius: OutMin = 0.0; OutMax = Infinity; break;
+	default: OutMin = -Infinity; OutMax = Infinity; break;
+	}
+}
+
+bool ACFCameraTuning::IsScalar(EACFCameraTuningParameter Parameter)
+{
+	return Parameter == EACFCameraTuningParameter::FieldOfView || Parameter == EACFCameraTuningParameter::CollisionRadius;
+}
+
+FString ACFCameraTuning::GetParameterName(EACFCameraTuningParameter Parameter)
+{
+	switch (Parameter)
+	{
+	case EACFCameraTuningParameter::FollowDamping: return TEXT("Follow Damping");
+	case EACFCameraTuningParameter::FieldOfView: return TEXT("Field Of View");
+	case EACFCameraTuningParameter::CameraOffset: return TEXT("Camera Offset");
+	case EACFCameraTuningParameter::CollisionRadius: return TEXT("Collision Radius");
+	default: return TEXT("?");
+	}
+}
+
+void ACFCameraTuning::GetNodes(const UACFCameraPreset& Preset, TArray<FACFCameraTuningNodeInfo>& Out)
+{
+	Out.Reset();
+	for (int32 Index = 0; Index < Preset.Nodes.Num(); ++Index)
+	{
+		const UACFCameraNode* Node = Preset.Nodes[Index];
+		if (!Node)
+		{
+			continue;
+		}
+		FACFCameraTuningNodeInfo& Info = Out.AddDefaulted_GetRef();
+		Info.NodeIndex = Index;
+		Info.NodeClass = Node->GetClass()->GetFName();
+		Info.Stage = Node->GetStage();
+		Info.bEnabled = Node->bEnabled;
+		for (const EACFCameraTuningParameter Parameter : ACFTuningImpl::AllParameters)
+		{
+			if (HasParameter(*Node, Parameter))
+			{
+				Info.Parameters.Add(Parameter);
+			}
+		}
+	}
+}
+
+FString ACFCameraTuning::GetUnavailableReason(const UACFCameraPreset& Preset, EACFCameraTuningParameter Parameter)
+{
+	if (!ACFTuningImpl::IsKnown(Parameter))
+	{
+		return TEXT("Unknown parameter.");
+	}
+	if (FindNode(Preset, Parameter, INDEX_NONE) != INDEX_NONE)
+	{
+		return FString();
+	}
+	switch (Parameter)
+	{
+	case EACFCameraTuningParameter::FollowDamping:
+		return TEXT("No Follow / Orbital Follow / Lock-On node in the preset.");
+	case EACFCameraTuningParameter::FieldOfView:
+		for (int32 Index = 0; Index < Preset.Nodes.Num(); ++Index)
+		{
+			const UACFCameraNode* Node = Preset.Nodes[Index];
+			if (Node && (Node->IsA<UACFCameraNode_FixedPose>() || Node->IsA<UACFCameraNode_ShotAnchor>()))
+			{
+				return FString::Printf(TEXT("%s (node %d): Override Field Of View is off, so the node does not set the FOV."), *Node->GetClass()->GetName(), Index);
+			}
+		}
+		return TEXT("No node sets the field of view: it comes from the UE camera (the view target's Camera Component or the PCM Default FOV), "
+			"changed only by Lock-On (Adjust Field Of View), Combat, Group Framing and effects. Add a Fixed Pose with only Override Field Of View on, first in the node list, to tune it (README 25).");
+	case EACFCameraTuningParameter::CameraOffset:
+		return TEXT("No Follow / Orbital Follow / Lock-On / Shot Anchor node in the preset.");
+	case EACFCameraTuningParameter::CollisionRadius:
+		return TEXT("No Collision node in the preset.");
+	default:
+		return FString();
+	}
+}
+
+void UACFCameraDirector::GetRequestInfos(TArray<FACFCameraRequestInfo>& Out)
+{
+	Out.Reset();
+	for (const FACFCameraRequestEntry& Entry : Requests)
+	{
+		FACFCameraRequestInfo& Info = Out.AddDefaulted_GetRef();
+		Info.Handle = Entry.Handle;
+		const FACFCameraTuningSession* Session = FindTuningSession(Entry.Handle);
+		const UACFCameraPreset* Asset = Session ? Session->Original.Get() : Entry.Rig.GetPreset();
+		Info.Preset = Asset ? Asset->GetFName() : NAME_None;
+		Info.DebugName = Entry.Params.DebugName;
+		Info.Priority = Entry.Params.Priority;
+		Info.bActive = Entry.Handle == ActiveHandle;
+		Info.bTuning = Session != nullptr;
+	}
+}
+
+EACFCameraTuningResult UACFCameraDirector::GetRequestNodes(FACFCameraRequestHandle Handle, TArray<FACFCameraTuningNodeInfo>& Out)
+{
+	Out.Reset();
+	const UACFCameraPreset* Preset = GetRequestPreset(Handle);
+	if (!Preset)
+	{
+		return EACFCameraTuningResult::NoRequest;
+	}
+	ACFCameraTuning::GetNodes(*Preset, Out);
+	return EACFCameraTuningResult::Ok;
+}
+
+FString UACFCameraDirector::GetTuningUnavailableReason(FACFCameraRequestHandle Handle, EACFCameraTuningParameter Parameter)
+{
+	const UACFCameraPreset* Preset = GetRequestPreset(Handle);
+	return Preset ? ACFCameraTuning::GetUnavailableReason(*Preset, Parameter) : FString(TEXT("The request does not exist (any more)."));
+}

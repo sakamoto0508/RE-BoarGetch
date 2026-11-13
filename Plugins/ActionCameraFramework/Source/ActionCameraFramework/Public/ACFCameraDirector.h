@@ -215,6 +215,10 @@ public:
 	/** The preset the request evaluates right now (its tuning copy while tuned). Null if no such request. */
 	const UACFCameraPreset* GetRequestPreset(FACFCameraRequestHandle Handle);
 	int32 GetNumTunedRequests() const { return TuningSessions.Num(); }
+	/** Phase 7A-2 (tools, read only): the live requests of this player, the nodes of a request, why a parameter cannot be tuned. */
+	void GetRequestInfos(TArray<FACFCameraRequestInfo>& Out);
+	EACFCameraTuningResult GetRequestNodes(FACFCameraRequestHandle Handle, TArray<FACFCameraTuningNodeInfo>& Out);
+	FString GetTuningUnavailableReason(FACFCameraRequestHandle Handle, EACFCameraTuningParameter Parameter);
 
 	/** True while ACF has any influence on the output (requests exist or a fade is running). */
 	bool IsInfluencingOutput() const { return Requests.Num() > 0 || LastResult.RequestWeight > 0.f; }

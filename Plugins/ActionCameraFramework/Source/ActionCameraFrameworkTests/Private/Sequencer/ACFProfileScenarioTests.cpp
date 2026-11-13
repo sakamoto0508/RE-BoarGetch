@@ -253,7 +253,7 @@ namespace ACFProfileScenarios
 			{
 				Acf2->ReleaseAllCameras(true);
 			}
-			World()->GetGameInstance()->RemoveLocalPlayer(Player);
+			ACFTestEnvironment::RemoveLocalPlayer(Player); // also its pawn (Phase 7A-2)
 		}
 		Second.Reset();
 	}

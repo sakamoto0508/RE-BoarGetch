@@ -19,7 +19,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
-- Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A を実施中（7A-1 Runtime Tuning の基盤が完了、24 章）
+- Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A を実施中（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネルが完了。24・25 章）
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -28,7 +28,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 | 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
 | 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Completed（B-1〜B-11） |
-| 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | In Progress（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 保存・Editor UI は未着手） |
+| 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | In Progress（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 PIE の Camera Tuning パネル: 完了、25 章。7A-3 Undo / Redo、7A-4 Profiler / Debugger は未着手） |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
 | 7D | Advanced Occlusion Handling（複数点の遮蔽判定、可視率、一時透過。Trace 数を計測） | Not Started |
@@ -60,7 +60,7 @@ Phase 6B の範囲と順序は、Phase 6A の監査結果で確定していま�
 | `ActionCameraFramework` | カメラ本体（Runtime） | すべて |
 | `ActionCameraFrameworkSequencer` | Level Sequencer 連携（Runtime） | すべて |
 | `ActionCameraFrameworkTests` | 自動テスト（DeveloperTool） | Editor と Debug / Development のゲーム（UE の `bBuildDeveloperTools` が有効な構成）。Test / Shipping には入らない |
-| `ActionCameraFrameworkEditor` | Editor 用（Data Validation のテスト） | Editor のみ |
+| `ActionCameraFrameworkEditor` | Editor 用（Camera Tuning パネル、Data Validation とパネルのテスト） | Editor のみ |
 
 PlayerCameraManager・GameMode・Character・入力システムの変更は不要です。Enhanced Input にも依存しません。
 最初の要求を出すまで、ACF はカメラに一切関与しません。
@@ -798,7 +798,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 | PCM の ViewTarget ブレンド | その間の壁抜けは Guard でも防げない | 7 章 |
 | Sequencer の通知 | 開始・終了の通知はカメラ更新の中では届かない。Tick の後で起きた変化は同じフレームのカメラ更新の後に、ゲームが手でカメラを更新した場合は次のフレームの Tick で届く。`RefreshNow` はその場では通知しない | 19 章 |
 | 実行時の不正値 | 不正な Transform の対象は Node によって「無い」扱い（保持しない）。非有限の演出は終わるまで毎フレーム捨てる | 16 章 |
-| 実行中の調整 | Runtime Tuning は 4 種類のパラメータだけ（Follow Damping・FOV・Offset・Collision Radius）。Preset への保存と Editor / Debugger の UI は未実装（Phase 7A-2） | 24 章 |
+| 実行中の調整 | Runtime Tuning は 4 種類のパラメータだけ（Follow Damping・FOV・Offset・Collision Radius）。Editor の UI は PIE だけ（25 章）。Preset への保存はしない方針。Undo / Redo は Phase 7A-3、Debugger は 7A-4。FOV は FOV を決める Node がある要求だけ | 24・25 章 |
 | マップ移動・Level Streaming | 実際の `open` / PIE の終了はテスト用 World の破棄で代用。Level Streaming のアンロードは未確認 | 17 章 |
 | 新しいプロジェクト | 別のプロジェクトへの導入・パッケージビルドは未確認（Phase 8） | 1 章・23 章 |
 | Shipping に残るサンプル用クラス | サンプル用 Shake の UCLASS 2 個（`UACFDebugCameraShake` とその Pattern。検証用 Blueprint が参照しているため移していない） | 23 章 |
@@ -848,30 +848,35 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **179 件が登録**されています（テスト名の数。Phase 7A-1 時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **189 件が登録**されています（テスト名の数。Phase 7A-2 時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
   | `.Director` 8、`.Nodes` 5、`.ThirdPerson` 11、`.Effects` 9、`.Action` 10、`.Constraints` 7、`.Sequence` 6、`.Authority` 3 | 59 | 実行 | 実行 |
   | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 12、`.Profiler` 3 | 30 | 実行 | 実行 |
-  | `.Tuning`（Runtime Tuning、24 章） | 9 | 実行 | 実行 |
-  | `.Editor`（Data Validation、21 章） | 2 | 実行 | — |
-  | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 2 | 4 | — | 実行 |
-  | `.Integration`（実際の PCM。7A-1 の Runtime Tuning 1 件を含む） | 28 | — | 実行 |
+  | `.Tuning`（Runtime Tuning、24 章。FOV の回避策 1 件を含む） | 10 | 実行 | 実行 |
+  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。実 PIE 1 件を含む） | 9 | 実行 | — |
+  | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 3 | 5 | — | 実行 |
+  | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件を含む） | 29 | — | 実行 |
   | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1） | 40 | — | 実行 |
   | `.Samples` | 6 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
-  | 合計 | 179 | 100 | 177 |
+  | 合計 | 189 | 108 | 180 |
 
-- **最新の結果（Phase 7A-1、2026-11-13）**
+- **最新の結果（Phase 7A-2 の最終検証、2026-11-13）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
-  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 177 | 170 / 0 / 7 | `.Samples` 6 件と `.Profile.Scenarios` は空のマップでは検証しない |
-  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 177 | 170 / 0 / 7 | 同上 |
-  | Editor（`--context editor`） | 100 | 100 / 0 / 0 | |
-  | サンプル（`--context samples`、テストマップ・描画あり） | 6 | 6 / 0 / 0 | |
-  | 性能の基準値（`--context profile`） | 1 | 1 / 0 / 0 | |
+  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 180 | 173 / 0 / 7 | `.Samples` 6 件と `.Profile.Scenarios` は空のマップでは検証しない |
+  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 180 | 173 / 0 / 7 | 同上 |
+  | Editor（`--context editor`） | 108 | 108 / 0 / 0 | |
+  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 180 | 179 / 0 / 1 | `.Profile.Scenarios`（`-ACFProfile` なし） |
+  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode。2 回実行） | 180 | 179 / 0 / 1（2 回とも） | 同上 |
+  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 180 | 180 / 0 / 0 | |
+  | サンプル（`--context samples-host`、`.Samples`） | 6 | 6 / 0 / 0 | |
+  | 繰り返し: `.Tuning`（ゲーム）×3、`.Editor.TuningPanel` + `.Tuning`（Editor）×3 | 30 / 51 | すべて Pass | |
+
+  全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 の途中で見つかったもの。7A-1 のコードでも同じ値で再現）は、2 人目のローカルプレイヤーの Pawn が残っていたためで、テスト環境側で修正しました（22 章「ローカルプレイヤーと Pawn」）。
 
   「Skip」は UE の集計では Success になります。`RunTests.sh` はテストが出す `Skipped:` のメッセージで区別します（22 章）。
 - 各カテゴリの内容: `.Health` は不正値の対策（16 章）、`.Lifetime` は Actor の参照と寿命（17 章。実際の World・Actor・GC、`-DisableGarbageElimination` でも合格）、`.PresetValidation` / `.Editor` は Preset の検証（21 章）、`.Profiler` は計測が出力を変えないこと（8 章）、`.Sequencer.PcmCompat` は PCM の互換性（15 章）、`.Sequencer.Events` は通知のタイミング（19 章）、`.Sequencer.ReturnBlend` は戻りのブレンド（20 章）、`.TestEnvironment` と `.Effects.SpeedFovAndRollFixedStep` / `.Integration.SpeedFovAndRollRepeated.*` はテストの土台（22 章）。
@@ -931,7 +936,7 @@ Scripts/RunTests.sh --context samples
 | `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`（`ACF.Debug.*` / `ACF.Profile.*`）、`ACFCameraSampleCommands`（`ACF.Sample.*`、23 章）、`ACFCameraDebugShake`（サンプル用 Shake） |
 | `Source/ActionCameraFrameworkSequencer/` | Level Sequencer 連携（Phase 5A）。`ACFSequencerCameraSubsystem`（検出・復帰処理）、`ACFSequencerBlueprintLibrary`、`ACFSequencerSettings`、`ACFSequencerTypes`、`ACF.Sample.Sequencer` コマンド（`ACFSequencerSampleCommands`）。LevelSequence / MovieScene に依存するのはこのモジュールだけです |
 | `Source/ActionCameraFrameworkTests/` | 自動テスト（Phase 6B / B-10、23 章）。Core のテスト（`Private/Core/`）、Sequencer のテスト（`Private/Sequencer/`）、テスト専用のクラス（テスト用 Shake、Sequencer のリスナー・プローブ Modifier・テスト用 PCM）、`ACFCameraTestEnvironment.h`（22 章）。Type = DeveloperTool で、Test / Shipping ではビルドされません |
-| `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 7A の Editor 専用機能の置き場。現状は Data Validation 経由の検証テストだけ）。Preset の検証の本体は `ACFCameraPresetValidation`（ランタイムモジュール、`WITH_EDITOR` のみ） |
+| `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 7A の Editor 専用機能の置き場。Camera Tuning パネル（25 章: `ACFCameraTuningPanelModel` は Slate を使わないモデル、`SACFCameraTuningPanel` は表示）と、Data Validation・パネルのテスト（`Private/Tests/`）。Preset の検証の本体は `ACFCameraPresetValidation`（ランタイムモジュール、`WITH_EDITOR` のみ） |
 | `Content/Verification/` | 自動テスト用アセット |
 | `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト |
@@ -1422,6 +1427,9 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 - 終了時に止めるもの: 要求、Camera Sequence、演出（B-9 より前は演出が次のテストまで残っていた）、Sequencer が後始末で出した通知（リスナーを外した後に配信し終えてから次へ）
 - 残っていればエラー: 出力抑制、画面に出ている外部 ViewTarget の登録、計測中の Profiler
 - 開始時に、そのプレイヤーの健全性の診断（16 章）を 0 に戻します。前のテストの報告で「N 件以上報告された」という判定が通ってしまうのを防ぐためです。
+- **ローカルプレイヤーと Pawn（Phase 7A-2）**: 開始時に無かったローカルプレイヤーと Pawn が終了時に残っていれば、エラーとして名前を出し、取り除きます。`.Profiler` の一時停止・複数 LocalPlayer のテスト（専用のステップ実行器）にも同じ後始末を適用しました。
+  - 経緯: `UGameInstance::RemoveLocalPlayer` は PlayerController だけを破棄し、GameMode がそのプレイヤー用に生成した Pawn は World に残ります。ホストの GameMode では `BP_ThirdPersonCharacter` が PlayerStart（原点付近）に残り、同じマップで後に実行されるテストのカメラ（ACF の Collision と UE の Spring Arm）を塞いでいました。全テストをテストマップで流すと、`.Samples.LockOnAndGroupOnTestMap` が「ロックオン直後にプレイヤーが画面内」で失敗していたのはこのためです（`.Profiler.PauseAndLocalPlayers` → `.Samples.LockOnAndGroupOnTestMap` の 2 件だけでも再現）。
+  - 2 人目のプレイヤーを外すテストは、すべて `ACFTestEnvironment::RemoveLocalPlayer`（プレイヤーとその Pawn を外す）を使います。確認は `.TestEnvironment.ExtraLocalPlayerLeavesNoPawn`。
 
 ヘッダーは `WITH_DEV_AUTOMATION_TESTS` の中だけで、通常の Tick には何も追加していません（Shipping のバイナリにテストの文字列が無いことを確認済み）。
 
@@ -1465,7 +1473,7 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 | `ActionCameraFramework` | Runtime | カメラ本体（Director・Node・Preset・Subsystem・Effects・Sequence）、診断（16 章の健全性、`ACF.Debug.*`、`ACF.Profile.*`）、サンプル用コマンド `ACF.Sample.*`（`ACFCameraSampleCommands.cpp`） | 本体だけ。`ACF.Debug.*` / `ACF.Profile.*` / `ACF.Sample.*` は入らない |
 | `ActionCameraFrameworkSequencer` | Runtime | Level Sequencer 連携、`ACF.Sample.Sequencer`（`ACFSequencerSampleCommands.cpp`） | 連携だけ |
 | `ActionCameraFrameworkTests` | DeveloperTool | Core と Sequencer の自動テスト、テスト専用のクラス、テスト環境（22 章） | 入らない（Test / Shipping ではビルドされない） |
-| `ActionCameraFrameworkEditor` | Editor | Data Validation 経由の検証テスト（21 章） | 入らない |
+| `ActionCameraFrameworkEditor` | Editor | Camera Tuning パネル（25 章）、Data Validation 経由の検証テスト（21 章）とパネルのテスト | 入らない |
 
 - 依存の向き: `Tests` → `Sequencer` → `ActionCameraFramework`、`Editor` → `ActionCameraFramework`。Runtime の 2 モジュールは `Tests` / `Editor` に依存しません。
 - テストは公開済みの API だけを使っています。モジュールを分けるために公開した API・追加した `_API` はありません。
@@ -1500,7 +1508,7 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 
 ## 24. Runtime Camera Tuning（Phase 7A-1）
 
-ゲームの実行中（PIE を含む）に、使用中のカメラ要求のパラメータを変え、結果をその場で確認し、元に戻せます。共有の Preset アセットは変更しません。**開発用**で、Shipping（または `ACF_WITH_RUNTIME_TUNING=0`）ではすべての呼び出しが `NotAvailable` を返します。調整した値を Preset に保存する機能と Editor の UI は、まだありません（Phase 7A-2）。
+ゲームの実行中（PIE を含む）に、使用中のカメラ要求のパラメータを変え、結果をその場で確認し、元に戻せます。共有の Preset アセットは変更しません。**開発用**で、Shipping（または `ACF_WITH_RUNTIME_TUNING=0`）ではすべての呼び出しが `NotAvailable` を返します。Editor の UI（PIE 用）は 25 章です。調整した値を Preset に保存する機能はありません。
 
 ### 使い方（Blueprint Library、カテゴリ Action Camera | Tuning）
 
@@ -1512,6 +1520,8 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 | `Reset ACF Camera Tuning Value` / `Reset All ACF Camera Tuning Values` | アセットの値に戻す（調整は続く） |
 | `Stop ACF Camera Tuning` | 調整を終える。要求はアセットの Preset に戻り、調整した値は捨てられる |
 | `Get ACF Camera Tuning Status` | 調整中か、アセットと違う値の数、調整中の要求の数 |
+| `Get ACF Camera Requests` (PlayerController) → Requests | そのプレイヤーの要求の一覧（Handle・Preset・Debug Name・Priority・Active・調整中か）。Phase 7A-2 |
+| `Get ACF Camera Tuning Nodes` (PlayerController, Request) → Nodes | 要求の Preset の Node の一覧（番号・クラス・Stage・Enabled・調整できるパラメータ）。同じクラスの Node は番号で区別。Phase 7A-2 |
 
 - **Request** はそのプレイヤーの要求の Handle です。**無効な Handle（既定）は「いま有効な要求」**を意味します。
 - 戻り値 `EACFCameraTuningResult`: `Ok` / `NotAvailable` / `NoPlayer` / `NoRequest`（その要求が無い）/ `NotTuning`（Start の前の Set / Reset / Stop）/ `NoNode`（Preset にそのパラメータを持つ Node が無い、または Node Index が違う）/ `InvalidValue`（NaN / Inf / 範囲外。何も変わらない）/ `InvalidParameter`。
@@ -1552,7 +1562,7 @@ Rig は Node の実行時状態を「Node の番号と状態の型」で持っ�
 ### 健全性（16 章）・Preset の検証（21 章）との関係
 
 - 調整の入力は `Set` の時点で検査し、NaN / Inf / 範囲外は `InvalidValue` で拒否します（何も変わらない）。範囲は Data Validation と同じ考え方です（Damping・半径は 0 以上、FOV は 0〜180 度）。そのため調整が原因の不正値は健全性チェックに届きません。健全性チェックは従来どおり実行時の値（対象・入力・出力）を受け持ちます。
-- 複製は保存されないので、保存時の Data Validation の対象にはなりません。Phase 7A-2 で保存するときに、`ACFCameraPresetValidation::ValidatePreset` を複製に対して使う予定です。
+- 複製は保存されないので、保存時の Data Validation の対象にはなりません。将来保存を扱う場合は、`ACFCameraPresetValidation::ValidatePreset` を複製に対して使います（7A-2 では保存しない方針）。
 
 ### 計測（8 章）との関係
 
@@ -1561,6 +1571,98 @@ Rig は Node の実行時状態を「Node の番号と状態の型」で持っ�
 ### 制限
 
 - 調整できるのは上の 4 種類だけです。追加はパラメータの表（`ACFCameraTuning.cpp` の `Access`）に Node とプロパティを足して行います（汎用のリフレクションは使っていません）。
-- 保存・Editor の UI・値の一覧表示は Phase 7A-2 です。
+- 保存はしません。値の一覧表示と操作は Editor のパネル（25 章、PIE のみ）。
 - ローカルプレイヤー単位の機能です。ネットワーク越しの調整はしません。
-- Editor / PIE で人が操作して見る確認はしていません（自動テストと、実際の PCM を使う統合テストで確認）。
+- 人が PIE で操作して見る確認はしていません（自動テスト、実際の PCM を使う統合テスト、実 PIE の自動テスト（25 章）で確認）。
+
+## 25. Camera Tuning パネル（Phase 7A-2）
+
+PIE 中のプレイヤーのカメラを、Editor のタブから調整するための画面です。24 章の Runtime Tuning API をそのまま使う薄い UI で、Editor モジュール（`ActionCameraFrameworkEditor`）だけにあります。ランタイムのモジュールは Editor に依存しません。**共有の Preset アセットは変更しません。保存機能もありません**（調整した値は Stop / PIE の終了で捨てられます）。
+
+### 開き方
+
+**Window > Developer Tools > Debug > ACF Camera Tuning**（Nomad タブ。どこにでもドッキングできます）。
+
+### 画面の構成
+
+| 場所 | 内容 |
+|---|---|
+| 上段 | **World**（PIE の World だけ。`PIE n: マップ名 (NetMode)`）と **Player**（その World の LocalPlayer。`Player i (PlayerController 名)`）。1 つしかなければ自動で選びます。状態の行（対象・Preset・調整中か・アセットと違う値の数） |
+| ボタン | **Start Tuning** / **Stop Tuning (discard)** / **Reset All** / **Show Original Values**（比較。もう一度押すと **Show Tuned Values**） |
+| Requests | そのプレイヤーの要求の一覧。Request（Handle と Debug Name）・Preset・Priority・State（Active / 待機中）・Tuning |
+| Nodes | 選んだ要求の Preset の Node。#（Node の番号）・Node（クラス）・Stage・Enabled・調整できるパラメータ |
+| Parameters | 選んだ Node のパラメータごとに: Original（アセットの値）・Current（数値入力とスライダー。Offset と Damping は X / Y / Z を別々に）・Difference・Valid range・Reset。調整できないパラメータは理由を表示 |
+| 最下段 | 最後の操作の結果と理由（例: 範囲外の値を拒否した、PIE が終わった） |
+
+### 使い方
+
+1. PIE を開始し、パネルで World と Player を選ぶ（1 つずつなら自動）。
+2. Requests で要求を選ぶ（Active の要求を選ぶのが普通です）。**Start Tuning** を押す。
+3. Nodes で Node を選び、Parameters の値を入力するかスライダーを動かす。次のカメラ更新から反映されます。
+4. **Show Original Values** で、アセットの値の見え方と比べる（もう一度押すと調整した値に戻る）。比較中は編集できません。
+5. **Reset**（行ごと）/ **Reset All** でアセットの値に戻す。**Stop Tuning (discard)** で調整を終える（値は捨てられる）。
+
+- Start の前でも値（Original / Current）は読めます。編集は Start の後だけです。
+- 入力した値が NaN / Inf / 範囲外なら、ランタイムが拒否し（`InvalidValue`）、何も変わらず、理由を最下段に表示します。スライダーの範囲（Damping 0〜2 秒、FOV 5〜170 度、Offset ±1000cm、Radius 0〜100cm）は操作しやすさのためで、数値入力では有効範囲内の任意の値を使えます。
+
+### 対象の識別
+
+- **World**: `GEngine` の World Context のうち `EWorldType::PIE` で、破棄中でないものだけ。Editor の World・Editor Preview・ゲーム（`-game`）の World は一覧に出ず、渡されても解決しません（テストで確認）。複数クライアントの PIE では World ごとに選べます。
+- **Player**: その World の GameInstance の LocalPlayer。PlayerController と PCM はその都度 LocalPlayer から引き直すので、作り直されても追従します。
+- **Request**: `FACFCameraRequestHandle`。要求が終わると一覧から消え、選択も外れます。
+- **Node**: Preset の Nodes の**番号とクラスの組**。同じクラスの Node が複数あっても番号で区別し、番号は同じでもクラスが違う（別の Preset の）Node は選択から外します。
+- 選んだものはすべて弱参照です。パネルは 0.25 秒ごとに対象が生きているかを確かめ（`Validate`）、PIE の終了・要求の終了・World の破棄で選択を外します。外れた対象を操作することはありません（`NoPlayer` / `NoRequest` / `NoNode`）。
+
+### FOV について
+
+ACF の FOV は、多くの Preset では **Node が決めていません**。Rig の最初の姿勢は UE のカメラ（View Target の Camera Component、無ければ PCM の Default FOV）で、Follow / Orbit はそのまま通します。FOV を変えるのは次だけです: Fixed Pose / Shot Anchor（Override Field Of View が ON のとき置き換え）、Lock-On（Adjust Field Of View）、Combat（Field Of View Offset。加算）、Group Framing（FOV モード）、Effects（Collision の後に加算し、Effect Fov Min / Max で制限）、要求間のブレンド。
+
+- このため、FOV を決める Node が無い要求では、FOV の行に「調整できない」と理由を表示します（Override が OFF の Fixed Pose / Shot Anchor も同様）。
+- 回避策（新しい仕組みは足していません）: Preset に **Override Field Of View だけを ON にした Fixed Pose**（Override Location / Override Rotation は OFF）を、**Nodes の一覧の先頭**に足すと、その Node の FOV を調整できます。検証の結果（`.Tuning.FovOnlyFixedPoseWorkaround`、`.Integration.FovOnlyFixedPoseOnTheRealCamera`）:
+  - 位置・回転は書き換えません。Follow + Look At + Collision、Orbital Follow + Collision、Lock-On + Collision のどれでも、「UE のカメラ自体の FOV がその値だった場合」とビット単位で同じ姿勢になります。調整（Start / Set）しても同じです。実際の PCM でも位置・回転は変わらず、FOV だけがその値（調整した値）になります。
+  - Preset の検証（21 章）で Error / Warning は出ません（Fixed Pose は FOV だけを書くので、位置を書く Follow / Orbital Follow と競合しない）。
+  - **一覧の最後（Collision の後など）に置かない**: 検証が Info（`ACF.Preset.EvaluationOrder`）を出します。Body の Node が先に評価されるため、FOV を使って構図を決める Lock-On は UE の FOV で構図を計算し、Fixed Pose の FOV で表示されます（構図がずれる）。Follow / Orbital Follow は FOV を使わないので影響はありません。
+  - **Lock-On の Adjust Field Of View が ON の Preset には使わない**: FOV を取り合います（検証が `ACF.Preset.BodyConflict` の Warning を出す）。先頭に置くと Lock-On の FOV が勝ち、調整しても見た目は変わりません。後に置くと Lock-On の FOV の調整が失われます。
+  - その要求の間、FOV は UE のカメラ（Camera Component の FOV、ゲーム側のズーム）に追従しなくなり、Fixed Pose の値に固定されます。普段の見た目を変えないよう、Field Of View にはゲームの通常の FOV（例: 90）を入れてください。Combat の Field Of View Offset と Effects の FOV はその上に加算されます。Group Framing の FOV モードは後（Framing ステージ）で FOV を決め直すので、その Preset では調整が見えません（コードからの判断で、テストはしていません）。
+- Lock-On・Combat・Group Framing の FOV、Effects の FOV は 4 種類のパラメータに含まれていません（7A の残り）。
+
+### 安全性
+
+- PIE の前・後: World が無ければ何も解決しません。PIE が終わると、ランタイムが調整を終え（World の変化）、パネルは選択を外します。次の PIE では選び直します（実 PIE を 2 回行うテストで確認）。
+- 要求の終了・PC / PCM の作り直し・Sequencer・Finisher・Lock-On・要求の切り替え: パネルは要求の Handle だけを持ち、カメラの状態には触れません。調整中の振る舞いは 24 章のとおりです（状態は保たれ、要求が終わると調整も終わる）。
+- 複数の LocalPlayer: 調整はプレイヤーごとです。パネルを 2 つ開いて別のプレイヤーを調整しても混ざりません（テストで確認）。
+- 比較（Show Original Values）は、調整した値を覚えて Reset All し、戻すときに Set し直すだけです。新しい要求・Rig は作らず、カメラの状態もリセットしません。
+- パネルは毎カメラフレームには何もしません。0.25 秒ごとに一覧を読み、内容が変わったときだけ作り直します。値の複製やリフレクションの走査はしません（パラメータの読み書きは 24 章の表）。
+
+### 性能
+
+- カメラの評価（2 プレイヤー、1 フレーム）とパネルの更新（1 回）を分けて計測しています（`.Editor.TuningPanel.CostOfThePanel`。下の表は 2026-11-13 の 1 回の結果、Development Editor）。
+
+  | 状態 | カメラの評価 | パネルの更新 |
+  |---|---|---|
+  | パネルを閉じている | 2.87 µs | 0.03 µs |
+  | 開いている（変更なし） | 2.98 µs | 4.54 µs |
+  | 毎フレーム値を変える | 3.15 µs | 4.57 µs |
+  | パネル 2 つ（2 プレイヤー） | 3.17 µs | 5.43 µs |
+
+- パネルの更新は 0.25 秒に 1 回なので、1 秒あたりの負荷はさらに小さくなります。カメラの評価の差は調整そのもの（24 章）の分で、パネルによるものではありません。B-1 のシナリオ（`--context profile`）の結果は 12 章。
+
+### テスト（`.Editor.TuningPanel.*`、7 件、Editor のみ）
+
+| テスト | 内容 |
+|---|---|
+| `OnlyPIEWorldsAreTargets` | PIE 以外の World は対象にならない。Editor の World は渡されても解決しない |
+| `RequestsNodesValuesCompareStop` | 要求 2 つの識別、同じクラスの Node 2 つの区別、UI の値が複製の Node に届く、範囲外の拒否、比較、Reset、Stop、アセットがバイト単位で変わらない |
+| `StaleTargetsAreNotTouched` | 要求の終了・Director の破棄の後、古い Node を操作しない |
+| `PlayersDoNotMix` | 2 プレイヤーを別々に調整して混ざらない |
+| `WidgetHandlers` | 実際のパネル（Slate のウィジェット）をボタン・入力のハンドラーで操作する |
+| `CostOfThePanel` | 上の性能の表 |
+| `RealPIE` | Editor の実際の PIE を 2 回起動し、PIE の World とプレイヤーを見つけ、実際の PCM の FOV が調整どおりに変わる。1 回目は調整中のまま PIE を終える、2 回目は Stop する。どちらの後も古い対象は外れ、アセットは変わらない |
+
+- 自動化していないもの: 人がマウスでパネルを操作すること（クリック・ドラッグ・ドッキング・見た目）。テストはクリックと同じハンドラーを呼びます。
+
+### 制限と次の段階
+
+- 保存はできません（Preset への書き戻しはしない方針）。Undo / Redo は Phase 7A-3、Profiler / Debugger の表示は Phase 7A-4 です（パネルの下に場所を空けてあります）。
+- 調整できるのは 24 章の 4 種類だけです。FOV は上のとおり、FOV を決める Node がある要求だけです。
+- PIE だけが対象です（スタンドアロンのゲーム・パッケージ版では、24 章の Blueprint ノードを使います）。

@@ -57,3 +57,20 @@ FACFCameraTuningStatus UACFCameraTuningLibrary::GetCameraTuningStatus(APlayerCon
 	UACFCameraDirector* Director = ACFTuningLibrary::FindDirector(PlayerController);
 	return Director ? Director->GetTuningStatus(Request) : FACFCameraTuningStatus();
 }
+
+TArray<FACFCameraRequestInfo> UACFCameraTuningLibrary::GetCameraRequests(APlayerController* PlayerController)
+{
+	TArray<FACFCameraRequestInfo> Out;
+	if (UACFCameraDirector* Director = ACFTuningLibrary::FindDirector(PlayerController))
+	{
+		Director->GetRequestInfos(Out);
+	}
+	return Out;
+}
+
+EACFCameraTuningResult UACFCameraTuningLibrary::GetCameraTuningNodes(APlayerController* PlayerController, const FACFCameraRequestHandle& Request, TArray<FACFCameraTuningNodeInfo>& Nodes)
+{
+	Nodes.Reset();
+	UACFCameraDirector* Director = ACFTuningLibrary::FindDirector(PlayerController);
+	return Director ? Director->GetRequestNodes(Request, Nodes) : EACFCameraTuningResult::NoPlayer;
+}

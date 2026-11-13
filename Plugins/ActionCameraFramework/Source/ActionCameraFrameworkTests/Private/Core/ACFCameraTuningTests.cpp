@@ -4,6 +4,7 @@
 
 #include "ACFCameraTestUtils.h"
 #include "ACFCameraTuning.h"
+#include "Algo/Count.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "Effects/ACFCameraBuiltinEffects.h"
@@ -12,6 +13,11 @@
 #include "Nodes/ACFCameraNode_Collision.h"
 #include "Nodes/ACFCameraNode_Follow.h"
 #include "Nodes/ACFCameraNode_LockOn.h"
+#include "Nodes/ACFCameraNode_LookAt.h"
+#include "Nodes/ACFCameraNode_FixedPose.h"
+#if WITH_EDITOR
+#include "ACFCameraPresetValidation.h"
+#endif
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
 #include "Serialization/ObjectWriter.h"
 #include "Tests/AutomationCommon.h"
@@ -562,5 +568,155 @@ bool FACFTuningProfilerTest::RunTest(const FString& Parameters)
 	return true;
 }
 #endif
+
+// README 25 章 の FOV の回避策（FOV だけ Override の Fixed Pose を Preset に足す）の安全性。3 つの Director に同じ入力を与えて比べる:
+//   A = 元の Preset（UE の FOV 90 をそのまま通す）、B = Lens（FOV だけの Fixed Pose）を足した Preset、
+//   C = 元の Preset で、UE のカメラ自体の FOV が Lens と同じ値だった場合。
+// - Lens を一覧の先頭に置くと、B は C とビット単位で同じ（＝UE のカメラの FOV を変えたのと同じ。Follow / Orbital Follow / Lock-On の
+//   位置と回転は、その FOV を前提に計算される）。調整（Start / Set）しても同じ。
+// - 一覧の最後（Collision の後）に置くと、検証が Info（EvaluationOrder）を出す。Body の Node は Lens より前に評価されるので、FOV を
+//   使う Lock-On は UE の FOV（90）で構図を計算し、Lens の FOV で表示される（B は A と同じ位置・回転で、C とは違う）。
+// - Lock-On の Adjust Field Of View とは FOV を取り合う（検証が BodyConflict の Warning を出し、評価が後の Node の FOV だけが見える）。
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFTuningFovOnlyFixedPoseTest, "ActionCameraFramework.Tuning.FovOnlyFixedPoseWorkaround", ACFTests::Flags)
+bool FACFTuningFovOnlyFixedPoseTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFTuningTests;
+	enum class EBase { Follow, Orbit, LockOn, LockOnAdjustingFov };
+	const TCHAR* const BaseNames[] = { TEXT("Follow + Look At + Collision"), TEXT("Orbital Follow + Collision"), TEXT("Lock-On + Collision"), TEXT("Lock-On (Adjust Field Of View) + Collision") };
+	auto MakeBase = [](EBase Base, bool bLens, bool bLensFirst) -> UACFCameraPreset*
+	{
+		UACFCameraPreset* Preset = MakePreset();
+		switch (Base)
+		{
+		case EBase::Follow:
+		{
+			UACFCameraNode_Follow* Follow = AddNode<UACFCameraNode_Follow>(Preset);
+			Follow->Offset = FVector(-300.0, 60.0, 150.0);
+			Follow->Damping = FACFCameraPositionDamping::Uniform(0.2f, EACFCameraDampingSpace::World);
+			AddNode<UACFCameraNode_LookAt>(Preset);
+			break;
+		}
+		case EBase::Orbit:
+		{
+			UACFCameraNode_OrbitalFollow* Orbit = AddNode<UACFCameraNode_OrbitalFollow>(Preset);
+			Orbit->PivotDamping = FACFCameraPositionDamping::Uniform(0.3f, EACFCameraDampingSpace::CameraYaw);
+			Orbit->ShoulderOffset = FVector(0.0, 40.0, 20.0);
+			break;
+		}
+		case EBase::LockOn:
+		case EBase::LockOnAdjustingFov:
+			AddNode<UACFCameraNode_LockOn>(Preset)->bAdjustFieldOfView = Base == EBase::LockOnAdjustingFov;
+			break;
+		}
+		AddNode<UACFCameraNode_Collision>(Preset);
+		if (bLens)
+		{
+			UACFCameraNode_FixedPose* Lens = NewObject<UACFCameraNode_FixedPose>(Preset);
+			Lens->bOverrideLocation = false;
+			Lens->bOverrideRotation = false;
+			Lens->FieldOfView = 75.f;
+			Preset->Nodes.Insert(Lens, bLensFirst ? 0 : Preset->Nodes.Num());
+		}
+		return Preset;
+	};
+
+	for (int32 BaseIndex = 0; BaseIndex < UE_ARRAY_COUNT(BaseNames); ++BaseIndex)
+	{
+		const EBase Base = static_cast<EBase>(BaseIndex);
+		const bool bConflict = Base == EBase::LockOnAdjustingFov;
+		const bool bUsesFov = Base == EBase::LockOn || Base == EBase::LockOnAdjustingFov; // Lock-On frames with the incoming FOV
+		for (const bool bLensFirst : { true, false })
+		{
+			const FString Case = FString::Printf(TEXT("%s, lens %s"), BaseNames[BaseIndex], bLensFirst ? TEXT("first") : TEXT("last"));
+			TStrongObjectPtr<UACFCameraPreset> Plain(MakeBase(Base, false, false));
+			TStrongObjectPtr<UACFCameraPreset> WithLens(MakeBase(Base, true, bLensFirst));
+#if WITH_EDITOR
+			TArray<FACFCameraPresetIssue> PlainIssues, LensIssues;
+			ACFCameraPresetValidation::ValidatePreset(*Plain, PlainIssues);
+			ACFCameraPresetValidation::ValidatePreset(*WithLens, LensIssues);
+			auto Num = [](const TArray<FACFCameraPresetIssue>& Issues, EACFCameraPresetIssueSeverity Severity, const TCHAR* Id = nullptr)
+			{
+				return static_cast<int32>(Algo::CountIf(Issues, [Severity, Id](const FACFCameraPresetIssue& Issue) { return Issue.Severity == Severity && (!Id || Issue.Id == FName(Id)); }));
+			};
+			TestEqual(Case + TEXT(": validation, errors"), Num(LensIssues, EACFCameraPresetIssueSeverity::Error), 0);
+			TestEqual(Case + TEXT(": validation, new warnings"), Num(LensIssues, EACFCameraPresetIssueSeverity::Warning) - Num(PlainIssues, EACFCameraPresetIssueSeverity::Warning), bConflict ? 1 : 0);
+			TestEqual(Case + TEXT(": validation, FOV conflict (BodyConflict) reported"), Num(LensIssues, EACFCameraPresetIssueSeverity::Warning, TEXT("ACF.Preset.BodyConflict")), bConflict ? 1 : 0);
+			TestEqual(Case + TEXT(": validation, list order differs from the evaluation order (Info)"), Num(LensIssues, EACFCameraPresetIssueSeverity::Info, TEXT("ACF.Preset.EvaluationOrder")), bLensFirst ? 0 : 1);
+#endif
+			TStrongObjectPtr<USceneComponent> Player(MakeTarget(FVector::ZeroVector));
+			TStrongObjectPtr<USceneComponent> Enemy(MakeTarget(FVector(900.0, 300.0, 0.0)));
+			USceneComponent* Look = Base == EBase::Orbit ? nullptr : (Base == EBase::Follow ? Player.Get() : Enemy.Get());
+			TStrongObjectPtr<UACFCameraDirector> A(NewObject<UACFCameraDirector>());
+			TStrongObjectPtr<UACFCameraDirector> B(NewObject<UACFCameraDirector>());
+			TStrongObjectPtr<UACFCameraDirector> C(NewObject<UACFCameraDirector>());
+			A->AddRequest(Plain.Get(), FollowParams(Player.Get(), Look));
+			const FACFCameraRequestHandle HandleB = B->AddRequest(WithLens.Get(), FollowParams(Player.Get(), Look));
+			C->AddRequest(Plain.Get(), FollowParams(Player.Get(), Look));
+			FFrameDriver DriverA, DriverB, DriverC;
+			for (FFrameDriver* Driver : { &DriverA, &DriverB, &DriverC })
+			{
+				Driver->Upstream.FieldOfView = 90.f;
+				Driver->bHasControlRotation = true;
+			}
+			DriverC.Upstream.FieldOfView = 75.f; // the UE camera itself at the lens FOV
+			bool bBEqualsA = true; // location and rotation, every frame
+			bool bBEqualsC = true;
+			FACFCameraPose LastA, LastB, LastC;
+			auto Run = [&](int32 From, int32 To)
+			{
+				for (int32 Frame = From; Frame < To; ++Frame)
+				{
+					Player->SetWorldLocation(FVector(Frame * 4.0, FMath::Sin(Frame * 0.05) * 150.0, 0.0));
+					Enemy->SetWorldLocation(FVector(900.0 + Frame * 2.0, 300.0, FMath::Sin(Frame * 0.03) * 50.0));
+					DriverA.ControlRotation = DriverB.ControlRotation = DriverC.ControlRotation = FRotator(-10.0, Frame * 0.7, 0.0);
+					LastA = DriverA.Step(A.Get(), 1.f / 60.f).Pose;
+					LastB = DriverB.Step(B.Get(), 1.f / 60.f).Pose;
+					LastC = DriverC.Step(C.Get(), 1.f / 60.f).Pose;
+					bBEqualsA &= LastA.Location == LastB.Location && LastA.Rotation == LastB.Rotation;
+					bBEqualsC &= LastC.Location == LastB.Location && LastC.Rotation == LastB.Rotation;
+				}
+			};
+			auto Check = [&](const TCHAR* Phase, float LensFov)
+			{
+				const FString P = Case + TEXT(", ") + Phase;
+				if (bConflict)
+				{
+					// Same stage: the list order decides. Lens first -> Lock-On runs later and its FOV is shown.
+					TestEqual(P + TEXT(": FOV of the node evaluated last"), LastB.FieldOfView, bLensFirst ? LastA.FieldOfView : LensFov);
+					TestFalse(P + TEXT(": Lock-On sets its own FOV"), FMath::IsNearlyEqual(LastA.FieldOfView, 90.f));
+					return;
+				}
+				TestEqual(P + TEXT(": without the lens the UE FOV passes through"), LastA.FieldOfView, 90.f);
+				TestEqual(P + TEXT(": FOV of the lens"), LastB.FieldOfView, LensFov);
+				TestEqual(P + TEXT(": the reference sees the same FOV"), LastC.FieldOfView, LensFov);
+				if (bLensFirst || !bUsesFov)
+				{
+					TestTrue(P + TEXT(": same location and rotation as a UE camera with that FOV, every frame"), bBEqualsC);
+				}
+				if (!bLensFirst || !bUsesFov)
+				{
+					TestTrue(P + TEXT(": same location and rotation as without the lens, every frame"), bBEqualsA);
+				}
+				if (bUsesFov)
+				{
+					// Lock-On composes with the FOV it receives: with the lens last it composes for 90 and is shown at the lens FOV.
+					TestEqual(P + TEXT(": Lock-On framing follows the lens only when the lens runs first"), bBEqualsC, bLensFirst);
+				}
+			};
+			Run(0, 90);
+			Check(TEXT("asset"), 75.f);
+
+			const int32 LensIndex = WithLens->Nodes.IndexOfByPredicate([](const UACFCameraNode* Node) { return Node->IsA<UACFCameraNode_FixedPose>(); });
+			TestEqual(Case + TEXT(": tuning Start"), B->StartTuning(HandleB), EResult::Ok);
+			TestEqual(Case + TEXT(": tuning the lens FOV"), B->SetTuningValue(HandleB, EParam::FieldOfView, FVector(55.0, 0.0, 0.0), LensIndex), EResult::Ok);
+			DriverC.Upstream.FieldOfView = 55.f;
+			bBEqualsA = bBEqualsC = true;
+			Run(90, 150);
+			Check(TEXT("tuned"), 55.f);
+			TestEqual(Case + TEXT(": tuning Stop"), B->StopTuning(HandleB), EResult::Ok);
+		}
+	}
+	return true;
+}
 
 #endif // WITH_DEV_AUTOMATION_TESTS

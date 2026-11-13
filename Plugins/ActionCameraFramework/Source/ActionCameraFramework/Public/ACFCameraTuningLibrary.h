@@ -46,4 +46,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Action Camera|Tuning", meta = (DisplayName = "Get ACF Camera Tuning Status", AutoCreateRefTerm = "Request"))
 	static FACFCameraTuningStatus GetCameraTuningStatus(APlayerController* PlayerController, const FACFCameraRequestHandle& Request);
+
+	/** The live camera requests of the player (Phase 7A-2, read only). */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Tuning", meta = (DisplayName = "Get ACF Camera Requests"))
+	static TArray<FACFCameraRequestInfo> GetCameraRequests(APlayerController* PlayerController);
+
+	/** The nodes of the request's preset with their tunable parameters; Node Index is what the tuning calls take. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Tuning", meta = (DisplayName = "Get ACF Camera Tuning Nodes", AutoCreateRefTerm = "Request"))
+	static EACFCameraTuningResult GetCameraTuningNodes(APlayerController* PlayerController, const FACFCameraRequestHandle& Request, TArray<FACFCameraTuningNodeInfo>& Nodes);
 };
