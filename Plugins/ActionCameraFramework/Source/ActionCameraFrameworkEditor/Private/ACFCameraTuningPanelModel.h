@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "ACFCameraTuning.h"
+#include "ACFCameraTuningChangeSet.h"
 #include "Engine/EngineTypes.h"
 #include "UObject/WeakObjectPtrTemplates.h"
 
@@ -98,7 +99,32 @@ public:
 
 	const FString& GetLastMessage() const { return LastMessage; }
 
+	// --- Phase 7A-3: changes kept for the preset assets (ACFCameraTuningChangeSet.h, README 26 章) -------------------
+	FACFCameraTuningPanelModel();
+	~FACFCameraTuningPanelModel();
+	FACFCameraTuningPanelModel(const FACFCameraTuningPanelModel&) = delete;
+	FACFCameraTuningPanelModel& operator=(const FACFCameraTuningPanelModel&) = delete;
+
+	/**
+	 * Records the tuned values of every tuned request of every PIE player (or of the test director). Read-only; the panel
+	 * calls it with its refresh, and it runs once more just before PIE ends (the tuning copies are gone afterwards).
+	 */
+	int32 CaptureAll();
+	FACFCameraTuningChangeSet& GetChangeSet() { return ChangeSet; }
+	const FACFCameraTuningChangeSet& GetChangeSet() const { return ChangeSet; }
+	/** Check / Apply / Save with the result as the last message. */
+	FACFCameraTuningChangeSet::FReport CheckChanges();
+	FACFCameraTuningChangeSet::FReport ApplyChanges(bool bConfirmWarnings);
+	FACFCameraTuningChangeSet::FReport SaveChanges();
+	/** Source key / label of a request of the selected player (what the change set records it under). */
+	FString MakeSourceKey(FACFCameraRequestHandle Handle) const;
+	FString MakeSourceLabel(const FACFCameraRequestInfo& Info) const;
+
 private:
+	void OnPrePIEEnded(bool bIsSimulating);
+	FDelegateHandle PrePIEEndedHandle;
+	FACFCameraTuningChangeSet ChangeSet;
+
 	EACFCameraTuningResult Report(EACFCameraTuningResult Result, const FString& What);
 	bool NodeMatches(UACFCameraDirector& Director) const;
 	void ClearCompare();

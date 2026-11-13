@@ -570,6 +570,7 @@ void UACFCameraDirector::GetRequestInfos(TArray<FACFCameraRequestInfo>& Out)
 		const FACFCameraTuningSession* Session = FindTuningSession(Entry.Handle);
 		const UACFCameraPreset* Asset = Session ? Session->Original.Get() : Entry.Rig.GetPreset();
 		Info.Preset = Asset ? Asset->GetFName() : NAME_None;
+		Info.PresetPath = FSoftObjectPath(Asset);
 		Info.DebugName = Entry.Params.DebugName;
 		Info.Priority = Entry.Params.Priority;
 		Info.bActive = Entry.Handle == ActiveHandle;

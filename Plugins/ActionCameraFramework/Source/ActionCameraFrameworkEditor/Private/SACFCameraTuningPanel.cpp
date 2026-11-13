@@ -4,6 +4,7 @@
 #include "Engine/World.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SSpinBox.h"
 #include "Widgets/Layout/SBorder.h"
@@ -262,13 +263,17 @@ void SACFCameraTuningPanel::Construct(const FArguments& InArgs)
 						+ SHeaderRow::Column(TEXT("Enabled")).DefaultLabel(LOCTEXT("ColEnabled", "Enabled")).FillWidth(0.1f)
 						+ SHeaderRow::Column(TEXT("Params")).DefaultLabel(LOCTEXT("ColParams", "Tunable parameters")).FillWidth(0.45f))
 				]
-				+ SSplitter::Slot().Value(0.5f)
+				+ SSplitter::Slot().Value(0.3f)
 				[
 					SNew(SScrollBox)
 					+ SScrollBox::Slot()
 					[
 						SAssignNew(ParameterBox, SVerticalBox)
 					]
+				]
+				+ SSplitter::Slot().Value(0.2f)
+				[
+					MakeChangesSection()
 				]
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)
@@ -410,6 +415,223 @@ void SACFCameraTuningPanel::Refresh()
 		RowsShape = Shape;
 		RebuildParameterBox();
 	}
+
+	// Phase 7A-3: keep the change set current (read-only), rebuild its rows only when the list itself changed. The row
+	// states are read live, so Undo / Redo / external edits show up without a rebuild.
+	Model->CaptureAll();
+	FString NewChangesShape;
+	const TArray<FACFCameraTuningChangeSet::FChange>& Changes = Model->GetChangeSet().GetChanges();
+	for (int32 Index = 0; Index < Changes.Num(); ++Index)
+	{
+		if (Changes[Index].IsChanged())
+		{
+			NewChangesShape += FString::Printf(TEXT("%d:%s|%s|%d|%d;"), Index, *Changes[Index].SourceKey, *Changes[Index].Preset.ToString(),
+				Changes[Index].NodeIndex, static_cast<int32>(Changes[Index].Parameter));
+		}
+	}
+	if (NewChangesShape != ChangesShape)
+	{
+		ChangesShape = NewChangesShape;
+		RebuildChangesBox();
+	}
+}
+
+// --- Phase 7A-3: changes for the preset assets -------------------------------------------------------------------------
+
+TSharedRef<SWidget> SACFCameraTuningPanel::MakeChangesSection()
+{
+	return SNew(SScrollBox)
+		+ SScrollBox::Slot()
+		[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().Padding(2.f)
+			[
+				SNew(STextBlock)
+				.Font(FAppStyle::GetFontStyle("BoldFont"))
+				.Text(LOCTEXT("ChangesTitle", "Changes for the preset assets (kept after PIE ends; written only by Apply to Asset)"))
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(2.f)
+			[
+				SNew(STextBlock).AutoWrapText(true).Text_Lambda([this]() { return GetChangesSummary(); })
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(2.f)
+			[
+				SAssignNew(ChangesBox, SVerticalBox)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(2.f)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)
+				[
+					SNew(SButton).Text(LOCTEXT("Check", "Check"))
+					.ToolTipText(LOCTEXT("CheckTip", "Conflicts with the assets as they are now, and Preset Validation of the result. Changes nothing."))
+					.IsEnabled_Lambda([this]() { return Model->GetChangeSet().CountState(FACFCameraTuningChangeSet::EState::Pending, true) > 0
+						|| Model->GetChangeSet().CountState(FACFCameraTuningChangeSet::EState::Conflict, true) > 0; })
+					.OnClicked(this, &SACFCameraTuningPanel::OnCheckChanges)
+				]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)
+				[
+					SNew(SButton).Text(LOCTEXT("Apply", "Apply to Asset"))
+					.ToolTipText(LOCTEXT("ApplyTip", "Writes the included pending changes to their preset assets in memory, as one undoable step (Edit > Undo). Not available during PIE. Does not save."))
+					.IsEnabled_Lambda([this]() { return CanApply(); })
+					.OnClicked(this, &SACFCameraTuningPanel::OnApplyChanges)
+				]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)
+				[
+					SNew(SButton).Text(LOCTEXT("Save", "Save Asset"))
+					.ToolTipText(LOCTEXT("SaveTip", "Saves only the packages of applied changes to disk. Other dirty packages are not saved."))
+					.IsEnabled_Lambda([this]() { return Model->GetChangeSet().HasUnsavedApplied(); })
+					.OnClicked(this, &SACFCameraTuningPanel::OnSaveChanges)
+				]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)
+				[
+					SNew(SButton).Text(LOCTEXT("ClearChanges", "Clear List"))
+					.ToolTipText(LOCTEXT("ClearChangesTip", "Forgets the listed changes. Never touches an asset (applied values stay applied)."))
+					.IsEnabled_Lambda([this]() { return !ChangesShape.IsEmpty(); })
+					.OnClicked(this, &SACFCameraTuningPanel::OnClearChanges)
+				]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(8.f, 2.f)
+				[
+					SNew(SCheckBox)
+					.IsChecked_Lambda([this]() { return bConfirmWarnings ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
+					.OnCheckStateChanged_Lambda([this](ECheckBoxState State) { bConfirmWarnings = State == ECheckBoxState::Checked; })
+					[
+						SNew(STextBlock).Text(LOCTEXT("ConfirmWarnings", "Apply despite validation warnings (I reviewed them)"))
+					]
+				]
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(2.f)
+			[
+				SNew(STextBlock).AutoWrapText(true).Text_Lambda([this]() { return FText::FromString(ValidationText); })
+			]
+		];
+}
+
+void SACFCameraTuningPanel::RebuildChangesBox()
+{
+	if (!ChangesBox)
+	{
+		return;
+	}
+	ChangesBox->ClearChildren();
+	NumChangeRows = 0;
+	const TArray<FACFCameraTuningChangeSet::FChange>& Changes = Model->GetChangeSet().GetChanges();
+	for (int32 Index = 0; Index < Changes.Num(); ++Index)
+	{
+		if (!Changes[Index].IsChanged())
+		{
+			continue;
+		}
+		++NumChangeRows;
+		const FACFCameraTuningChangeSet::FChange& Change = Changes[Index];
+		auto Format = [&Change](const FVector& V)
+		{
+			return Change.bScalar ? FString::Printf(TEXT("%.3f"), V.X) : FString::Printf(TEXT("(%.3f, %.3f, %.3f)"), V.X, V.Y, V.Z);
+		};
+		const FText What = FText::FromString(FString::Printf(TEXT("%s  ->  %s : node %d %s : %s  %s -> %s"), *Change.SourceLabel, *Change.Preset.GetAssetName(),
+			Change.NodeIndex, *Change.NodeClass.ToString(), *ACFCameraTuning::GetParameterName(Change.Parameter), *Format(Change.BaseValue), *Format(Change.Value)));
+		ChangesBox->AddSlot().AutoHeight().Padding(1.f)
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(SCheckBox)
+				.ToolTipText(LOCTEXT("IncludeTip", "Include this change in Check / Apply."))
+				.IsChecked_Lambda([this, Index]() { const auto& All = Model->GetChangeSet().GetChanges(); return All.IsValidIndex(Index) && All[Index].bInclude ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
+				.OnCheckStateChanged_Lambda([this, Index](ECheckBoxState State) { Model->GetChangeSet().SetIncluded(Index, State == ECheckBoxState::Checked); })
+			]
+			+ SHorizontalBox::Slot().FillWidth(0.7f).VAlign(VAlign_Center).Padding(4.f, 0.f)
+			[
+				SNew(STextBlock).Text(What).ToolTipText(FText::FromString(Change.Preset.ToString()))
+			]
+			+ SHorizontalBox::Slot().FillWidth(0.3f).VAlign(VAlign_Center)
+			[
+				SNew(STextBlock).AutoWrapText(true).Text_Lambda([this, Index]() { return GetChangeStateText(Index); })
+			]
+		];
+	}
+}
+
+FText SACFCameraTuningPanel::GetChangeStateText(int32 Index) const
+{
+	using EState = FACFCameraTuningChangeSet::EState;
+	const FACFCameraTuningChangeSet::FStatus Status = Model->GetChangeSet().GetStatus(Index);
+	switch (Status.State)
+	{
+	case EState::Pending: return LOCTEXT("StatePending", "Not applied");
+	case EState::Applied: return Status.bUnsaved ? LOCTEXT("StateUnsaved", "Applied, NOT saved") : LOCTEXT("StateSaved", "Applied (asset saved)");
+	case EState::Conflict: return FText::Format(LOCTEXT("StateConflict", "Conflict: {0}"), FText::FromString(Status.Reason));
+	default: return LOCTEXT("StateUnchanged", "Unchanged");
+	}
+}
+
+FText SACFCameraTuningPanel::GetChangesSummary() const
+{
+	using EState = FACFCameraTuningChangeSet::EState;
+	const FACFCameraTuningChangeSet& Set = Model->GetChangeSet();
+	const int32 Pending = Set.CountState(EState::Pending, false);
+	const int32 Applied = Set.CountState(EState::Applied, false);
+	const int32 Conflicts = Set.CountState(EState::Conflict, false);
+	FString Text = FString::Printf(TEXT("%d not applied, %d applied, %d conflict(s)."), Pending, Applied, Conflicts);
+	if (Set.HasUnsavedApplied())
+	{
+		Text += TEXT(" Unsaved changes in preset assets: use Save Asset (Undo does not change the file on disk).");
+	}
+	if (FACFCameraTuningChangeSet::IsPlaySessionRunning() && Pending > 0)
+	{
+		Text += TEXT(" End PIE to apply: the shared preset is in use by the game.");
+	}
+	return FText::FromString(Text);
+}
+
+bool SACFCameraTuningPanel::CanApply() const
+{
+	return !FACFCameraTuningChangeSet::IsPlaySessionRunning() && Model->GetChangeSet().CountState(FACFCameraTuningChangeSet::EState::Pending, true) > 0;
+}
+
+void SACFCameraTuningPanel::ShowReport(const FACFCameraTuningChangeSet::FReport& Report)
+{
+	TArray<FString> Lines;
+	for (const FString& Conflict : Report.Conflicts)
+	{
+		Lines.Add(FString::Printf(TEXT("CONFLICT  %s"), *Conflict));
+	}
+	for (const FACFCameraPresetIssue& Issue : Report.Issues)
+	{
+		const TCHAR* Severity = Issue.Severity == EACFCameraPresetIssueSeverity::Error ? TEXT("ERROR") : Issue.Severity == EACFCameraPresetIssueSeverity::Warning ? TEXT("WARNING") : TEXT("INFO");
+		Lines.Add(FString::Printf(TEXT("%s  %s"), Severity, *Issue.Message.ToString()));
+	}
+	if (!Report.UnsavedPackages.IsEmpty())
+	{
+		Lines.Add(FString::Printf(TEXT("UNSAVED  %s"), *FString::Join(Report.UnsavedPackages, TEXT(", "))));
+	}
+	ValidationText = FString::Join(Lines, TEXT("\n"));
+}
+
+FReply SACFCameraTuningPanel::OnCheckChanges()
+{
+	ShowReport(Model->CheckChanges());
+	return FReply::Handled();
+}
+
+FReply SACFCameraTuningPanel::OnApplyChanges()
+{
+	ShowReport(Model->ApplyChanges(bConfirmWarnings));
+	return FReply::Handled();
+}
+
+FReply SACFCameraTuningPanel::OnSaveChanges()
+{
+	ShowReport(Model->SaveChanges());
+	return FReply::Handled();
+}
+
+FReply SACFCameraTuningPanel::OnClearChanges()
+{
+	Model->GetChangeSet().Clear();
+	ValidationText.Reset();
+	Refresh();
+	return FReply::Handled();
 }
 
 void SACFCameraTuningPanel::RebuildParameterBox()

@@ -43,7 +43,28 @@ public:
 	void OnRequestSelected(TSharedPtr<FACFCameraRequestInfo> Item, ESelectInfo::Type Info);
 	void OnNodeSelected(TSharedPtr<FACFCameraTuningNodeInfo> Item, ESelectInfo::Type Info);
 
+	// Phase 7A-3: changes for the preset assets (README 26 章).
+	FReply OnCheckChanges();
+	FReply OnApplyChanges();
+	FReply OnSaveChanges();
+	FReply OnClearChanges();
+	void SetConfirmWarnings(bool bConfirm) { bConfirmWarnings = bConfirm; }
+	bool CanApply() const;
+	int32 GetNumChangeRows() const { return NumChangeRows; }
+	const FString& GetValidationText() const { return ValidationText; }
+	FText GetChangeStateText(int32 ChangeIndex) const;
+	FText GetChangesSummary() const;
+
 private:
+	TSharedRef<SWidget> MakeChangesSection();
+	void RebuildChangesBox();
+	void ShowReport(const FACFCameraTuningChangeSet::FReport& Report);
+	TSharedPtr<SVerticalBox> ChangesBox;
+	FString ChangesShape;
+	int32 NumChangeRows = 0;
+	FString ValidationText;
+	bool bConfirmWarnings = false;
+
 	EActiveTimerReturnType OnTimer(double CurrentTime, float DeltaTime);
 	void RebuildParameterBox();
 	TSharedRef<SWidget> MakeParameterRow(int32 RowIndex);

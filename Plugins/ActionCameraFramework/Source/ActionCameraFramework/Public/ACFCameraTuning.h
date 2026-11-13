@@ -118,6 +118,10 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRequestInfo
 	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
 	FName Preset;
 
+	/** Path of that asset (Phase 7A-3: the editor applies tuned values to it after PIE). Not a reference: it keeps nothing alive. */
+	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
+	FSoftObjectPath PresetPath;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Tuning")
 	FName DebugName;
 

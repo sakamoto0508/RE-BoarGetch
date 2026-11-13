@@ -6,6 +6,7 @@
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "Editor.h"
 
 namespace ACFTuningPanelImpl
 {
@@ -288,7 +289,18 @@ EACFCameraTuningResult FACFCameraTuningPanelModel::Start()
 	{
 		return Report(EACFCameraTuningResult::NoRequest, TEXT("Start Tuning"));
 	}
-	return Report(Director->StartTuning(Request), TEXT("Start Tuning"));
+	const EACFCameraTuningResult Result = Director->StartTuning(Request);
+	if (Result == EACFCameraTuningResult::Ok)
+	{
+		// Phase 7A-3: record the asset values right away; they are the base the conflict check compares with.
+		TArray<FACFCameraRequestInfo> Infos;
+		Director->GetRequestInfos(Infos);
+		if (const FACFCameraRequestInfo* Info = Infos.FindByPredicate([this](const FACFCameraRequestInfo& Entry) { return Entry.Handle == Request; }))
+		{
+			ChangeSet.Capture(*Director, Request, MakeSourceKey(Request), MakeSourceLabel(*Info));
+		}
+	}
+	return Report(Result, TEXT("Start Tuning"));
 }
 
 EACFCameraTuningResult FACFCameraTuningPanelModel::Stop()
@@ -299,7 +311,12 @@ EACFCameraTuningResult FACFCameraTuningPanelModel::Stop()
 		return Report(EACFCameraTuningResult::NoPlayer, TEXT("Stop Tuning"));
 	}
 	ClearCompare(); // stopping discards the tuned values anyway
-	return Report(Request.IsValid() ? Director->StopTuning(Request) : EACFCameraTuningResult::NoRequest, TEXT("Stop Tuning"));
+	const EACFCameraTuningResult Result = Request.IsValid() ? Director->StopTuning(Request) : EACFCameraTuningResult::NoRequest;
+	if (Result == EACFCameraTuningResult::Ok)
+	{
+		ChangeSet.Discard(MakeSourceKey(Request)); // Phase 7A-3: "discard" also means: nothing of it is offered for the asset
+	}
+	return Report(Result, TEXT("Stop Tuning"));
 }
 
 EACFCameraTuningResult FACFCameraTuningPanelModel::SetValue(EACFCameraTuningParameter Parameter, const FVector& Value)
@@ -419,4 +436,116 @@ void FACFCameraTuningPanelModel::ClearCompare()
 {
 	CompareStash.Reset();
 	bShowingOriginal = false;
+}
+
+// --- Phase 7A-3 --------------------------------------------------------------------------------------------------------
+
+FACFCameraTuningPanelModel::FACFCameraTuningPanelModel()
+{
+	PrePIEEndedHandle = FEditorDelegates::PrePIEEnded.AddRaw(this, &FACFCameraTuningPanelModel::OnPrePIEEnded);
+}
+
+FACFCameraTuningPanelModel::~FACFCameraTuningPanelModel()
+{
+	FEditorDelegates::PrePIEEnded.Remove(PrePIEEndedHandle);
+}
+
+void FACFCameraTuningPanelModel::OnPrePIEEnded(bool bIsSimulating)
+{
+	// The PIE worlds still exist here; right after, the tuning sessions end with them (only the change set remains).
+	CaptureAll();
+}
+
+FString FACFCameraTuningPanelModel::MakeSourceKey(FACFCameraRequestHandle Handle) const
+{
+	if (TestDirector.IsValid())
+	{
+		return FString::Printf(TEXT("Test:%s|%s"), *TestDirector->GetName(), *Handle.ToString());
+	}
+	const UWorld* W = World.Get();
+	const ULocalPlayer* LocalPlayer = Player.Get();
+	const UGameInstance* GameInstance = W ? W->GetGameInstance() : nullptr;
+	const int32 PlayerIndex = GameInstance && LocalPlayer ? GameInstance->GetLocalPlayers().IndexOfByKey(LocalPlayer) : INDEX_NONE;
+	return FString::Printf(TEXT("%s#%u|%d|%s"), W ? *W->GetName() : TEXT("-"), W ? W->GetUniqueID() : 0u, PlayerIndex, *Handle.ToString());
+}
+
+FString FACFCameraTuningPanelModel::MakeSourceLabel(const FACFCameraRequestInfo& Info) const
+{
+	FString Who = TEXT("Test director");
+	if (!TestDirector.IsValid())
+	{
+		const UWorld* W = World.Get();
+		const UGameInstance* GameInstance = W ? W->GetGameInstance() : nullptr;
+		const int32 PlayerIndex = GameInstance && Player.IsValid() ? GameInstance->GetLocalPlayers().IndexOfByKey(Player.Get()) : INDEX_NONE;
+		Who = FString::Printf(TEXT("%s / Player %d"), W ? *W->GetMapName() : TEXT("-"), PlayerIndex);
+	}
+	return FString::Printf(TEXT("%s / %s%s"), *Who, *Info.Handle.ToString(), Info.DebugName.IsNone() ? TEXT("") : *FString::Printf(TEXT(" (%s)"), *Info.DebugName.ToString()));
+}
+
+int32 FACFCameraTuningPanelModel::CaptureAll()
+{
+	int32 NumChanged = 0;
+	auto CaptureDirector = [this, &NumChanged](UACFCameraDirector& Director)
+	{
+		TArray<FACFCameraRequestInfo> Infos;
+		Director.GetRequestInfos(Infos);
+		for (const FACFCameraRequestInfo& Info : Infos)
+		{
+			if (Info.bTuning)
+			{
+				NumChanged += ChangeSet.Capture(Director, Info.Handle, MakeSourceKey(Info.Handle), MakeSourceLabel(Info));
+			}
+		}
+	};
+	if (UACFCameraDirector* Director = TestDirector.Get())
+	{
+		CaptureDirector(*Director);
+		return NumChanged;
+	}
+	// Every PIE player, not only the selected one: the key / label are built from the selection, so select each in turn.
+	const TWeakObjectPtr<UWorld> SavedWorld = World;
+	const TWeakObjectPtr<ULocalPlayer> SavedPlayer = Player;
+	TArray<FWorldEntry> Worlds;
+	GetPIEWorlds(Worlds);
+	for (const FWorldEntry& WorldEntry : Worlds)
+	{
+		TArray<FPlayerEntry> Players;
+		GetPlayers(WorldEntry.World.Get(), Players);
+		for (const FPlayerEntry& PlayerEntry : Players)
+		{
+			World = WorldEntry.World;
+			Player = PlayerEntry.Player;
+			UACFCameraSubsystem* Subsystem = PlayerEntry.Player.IsValid() ? PlayerEntry.Player->GetSubsystem<UACFCameraSubsystem>() : nullptr;
+			if (UACFCameraDirector* Director = Subsystem ? Subsystem->GetDirector() : nullptr)
+			{
+				CaptureDirector(*Director);
+			}
+		}
+	}
+	World = SavedWorld;
+	Player = SavedPlayer;
+	return NumChanged;
+}
+
+FACFCameraTuningChangeSet::FReport FACFCameraTuningPanelModel::CheckChanges()
+{
+	CaptureAll();
+	FACFCameraTuningChangeSet::FReport Result = ChangeSet.Check();
+	LastMessage = FString::Printf(TEXT("Check: %s"), *Result.Message);
+	return Result;
+}
+
+FACFCameraTuningChangeSet::FReport FACFCameraTuningPanelModel::ApplyChanges(bool bConfirmWarnings)
+{
+	CaptureAll();
+	FACFCameraTuningChangeSet::FReport Result = ChangeSet.Apply(bConfirmWarnings);
+	LastMessage = FString::Printf(TEXT("Apply to Asset: %s"), *Result.Message);
+	return Result;
+}
+
+FACFCameraTuningChangeSet::FReport FACFCameraTuningPanelModel::SaveChanges()
+{
+	FACFCameraTuningChangeSet::FReport Result = ChangeSet.Save();
+	LastMessage = FString::Printf(TEXT("Save Asset: %s"), *Result.Message);
+	return Result;
 }
