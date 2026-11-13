@@ -2,7 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-#include "Tests/ACFCameraTestEnvironment.h"
+#include "ACFCameraTestEnvironment.h"
 #include "ACFCameraHealth.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"

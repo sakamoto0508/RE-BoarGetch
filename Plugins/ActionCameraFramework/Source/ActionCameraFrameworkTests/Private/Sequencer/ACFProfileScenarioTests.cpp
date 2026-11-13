@@ -31,7 +31,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "UObject/StrongObjectPtr.h"
-#include "Tests/ACFCameraTestEnvironment.h"
+#include "ACFCameraTestEnvironment.h"
 
 /**
  * Phase 6B / B-1 performance baseline. NOT a regression test: it only runs when the command line has -ACFProfile and

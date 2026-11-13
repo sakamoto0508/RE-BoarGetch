@@ -16,7 +16,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。設計リスクは再現しておらず、性能は未計測
-- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測）〜 B-9（テストの土台、22 章）が完了し、次は B-10。今後の計画は下の「開発ロードマップ」
+- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測）〜 B-10（Tests / Samples の分離、23 章）が完了し、次は B-11。今後の計画は下の「開発ロードマップ」
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -24,7 +24,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 |-------|------|-----------|
 | 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
-| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1〜B-9: Completed。次は B-10） |
+| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1〜B-10: Completed。次は B-11） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Not Started |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
@@ -850,8 +850,9 @@ Scripts/RunTests.sh --context samples
 | `Source/ActionCameraFramework/Public/` | `ACFCameraSubsystem`（入口）、`ACFCameraDirector`、`ACFCameraSequence`（Sequence / Shot の定義・Handle・状態・通知）、`ACFCameraSequencePlayer`（再生）、`ACFCameraAnimNotifies`（Anim Notify / Notify State）、`ACFCameraConstraintSolver`（Deoccluder / Framing Recovery）、`ACFCameraPreset`、`ACFCameraNode`（段・Scratch）、`ACFCameraRigInstance`、`ACFCameraOutputModifier`（Output と Guard）、`ACFCameraTypes`、`ACFCameraSettings`、`ACFCameraBlueprintLibrary`、`ACFCameraProfiler`（計測。Shipping 以外） |
 | `Source/ActionCameraFramework/Public/Nodes/` | FixedPose / Follow / LookAt / OrbitalFollow / Composers / LockOn / ShotAnchor / Combat / GroupFraming / Collision と、共通部品の TargetTracking（Damping・Lookahead・テレポート）/ Framing（画面座標の計算）/ TargetGroup（グループの解決） |
 | `Source/ActionCameraFramework/Public/Effects/` | `ACFCameraEffect`（Layer 基底・Effect Preset）、`ACFCameraBuiltinEffects`（Punch / Recoil / Impulse / Shake / Speed FOV / Roll）、`ACFCameraEffectStack`（Instance・Envelope・合成）、`ACFCameraEffectTypes` |
-| `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`、`ACFCameraDebugShake`（サンプル用 Shake）、`Tests/` |
-| `Source/ActionCameraFrameworkSequencer/` | Level Sequencer 連携（Phase 5A）。`ACFSequencerCameraSubsystem`（検出・復帰処理）、`ACFSequencerBlueprintLibrary`、`ACFSequencerSettings`、`ACFSequencerTypes`、`ACF.Sample.Sequencer` コマンド、`Tests/`。LevelSequence / MovieScene に依存するのはこのモジュールだけです |
+| `Source/ActionCameraFramework/Private/` | 上記の実装、`ACFCameraDebugDraw`、`ACFCameraDebugCommands`（`ACF.Debug.*` / `ACF.Profile.*`）、`ACFCameraSampleCommands`（`ACF.Sample.*`、23 章）、`ACFCameraDebugShake`（サンプル用 Shake） |
+| `Source/ActionCameraFrameworkSequencer/` | Level Sequencer 連携（Phase 5A）。`ACFSequencerCameraSubsystem`（検出・復帰処理）、`ACFSequencerBlueprintLibrary`、`ACFSequencerSettings`、`ACFSequencerTypes`、`ACF.Sample.Sequencer` コマンド（`ACFSequencerSampleCommands`）。LevelSequence / MovieScene に依存するのはこのモジュールだけです |
+| `Source/ActionCameraFrameworkTests/` | 自動テスト（Phase 6B / B-10、23 章）。Core のテスト（`Private/Core/`）、Sequencer のテスト（`Private/Sequencer/`）、テスト専用のクラス（テスト用 Shake、Sequencer のリスナー・プローブ Modifier・テスト用 PCM）、`ACFCameraTestEnvironment.h`（22 章）。Type = DeveloperTool で、Test / Shipping ではビルドされません |
 | `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 7A の Editor 専用機能の置き場。現状は Data Validation 経由の検証テストだけ）。Preset の検証の本体は `ACFCameraPresetValidation`（ランタイムモジュール、`WITH_EDITOR` のみ） |
 | `Content/Verification/` | 自動テスト用アセット |
 | `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
@@ -1331,9 +1332,9 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 
 - マップはエンジンの空のマップ `/Engine/Maps/Entry`、GameMode はエンジンの `GameModeBase`（URL の `?game=`）、GameInstance はエンジンの `GameInstance`（`-ini:` で上書き）です。PlayerController・Pawn（DefaultPawn）・PCM もエンジン標準なので、ホストプロジェクトのゲームの処理（REBoarGetch の `BP_BoarGameInstance`、`BP_PC_Lobby`、ThirdPerson の Character）は動きません。新しいアセットは追加していません。
 - 統合テストで使う Actor・ターゲット・SpringArm・壁は、各テストが自分でスポーンします（`OrbitMatchesSpringArm` は B-9 から自分の SpringArm を使い、ホストの Pawn の設定に依存しません）。
-- `.Samples.*` と `.Profile.Scenarios` だけは、テストマップ `L_ACFCameraTest` とホストプロジェクトの GameMode（人型の Pawn）を使います（画面内の判定が人型の大きさを前提にしているため。既存のマップとアセットは作り直していません）。
+- `.Samples.*` はテストマップ `L_ACFCameraTest` を使います。B-10 から、`samples` コンテキストもエンジン標準の GameModeBase / DefaultPawn / GameInstance で実行します（6 件すべて合格を確認）。`samples-host` はホストプロジェクトの既定の GameMode（エディターでマップをプレイしたときと同じ）で実行します。`.Profile.Scenarios` は、B-1〜B-9 の基準値と比べられるよう、ホストの GameMode のままです。
 
-### シナリオの後始末（`Public/Tests/ACFCameraTestEnvironment.h`）
+### シナリオの後始末（`ActionCameraFrameworkTests/Private/ACFCameraTestEnvironment.h`）
 
 実際の World・PlayerController・PCM を使う Integration / Sequencer のシナリオは、開始時に次を記録し、終了時（途中で失敗・中断した場合も）に戻します。テストが戻し忘れた場合は、そのテストのエラーとして名前を出します。
 
@@ -1374,5 +1375,47 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 - UE の Automation は 1 プロセスで 1 回しか `RunTests` を受け付けず、カテゴリの中の順序は変えられません。順序への依存は「全件の連続実行」「1 件ずつ別プロセス」「カテゴリの組み合わせ」で確認しました。全件の順序をランダムに入れ替えた実行はしていません。
 - PIE（エディターでのプレイ）の開始・終了をまたぐテストはありません（ゲームプロセスと `FTestWorldWrapper` の World の破棄で確認）。
 - アセット生成スクリプトの再実行で結果が変わらないことは、コード（既存のアセットの再利用、マップの作り直し）からの判断です。B-9 では、追跡しているアセットを書き換えないよう再実行していません（実行スクリプトは読み取りだけのスクリプトで確認）。
-- `.Samples.*` / `.Profile.Scenarios` はホストプロジェクトの GameMode に依存したままです。新しいプロジェクトでの実行は Phase 8 で確認します。
+- `.Profile.Scenarios` と、エディターでテストマップをプレイしたときは、ホストプロジェクトの既定の GameMode を使います（マップの World Settings に GameMode を設定していないため）。新しいプロジェクトでの実行は Phase 8 で確認します。
 - 時間で待つ統合テスト（監査 T-2）は、まだ 40 箇所以上あります。B-9 では、不安定さが確認された `SpeedFovAndRoll` の原因だけを直しました。
+
+## 23. モジュール構成（Runtime / Tests / Samples、Phase 6B / B-10）
+
+### 構成
+
+| モジュール | Type | 内容 | Shipping |
+|---|---|---|---|
+| `ActionCameraFramework` | Runtime | カメラ本体（Director・Node・Preset・Subsystem・Effects・Sequence）、診断（16 章の健全性、`ACF.Debug.*`、`ACF.Profile.*`）、サンプル用コマンド `ACF.Sample.*`（`ACFCameraSampleCommands.cpp`） | 本体だけ。`ACF.Debug.*` / `ACF.Profile.*` / `ACF.Sample.*` は入らない |
+| `ActionCameraFrameworkSequencer` | Runtime | Level Sequencer 連携、`ACF.Sample.Sequencer`（`ACFSequencerSampleCommands.cpp`） | 連携だけ |
+| `ActionCameraFrameworkTests` | DeveloperTool | Core と Sequencer の自動テスト、テスト専用のクラス、テスト環境（22 章） | 入らない（Test / Shipping ではビルドされない） |
+| `ActionCameraFrameworkEditor` | Editor | Data Validation 経由の検証テスト（21 章） | 入らない |
+
+- 依存の向き: `Tests` → `Sequencer` → `ActionCameraFramework`、`Editor` → `ActionCameraFramework`。Runtime の 2 モジュールは `Tests` / `Editor` に依存しません。
+- テストは公開済みの API だけを使っています。モジュールを分けるために公開した API・追加した `_API` はありません。
+- `DeveloperTool` は Editor と Debug / Development のゲームでビルド・ロードされます。`-game`（エディターのバイナリ）でもテストは今までどおり見つかり、実行されます（件数は B-9 と同じ、テスト名の一覧も一致）。
+
+### 比較した方式
+
+| 方式 | 内容 | 判断 |
+|---|---|---|
+| A | モジュールはそのまま、ファイルとコンパイル条件だけ整理 | テスト用の UCLASS（テスト用 Shake、Sequencer のリスナー・プローブ・テスト用 PCM 4 種）は UHT が構成で除外できないため、Shipping に残る |
+| **B（採用）** | Tests をモジュールに分ける。Samples は既存のモジュール内で整理 | テストの移動はリンクエラー 0 件・API の変更なしで済んだ。テスト用 UCLASS が Shipping から消える。サンプルはアセットが参照しているクラスがあるので、移さずに整理する |
+| C | Core / Editor / Sequencer / Tests / Samples をすべて分ける | サンプル用 Shake（`UACFDebugCameraShake`）を別モジュールへ移すと、検証用 Blueprint `BP_ACFEffectTest` のクラスの参照が変わり、リダイレクトとアセットの再保存が必要。得られるのは小さな UCLASS 2 個分だけなので、今回は見送り |
+
+### サンプル
+
+- `ACF.Sample.*` は `ACF_WITH_SAMPLE_COMMANDS`（`ACFCameraTypes.h`、既定は Shipping 以外で 1）でまとめてコンパイルされます。プロジェクトが `ACF_WITH_SAMPLE_COMMANDS=0` を定義すれば、Development でも入りません（例: ゲームの Target.cs の `GlobalDefinitions`。共有ビルド環境のエディターでは使えません）。0 の構成は Shipping のビルドで確認済みです。
+- サンプルのアセット（`Content/Samples/`）はコードからは文字列のパスでしか参照されません。フォルダーを削除してもカメラの機能は動き、`ACF.Sample.*` は「見つからない」という警告を出すだけです。
+- サンプルと検証用のアセット 22 個のパッケージの依存は、エンジンとこのプラグインの中だけです（Asset Registry で確認）。テストマップの中に `/Game/Level/L_Lobby` という文字列が 1 つ残っていますが、依存ではありません（作成時の名残）。
+- テストマップの World Settings には GameMode が設定されていないので、エディターでプレイするとプロジェクトの既定の GameMode が使われます。`.Samples.*` はエンジン標準の GameModeBase / DefaultPawn でも合格します（`Scripts/RunTests.sh --context samples`）。
+
+### Shipping
+
+- B-9 の Shipping のバイナリにあったテスト用クラスの名前（`ACFTestCameraShake`、`ACFSequencerTestListener`、`ACFSequencerTestProbeModifier`、`ACFSequencerTestCameraManager`）は、B-10 では 0 件です。
+- 残るもの: サンプル用 Shake の UCLASS 2 個（`UACFDebugCameraShake` とその Pattern。クラスピッカーには出ない）。`ACF.Sample.*` のコードとサンプルのパスは、以前から Shipping に入っていません。
+
+### 残るホストプロジェクトへの依存（RE-BoarGetch）
+
+- コードとアセットの依存はありません（Build.cs はエンジンのモジュールだけ、アセットの依存もエンジンとプラグインの中だけ）。
+- 実行方法の一部: `RunTests.sh` の `host` / `samples-host` はホストの既定のマップ・GameMode を使います（比較用）。`profile` は B-1〜B-9 の基準値と比べられるよう、ホストの GameMode で計測します。
+- `.Editor.ProjectPresetsValidate` はプロジェクトの `/Game/` の Preset も検証します（どのプロジェクトでも同じ動き）。
+- 新しいプロジェクトに入れてビルド・テストする確認は Phase 8 で行います。

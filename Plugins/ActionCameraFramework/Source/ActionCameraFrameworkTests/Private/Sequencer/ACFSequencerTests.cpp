@@ -41,7 +41,7 @@
 #include "UObject/StrongObjectPtr.h"
 #include "UnrealClient.h"
 #include "ACFSequencerSettings.h"
-#include "Tests/ACFCameraTestEnvironment.h"
+#include "ACFCameraTestEnvironment.h"
 
 /**
  * Phase 5A: 実際の Level Sequence（Camera Cut Track）・PlayerCameraManager との結合テスト。ClientContext のみ:

@@ -43,7 +43,7 @@
 #include "Nodes/ACFCameraNode_ShotAnchor.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimNotifyQueue.h"
-#include "Tests/ACFCameraTestEnvironment.h"
+#include "ACFCameraTestEnvironment.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
 /**

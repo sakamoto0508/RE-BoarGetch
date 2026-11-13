@@ -14,6 +14,15 @@ class UWorld;
 ACTIONCAMERAFRAMEWORK_API DECLARE_LOG_CATEGORY_EXTERN(LogActionCamera, Log, All);
 
 /**
+ * The ACF.Sample.* console commands (Core and Sequencer modules) that drive the sample content of
+ * /ActionCameraFramework/Samples (README 9 章 / 23 章). Never in Shipping; a project can also leave them out of other
+ * builds by defining ACF_WITH_SAMPLE_COMMANDS=0 (e.g. GlobalDefinitions of its game Target.cs).
+ */
+#ifndef ACF_WITH_SAMPLE_COMMANDS
+#define ACF_WITH_SAMPLE_COMMANDS (!UE_BUILD_SHIPPING)
+#endif
+
+/**
  * Minimal camera pose produced by ACF rigs.
  *
  * Deliberately smaller than FMinimalViewInfo (which also carries post process settings).

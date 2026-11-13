@@ -9,9 +9,11 @@
 #                                GameInstance (nothing of the host project's game logic runs).
 #                       host     -game -NullRHI on the host project's default map and GameMode (the pre-B-9 way).
 #                       editor   editor context (no -game), -NullRHI.
-#                       samples  rendered, on /ActionCameraFramework/Samples/L_ACFCameraTest (host project GameMode:
-#                                the sample checks need a humanoid player pawn). Filter default .Samples.
-#                       profile  like samples, with -ACFProfile. Filter default .Profile.Scenarios.
+#                       samples  rendered, on /ActionCameraFramework/Samples/L_ACFCameraTest with the same engine
+#                                GameModeBase / DefaultPawn / GameInstance as game (B-10). Filter default .Samples.
+#                       samples-host  the same on the host project's default GameMode (what PIE on the map uses).
+#                       profile  rendered on the test map with -ACFProfile and the host project GameMode (as in the
+#                                B-1 .. B-9 baselines, so the numbers stay comparable). Filter .Profile.Scenarios.
 #   --repeat N          N separate runs (fresh process each).
 #   --isolate           every matching test in its own process (order / state independence). Slow: ~20 s per test.
 #   --list              print the matching test names and exit.
@@ -21,8 +23,8 @@
 #
 # A run passes only when: the editor process exits with 0, the log says "N tests performed" with N > 0, N tests report
 # Result={Success}, none failed, and the log has no crash / ensure. The script exits with 1 if any run failed and
-# writes one line per test and run to summary.tsv (run, result, test). Tests that skip themselves (wrong map, plugin not
-# loaded) still report Success; the verdict line shows how many did.
+# writes one line per test and run to summary.tsv (run, Pass / Fail / Skip, test). Tests that skip themselves (wrong map,
+# plugin not loaded) report Success to UE: they are listed as Skip (from their "Skipped:" message).
 
 set -u
 export MSYS_NO_PATHCONV=1 # Git Bash: keep /Engine/... and /Game/... as they are
@@ -90,6 +92,10 @@ case "$CONTEXT" in
 		ARGS=(-NullRHI "${ARGS[@]}") ;;
 	samples)
 		[ -z "$FILTER" ] && FILTER=ActionCameraFramework.Samples
+		ARGS=("/ActionCameraFramework/Samples/L_ACFCameraTest?game=/Script/Engine.GameModeBase" -game
+			"-ini:Engine:[/Script/EngineSettings.GameMapsSettings]:GameInstanceClass=/Script/Engine.GameInstance" -windowed -resx=1280 -resy=720 "${ARGS[@]}") ;;
+	samples-host)
+		[ -z "$FILTER" ] && FILTER=ActionCameraFramework.Samples
 		ARGS=(/ActionCameraFramework/Samples/L_ACFCameraTest -game -windowed -resx=1280 -resy=720 "${ARGS[@]}") ;;
 	profile)
 		[ -z "$FILTER" ] && FILTER=ActionCameraFramework.Profile.Scenarios
@@ -114,15 +120,27 @@ check_log() {
 	SUCCESS=$(grep -c "Test Completed. Result={Success}" "$LOG" 2>/dev/null)
 	FAILED=$(grep -cE "Test Completed. Result=\{(Fail|Failed)" "$LOG" 2>/dev/null)
 	PROBLEMS=$(grep -cE "Fatal error|Unhandled Exception|Ensure condition failed|=== Critical error ===" "$LOG" 2>/dev/null)
-	local SKIPPED
-	SKIPPED=$(grep -cE "LogAutomationController: (Warning: )?Skipped:" "$LOG" 2>/dev/null) # passed without checking (wrong map / plugin missing)
-	grep -E "Test Completed. Result=" "$LOG" 2>/dev/null | strip_time \
-		| sed -E 's/.*Result=\{([A-Za-z]+)\}.*Path=\{([^}]*)\}.*/\1\t\2/' | sed "s/^/$RUN\t/" >> "$LOGDIR/summary.tsv"
+	# Per test: Pass / Fail / Skip. A test that skips itself (wrong map, plugin missing) reports Success to UE; its own
+	# "Skipped:" message between "BeginEvents: <path>" and "EndEvents" makes it Skip here.
+	local ROWS SKIPPED
+	ROWS=$(strip_time < "$LOG" 2>/dev/null | awk -v run="$RUN" '
+		/Test Completed\. Result=\{/ {
+			result = $0; sub(/.*Result=\{/, "", result); sub(/\}.*/, "", result)
+			path = $0; sub(/.*Path=\{/, "", path); sub(/\}.*/, "", path)
+			order[++n] = path; res[path] = (result == "Success") ? "Pass" : "Fail"
+		}
+		/LogAutomationController: BeginEvents: / { current = $0; sub(/.*BeginEvents: /, "", current); sub(/\r$/, "", current) }
+		/LogAutomationController: EndEvents: / { current = "" }
+		/LogAutomationController: (Warning: )?Skipped:/ { if (current != "" && res[current] == "Pass") res[current] = "Skip" }
+		END { for (i = 1; i <= n; ++i) printf "%s\t%s\t%s\n", run, res[order[i]], order[i] }')
+	[ -n "$ROWS" ] && echo "$ROWS" >> "$LOGDIR/summary.tsv"
+	SKIPPED=$(echo "$ROWS" | grep -c "	Skip	")
 	local VERDICT=PASS
 	if [ "$CODE" -ne 0 ] || [ "$PERFORMED" -eq 0 ] || [ "$SUCCESS" -ne "$PERFORMED" ] || [ "$FAILED" -ne 0 ] || [ "$PROBLEMS" -ne 0 ]; then
 		VERDICT=FAIL
 	fi
-	echo "$VERDICT  $RUN: $SUCCESS/$PERFORMED succeeded ($SKIPPED of them skipped), $FAILED failed, exit $CODE, crash/ensure $PROBLEMS  ($LOG)"
+	echo "$VERDICT  $RUN: $PERFORMED tests: $((SUCCESS - SKIPPED)) pass, $FAILED fail, $SKIPPED skip; exit $CODE, crash/ensure $PROBLEMS  ($LOG)"
+	echo "$ROWS" | grep "	Skip	" | cut -f3 | sed 's/^/      skip: /'
 	grep -E "Test Completed. Result=\{(Fail|Failed)" "$LOG" 2>/dev/null | strip_time | sed 's/^/      /'
 	[ "$VERDICT" = PASS ]
 }

@@ -8,7 +8,7 @@
 #include "LevelSequenceActor.h"
 #include "LevelSequencePlayer.h"
 
-#if !UE_BUILD_SHIPPING
+#if ACF_WITH_SAMPLE_COMMANDS // Phase 6B / B-10: the sample command switch of ACFCameraTypes.h
 
 /**
  * 手動確認用（L_ACFCameraTest）。ゲーム側が Level Sequence を再生・停止する操作をコンソールから再現する:
@@ -145,4 +145,4 @@ namespace ACFSequencerDebug
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleSequencer));
 }
 
-#endif // !UE_BUILD_SHIPPING
+#endif // ACF_WITH_SAMPLE_COMMANDS

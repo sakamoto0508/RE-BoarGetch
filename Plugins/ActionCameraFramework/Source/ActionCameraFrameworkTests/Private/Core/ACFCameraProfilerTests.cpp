@@ -22,7 +22,7 @@
 #include "HAL/IConsoleManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/StrongObjectPtr.h"
-#include "Tests/ACFCameraTestEnvironment.h"
+#include "ACFCameraTestEnvironment.h"
 
 /**
  * Phase 6B / B-1: the profiler must never change what ACF outputs, must count ACF's own queries exactly once per
