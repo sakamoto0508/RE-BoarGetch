@@ -201,6 +201,19 @@ void FACFCameraRigInstance::ResetInterpolation()
 	ForEachNode([](const UACFCameraNode& Node, FInstancedStruct* State) { Node.ResetInterpolation(State); });
 }
 
+bool FACFCameraRigInstance::RebindPreset(const UACFCameraPreset* NewPreset)
+{
+	bool bSameLayout = NewPreset != nullptr && Preset != nullptr && NewPreset->Nodes.Num() == NodeStates.Num();
+	for (int32 Index = 0; bSameLayout && Index < NewPreset->Nodes.Num(); ++Index)
+	{
+		const UACFCameraNode* Node = NewPreset->Nodes[Index];
+		bSameLayout = NodeStates[Index].GetScriptStruct() == (Node ? Node->GetRuntimeStateType() : nullptr);
+	}
+	Preset = NewPreset;
+	SyncStatesWithPreset(); // same layout: only the evaluation order is rebuilt (node pointers changed), states stay
+	return bSameLayout;
+}
+
 int64 FACFCameraRigInstance::GetEvaluationSortKey(const UACFCameraNode* Node)
 {
 	return Node ? static_cast<int64>(Node->GetStage()) * 1000000 + FMath::Clamp(Node->GetStageOrder(), -MaxStageOrder, MaxStageOrder) : 0;

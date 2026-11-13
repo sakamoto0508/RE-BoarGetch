@@ -573,6 +573,72 @@ namespace ACFProfileScenarios
 				TEXT("Standalone director evaluation by node count (Fixed Pose nodes, includes the node work and every check), us per evaluation (median of 7 x 20000):\n| Nodes | us |\n|---|---|\n%s"),
 				SCheck.Median, CheckNs[0], CheckNs.Last(), Valid, *Scaling);
 		}
+		{
+			// Phase 7A-1: runtime tuning, same evaluation as above. Off / on (values unchanged) / on with a Set every evaluation.
+			// The copy is made once by Start (not timed); allocations are counted over the timed evaluations.
+			auto TuningBench = [&](int32 Mode, int32 Evaluations, uint64& OutAllocations) -> double
+			{
+				TStrongObjectPtr<UACFCameraDirector> D(NewObject<UACFCameraDirector>());
+				FACFCameraRequestParams Params;
+				Params.FollowTarget.Actor = BenchActors[0].Get();
+				Params.LookAtTarget.Actor = BenchActors[1].Get();
+				const FACFCameraRequestHandle H = D->AddRequest(BenchPreset.Get(), Params);
+				FACFCameraEvaluationContext Context;
+				Context.World = W;
+				Context.DeltaTime = 1.f / 60.f;
+				for (int32 I = 0; I < 120; ++I)
+				{
+					Context.FrameNumber = 70000000ull + I;
+					D->Evaluate(Context);
+				}
+				if (Mode > 0)
+				{
+					D->StartTuning(H);
+				}
+				D->SetProfilerForced(true);
+				D->GetProfiler().Start(Evaluations);
+				FACFCameraAllocationCounter::SetCounting(true);
+				const uint64 T0 = FPlatformTime::Cycles64();
+				for (int32 I = 0; I < Evaluations; ++I)
+				{
+					if (Mode == 2)
+					{
+						D->SetTuningValue(H, EACFCameraTuningParameter::CameraOffset, FVector(0.0, (I & 1) ? 40.0 : 39.0, 0.0));
+					}
+					Context.FrameNumber = 71000000ull + I;
+					D->Evaluate(Context);
+				}
+				const double Us = FPlatformTime::ToMilliseconds64(FPlatformTime::Cycles64() - T0) * 1000.0 / Evaluations;
+				FACFCameraAllocationCounter::SetCounting(false);
+				OutAllocations = 0;
+				for (int32 F = 0; F < D->GetProfiler().Num(); ++F)
+				{
+					OutAllocations += D->GetProfiler().GetFrame(F).Allocations;
+				}
+				D->SetProfilerForced(false);
+				return Us;
+			};
+			TArray<double> Times[3];
+			uint64 Allocations[3] = {};
+			for (int32 Round = 0; Round < 7; ++Round)
+			{
+				for (int32 Mode = 0; Mode < 3; ++Mode)
+				{
+					uint64 A = 0;
+					Times[Mode].Add(TuningBench(Mode, 600, A));
+					Allocations[Mode] = FMath::Max(Allocations[Mode], A);
+				}
+			}
+			const TCHAR* Labels[3] = { TEXT("tuning off"), TEXT("tuning on (unchanged values)"), TEXT("tuning on, Set Camera Offset every evaluation") };
+			FString Rows;
+			for (int32 Mode = 0; Mode < 3; ++Mode)
+			{
+				const FACFCameraProfileStats S = FACFCameraProfileStats::Compute(Times[Mode]);
+				Rows += FString::Printf(TEXT("| %s | %.3f | %.3f | %.3f | %llu |\n"), Labels[Mode], S.Median, Times[Mode][0], Times[Mode].Last(), Allocations[Mode]);
+			}
+			OverheadText += FString::Printf(TEXT("\nRuntime tuning (7A-1), same evaluation, us per evaluation (7 rounds x 600, median / min / max) and allocations in 600 evaluations (max of the rounds):\n")
+				TEXT("| Mode | median | min | max | allocations |\n|---|---|---|---|---|\n%s"), *Rows);
+		}
 	}
 
 	bool FRunner::Update()

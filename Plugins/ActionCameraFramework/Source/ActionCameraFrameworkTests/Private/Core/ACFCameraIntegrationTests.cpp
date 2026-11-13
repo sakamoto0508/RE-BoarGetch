@@ -44,6 +44,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimNotifyQueue.h"
 #include "ACFCameraTestEnvironment.h"
+#include "ACFCameraTuningLibrary.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
 /**
@@ -2811,6 +2812,73 @@ bool FACFSampleFinisherTest::RunTest(const FString& Parameters)
 	Exec(TEXT("ACF.Sample.Release 0"));
 	Exec(TEXT("ACF.Sample.Goto Start"));
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
+	return true;
+}
+
+
+// =================================================================================================
+// Phase 7A-1: runtime tuning on the real PlayerCameraManager (Blueprint library entry points).
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationTuningTest, "ActionCameraFramework.Integration.RuntimeTuningOnTheRealCamera",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+bool FACFIntegrationTuningTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Pivot = TestArea + FVector(6000, -9000, 0);
+		S.ActorA = SpawnMovablePoint(S.World(), S.Pivot);
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_Follow* Follow = NewObject<UACFCameraNode_Follow>(Preset);
+		Follow->Offset = FVector(-300, 0, 150);
+		Follow->OffsetSpace = EACFCameraOffsetSpace::World;
+		UACFCameraNode_FixedPose* Lens = NewObject<UACFCameraNode_FixedPose>(Preset);
+		Lens->bOverrideLocation = false;
+		Lens->bOverrideRotation = true;
+		Lens->Rotation = FRotator::ZeroRotator;
+		Lens->FieldOfView = 70.f;
+		Preset->Nodes = { Follow, Lens };
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		S.Preset.Reset(Preset);
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorA.Get();
+		S.Handle = S.Subsystem->RequestCamera(Preset, Params);
+		return S.Test->TestTrue(TEXT("Request accepted"), S.Handle.IsValid());
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraIs(S, S.Pivot + FVector(-300, 0, 150), FRotator::ZeroRotator, 70.f, TEXT("Asset values on the PCM"));
+		S.Test->TestEqual(TEXT("Start (active request)"), UACFCameraTuningLibrary::StartCameraTuning(S.Controller.Get(), FACFCameraRequestHandle()), EACFCameraTuningResult::Ok);
+		S.Test->TestEqual(TEXT("Set FOV"), UACFCameraTuningLibrary::SetCameraTuningValue(S.Controller.Get(), S.Handle, EACFCameraTuningParameter::FieldOfView, FVector(50, 0, 0)), EACFCameraTuningResult::Ok);
+		S.Test->TestEqual(TEXT("Set offset"), UACFCameraTuningLibrary::SetCameraTuningValue(S.Controller.Get(), S.Handle, EACFCameraTuningParameter::CameraOffset, FVector(-500, 0, 250)), EACFCameraTuningResult::Ok);
+		S.Test->TestEqual(TEXT("Rejected value"), UACFCameraTuningLibrary::SetCameraTuningValue(S.Controller.Get(), S.Handle, EACFCameraTuningParameter::FieldOfView, FVector(400, 0, 0)), EACFCameraTuningResult::InvalidValue);
+		S.Test->TestEqual(TEXT("No player"), UACFCameraTuningLibrary::StartCameraTuning(nullptr, S.Handle), EACFCameraTuningResult::NoPlayer);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraIs(S, S.Pivot + FVector(-500, 0, 250), FRotator::ZeroRotator, 50.f, TEXT("Tuned values on the PCM (next frame)"));
+		const FACFCameraTuningStatus Status = UACFCameraTuningLibrary::GetCameraTuningStatus(S.Controller.Get(), S.Handle);
+		S.Test->TestTrue(TEXT("Status: tuning, 2 values changed"), Status.bTuning && Status.NumChangedValues == 2);
+		S.Test->TestEqual(TEXT("Asset FOV untouched"), CastChecked<UACFCameraNode_FixedPose>(S.Preset->Nodes[1])->FieldOfView, 70.f);
+		S.Test->TestEqual(TEXT("Reset FOV"), UACFCameraTuningLibrary::ResetCameraTuningValue(S.Controller.Get(), S.Handle, EACFCameraTuningParameter::FieldOfView), EACFCameraTuningResult::Ok);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraIs(S, S.Pivot + FVector(-500, 0, 250), FRotator::ZeroRotator, 70.f, TEXT("FOV reset, offset still tuned"));
+		S.Test->TestEqual(TEXT("Stop"), UACFCameraTuningLibrary::StopCameraTuning(S.Controller.Get(), S.Handle), EACFCameraTuningResult::Ok);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		CameraIs(S, S.Pivot + FVector(-300, 0, 150), FRotator::ZeroRotator, 70.f, TEXT("Stopped: asset values again"));
+		S.Test->TestFalse(TEXT("Stopped: not tuning"), UACFCameraTuningLibrary::GetCameraTuningStatus(S.Controller.Get(), S.Handle).bTuning);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));
 	return true;
 }
 

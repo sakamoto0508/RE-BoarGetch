@@ -42,6 +42,14 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraRigInstance
 	/** Teleport / hard cut: every node drops its interpolation history. */
 	void ResetInterpolation();
 
+	/**
+	 * Runtime tuning (Phase 7A-1): evaluates with NewPreset from the next evaluation on, WITHOUT re-initializing or
+	 * re-activating anything. Node states are kept per node slot when NewPreset has the same node layout (same count and
+	 * runtime state types, e.g. a copy of the current preset): damping history, orbit angles, lock-on, collision distance
+	 * continue as they are. Returns false if the layout differs (the slots that do not match get fresh states).
+	 */
+	bool RebindPreset(const UACFCameraPreset* NewPreset);
+
 	/** Visits every enabled node with its runtime state (e.g. to push a runtime command). */
 	void ForEachNode(TFunctionRef<void(const UACFCameraNode& Node, FInstancedStruct* State)> Visitor);
 

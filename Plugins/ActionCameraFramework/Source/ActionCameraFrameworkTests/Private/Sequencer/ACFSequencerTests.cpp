@@ -42,6 +42,7 @@
 #include "UnrealClient.h"
 #include "ACFSequencerSettings.h"
 #include "ACFCameraTestEnvironment.h"
+#include "ACFCameraTuningLibrary.h"
 
 /**
  * Phase 5A: 実際の Level Sequence（Camera Cut Track）・PlayerCameraManager との結合テスト。ClientContext のみ:
@@ -3512,6 +3513,87 @@ bool FACFReturnBlendReleaseTest::RunTest(const FString& Parameters)
 	{
 		S.CameraNear(GameplayLoc, 0.01, TEXT("Back on the lower camera"));
 		S.Test->TestTrue(FString::Printf(TEXT("Smooth (max %.1f cm / frame)"), S.MaxFrameJump), S.MaxFrameJump < GameplayToCine / 30.0 * 1.5);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+
+// -------------------------------------------------------------------------------------------------
+// Phase 7A-1: 調整中のリクエストに Sequencer の Camera Cut が入っても、出力制御（外部 ViewTarget、抑制なし）は従来どおり。
+// 戻った後は調整した値が映り、調整を止めると Preset の値に戻る。
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequencerTuningTest, "ActionCameraFramework.Sequencer.TuningKeepsTheSequencerOutputControl", ACFSeqTest::Flags)
+bool FACFSequencerTuningTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Handle = RequestGameplay(S);
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+		S.SequenceA = MakeSequence(S, S.ActorA.Get(), 1.0);
+		SetReturnBlend(S, 0.f); // cut back: the first frame after the sequence is the tuned gameplay camera
+		return S.Test->TestNotNull(TEXT("sequence actor created"), S.SequenceA.Get());
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Start tuning"), UACFCameraTuningLibrary::StartCameraTuning(S.Controller.Get(), S.Handle), EACFCameraTuningResult::Ok);
+		S.Test->TestEqual(TEXT("Set FOV 50"), UACFCameraTuningLibrary::SetCameraTuningValue(S.Controller.Get(), S.Handle, EACFCameraTuningParameter::FieldOfView, FVector(50, 0, 0)), EACFCameraTuningResult::Ok);
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Before the sequence: tuned FOV on screen"), S.PCM()->GetFOVAngle(), 50.f, 0.01f);
+		Player(S.SequenceA)->Play();
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		if (S.Phase() != EACFSequencerCameraPhase::InControl)
+		{
+			S.bRetry = true;
+			return true;
+		}
+		S.ResetSamples();
+		return true;
+	});
+	WaitFrames(Steps, 10);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(CineLoc, 0.1, TEXT("During the sequence: the cine camera"));
+		S.Test->TestEqual(TEXT("During: cine FOV (the tuned ACF value is not written to the sequencer camera)"), S.PCM()->GetFOVAngle(), CineFov, 0.01f);
+		S.Test->TestTrue(TEXT("During: bypassed, not suppressed (output control unchanged)"), S.Acf->IsOutputBypassed() && !S.Acf->IsOutputSuppressed());
+		S.Test->TestEqual(TEXT("During: ACF weight untouched"), S.MinAcfWeight, 1.f);
+		S.Test->TestTrue(TEXT("During: still tuning in the background"), UACFCameraTuningLibrary::GetCameraTuningStatus(S.Controller.Get(), S.Handle).bTuning);
+		S.Test->TestEqual(TEXT("During: background evaluation uses the tuned value"), S.Acf->GetLastEvaluationResult().Pose.FieldOfView, 50.f, 0.01f);
+		return true;
+	});
+	Steps.Add([](FScenario& S)
+	{
+		if (S.Phase() != EACFSequencerCameraPhase::None)
+		{
+			S.bRetry = true;
+			return true;
+		}
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.CameraNear(GameplayLoc, 0.1, TEXT("After the sequence: gameplay camera"));
+		S.Test->TestEqual(TEXT("After: the tuned FOV"), S.PCM()->GetFOVAngle(), 50.f, 0.01f);
+		S.Test->TestEqual(TEXT("No suppression was used"), S.MaxSuppressions, 0);
+		S.Test->TestEqual(TEXT("Stop tuning"), UACFCameraTuningLibrary::StopCameraTuning(S.Controller.Get(), S.Handle), EACFCameraTuningResult::Ok);
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Stopped: the preset FOV"), S.PCM()->GetFOVAngle(), GameplayFov, 0.01f);
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));

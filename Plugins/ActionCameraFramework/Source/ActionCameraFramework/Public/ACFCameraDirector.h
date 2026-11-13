@@ -9,6 +9,7 @@
 #include "ACFCameraSequencePlayer.h"
 #include "ACFCameraProfiler.h"
 #include "ACFCameraHealth.h"
+#include "ACFCameraTuning.h"
 #include "ACFCameraDirector.generated.h"
 
 class UACFCameraPreset;
@@ -195,6 +196,26 @@ public:
 	/** Sets the orbit rotation (world) of the request's Orbital Follow nodes. False if none. */
 	bool SetOrbitRotation(FACFCameraRequestHandle Handle, const FRotator& Rotation, bool bInstant);
 
+	// --- Runtime tuning (Phase 7A-1, ACFCameraTuning.h, README 24 章) ------------------------------------------------------
+	// Handle = a live request of this player; an invalid handle means the active request. The request evaluates a transient
+	// copy of its preset while tuned; the shared asset is never written. Development builds only (else NotAvailable).
+
+	/** Gives the request its own copy of its preset (nodes included) and switches its rig to it, keeping the rig state. */
+	EACFCameraTuningResult StartTuning(FACFCameraRequestHandle Handle);
+	/** Switches the request back to the shared preset (rig state kept) and drops the copy. */
+	EACFCameraTuningResult StopTuning(FACFCameraRequestHandle Handle);
+	void StopAllTuning();
+	/** Current value (the copy while tuned, else the shared preset) and the asset value. */
+	EACFCameraTuningResult GetTuningValue(FACFCameraRequestHandle Handle, EACFCameraTuningParameter Parameter, int32 NodeIndex, FACFCameraTuningValue& Out);
+	/** Writes the copy (needs StartTuning). Invalid values are rejected and change nothing. */
+	EACFCameraTuningResult SetTuningValue(FACFCameraRequestHandle Handle, EACFCameraTuningParameter Parameter, const FVector& Value, int32 NodeIndex = INDEX_NONE);
+	EACFCameraTuningResult ResetTuningValue(FACFCameraRequestHandle Handle, EACFCameraTuningParameter Parameter, int32 NodeIndex = INDEX_NONE);
+	EACFCameraTuningResult ResetAllTuningValues(FACFCameraRequestHandle Handle);
+	FACFCameraTuningStatus GetTuningStatus(FACFCameraRequestHandle Handle);
+	/** The preset the request evaluates right now (its tuning copy while tuned). Null if no such request. */
+	const UACFCameraPreset* GetRequestPreset(FACFCameraRequestHandle Handle);
+	int32 GetNumTunedRequests() const { return TuningSessions.Num(); }
+
 	/** True while ACF has any influence on the output (requests exist or a fade is running). */
 	bool IsInfluencingOutput() const { return Requests.Num() > 0 || LastResult.RequestWeight > 0.f; }
 
@@ -327,6 +348,10 @@ private:
 	void EndTransition();
 	FACFCameraPose EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context, FACFCameraRigScratch& OutScratch);
 	void StartSuppressionFade(float BlendTime);
+	FACFCameraRequestHandle ResolveTuningHandle(FACFCameraRequestHandle Handle) const { return Handle.IsValid() ? Handle : ActiveHandle; }
+	FACFCameraTuningSession* FindTuningSession(FACFCameraRequestHandle Handle);
+	/** Once per evaluation while sessions exist: drops sessions of ended requests, ends all of them when the World changes. */
+	void UpdateTuningSessions(const UWorld* World);
 	float AdvanceSuppressionFade(float DeltaTime);
 
 	UPROPERTY()
@@ -338,6 +363,10 @@ private:
 	 */
 	UPROPERTY()
 	TArray<FACFCameraRequestEntry> RetiredRequests;
+
+	/** Phase 7A-1: requests evaluated on a tuning copy of their preset (owns the copies). */
+	UPROPERTY()
+	TArray<FACFCameraTuningSession> TuningSessions;
 
 	UPROPERTY()
 	FACFCameraEffectStack Effects;

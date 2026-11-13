@@ -966,6 +966,10 @@ void UACFCameraDirector::SanitizeContext(FACFCameraEvaluationContext& Context)
 	}
 	EffectsWorld = Context.World;
 	bHasEffectsWorld = true;
+	if (TuningSessions.Num() > 0) // Phase 7A-1: nothing to do (one branch) unless a request is being tuned
+	{
+		UpdateTuningSessions(Context.World);
+	}
 
 	if (!IsSameCameraContext(Context))
 	{
