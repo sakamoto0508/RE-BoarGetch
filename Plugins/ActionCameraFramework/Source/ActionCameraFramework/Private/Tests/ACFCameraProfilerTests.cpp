@@ -22,6 +22,7 @@
 #include "HAL/IConsoleManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Tests/ACFCameraTestEnvironment.h"
 
 /**
  * Phase 6B / B-1: the profiler must never change what ACF outputs, must count ACF's own queries exactly once per
@@ -497,7 +498,7 @@ bool FACFProfilerPauseAndPlayersTest::RunTest(const FString& Parameters)
 	using namespace ACFProfilerTests;
 	// Real camera path (PlayerCameraManager -> output modifier). The second local player's controller is created by
 	// the host project's GameMode; its BeginPlay may log a UMG error unrelated to ACF (see the Sequencer tests).
-	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this); // B-9: only for a host Blueprint PlayerController
 	struct FState
 	{
 		TSharedPtr<FCVarGuard> On;

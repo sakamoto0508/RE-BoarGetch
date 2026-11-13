@@ -16,7 +16,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 4C（Finisher Camera、Cinematic Camera Sequence、Shot Anchor、アニメーション同期用 Notify）完了
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。設計リスクは再現しておらず、性能は未計測
-- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測）〜 B-8（Preset の検証、21 章）が完了し、次は B-9。今後の計画は下の「開発ロードマップ」
+- Phase 6B（監査結果の修正）を実施中。B-1（計測の土台と性能の実測）〜 B-9（テストの土台、22 章）が完了し、次は B-10。今後の計画は下の「開発ロードマップ」
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -24,7 +24,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 |-------|------|-----------|
 | 1〜5A | 上記 | Completed（Editor で人が操作して見る確認は全 Phase で未実施） |
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
-| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1〜B-8: Completed。次は B-9） |
+| 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | In Progress（B-1〜B-9: Completed。次は B-10） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Not Started |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
@@ -786,16 +786,17 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 
 ## 12. 検証
 
-- 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。
+- 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×2）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは 162 件です。
+- 自動テストは 168 件です（実行方法とテスト環境は 22 章）。
+  - Phase 6B / B-9: `.Effects.SpeedFovAndRollFixedStep`（Editor とゲームの両方。固定 DeltaTime の Speed FOV / Roll）、`.TestEnvironment.*`（2 件、`-game`。状態の復元と LocalPlayer の後始末）、`.Integration.SpeedFovAndRollRepeated.Run1〜3`（同じシナリオの連続実行）。
   - `.PresetValidation.*`（12 件。Editor とゲームの両方）と `.Editor.*`（2 件。Editor のみ）: Preset の検証（21 章）。
   - `.Director.*` / `.Nodes.*` / `.ThirdPerson.*` / `.Effects.*` / `.Action.*` / `.Constraints.*` / `.Sequence.*` / `.Authority.*`（58 件）: Editor とゲームの両方で実行できます。
   - `.Profiler.*`（5 件。計測の ON / OFF で出力が変わらないこと、Trace 数・アロケーションの数え方、一時停止・複数 LocalPlayer）: 3 件は Editor とゲームの両方、2 件は `-game` のみ。`.Profile.Scenarios`（1 件）は性能の基準値の計測で、`-ACFProfile` を付けてテストマップで実行したときだけ動きます（8 章）。
   - `.Health.*`（10 件。Editor とゲームの両方）と `.Sequencer.Health.*`（2 件、`-game`）: 不正値（NaN / Inf / 不正な FOV / 不正な DeltaTime など）の対策（16 章）。正常な入力で姿勢が修正前とビット単位で一致すること、ランダム化した不正入力を含む。
   - `.Lifetime.*`（5 件。Editor とゲームの両方）: Actor の参照と寿命（17 章）。実際の World・Actor・GC を使い、`-DisableGarbageElimination` でも合格すること。 B-5 の演出の寿命（要求の有無と World の変化）を含む。
-  - `.Integration.*`（24 件）、`.Sequencer.*`（21 件。実際の Level Sequence・PCM を使う。うち `.Sequencer.PcmCompat.*` 7 件は Phase 6B / B-2 の PCM 互換性、15 章）: `-game` でのみ実行されます。
+  - `.Integration.*`（24 件 + B-9 の 3 件）、`.Sequencer.*`（21 件。実際の Level Sequence・PCM を使う。うち `.Sequencer.PcmCompat.*` 7 件は Phase 6B / B-2 の PCM 互換性、15 章）: `-game` でのみ実行されます。
   - `.Samples.*`（6 件: TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）: テストマップ上でだけ実行されます。他のマップではスキップします。スクリーンショットは描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
   - ロック開始・解除（ブレンド中に 1 フレーム 40cm 超の飛びがない）、敵が周回・プレイヤーが移動しても両方が画面内
@@ -828,16 +829,18 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
   - Lock-On・Finisher（Continue / Pause / Cancel）との併用、ControlRotation、PCM の作り直し、ローカルプレイヤー 2 人の独立
   - テストマップで `LS_ACFSample_Cut` / `LS_ACFSample_Blend` とロックオン中の再生（描画あり、スクリーンショット `ACF_5A_*`）
 
+実行はプラグインのフォルダーで `Scripts/RunTests.sh`（22 章）:
+
 ```bash
-UnrealEditor-Cmd.exe <project>.uproject -unattended -NullRHI -nosplash "-ExecCmds=Automation RunTests ActionCameraFramework.Director+ActionCameraFramework.Nodes+ActionCameraFramework.ThirdPerson" "-TestExit=Automation Test Queue Empty"
+Scripts/RunTests.sh
 ```
 
 ```bash
-MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /Game/Level/L_Lobby -game -unattended -NullRHI -nosplash -nosound "-ExecCmds=Automation RunTests ActionCameraFramework" "-TestExit=Automation Test Queue Empty"
+Scripts/RunTests.sh --context editor
 ```
 
 ```bash
-MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /ActionCameraFramework/Samples/L_ACFCameraTest -game -unattended -NullRHI -nosplash -nosound "-ExecCmds=Automation RunTests ActionCameraFramework.Samples" "-TestExit=Automation Test Queue Empty"
+Scripts/RunTests.sh --context samples
 ```
 
 ## 13. ファイル構成
@@ -952,7 +955,7 @@ PlayerController->SetViewTargetWithBlend(CutsceneCameraActor, 1.f);   // PCM の
 **自動テストの実行**
 
 ```bash
-MSYS_NO_PATHCONV=1 UnrealEditor-Cmd.exe <project>.uproject /Game/Level/L_Lobby -game -unattended -NullRHI -nosplash -nosound "-ExecCmds=Automation RunTests ActionCameraFramework.Sequencer+ActionCameraFramework.Authority" "-TestExit=Automation Test Queue Empty"
+Scripts/RunTests.sh "ActionCameraFramework.Sequencer+ActionCameraFramework.Authority"
 ```
 
 **制限**
@@ -1300,3 +1303,76 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 - 組み込みの Node の役割（どの要素を上書きするか）は、検証側の表で判断しています。独自の Node は役割の競合の判定に入りません（パラメーターの NaN / 範囲は独自の Node も調べます）。
 - 値の組み合わせのうち、実行時のターゲットや入力で決まるもの（ターゲットがいるか、Lock-On の対象があるか）は調べられません。
 - Info は保存のときにも Message Log に出ます。
+
+## 22. テストの実行とテスト環境（Phase 6B / B-9）
+
+### 実行方法（`Scripts/RunTests.sh`、Git Bash）
+
+プラグインのフォルダーで実行します。プロジェクト（このプラグインより上にある最初の `.uproject`）とエンジン（`$UE_ROOT`、無ければ `C:/Program Files/Epic Games/UE_5.8`）は自動で探します。`--project` / `--engine` で指定もできます。
+
+| 目的 | コマンド |
+|---|---|
+| ACF の全テスト（ゲーム、ACF のテスト環境） | `Scripts/RunTests.sh` |
+| 特定のカテゴリだけ | `Scripts/RunTests.sh "ActionCameraFramework.Sequencer+ActionCameraFramework.Authority"` |
+| Editor コンテキスト | `Scripts/RunTests.sh --context editor` |
+| 描画ありのサンプル（テストマップ） | `Scripts/RunTests.sh --context samples` |
+| 性能の基準値（8 章） | `Scripts/RunTests.sh --context profile` |
+| 繰り返し（毎回新しいプロセス） | `Scripts/RunTests.sh --repeat 10 ActionCameraFramework.Integration.SpeedFovAndRoll` |
+| 1 件ずつ別のプロセスで（順序・状態への依存の確認） | `Scripts/RunTests.sh --isolate ActionCameraFramework.Integration` |
+| ホストプロジェクトの既定のマップと GameMode で（B-9 より前の方法） | `Scripts/RunTests.sh --context host` |
+| 対象のテスト名の一覧 | `Scripts/RunTests.sh --list ActionCameraFramework.Sequencer` |
+
+- 合否は、テストの結果だけでなく次のすべてで判定します: エディターの終了コードが 0、ログの「N tests performed」の N が 1 以上、N 件すべてが `Result={Success}`、失敗 0 件、クラッシュ・ensure のログなし。1 回でも不合格なら終了コード 1 です。
+- 結果は `<project>/Saved/Logs/ACFTests/<context>/` に、実行ごとのログと `summary.tsv`（実行・結果・テスト名の 1 行 1 件）で残ります。
+- 自分をスキップするテスト（テストマップ以外の `.Samples.*`、`-ACFProfile` なしの `.Profile.Scenarios`、GameplayCameras が無いときの互換テスト）も、UE の集計では Success になります。判定の行に、そのうち何件がスキップだったかを表示します。
+- アセットの作り直しは `Scripts/RunEditorPython.sh Scripts/CreateVerificationAssets.py` / `Scripts/CreateManualTestAssets.py`（どちらも何度実行しても同じ構成になるように、既存のアセットを再利用します）。
+
+### ACF のテスト環境（既定の `game` コンテキスト）
+
+- マップはエンジンの空のマップ `/Engine/Maps/Entry`、GameMode はエンジンの `GameModeBase`（URL の `?game=`）、GameInstance はエンジンの `GameInstance`（`-ini:` で上書き）です。PlayerController・Pawn（DefaultPawn）・PCM もエンジン標準なので、ホストプロジェクトのゲームの処理（REBoarGetch の `BP_BoarGameInstance`、`BP_PC_Lobby`、ThirdPerson の Character）は動きません。新しいアセットは追加していません。
+- 統合テストで使う Actor・ターゲット・SpringArm・壁は、各テストが自分でスポーンします（`OrbitMatchesSpringArm` は B-9 から自分の SpringArm を使い、ホストの Pawn の設定に依存しません）。
+- `.Samples.*` と `.Profile.Scenarios` だけは、テストマップ `L_ACFCameraTest` とホストプロジェクトの GameMode（人型の Pawn）を使います（画面内の判定が人型の大きさを前提にしているため。既存のマップとアセットは作り直していません）。
+
+### シナリオの後始末（`Public/Tests/ACFCameraTestEnvironment.h`）
+
+実際の World・PlayerController・PCM を使う Integration / Sequencer のシナリオは、開始時に次を記録し、終了時（途中で失敗・中断した場合も）に戻します。テストが戻し忘れた場合は、そのテストのエラーとして名前を出します。
+
+- すべての `ACF.` コンソール変数、ACF の設定オブジェクト（出力の Collision Guard など、Sequencer の設定）
+- 固定タイムステップ、ゲーム World の Pause と Time Dilation
+- プレイヤーの Control Rotation（Integration）
+- 終了時に止めるもの: 要求、Camera Sequence、演出（B-9 より前は演出が次のテストまで残っていた）、Sequencer が後始末で出した通知（リスナーを外した後に配信し終えてから次へ）
+- 残っていればエラー: 出力抑制、画面に出ている外部 ViewTarget の登録、計測中の Profiler
+- 開始時に、そのプレイヤーの健全性の診断（16 章）を 0 に戻します。前のテストの報告で「N 件以上報告された」という判定が通ってしまうのを防ぐためです。
+
+ヘッダーは `WITH_DEV_AUTOMATION_TESTS` の中だけで、通常の Tick には何も追加していません（Shipping のバイナリにテストの文字列が無いことを確認済み）。
+
+### ホストのエラーログの扱い
+
+2 人目のローカルプレイヤーを作るテストは、ホストの Blueprint の PlayerController が `BeginPlay` で Widget を作ると UMG のエラー（`CreateWidget cannot be used on Player Controller with no attached player`）を受けます。B-9 から、このメッセージを予期するのは「GameMode の PlayerController が Blueprint のとき」だけです。ACF のテスト環境ではエンジン標準の PlayerController なので何も無視せず、このエラーが出ればテストは失敗します（実際に 0 件）。
+
+### `SpeedFovAndRoll` の不安定さ（原因と対策）
+
+- 原因: テストがターゲットを Latent Command の中で動かしていました。Latent Command はエンジンの Tick（カメラの更新）の**後**に実行されるので、ターゲットは 1 フレーム遅れて「前のフレームの時間 × 速度」だけ動きます。Speed FOV / Roll は位置の差を**今のフレームの** DeltaTime で割って速度にします。フレーム時間が揃っていれば一致しますが、16.7 ms の後に 50 ms のフレームが来ると速度を 3 分の 1 と見積もり、Roll が 5 度から約 4.34 度に下がります（失敗した実行のログは 4.38 度）。
+- 対策: ターゲットは World の Tick の中で自分で動きます（ProjectileMovement、そのフレームの DeltaTime × 速度。カメラの更新の前）。実際のキャラクターと同じ条件で、フレーム時間が揺れても速度は正確です。許容誤差は変えていません。
+- 効果の計算自体は `.Effects.SpeedFovAndRollFixedStep` で固定 DeltaTime（30 / 60 / 144 Hz）で確認します。同じ時刻で同じ値、2 回実行してビット単位で同じ、上の 1 フレーム遅れ + 50 ms のフレームで 4.34 度に下がること（原因の再現）と、カメラと同じ時計で動かせば 5 度のままであること。
+- `.Integration.SpeedFovAndRollRepeated.Run1〜3` は同じシナリオを同じプロセスで 3 回続けて実行し、前の実行の状態が残らないことを確認します。
+
+### 確認した実行（B-9）
+
+| 実行 | 結果 |
+|---|---|
+| `game`（ACF のテスト環境）全件 | 166 / 166 |
+| `host`（REBoarGetch の既定のマップ・GameMode）全件 | 166 / 166（うち 7 件はスキップ） |
+| `editor` 全件 | 91 / 91 |
+| `samples`（描画あり） / `profile` | 6 / 6、1 / 1 |
+| Integration・Sequencer・TestEnvironment・Lifetime・Profiler を 1 件ずつ別プロセス（`--isolate`） | 78 / 78 プロセス |
+| カテゴリの組み合わせを変えた実行（Sequencer + TestEnvironment、Integration + Lifetime + Profiler） | 41 / 41、37 / 37 |
+| `SpeedFovAndRoll`（+ 連続 3 回 + 固定ステップ）を 10 回、ホスト環境で 5 回 | 15 / 15 プロセス。Roll は 60 回すべて 5.00 |
+
+### 確認していないこと（制限）
+
+- UE の Automation は 1 プロセスで 1 回しか `RunTests` を受け付けず、カテゴリの中の順序は変えられません。順序への依存は「全件の連続実行」「1 件ずつ別プロセス」「カテゴリの組み合わせ」で確認しました。全件の順序をランダムに入れ替えた実行はしていません。
+- PIE（エディターでのプレイ）の開始・終了をまたぐテストはありません（ゲームプロセスと `FTestWorldWrapper` の World の破棄で確認）。
+- アセット生成スクリプトの再実行で結果が変わらないことは、コード（既存のアセットの再利用、マップの作り直し）からの判断です。B-9 では、追跡しているアセットを書き換えないよう再実行していません（実行スクリプトは読み取りだけのスクリプトで確認）。
+- `.Samples.*` / `.Profile.Scenarios` はホストプロジェクトの GameMode に依存したままです。新しいプロジェクトでの実行は Phase 8 で確認します。
+- 時間で待つ統合テスト（監査 T-2）は、まだ 40 箇所以上あります。B-9 では、不安定さが確認された `SpeedFovAndRoll` の原因だけを直しました。

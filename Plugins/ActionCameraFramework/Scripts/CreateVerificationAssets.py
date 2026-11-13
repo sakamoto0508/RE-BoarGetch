@@ -1,5 +1,5 @@
 """Creates / edits the ACF verification assets through the editor APIs (idempotent). Headless:
-  run_ue_py.sh C:/UnrealGames/REBoarGetch/Plugins/ActionCameraFramework/Scripts/CreateVerificationAssets.py
+  Scripts/RunEditorPython.sh Scripts/CreateVerificationAssets.py   (from the plugin folder; any project)
 - DA_ACFVerify_Fixed        : ACFCameraPreset created with the Data Asset factory, FixedPose node; then EDITED (FOV 55 -> 65)
 - DA_ACFVerify_FollowLookAt : preset with Follow + LookAt instanced nodes (checks new node types are editable)
 - BP_ACFBlueprintApiTest    : Actor Blueprint. BeginPlay -> Request Camera For Player(DA_ACFVerify_Fixed) -> Delay 1s -> Release Camera For Player(same handle)

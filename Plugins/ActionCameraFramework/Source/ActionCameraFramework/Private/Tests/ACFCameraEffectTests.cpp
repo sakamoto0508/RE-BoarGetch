@@ -9,6 +9,9 @@
 #include "Effects/ACFCameraBuiltinEffects.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UObjectIterator.h"
+#include "Tests/AutomationCommon.h"
+#include "Engine/World.h"
+#include "Components/SceneComponent.h"
 
 /** Phase 3 camera effects: envelope, handles, composition rules, FOV limits, attenuation, shakes. */
 namespace ACFEffectTests
@@ -308,6 +311,166 @@ bool FACFEffectShakeUnitTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Layer removed when the shake finished"), Rig.Director->GetNumActiveEffects(), 0);
 	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
 	TestEqual(TEXT("Shake instance released (no leaked runtime state)"), CountLiveTestShakes(), ShakesBefore);
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Phase 6B / B-9: Speed FOV / Roll with a fixed DeltaTime (the logic part of .Integration.SpeedFovAndRoll).
+
+namespace ACFEffectTests
+{
+	/** Same layers as .Integration.SpeedFovAndRoll: +20 deg up to MaxFOV 105, roll 0.01 deg per cm/s up to 5 deg. */
+	inline UACFCameraEffectPreset* MakeMotionPreset()
+	{
+		UACFCameraEffectPreset* P = NewEffect();
+		UACFCameraEffect_SpeedFOV* Fov = NewObject<UACFCameraEffect_SpeedFOV>(P);
+		Fov->MinSpeed = 100.f;
+		Fov->MaxSpeed = 1000.f;
+		Fov->FOVAtMaxSpeed = 20.f;
+		Fov->MaxFOV = 105.f;
+		Fov->RiseTime = 0.1f;
+		Fov->FallTime = 0.1f;
+		P->Layers.Add(Fov);
+		UACFCameraEffect_Roll* Roll = NewObject<UACFCameraEffect_Roll>(P);
+		Roll->RollPerYawRate = 0.f;
+		Roll->RollPerLateralSpeed = 0.01f;
+		Roll->MaxRoll = 5.f;
+		Roll->ResponseTime = 0.1f;
+		Roll->ReturnTime = 0.1f;
+		P->Layers.Add(Roll);
+		return P;
+	}
+
+	struct FMotionSample
+	{
+		float Fov = 0.f;
+		float Roll = 0.f;
+	};
+
+	/**
+	 * Fixed camera at the origin looking along +X; the motion target runs along +Y (camera right). Frames[i] is the
+	 * DeltaTime of frame i. Each frame the target moves by Velocity * Moves[i] before the camera evaluates with Frames[i]
+	 * (Moves = Frames: the target moves with the same clock as the camera, like a character in the World tick).
+	 */
+	inline TArray<FMotionSample> RunMotion(UWorld* World, const TArray<float>& Frames, const TArray<float>& Moves, const TArray<double>& Speeds)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AActor* Target = World->SpawnActor<AActor>(AActor::StaticClass(), FTransform(FVector(800.0, 0.0, 0.0)), SpawnParams);
+		USceneComponent* Root = NewObject<USceneComponent>(Target, TEXT("Root"));
+		Root->SetMobility(EComponentMobility::Movable);
+		Target->SetRootComponent(Root);
+		Root->RegisterComponent();
+		Target->SetActorLocation(FVector(800.0, 0.0, 0.0));
+
+		FRig Rig;
+		TStrongObjectPtr<UACFCameraEffectPreset> Preset(MakeMotionPreset());
+		FACFCameraEffectParams Params;
+		Params.TargetActor = Target;
+		Rig.Director->PlayEffect(Preset.Get(), Params);
+		TArray<FMotionSample> Out;
+		for (int32 Frame = 0; Frame < Frames.Num(); ++Frame)
+		{
+			Target->SetActorLocation(Target->GetActorLocation() + FVector(0.0, Speeds[Frame] * Moves[Frame], 0.0));
+			const FACFCameraPose& Pose = Rig.Step(Frames[Frame]).Pose;
+			Out.Add({ Pose.FieldOfView, static_cast<float>(Pose.Rotation.Roll) });
+		}
+		Target->Destroy();
+		return Out;
+	}
+
+	/** Seconds of motion at 1000 cm/s, then seconds at rest, at a constant frame time. */
+	inline void MakeRunThenStop(float Dt, double MovingSeconds, double RestSeconds, TArray<float>& Frames, TArray<double>& Speeds)
+	{
+		const int32 Moving = FMath::RoundToInt(MovingSeconds / Dt);
+		const int32 Rest = FMath::RoundToInt(RestSeconds / Dt);
+		for (int32 I = 0; I < Moving + Rest; ++I)
+		{
+			Frames.Add(Dt);
+			Speeds.Add(I < Moving ? 1000.0 : 0.0);
+		}
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEffectSpeedFovRollFixedStepTest, "ActionCameraFramework.Effects.SpeedFovAndRollFixedStep", ACFTests::Flags)
+bool FACFEffectSpeedFovRollFixedStepTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFEffectTests;
+	FTestWorldWrapper Wrapper;
+	if (!TestTrue(TEXT("test world created"), Wrapper.CreateTestWorld(EWorldType::Game)))
+	{
+		return false;
+	}
+	UWorld* World = Wrapper.GetTestWorld();
+
+	// 1. Fixed steps at 30 / 60 / 144 Hz: the same values at the same time, whatever the frame rate.
+	TArray<FMotionSample> Ends;
+	TArray<FMotionSample> Rests;
+	TArray<FMotionSample> Mids;
+	for (const float Dt : { 1.f / 30.f, 1.f / 60.f, 1.f / 144.f })
+	{
+		TArray<float> Frames;
+		TArray<double> Speeds;
+		MakeRunThenStop(Dt, 1.2, 1.0, Frames, Speeds);
+		const TArray<FMotionSample> Samples = RunMotion(World, Frames, Frames, Speeds);
+		const int32 EndOfRun = FMath::RoundToInt(1.2 / Dt) - 1;
+		const FMotionSample& End = Samples[EndOfRun];
+		const FMotionSample& Rest = Samples.Last();
+		const FMotionSample& Mid = Samples[FMath::RoundToInt(0.3 / Dt) - 1];
+		AddInfo(FString::Printf(TEXT("dt 1/%.0f: running FOV %.4f roll %.4f, at 0.3 s roll %.4f, stopped FOV %.4f roll %.4f"), 1.f / Dt, End.Fov, End.Roll, Mid.Roll, Rest.Fov, Rest.Roll));
+		TestTrue(TEXT("Running: FOV at MaxFOV 105"), FMath::IsNearlyEqual(End.Fov, 105.f, 0.01f));
+		TestTrue(TEXT("Running: roll at MaxRoll 5"), FMath::IsNearlyEqual(FMath::Abs(End.Roll), 5.f, 0.01f));
+		TestTrue(TEXT("Stopped: FOV back to 90"), FMath::IsNearlyEqual(Rest.Fov, 90.f, 0.01f));
+		TestTrue(TEXT("Stopped: roll back to level"), FMath::Abs(Rest.Roll) < 0.01f);
+		Ends.Add(End);
+		Rests.Add(Rest);
+		Mids.Add(Mid);
+	}
+	for (int32 I = 1; I < Mids.Num(); ++I)
+	{
+		// The approach is exponential in time (frame-rate independent). Only the first sample (no velocity yet) costs one frame,
+		// at most 1/30 s here: about 0.12 deg at 0.3 s, while the roll still rises.
+		TestTrue(FString::Printf(TEXT("Frame rate independent while rising (0.3 s: %.4f vs %.4f)"), Mids[0].Roll, Mids[I].Roll), Mids[I].Roll < 4.9f && FMath::Abs(Mids[0].Roll - Mids[I].Roll) < 0.15f);
+	}
+
+	// 2. Same input twice: bit-identical output (no hidden state between two plays of the effect).
+	{
+		TArray<float> Frames;
+		TArray<double> Speeds;
+		MakeRunThenStop(1.f / 60.f, 1.2, 0.5, Frames, Speeds);
+		const TArray<FMotionSample> A = RunMotion(World, Frames, Frames, Speeds);
+		const TArray<FMotionSample> B = RunMotion(World, Frames, Frames, Speeds);
+		bool bSame = A.Num() == B.Num();
+		for (int32 I = 0; bSame && I < A.Num(); ++I)
+		{
+			bSame = A[I].Fov == B[I].Fov && A[I].Roll == B[I].Roll;
+		}
+		TestTrue(TEXT("Repeated run: identical FOV / roll every frame"), bSame);
+	}
+
+	// 3. Root cause of the old flaky integration test. It moved the target from the latent command (after the camera
+	//    update) by the world time of the PREVIOUS frame; the effect divides by the CURRENT DeltaTime. One 50 ms frame after
+	//    16.7 ms frames samples a third of the real speed, and the roll drops from 5 to about 4.4 (a failed run logged 4.38).
+	//    With motion on the camera's own clock the same frame spike changes nothing.
+	{
+		TArray<float> Frames;
+		TArray<double> Speeds;
+		MakeRunThenStop(1.f / 60.f, 1.2, 0.0, Frames, Speeds);
+		Frames.Add(0.05f); // the spike, still running
+		Speeds.Add(1000.0);
+		TArray<float> Lagged;
+		Lagged.Add(Frames[0]);
+		for (int32 I = 1; I < Frames.Num(); ++I)
+		{
+			Lagged.Add(Frames[I - 1]); // old test: moved by the previous frame's time
+		}
+		const float Consistent = FMath::Abs(RunMotion(World, Frames, Frames, Speeds).Last().Roll);
+		const float Old = FMath::Abs(RunMotion(World, Frames, Lagged, Speeds).Last().Roll);
+		AddInfo(FString::Printf(TEXT("50 ms frame spike while running: roll %.4f with motion on the camera clock, %.4f with the old one-frame-late motion"), Consistent, Old));
+		TestTrue(TEXT("Spike, motion on the camera clock: roll stays at 5"), FMath::IsNearlyEqual(Consistent, 5.f, 0.01f));
+		TestTrue(TEXT("Spike, old one-frame-late motion: the sampled speed (and roll) drops below the old tolerance"), Old < 4.75f && Old > 4.f);
+	}
+	Wrapper.DestroyTestWorld(/*bForceGarbageCollect*/ false);
 	return true;
 }
 

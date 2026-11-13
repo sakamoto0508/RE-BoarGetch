@@ -40,6 +40,8 @@
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UnrealClient.h"
+#include "ACFSequencerSettings.h"
+#include "Tests/ACFCameraTestEnvironment.h"
 
 /**
  * Phase 5A: 実際の Level Sequence（Camera Cut Track）・PlayerCameraManager との結合テスト。ClientContext のみ:
@@ -222,6 +224,10 @@ namespace ACFSeqTest
 
 		virtual bool Update() override
 		{
+			if (bCleaningUp)
+			{
+				return DrainAndEnd();
+			}
 			if (!bStarted)
 			{
 				APlayerController* PC = FindLocalPlayerController();
@@ -245,6 +251,9 @@ namespace ACFSeqTest
 				State->Listener.Reset(NewObject<UACFSequencerTestListener>());
 				State->Sequencer->OnSequencerCameraStarted.AddDynamic(State->Listener.Get(), &UACFSequencerTestListener::HandleStarted);
 				State->Sequencer->OnSequencerCameraEnded.AddDynamic(State->Listener.Get(), &UACFSequencerTestListener::HandleEnded);
+				// B-9: process-wide state is restored at the end (also on abort); diagnostics count from zero.
+				Guard.Capture(PC->GetWorld(), { GetMutableDefault<UACFSequencerSettings>() });
+				ACFTestEnvironment::BeginScenario(*State->Acf);
 				bSavedFixedStep = FApp::UseFixedTimeStep();
 				SavedFixedDt = FApp::GetFixedDeltaTime();
 				FApp::SetFixedDeltaTime(FixedDt);
@@ -261,36 +270,59 @@ namespace ACFSeqTest
 			if (!State->PCM() || !State->Acf.IsValid() || !State->Sequencer.IsValid())
 			{
 				State->Test->AddError(TEXT("Player, camera manager or subsystem lost during the scenario."));
-				Cleanup();
-				return true;
+				return Finish();
 			}
 			State->Sample();
 			State->bRetry = false;
 			if (!Steps[Index](*State))
 			{
-				Cleanup();
-				return true;
+				return Finish();
 			}
 			if (State->bRetry)
 			{
 				if (++RetryFrames > 1800)
 				{
 					State->Test->AddError(FString::Printf(TEXT("Scenario step %d timed out (phase history: %s)."), Index, *State->PhaseHistory()));
-					Cleanup();
-					return true;
+					return Finish();
 				}
 				return false;
 			}
 			RetryFrames = 0;
 			if (++Index >= Steps.Num())
 			{
-				Cleanup();
-				return true;
+				return Finish();
 			}
 			return false;
 		}
 
 	private:
+		/** B-9: cleanup, then let notifications queued by the cleanup (the listener is already unbound) drain before the next test. */
+		bool Finish()
+		{
+			Cleanup();
+			bCleaningUp = true;
+			return DrainAndEnd();
+		}
+
+		bool DrainAndEnd()
+		{
+			const int32 Pending = State->Sequencer.IsValid() ? State->Sequencer->GetNumPendingEvents() : 0;
+			if (Pending > 0 && ++DrainFrames <= 10)
+			{
+				return false;
+			}
+			if (Pending > 0)
+			{
+				State->Test->AddError(FString::Printf(TEXT("Test environment: %d sequencer notification(s) still pending 10 frames after the scenario."), Pending));
+			}
+			else if (DrainFrames > 0)
+			{
+				State->Test->AddInfo(FString::Printf(TEXT("Cleanup: pending sequencer notifications delivered (listener unbound) in %d frame(s)."), DrainFrames));
+			}
+			ACFTestEnvironment::EndScenario(*State->Test, State->Acf.Get(), State->PCM(), Guard);
+			return true;
+		}
+
 		void Cleanup()
 		{
 			FScenario& S = *State;
@@ -354,6 +386,7 @@ namespace ACFSeqTest
 				S.Test->TestEqual(TEXT("Cleanup: no output suppression left behind by the sequencer bridge"), S.Acf->GetNumOutputSuppressions(), 0);
 				S.Acf->GetDirector()->StopAllSequences(true);
 				S.Acf->ReleaseAllCameras(true);
+				S.Acf->StopAllCameraEffects(true); // B-9: effects used to survive into the next test
 			}
 			S.Spawned.Add(S.ActorA);
 			S.Spawned.Add(S.ActorB);
@@ -377,6 +410,9 @@ namespace ACFSeqTest
 		double SavedFixedDt = 0.0;
 		bool bSavedFixedStep = false;
 		bool bStarted = false;
+		bool bCleaningUp = false;
+		int32 DrainFrames = 0;
+		ACFTestEnvironment::FGlobalStateGuard Guard;
 	};
 
 	static void WaitFrames(TArray<FStep>& Steps, int32 Frames)
@@ -1260,11 +1296,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequencerLocalPlayersTest, "ActionCameraFra
 bool FACFSequencerLocalPlayersTest::RunTest(const FString& Parameters)
 {
 	using namespace ACFSeqTest;
-	// 2 人目の PlayerController は GameMode の PlayerController Class で生成され、エンジンの順序上 BeginPlay の時点では
-	// まだ LocalPlayer が付いていない。ホストプロジェクト（REBoarGetch の BP_PC_Lobby）は BeginPlay で HUD を CreateWidget
-	// するため UMG がエラーを出す。ACF とは無関係（ACF は UMG を使わない）なので、このメッセージだけを無視する。
-	// 出ない GameMode もあるので「出なくても失敗にしない」（Occurrences < 0）。ACF の検証項目は変えない。
-	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	// 2 人目の PlayerController は BeginPlay の時点ではまだ LocalPlayer が付いていない。ホストプロジェクトの Blueprint の
+	// PlayerController（REBoarGetch の BP_PC_Lobby）は BeginPlay で HUD を CreateWidget し、UMG がエラーを出す（ACF とは無関係）。
+	// B-9: そのエラーを予期するのは、PlayerController が Blueprint のときだけ。ACF のテスト環境（エンジン標準の
+	// GameModeBase / PlayerController、README 22 章）では何も無視せず、エラーが出ればテストは失敗する。
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this); // B-9: only for a host Blueprint PlayerController
 	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
 	auto SecondController = [](FScenario& S) { return S.SecondPlayer.IsValid() ? S.SecondPlayer->GetPlayerController(S.World()) : nullptr; };
 	TArray<FStep> Steps;
@@ -2265,7 +2301,7 @@ bool FACFPcmCompatLocalPlayersTest::RunTest(const FString& Parameters)
 {
 	using namespace ACFSeqTest;
 	// 2 人目の PlayerController の BeginPlay でホストプロジェクトの HUD が出すエラー（LocalPlayersAreIndependent と同じ。ACF とは無関係）。
-	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this); // B-9: only for a host Blueprint PlayerController
 	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
 	TArray<FStep> Steps;
 	Steps.Add([](FScenario& S)
@@ -2372,7 +2408,7 @@ bool FACFHealthPcmOutputTest::RunTest(const FString& Parameters)
 {
 	using namespace ACFSeqTest;
 	// 2 人目の PlayerController の BeginPlay でホストプロジェクトの HUD が出すエラー（ACF とは無関係。LocalPlayersAreIndependent と同じ）。
-	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this); // B-9: only for a host Blueprint PlayerController
 	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
 	static const FVector TargetLoc = Base + FVector(500.f, 0.f, 0.f);
 	static const FVector NewTargetLoc = Base + FVector(900.f, 300.f, 0.f);
@@ -2517,7 +2553,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEffectsNoRequestTest, "ActionCameraFramewor
 bool FACFEffectsNoRequestTest::RunTest(const FString& Parameters)
 {
 	using namespace ACFSeqTest;
-	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this); // B-9: only for a host Blueprint PlayerController
 	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
 	TArray<FStep> Steps;
 	Steps.Add([](FScenario& S)
@@ -3019,7 +3055,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFEventsPendingLifetimeTest, "ActionCameraFra
 bool FACFEventsPendingLifetimeTest::RunTest(const FString& Parameters)
 {
 	using namespace ACFSeqTest;
-	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this); // B-9: only for a host Blueprint PlayerController
 	TArray<FStep> Steps;
 	Steps.Add([](FScenario& S)
 	{
@@ -3287,7 +3323,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFReturnBlendRecallPlayersTest, "ActionCamera
 bool FACFReturnBlendRecallPlayersTest::RunTest(const FString& Parameters)
 {
 	using namespace ACFSeqTest;
-	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this); // B-9: only for a host Blueprint PlayerController
 	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
 	TArray<FStep> Steps;
 	Steps.Add([](FScenario& S)

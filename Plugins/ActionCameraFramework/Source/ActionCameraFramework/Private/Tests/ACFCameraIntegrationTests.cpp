@@ -43,6 +43,8 @@
 #include "Nodes/ACFCameraNode_ShotAnchor.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimNotifyQueue.h"
+#include "Tests/ACFCameraTestEnvironment.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 /**
  * End-to-end checks against the real PlayerCameraManager. ClientContext only: run in a game process:
@@ -145,6 +147,10 @@ namespace ACFIntegration
 					State->Test->AddError(TEXT("UACFCameraSubsystem missing on local player."));
 					return true;
 				}
+				// B-9: process-wide state is restored at the end (also on abort); diagnostics count from zero.
+				Guard.Capture(PC->GetWorld());
+				SavedControlRotation = PC->GetControlRotation();
+				ACFTestEnvironment::BeginScenario(*State->Subsystem);
 				bHavePlayer = true;
 			}
 			if (GFrameCounter < ResumeFrame)
@@ -154,6 +160,7 @@ namespace ACFIntegration
 			if (!State->PCM() || !State->Subsystem.IsValid())
 			{
 				State->Test->AddError(TEXT("Player, camera manager or subsystem lost during the scenario."));
+				Cleanup();
 				return true;
 			}
 			State->bRetry = false;
@@ -188,6 +195,7 @@ namespace ACFIntegration
 			{
 				State->Subsystem->GetDirector()->StopAllSequences(true);
 				State->Subsystem->ReleaseAllCameras(true);
+				State->Subsystem->StopAllCameraEffects(true); // B-9: effects used to survive into the next test
 			}
 			State->Spawned.Add(State->ActorA);
 			State->Spawned.Add(State->ActorB);
@@ -198,9 +206,16 @@ namespace ACFIntegration
 					Actor->Destroy();
 				}
 			}
+			if (State->Controller.IsValid())
+			{
+				State->Controller->SetControlRotation(SavedControlRotation); // B-9: tests that aim the player restore it here
+			}
+			ACFTestEnvironment::EndScenario(*State->Test, State->Subsystem.Get(), State->PCM(), Guard);
 		}
 
 		TSharedRef<FScenario> State = MakeShared<FScenario>();
+		ACFTestEnvironment::FGlobalStateGuard Guard;
+		FRotator SavedControlRotation = FRotator::ZeroRotator;
 		TArray<FStep> Steps;
 		uint64 WaitFrames;
 		uint64 ResumeFrame = 0;
@@ -524,12 +539,24 @@ bool FACFIntegrationSpringArmTest::RunTest(const FString& Parameters)
 	TArray<FStep> Steps;
 	Steps.Add([](FScenario& S)
 	{
-		APawn* Pawn = S.Controller->GetPawn();
-		USpringArmComponent* Arm = Pawn ? Pawn->FindComponentByClass<USpringArmComponent>() : nullptr;
-		if (!S.Test->TestNotNull(TEXT("Player pawn with a SpringArm"), Arm))
-		{
-			return false;
-		}
+		// B-9: the test's own SpringArm with explicit settings (it used to read the host project's player pawn, so the
+		// result depended on that pawn's arm and lag). Its rotation is set to the control rotation, like
+		// bUsePawnControlRotation does for a possessed pawn, so no possession change is needed.
+		S.ActorA = SpawnMovablePoint(S.World(), TestArea + FVector(-6000, -6000, 0));
+		USpringArmComponent* Arm = NewObject<USpringArmComponent>(S.ActorA.Get(), TEXT("TestArm"));
+		Arm->SetupAttachment(S.ActorA->GetRootComponent());
+		Arm->SetUsingAbsoluteRotation(true);
+		Arm->bUsePawnControlRotation = false;
+		Arm->TargetArmLength = 400.f;
+		Arm->SocketOffset = FVector(0.f, 50.f, 60.f);
+		Arm->TargetOffset = FVector(0.f, 0.f, 60.f);
+		Arm->bEnableCameraLag = false;
+		Arm->bEnableCameraRotationLag = false;
+		Arm->bDoCollisionTest = true;
+		Arm->ProbeSize = 12.f;
+		Arm->ProbeChannel = ECC_Camera;
+		Arm->RegisterComponent();
+		Arm->SetWorldRotation(FRotator(-20.f, 30.f, 0.f));
 		S.Component = Arm;
 		S.Test->AddInfo(FString::Printf(TEXT("SpringArm %s: length %.1f socket %s target %s pawnRot %d lag %d(%.1f) rotLag %d collision %d probe %.1f"),
 			*Arm->GetPathName(), Arm->TargetArmLength, *Arm->SocketOffset.ToString(), *Arm->TargetOffset.ToString(), Arm->bUsePawnControlRotation ? 1 : 0,
@@ -588,6 +615,7 @@ bool FACFIntegrationSpringArmTest::RunTest(const FString& Parameters)
 	{
 		Compare(S, TEXT("Control rotation (-20, 30)"));
 		S.Controller->SetControlRotation(FRotator(-45.f, 160.f, 0.f));
+		S.Component->SetWorldRotation(FRotator(-45.f, 160.f, 0.f)); // the arm follows the control rotation
 		S.StartTime = S.World()->GetTimeSeconds();
 		return true;
 	});
@@ -1257,11 +1285,41 @@ bool FACFIntegrationAcfShakeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace ACFIntegration
+{
+	static TArray<FStep> MakeSpeedFovRollSteps();
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationSpeedFovRollTest, "ActionCameraFramework.Integration.SpeedFovAndRoll",
 	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
 bool FACFIntegrationSpeedFovRollTest::RunTest(const FString& Parameters)
 {
 	using namespace ACFIntegration;
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MakeSpeedFovRollSteps(), 1));
+	return true;
+}
+
+// B-9: the same scenario three times in a row in one process (same player, PCM and World): it must give the same
+// result each time, so nothing of a run (effect state, motion history, diagnostics) leaks into the next one.
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FACFIntegrationSpeedFovRollRepeatTest, "ActionCameraFramework.Integration.SpeedFovAndRollRepeated",
+	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+void FACFIntegrationSpeedFovRollRepeatTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
+{
+	for (int32 Run = 1; Run <= 3; ++Run)
+	{
+		OutBeautifiedNames.Add(FString::Printf(TEXT("Run%d"), Run));
+		OutTestCommands.Add(FString::FromInt(Run));
+	}
+}
+bool FACFIntegrationSpeedFovRollRepeatTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFIntegration;
+	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MakeSpeedFovRollSteps(), 1));
+	return true;
+}
+
+TArray<ACFIntegration::FStep> ACFIntegration::MakeSpeedFovRollSteps()
+{
 	TArray<FStep> Steps;
 	Steps.Add([](FScenario& S)
 	{
@@ -1291,14 +1349,24 @@ bool FACFIntegrationSpeedFovRollTest::RunTest(const FString& Parameters)
 		FACFCameraEffectParams Params;
 		Params.TargetActor = S.ActorA.Get();
 		S.Subsystem->PlayCameraEffect(S.EffectPresets[0].Get(), Params);
+		// B-9: the target moves ITSELF during the World tick (velocity x that frame's DeltaTime, before the camera update),
+		// like a real character. The old test moved it from the latent command, i.e. after the camera update, by the
+		// world-time difference of the PREVIOUS frame: the effects divided that by the CURRENT DeltaTime, so a frame
+		// time spike lowered the sampled speed and the roll (4.38 instead of 5 in a failed run). See
+		// .Effects.SpeedFovAndRollFixedStep for the deterministic check of the effect itself.
+		UProjectileMovementComponent* Mover = NewObject<UProjectileMovementComponent>(S.ActorA.Get(), TEXT("TestMover"));
+		Mover->ProjectileGravityScale = 0.f;
+		Mover->bRotationFollowsVelocity = false;
+		Mover->SetUpdatedComponent(S.ActorA->GetRootComponent());
+		Mover->Velocity = FVector(0.0, 1000.0, 0.0); // sideways (camera right), 1000 cm/s
+		Mover->RegisterComponent();
+		S.Component = S.ActorA->GetRootComponent();
 		S.StartTime = S.World()->GetTimeSeconds();
 		return true;
 	});
 	Steps.Add([](FScenario& S)
 	{
-		// Target runs sideways (camera right) at 1000 cm/s for 1.2 s.
 		const double T = S.World()->GetTimeSeconds() - S.StartTime;
-		S.ActorA->SetActorLocation(S.Pivot + FVector(0, 1000.0 * T, 0));
 		S.bRetry = T < 1.2;
 		return true;
 	});
@@ -1308,6 +1376,13 @@ bool FACFIntegrationSpeedFovRollTest::RunTest(const FString& Parameters)
 		S.Test->AddInfo(FString::Printf(TEXT("Running: FOV %.2f roll %.2f"), View.FOV, View.Rotation.Roll));
 		S.Test->TestTrue(TEXT("Speed FOV widened up to its MaxFOV (105)"), FMath::IsNearlyEqual(View.FOV, 105.f, 0.5f));
 		S.Test->TestTrue(TEXT("Roll banks to MaxRoll (5)"), FMath::IsNearlyEqual(FMath::Abs(View.Rotation.Roll), 5.f, 0.25f));
+		const double Moved = S.ActorA->GetActorLocation().Y - S.Pivot.Y;
+		const double Elapsed = S.World()->GetTimeSeconds() - S.StartTime;
+		S.Test->TestTrue(FString::Printf(TEXT("The target really moved with the World tick (%.1f cm in %.3f s)"), Moved, Elapsed), FMath::IsNearlyEqual(Moved, 1000.0 * Elapsed, 50.0));
+		if (UProjectileMovementComponent* Mover = S.ActorA->FindComponentByClass<UProjectileMovementComponent>())
+		{
+			Mover->StopMovementImmediately(); // target stops
+		}
 		S.StartTime = S.World()->GetTimeSeconds();
 		return true;
 	});
@@ -1328,8 +1403,7 @@ bool FACFIntegrationSpeedFovRollTest::RunTest(const FString& Parameters)
 		S.Subsystem->StopAllCameraEffects(true);
 		return true;
 	});
-	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps), 1));
-	return true;
+	return Steps;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFIntegrationEffectLifetimeTest, "ActionCameraFramework.Integration.EffectsSurvivePcmAndActorLoss",

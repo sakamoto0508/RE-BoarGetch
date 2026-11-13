@@ -31,6 +31,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Tests/ACFCameraTestEnvironment.h"
 
 /**
  * Phase 6B / B-1 performance baseline. NOT a regression test: it only runs when the command line has -ACFProfile and
@@ -891,7 +892,7 @@ bool FACFProfileScenariosTest::RunTest(const FString& Parameters)
 		return true;
 	}
 	// The second local player's controller comes from the host project's GameMode (may log an unrelated UMG error).
-	AddExpectedErrorPlain(TEXT("CreateWidget cannot be used on Player Controller with no attached player"), EAutomationExpectedErrorFlags::Contains, -1);
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this); // B-9: only for a host Blueprint PlayerController
 	ADD_LATENT_AUTOMATION_COMMAND(ACFProfileScenarios::FRunner(this));
 	return true;
 }

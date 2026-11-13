@@ -1,5 +1,5 @@
 """Creates the ACF manual-verification content (idempotent). Headless:
-  run_ue_py.sh C:/UnrealGames/REBoarGetch/Plugins/ActionCameraFramework/Scripts/CreateManualTestAssets.py
+  Scripts/RunEditorPython.sh Scripts/CreateManualTestAssets.py   (from the plugin folder; any project)
 Presets in /ActionCameraFramework/Samples (used by the console command ACF.Sample.Use <Name>):
   DA_ACFSample_Follow      Follow (axis damping, lookahead) + Look At + Collision
   DA_ACFSample_ThirdPerson Orbital Follow (Control Rotation = the project's mouse / gamepad look) + Combat Camera + Collision (solver)
