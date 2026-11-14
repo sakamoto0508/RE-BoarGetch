@@ -2,6 +2,7 @@
 
 
 #include "Boar/BoarBase.h"
+#include "Boar/BoarMovementComponent.h"
 #include "AIController.h"
 #include "Animation/AnimSequenceBase.h"
 #include "BrainComponent.h"
@@ -20,7 +21,9 @@
 #include "Navigation/PathFollowingComponent.h"
 
 // UObject生成中はDataAsset由来の種別設定がまだ確定していないため、Tick可否はBeginPlayで決める。
-ABoarBase::ABoarBase()
+// CharacterMovementは演出用の移動時間倍率を持つUBoarMovementComponentにする（Component名・既存設定はそのまま）。
+ABoarBase::ABoarBase(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UBoarMovementComponent>(CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
 	CaptureComponent = CreateDefaultSubobject<UCaptureComponent>(TEXT("CaptureComponent"));

@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
 #include "Rendering/RetroRenderTypes.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "RetroRenderSettings.generated.h"
 
 // Project Settings > Plugins > Retro Render. Stored in Config/DefaultGame.ini.
@@ -20,6 +21,10 @@ public:
 	UPROPERTY(config, EditAnywhere, Category="Auto Apply", meta=(EditCondition="bAutoApplyInGame")) bool bDefaultCRTOverlay = true;
 	// Maps that stay untouched (e.g. a title screen rendered as a plain menu).
 	UPROPERTY(config, EditAnywhere, Category="Auto Apply", meta=(AllowedClasses="/Script/Engine.World")) TArray<FSoftObjectPath> ExcludedMaps;
+	// MPC_Retro に加えて、ジオメトリ用スカラー（RetroVertexSnap など）を書き込む MPC。
+	// マテリアルが既に UE の上限（2 個）まで MPC を使っていて MPC_Retro を足せない場合に、
+	// そのマテリアルが使っている MPC に同名スカラーを追加して、ここに登録する。存在しないものは無視される。
+	UPROPERTY(config, EditAnywhere, Category="Parameter Collections") TArray<TSoftObjectPtr<UMaterialParameterCollection>> AdditionalParameterCollections;
 	// Editor: when a level is opened, notify if it uses project materials without the retro geometry patch.
 	UPROPERTY(config, EditAnywhere, Category="Editor") bool bNotifyUnpatchedMaterials = true;
 };

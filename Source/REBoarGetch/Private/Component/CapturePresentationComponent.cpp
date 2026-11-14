@@ -1,12 +1,14 @@
 #include "Component/CapturePresentationComponent.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Boar/BoarBase.h"
+#include "Boar/BoarMovementComponent.h"
 #include "Core/BoarGameMode.h"
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -128,20 +130,27 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 		SharedAge = 0.f;
 		bConfirmed = false;
 		bTransferSoundPlayed = false;
-		// 変更前の値を保存してから時間倍率とCameraを取得する。復元はRestoreSharedState()が担当する。
-		OriginalTimeScale = UGameplayStatics::GetGlobalTimeDilation(this);
+		// 変更前の値を保存してからCameraを取得する。復元はRestoreSharedState()が担当する。
 		Camera = PC->GetPawn() ? PC->GetPawn()->FindComponentByClass<UCameraComponent>() : nullptr;
 		if (Camera.IsValid())
 		{
 			OriginalFOV = AppliedFOV = Camera->FieldOfView;
 			bOwnCamera = true;
 		}
-		ApplyTimeScale(
-			OriginalTimeScale * FMath::Clamp(HitStopDuration > 0 ? HitStopTimeScale : SlowTimeScale, .001f, 1.f));
+		// World全体の時間は変えず、捕獲地点の周囲にいる未捕獲Boarだけを減速する。
+		SlowedBoars.Reset();
+		CollectLocalSlowTargets(T.CaptureLocation);
+		ApplyLocalSlow(HitStopDuration > 0);
 		if (PC->PlayerCameraManager && CameraShake && !CameraShake->HasAnyClassFlags(CLASS_Abstract))
 			ActiveShake = PC->PlayerCameraManager->
 			                  StartCameraShake(CameraShake);
 		PlaySound(ImpactSound);
+	}
+	else if (bSharedActive && SharedAge < HitStopDuration + SlowDuration)
+	{
+		// 同じ演出中に別の地点で捕獲した場合も、その周囲を同じ減速へ加える（共有演出は開始し直さない）。
+		CollectLocalSlowTargets(T.CaptureLocation);
+		ApplyLocalSlow(SharedAge < HitStopDuration);
 	}
 	return true;
 }
@@ -153,26 +162,94 @@ void UCapturePresentationComponent::PlaySound(USoundBase* Sound)
 			Audio->PlaySoundEffect2D(this, Sound);
 }
 
-void UCapturePresentationComponent::ApplyTimeScale(float Scale)
+// 捕獲地点から半径内の未捕獲Boarを減速対象に加える。捕獲されたBoarは発光・データ化の演出側で扱うため含めない。
+void UCapturePresentationComponent::CollectLocalSlowTargets(const FVector& Center)
 {
-	UGameplayStatics::SetGlobalTimeDilation(this, Scale);
-	// World Settings側でClampされた実際の値を所有の目印として記録する。
-	AppliedTimeScale = UGameplayStatics::GetGlobalTimeDilation(this);
-	bOwnTimeScale = true;
+	if (LocalSlowRadius <= 0.f || !GetWorld())
+		return;
+	const float RadiusSquared = FMath::Square(LocalSlowRadius);
+	for (TActorIterator<ABoarBase> It(GetWorld()); It; ++It)
+	{
+		ABoarBase* Boar = *It;
+		if (!IsValid(Boar) || Boar->IsCaptured() || FVector::DistSquared(Boar->GetActorLocation(), Center) > RadiusSquared)
+			continue;
+		if (SlowedBoars.ContainsByPredicate([Boar](const FCaptureSlowedBoar& S) { return S.Boar == Boar; }))
+			continue;
+		FCaptureSlowedBoar Slowed;
+		Slowed.Boar = Boar;
+		SlowedBoars.Add(Slowed);
+	}
 }
 
-void UCapturePresentationComponent::ReleaseTimeScale()
+// アニメーションはMeshのGlobalAnimRateScale、移動はUBoarMovementComponentの移動時間倍率で減速する。
+// MaxWalkSpeedは変えないので、ApplyMovementSpeedや攻撃Taskの速度設定・保存と競合せず、毎Tickの再計算でも打ち消されない。
+void UCapturePresentationComponent::ApplyLocalSlow(bool bHitStop)
 {
-	if (!bOwnTimeScale)
-		return;
-	bOwnTimeScale = false;
-	if (!GetWorld())
-		return;
-	// 自分が設定した値のままなら元へ戻す。別の演出が上書きしていれば、その演出の所有として触らない。
-	if (FMath::IsNearlyEqual(UGameplayStatics::GetGlobalTimeDilation(this), AppliedTimeScale))
-		UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeScale);
-	else
-		UE_LOG(LogTemp, Warning, TEXT("[Capture] Global Time Dilation was changed by another owner; leaving it as is."));
+	const float AnimRate = FMath::Clamp(bHitStop ? HitStopAnimRate : SlowAnimRate, .001f, 1.f);
+	const float MoveScale = bMatchMovementToAnimation
+		                        ? AnimRate
+		                        : FMath::Clamp(bHitStop ? HitStopMoveScale : SlowMoveScale, .001f, 1.f);
+	for (int32 I = SlowedBoars.Num() - 1; I >= 0; --I)
+	{
+		FCaptureSlowedBoar& S = SlowedBoars[I];
+		ABoarBase* Boar = S.Boar.Get();
+		if (!IsValid(Boar))
+		{
+			SlowedBoars.RemoveAt(I);
+			continue;
+		}
+		// 演出中に捕獲されたBoarは元の速さへ戻し、以後は捕獲演出だけに任せる。
+		if (Boar->IsCaptured())
+		{
+			RestoreSlowedBoar(S);
+			SlowedBoars.RemoveAt(I);
+			continue;
+		}
+		if (USkeletalMeshComponent* Mesh = Boar->GetMesh(); Mesh && !S.bAnimOwnershipLost)
+		{
+			if (!S.bAnimApplied)
+				S.OriginalAnimRate = Mesh->GlobalAnimRateScale;
+			else if (!FMath::IsNearlyEqual(Mesh->GlobalAnimRateScale, S.AppliedAnimRate))
+				S.bAnimOwnershipLost = true;
+			if (!S.bAnimOwnershipLost)
+			{
+				Mesh->GlobalAnimRateScale = S.OriginalAnimRate * AnimRate;
+				S.AppliedAnimRate = Mesh->GlobalAnimRateScale;
+				S.bAnimApplied = true;
+			}
+			else
+				S.bAnimApplied = false;
+		}
+		if (auto* Movement = Cast<UBoarMovementComponent>(Boar->GetCharacterMovement()))
+		{
+			Movement->SetPresentationTimeScale(MoveScale);
+			S.bMoveApplied = true;
+		}
+	}
+}
+
+// 1体分の復元。自分が設定した値のまま残っている場合だけ戻す（他の処理が変えたアニメーション倍率は上書きしない）。
+void UCapturePresentationComponent::RestoreSlowedBoar(FCaptureSlowedBoar& S)
+{
+	ABoarBase* Boar = S.Boar.Get();
+	if (S.bAnimApplied && IsValid(Boar) && Boar->GetMesh() &&
+		FMath::IsNearlyEqual(Boar->GetMesh()->GlobalAnimRateScale, S.AppliedAnimRate))
+		Boar->GetMesh()->GlobalAnimRateScale = S.OriginalAnimRate;
+	// 移動時間倍率を設定するのは捕獲演出だけなので、通常値へ戻す。
+	if (S.bMoveApplied && IsValid(Boar))
+		if (auto* Movement = Cast<UBoarMovementComponent>(Boar->GetCharacterMovement()))
+			Movement->SetPresentationTimeScale(1.f);
+	S.bAnimApplied = false;
+	S.bMoveApplied = false;
+}
+
+// 全対象を復元する。対象リストは残すので、Pause解除後は同じBoarへ再び適用できる（次の共有演出の開始時に作り直す）。
+void UCapturePresentationComponent::ReleaseLocalSlow()
+{
+	for (FCaptureSlowedBoar& S : SlowedBoars)
+	{
+		RestoreSlowedBoar(S);
+	}
 }
 
 void UCapturePresentationComponent::ApplyFieldOfView(float FOV)
@@ -205,7 +282,7 @@ void UCapturePresentationComponent::ReleaseCameraShake()
 // 共有状態の解放。正常終了・キャンセル・対象Destroy・Pause・EndPlayのどこから何度呼ばれても安全。
 void UCapturePresentationComponent::RestoreSharedState()
 {
-	ReleaseTimeScale();
+	ReleaseLocalSlow();
 	ReleaseCamera();
 	ReleaseCameraShake();
 }
@@ -236,7 +313,7 @@ void UCapturePresentationComponent::RestoreTarget(FCaptureVisualTarget& T)
 
 void UCapturePresentationComponent::CancelPresentation(bool bCommitCaptures)
 {
-	// 先に演出リストと時間倍率を片付け、Gameplayへの通知が再入しても同じ対象を確定しない。
+	// 先に演出リストと周囲Boarの減速を片付け、Gameplayへの通知が再入しても同じ対象を確定しない。
 	RestoreSharedState();
 	bSharedActive = false;
 	TArray<TWeakObjectPtr<ABoarBase>> Pending;
@@ -373,7 +450,7 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 		CancelPresentation();
 		return;
 	}
-	// Pause suspends the sequence, but never leaves the world or camera in a slowed state.
+	// Pause suspends the sequence, but never leaves nearby boars or the camera in a slowed state.
 	if (UGameplayStatics::IsGamePaused(this))
 	{
 		RestoreSharedState();
@@ -390,7 +467,7 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 		UpdateSharedFeedback(RealDelta);
 	TArray<TWeakObjectPtr<ABoarBase>> Finished;
 	UpdateTargets(RealDelta, Finished);
-	// Restore globals before invoking gameplay: this call can trigger the existing clear sequence.
+	// Restore shared state (local slow, camera) before invoking gameplay: this call can trigger the existing clear sequence.
 	if (Targets.IsEmpty())
 	{
 		RestoreSharedState();
@@ -404,11 +481,11 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 void UCapturePresentationComponent::UpdateSharedFeedback(float RealDelta)
 {
 	SharedAge += RealDelta;
+	// Hit Stop → Slow → 通常速度。毎回値を設定し直すので、Pause解除後も同じ段階の減速へ戻る。
 	if (SharedAge < HitStopDuration + SlowDuration)
-		ApplyTimeScale(OriginalTimeScale * FMath::Clamp(SharedAge < HitStopDuration ? HitStopTimeScale : SlowTimeScale,
-		                                                .001f, 1.f));
+		ApplyLocalSlow(SharedAge < HitStopDuration);
 	else
-		ReleaseTimeScale();
+		ReleaseLocalSlow();
 	if (Camera.IsValid())
 	{
 		const float P = FMath::Clamp(SharedAge / FMath::Max(.01f, CameraDuration), 0.f, 1.f);

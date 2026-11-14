@@ -46,6 +46,22 @@ struct FCaptureVisualTarget
  float Age = 0.f;
 };
 
+/** 捕獲地点の周囲で一時的に減速しているBoar。値はこのComponentが設定したものだけを元へ戻します。 */
+USTRUCT()
+struct FCaptureSlowedBoar
+{
+ GENERATED_BODY()
+ UPROPERTY() TWeakObjectPtr<ABoarBase> Boar;
+ /** 減速前のMeshのGlobalAnimRateScaleと、このComponentが設定した値。 */
+ float OriginalAnimRate = 1.f;
+ float AppliedAnimRate = 1.f;
+ /** アニメーション倍率・移動時間倍率をこのComponentが設定中か。 */
+ bool bAnimApplied = false;
+ bool bMoveApplied = false;
+ /** 他の処理がアニメーション倍率を変えたため、この演出では以後触らない。 */
+ bool bAnimOwnershipLost = false;
+};
+
 USTRUCT()
 struct FCaptureReception
 {
@@ -67,10 +83,16 @@ public:
  void CancelPresentation(bool bCommitCaptures = true);
  bool HasPendingCaptures() const { return bCommittingCaptures || !Targets.IsEmpty() || !Receptions.IsEmpty(); }
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation", meta=(ToolTip="捕獲成功演出を有効にします。OFFでも捕獲判定とCageへの収容は通常どおり行われます。")) bool bEnabled = true;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0",ClampMax="0.12", ToolTip="網が当たった直後に時間を止める長さ（実時間・秒）。推奨0.08～0.12秒。Net 1回につき1回だけ適用します。")) float HitStopDuration = .1f;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0.001",ClampMax="1", ToolTip="Hit Stop中の時間倍率。0に近いほど強く停止します。初期値0.01。")) float HitStopTimeScale = .01f;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0.01",ClampMax="1", ToolTip="スローモーション中の時間倍率。小さいほど周囲の動きが遅くなります。初期値0.3。")) float SlowTimeScale = .3f;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0",ClampMax="0.6", ToolTip="Hit Stop後のスローモーションの長さ（実時間・秒）。足元リングとシアン発光を見せる時間です。")) float SlowDuration = .27f;
+ // Hit Stop／Slowは、捕獲地点の周囲にいる未捕獲Boarだけを減速します。World全体の時間（Global Time Dilation）、
+ // Player、AI（StateTree）、Timer、Stage進行、Cage、UI・SE・VFXの時間は変えません。
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0",ClampMax="0.12", ToolTip="網が当たった直後に周囲のBoarを止めて見せる長さ（実時間・秒）。推奨0.08～0.12秒。Net 1回につき1回だけ適用します。")) float HitStopDuration = .1f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0",ClampMax="0.6", ToolTip="Hit Stop後に周囲のBoarをゆっくり動かす長さ（実時間・秒）。足元リングとシアン発光を見せる時間です。")) float SlowDuration = .27f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Local Slow", meta=(ClampMin="0",ClampMax="5000",Units="cm", ToolTip="減速させるBoarの範囲（捕獲地点からの半径）。捕獲されたBoar自身とPlayerは対象外です。0なら周囲のBoarを減速しません。")) float LocalSlowRadius = 1500.f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Local Slow", meta=(ClampMin="0.001",ClampMax="1", ToolTip="Hit Stop中の周囲Boarのアニメーション再生倍率（MeshのGlobalAnimRateScale）。0に近いほど止まって見えます。初期値0.01。")) float HitStopAnimRate = .01f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Local Slow", meta=(ClampMin="0.01",ClampMax="1", ToolTip="Slow中の周囲Boarのアニメーション再生倍率（MeshのGlobalAnimRateScale）。初期値0.3。")) float SlowAnimRate = .3f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Local Slow", meta=(ToolTip="ONなら移動の時間倍率にアニメーション再生倍率と同じ値を使います。ABPは実際の速度から足の再生速度を合わせるため、同じ値にすると足と移動がずれません。")) bool bMatchMovementToAnimation = true;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Local Slow", meta=(ClampMin="0.001",ClampMax="1",EditCondition="!bMatchMovementToAnimation", ToolTip="Hit Stop中の周囲Boarの移動時間倍率（移動・加速・旋回）。MaxWalkSpeedは変えません。")) float HitStopMoveScale = .01f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Local Slow", meta=(ClampMin="0.01",ClampMax="1",EditCondition="!bMatchMovementToAnimation", ToolTip="Slow中の周囲Boarの移動時間倍率（移動・加速・旋回）。MaxWalkSpeedは変えません。")) float SlowMoveScale = .3f;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0.05",ClampMax="0.7", ToolTip="Boarが下から上へデータ化される長さ（実時間・秒）。長くするとScanと分解をゆっくり見せられます。")) float CaptureDissolveDuration = .3f;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0.05",ClampMax="0.4", ToolTip="データ化後、Boarの残像と破片が上昇して消えるまでの長さ（実時間・秒）。")) float TransferFinishDuration = .18f;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Timing", meta=(ClampMin="0.05",ClampMax="0.5", ToolTip="Cageへ収容した直後のシアン受信エフェクトの長さ（実時間・秒）。捕獲地点の演出時間には含まれません。")) float CageReceptionDuration = .18f;
@@ -102,10 +124,12 @@ private:
  bool UpdateTarget(FCaptureVisualTarget& Target, float RealDelta);
  void CommitFinishedCaptures(ABoarGameMode* Mode, const TArray<TWeakObjectPtr<ABoarBase>>& Finished);
  void UpdateReceptions(float RealDelta, ABoarGameMode* Mode);
- // 共有状態（Global Time Dilation・Camera FOV・Camera Shake）の取得と解放。解放は冪等で、
+ // 共有状態（周囲Boarの局所減速・Camera FOV・Camera Shake）の取得と解放。解放は冪等で、
  // このComponentが最後に設定した値のまま残っている場合だけ元の値へ戻します（他の演出が上書きした値は戻しません）。
- void ApplyTimeScale(float Scale);
- void ReleaseTimeScale();
+ void CollectLocalSlowTargets(const FVector& Center);
+ void ApplyLocalSlow(bool bHitStop);
+ void ReleaseLocalSlow();
+ void RestoreSlowedBoar(FCaptureSlowedBoar& Slowed);
  void ApplyFieldOfView(float FOV);
  void ReleaseCamera();
  void ReleaseCameraShake();
@@ -121,11 +145,13 @@ private:
  UPROPERTY(Transient) TArray<FCaptureReception> Receptions;
  UPROPERTY(Transient) TWeakObjectPtr<UCameraComponent> Camera;
  UPROPERTY(Transient) TObjectPtr<UCameraShakeBase> ActiveShake;
+ /** 現在の共有演出で減速対象にしたBoar。演出終了時に空にします。 */
+ UPROPERTY(Transient) TArray<FCaptureSlowedBoar> SlowedBoars;
  FDelegateHandle TickHandle;
  double LastRealTime = 0.;
- float SharedAge = 0.f, OriginalTimeScale = 1.f, OriginalFOV = 90.f;
- /** このComponentが最後に設定したGlobal Time Dilation / FOV。解放時の所有確認に使います。 */
- float AppliedTimeScale = 1.f, AppliedFOV = 90.f;
+ float SharedAge = 0.f, OriginalFOV = 90.f;
+ /** このComponentが最後に設定したFOV。解放時の所有確認に使います。 */
+ float AppliedFOV = 90.f;
  bool bCommittingCaptures = false;
- bool bSharedActive = false, bOwnTimeScale = false, bOwnCamera = false, bConfirmed = false, bTransferSoundPlayed = false;
+ bool bSharedActive = false, bOwnCamera = false, bConfirmed = false, bTransferSoundPlayed = false;
 };
