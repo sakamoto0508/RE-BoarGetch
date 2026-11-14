@@ -7,6 +7,8 @@
 #include "ACFCameraPreset.h"
 #include "ACFCameraSubsystem.h"
 #include "Nodes/ACFCameraNode_FixedPose.h"
+#include "Nodes/ACFCameraNode_OrbitalFollow.h"
+#include "InputCoreTypes.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
@@ -153,6 +155,221 @@ namespace ACFSamples
 		TEXT("Teleport the pawn forward: [Distance=3000]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleTeleport));
 	static FAutoConsoleCommandWithWorldAndArgs GSampleGuardCmd(TEXT("ACF.Sample.Guard"),
 		TEXT("Enable / disable the output collision guard: <0|1>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleGuard));
+
+	// ---------------------------------------------------------------------------------------------
+	// Phase 7B feel check (README 31 章): Movement Assistance needs Input Source = Camera Input, and nothing in the sample
+	// map feeds Add Camera Input / Set Camera Input Rate. This command requests a transient copy of a sample preset with the
+	// Orbital Follow switched to Camera Input, and forwards the player's raw right stick (rate) and mouse (delta) to ACF
+	// every frame, keeping the control rotation on the ACF camera so movement stays camera-relative. Sample code only:
+	// it is not an input feature of ACF (a game feeds its own input, README 30 章).
+	//   ACF.Sample.Assist On [Facing|Movement] [Preset=ThirdPerson] | Off [Preset] | Heading <Facing|Movement>
+	//   ACF.Sample.Assist RealTime <0|1> | Drift <stick units> | Stick <deg/s> | Mouse <deg/count> | Nudge <yaw deg>
+	//   ACF.Sample.Assist Release
+
+	struct FAssistBridge
+	{
+		TWeakObjectPtr<UACFCameraSubsystem> Subsystem;
+		TWeakObjectPtr<UACFCameraNode_OrbitalFollow> Orbit; // the transient copy's node (not the asset)
+		TStrongObjectPtr<UACFCameraPreset> Preset;
+		FDelegateHandle Hook;
+		uint64 LastFrame = 0;
+		float Drift = 0.f;
+		float StickDegreesPerSecond = 180.f;
+		float MouseDegreesPerCount = 0.1f;
+	};
+	static FAssistBridge GAssist;
+
+	/** The orbit node(s) the request really uses: the transient copy, and the tuning copy while Camera Tuning runs. */
+	template <typename TFunc>
+	static void ForEachAssistOrbit(TFunc&& Func)
+	{
+		if (UACFCameraNode_OrbitalFollow* Orbit = GAssist.Orbit.Get())
+		{
+			Func(*Orbit);
+		}
+		UACFCameraSubsystem* Subsystem = GAssist.Subsystem.Get();
+		const UACFCameraPreset* Used = Subsystem && Subsystem->GetDirector() ? Subsystem->GetDirector()->GetRequestPreset(GSampleHandle) : nullptr;
+		if (Used && Used != GAssist.Preset.Get())
+		{
+			for (UACFCameraNode* Node : const_cast<UACFCameraPreset*>(Used)->Nodes)
+			{
+				if (UACFCameraNode_OrbitalFollow* Orbit = Cast<UACFCameraNode_OrbitalFollow>(Node))
+				{
+					Func(*Orbit);
+				}
+			}
+		}
+	}
+
+	static void AssistForwardInput(UACFCameraSubsystem& Subsystem, float DeltaTime)
+	{
+		if (&Subsystem != GAssist.Subsystem.Get() || GAssist.LastFrame == GFrameCounter)
+		{
+			return;
+		}
+		GAssist.LastFrame = GFrameCounter;
+		APlayerController* PC = Subsystem.GetLocalPlayer() ? Subsystem.GetLocalPlayer()->PlayerController.Get() : nullptr;
+		if (!PC)
+		{
+			return;
+		}
+		// Right stick: a per-second rate (the engine's axis dead zone applies; Drift adds a constant offset for the drift check). Keys by
+		// name: no InputCore link dependency for sample code.
+		const FVector2D Stick(PC->GetInputAnalogKeyState(FKey(FName(TEXT("Gamepad_RightX")))) + GAssist.Drift, PC->GetInputAnalogKeyState(FKey(FName(TEXT("Gamepad_RightY")))));
+		if (!Stick.IsZero())
+		{
+			Subsystem.SetCameraInputRate(Stick * GAssist.StickDegreesPerSecond);
+		}
+		// Mouse: this frame's counts, a displacement.
+		float MouseX = 0.f;
+		float MouseY = 0.f;
+		PC->GetInputMouseDelta(MouseX, MouseY);
+		if (MouseX != 0.f || MouseY != 0.f)
+		{
+			Subsystem.AddCameraInput(FVector2D(MouseX, MouseY) * GAssist.MouseDegreesPerCount);
+		}
+		// Movement input of the pawn is relative to the control rotation: keep it on the camera ACF shows.
+		if (Subsystem.IsActiveCamera(GSampleHandle))
+		{
+			const FRotator Camera = Subsystem.GetLastEvaluationResult().Pose.Rotation;
+			PC->SetControlRotation(FRotator(Camera.Pitch, Camera.Yaw, 0.f));
+		}
+	}
+
+	static void AssistStop()
+	{
+		if (GAssist.Hook.IsValid())
+		{
+			UACFCameraSubsystem::OnPreEvaluate.Remove(GAssist.Hook);
+			GAssist.Hook.Reset();
+		}
+		GAssist.Subsystem.Reset();
+		GAssist.Orbit.Reset();
+		GAssist.Preset.Reset();
+	}
+
+	static void AssistRequest(UWorld* World, bool bEnable, const FString& Heading, const FString& PresetName)
+	{
+		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
+		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		const FString Path = FString::Printf(TEXT("/ActionCameraFramework/Samples/DA_ACFSample_%s.DA_ACFSample_%s"), *PresetName, *PresetName);
+		const UACFCameraPreset* Asset = LoadObject<UACFCameraPreset>(nullptr, *Path);
+		if (!Subsystem || !PC || !Asset)
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist: needs a player and %s."), *Path);
+			return;
+		}
+		// A transient copy (the shared asset is never changed). Values edited on the asset in the editor carry over.
+		UACFCameraPreset* Copy = DuplicateObject<UACFCameraPreset>(Asset, GetTransientPackage());
+		Copy->SetFlags(RF_Transient);
+		UACFCameraNode_OrbitalFollow* Orbit = nullptr;
+		for (UACFCameraNode* Node : Copy->Nodes)
+		{
+			Orbit = Orbit ? Orbit : Cast<UACFCameraNode_OrbitalFollow>(Node);
+		}
+		if (!Orbit)
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist: %s has no Orbital Follow."), *PresetName);
+			return;
+		}
+		Orbit->InputSource = EACFCameraOrbitInputSource::CameraInput;
+		Orbit->Sensitivity = FVector2D(1.f, 1.f); // input already in degrees (Stick / Mouse settings above)
+		Orbit->InitialRotation = EACFCameraOrbitInitialRotation::UpstreamCamera; // no jump when switching ON / OFF
+		Orbit->bEnableMovementAssistance = bEnable;
+		Orbit->RecenterHeading = Heading.Equals(TEXT("Movement"), ESearchCase::IgnoreCase) ? EACFCameraRecenterHeading::MovementDirection : EACFCameraRecenterHeading::TargetFacing;
+
+		AssistStop();
+		GAssist.Subsystem = Subsystem;
+		GAssist.Preset.Reset(Copy);
+		GAssist.Orbit = Orbit;
+		GAssist.LastFrame = 0;
+		GAssist.Hook = UACFCameraSubsystem::OnPreEvaluate.AddStatic(&AssistForwardInput);
+
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = PC->GetPawn();
+		Params.bOverrideBlendIn = true;
+		Params.BlendIn = SampleBlend(0.f, true);
+		Params.DebugName = *FString::Printf(TEXT("Sample_Assist_%s"), bEnable ? TEXT("On") : TEXT("Off"));
+		const FACFCameraRequestHandle Previous = GSampleHandle;
+		GSampleHandle = Subsystem->RequestCamera(Copy, Params);
+		FACFCameraRequestHandle ToRelease = Previous;
+		Subsystem->ReleaseCamera(ToRelease);
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist %s: %s, heading %s, stick %.0f deg/s, mouse %.3f deg/count, drift %.3f -> %s"),
+			bEnable ? TEXT("ON") : TEXT("OFF"), *PresetName, *UEnum::GetValueAsString(Orbit->RecenterHeading), GAssist.StickDegreesPerSecond,
+			GAssist.MouseDegreesPerCount, GAssist.Drift, *GSampleHandle.ToString());
+	}
+
+	static void SampleAssist(const TArray<FString>& Args, UWorld* World)
+	{
+		const FString Kind = Args.IsValidIndex(0) ? Args[0] : FString(TEXT("On"));
+		auto Arg = [&Args](int32 Index, const TCHAR* Default) { return Args.IsValidIndex(Index) ? Args[Index] : FString(Default); };
+		auto IsHeading = [](const FString& Value) { return Value.Equals(TEXT("Facing"), ESearchCase::IgnoreCase) || Value.Equals(TEXT("Movement"), ESearchCase::IgnoreCase); };
+		if (Kind.Equals(TEXT("On"), ESearchCase::IgnoreCase))
+		{
+			const bool bHeadingGiven = IsHeading(Arg(1, TEXT("Facing")));
+			AssistRequest(World, true, bHeadingGiven ? Arg(1, TEXT("Facing")) : FString(TEXT("Facing")), Arg(bHeadingGiven ? 2 : 1, TEXT("ThirdPerson")));
+		}
+		else if (Kind.Equals(TEXT("Off"), ESearchCase::IgnoreCase))
+		{
+			AssistRequest(World, false, TEXT("Facing"), Arg(1, TEXT("ThirdPerson")));
+		}
+		else if (Kind.Equals(TEXT("Release"), ESearchCase::IgnoreCase))
+		{
+			AssistStop();
+			if (UACFCameraSubsystem* Subsystem = FindSubsystem(World))
+			{
+				Subsystem->ReleaseCameraWithBlend(GSampleHandle, SampleBlend(0.6f, true));
+			}
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist released"));
+		}
+		else if (!GAssist.Hook.IsValid())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist %s: run ACF.Sample.Assist On first."), *Kind);
+		}
+		else if (Kind.Equals(TEXT("Heading"), ESearchCase::IgnoreCase))
+		{
+			const bool bMovement = Arg(1, TEXT("Facing")).Equals(TEXT("Movement"), ESearchCase::IgnoreCase);
+			ForEachAssistOrbit([bMovement](UACFCameraNode_OrbitalFollow& Orbit) { Orbit.RecenterHeading = bMovement ? EACFCameraRecenterHeading::MovementDirection : EACFCameraRecenterHeading::TargetFacing; });
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist Heading %s"), bMovement ? TEXT("Movement Direction") : TEXT("Target Facing"));
+		}
+		else if (Kind.Equals(TEXT("RealTime"), ESearchCase::IgnoreCase))
+		{
+			const bool bReal = ArgOr(Args, 1, 1.f) != 0.f;
+			ForEachAssistOrbit([bReal](UACFCameraNode_OrbitalFollow& Orbit) { Orbit.bInputRateIgnoresTimeDilation = bReal; });
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist RealTime %d (Input Rate Ignores Time Dilation)"), bReal ? 1 : 0);
+		}
+		else if (Kind.Equals(TEXT("Drift"), ESearchCase::IgnoreCase))
+		{
+			GAssist.Drift = ArgOr(Args, 1, 0.f);
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist Drift %.3f (= %.2f deg/s)"), GAssist.Drift, GAssist.Drift * GAssist.StickDegreesPerSecond);
+		}
+		else if (Kind.Equals(TEXT("Stick"), ESearchCase::IgnoreCase))
+		{
+			GAssist.StickDegreesPerSecond = ArgOr(Args, 1, 180.f);
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist Stick %.1f deg/s at full tilt"), GAssist.StickDegreesPerSecond);
+		}
+		else if (Kind.Equals(TEXT("Mouse"), ESearchCase::IgnoreCase))
+		{
+			GAssist.MouseDegreesPerCount = ArgOr(Args, 1, 0.1f);
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist Mouse %.3f deg/count"), GAssist.MouseDegreesPerCount);
+		}
+		else if (Kind.Equals(TEXT("Nudge"), ESearchCase::IgnoreCase))
+		{
+			if (UACFCameraSubsystem* Subsystem = GAssist.Subsystem.Get())
+			{
+				Subsystem->AddCameraInput(FVector2D(ArgOr(Args, 1, 30.f), 0.f)); // one delta, also while paused
+				UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist Nudge %.1f deg"), ArgOr(Args, 1, 30.f));
+			}
+		}
+		else
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist: unknown command %s"), *Kind);
+		}
+	}
+
+	static FAutoConsoleCommandWithWorldAndArgs GSampleAssistCmd(TEXT("ACF.Sample.Assist"),
+		TEXT("Movement Assistance feel check (README 31): <On [Facing|Movement] [Preset=ThirdPerson]|Off [Preset]|Heading <Facing|Movement>|RealTime <0|1>|Drift <x>|Stick <deg/s>|Mouse <deg/count>|Nudge <deg>|Release>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleAssist));
 
 	// ACF.Sample.Effect <Recoil|Impulse|Shake|Punch|Motion|Stop>
 	static FACFCameraEffectHandle GMotionHandle;

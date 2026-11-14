@@ -20,7 +20,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
 - Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A 完了（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映、7A-4 Profiler / Debugger / Composition が完了。24〜27 章）
-- Phase 7B 完了。7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance。29 章）、7B-2（カメラ入力の処理: 手動入力の判定、Time Dilation、補助の値の Runtime Tuning。30 章）
+- Phase 7B 完了。7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance。29 章）、7B-2（カメラ入力の処理: 手動入力の判定、Time Dilation、補助の値の Runtime Tuning。30 章）。操作感の確認の手順と `ACF.Sample.Assist` を用意（31 章）。人による操作感の評価は未実施
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -641,7 +641,7 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
 - マウス: プロジェクト既定の Look 入力（ControlRotation）でカメラを旋回します。
 - ゲームパッド: 右スティックで旋回します。
 - サンプル Preset はすべて Input Source = Control Rotation なので、既存の入力設定のまま動きます。
-- ACF の `AddCameraInput` / `SetCameraInputRate` 経由の入力は、`BP_ACFOrbitInputTest` と自動テストで確認しています。
+- ACF の `AddCameraInput` / `SetCameraInputRate` 経由の入力は、`BP_ACFOrbitInputTest` と自動テストで確認しています。Movement Assistance（Camera Input が必要）を手で確かめるときは `ACF.Sample.Assist`（31 章）を使います。
 
 | 確認項目 | 手順 | 期待する見た目 |
 |----------|------|----------------|
@@ -851,7 +851,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **232 件が登録**されています（テスト名の数。Phase 7B-2 の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **233 件が登録**されています（テスト名の数。Phase 7B の操作感の確認の準備の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
@@ -864,29 +864,29 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
   | `.Projection`（構図計算と描画の投影、28 章） | 2 | 実行 | 実行 |
   | `.Assistance`（移動方向へのカメラ補助 13 件、29 章。カメラ入力 `.Assistance.Input` 6 件、30 章） | 19 | 実行 | 実行 |
   | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1、`.Assistance` 3） | 43 | — | 実行 |
-  | `.Samples` | 6 | — | テストマップでだけ検証（他のマップではスキップ） |
+  | `.Samples`（`ACF.Sample.Assist` の 1 件、31 章を含む） | 7 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
   | `.Profile.AssistanceVariants`（補助の状態ごとの性能、29 章・30 章） | 1 | `-ACFProfile` でだけ計測 | 同左 |
-  | 合計 | 232 | 147 | 208 |
+  | 合計 | 233 | 147 | 209 |
 
-- **最新の結果（Phase 7B-2、2026-11-14。クリーンな unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
+- **最新の結果（Phase 7B の操作感の確認の準備、2026-11-14。クリーンな unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
-  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 208 | 200 / 0 / 8 | `.Samples` 6 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
-  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 208 | 200 / 0 / 8 | 同上 |
+  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 209 | 200 / 0 / 9 | `.Samples` 7 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
+  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 209 | 200 / 0 / 9 | 同上 |
   | Editor（`--context editor`、`-NullRHI`） | 147 | 146 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
   | Editor（`--context editor-rendered`、描画あり。`.Editor` 24 件） | 24 | 24 / 0 / 0 | |
-  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 208 | 206 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
-  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 208 | 206 / 0 / 2 | 同上 |
-  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 208 | 208 / 0 / 0 | |
+  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 7 件を含む） | 209 | 207 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 209 | 207 / 0 / 2 | 同上 |
+  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 209 | 209 / 0 / 0 | |
   | 繰り返し（Editor、Phase 7A 最終安定化の時点）: `.Projection` + `.Tuning` + `.Editor.TuningApply` + `.Editor.Diagnostics` ×2 | 48 | 48 / 0 / 0 | |
 
   全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 で見つけ、7A-1 のコードでも同じ値で再現したもの）は、2 人目のローカルプレイヤーの Pawn が残っていたのが原因で、テスト環境側で修正済みです（22 章「ローカルプレイヤーと Pawn」）。
 
   「Skip」は UE の集計では Success になります。`RunTests.sh` はテストが出す `Skipped:` のメッセージで区別します（22 章）。
 - 各カテゴリの内容: `.Health` は不正値の対策（16 章）、`.Lifetime` は Actor の参照と寿命（17 章。実際の World・Actor・GC、`-DisableGarbageElimination` でも合格）、`.PresetValidation` / `.Editor` は Preset の検証（21 章）、`.Profiler` は計測が出力を変えないこと（8 章）、`.Sequencer.PcmCompat` は PCM の互換性（15 章）、`.Sequencer.Events` は通知のタイミング（19 章）、`.Sequencer.ReturnBlend` は戻りのブレンド（20 章）、`.TestEnvironment` と `.Effects.SpeedFovAndRollFixedStep` / `.Integration.SpeedFovAndRollRepeated.*` はテストの土台（22 章）。
-- `.Samples.*`（TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap）のスクリーンショットは、描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
+- `.Samples.*`（TestMapSmoke、TestMapScreenshot、LockOnAndGroupOnTestMap、SolverAndCombatOnTestMap、FinisherOnTestMap、SequencerOnTestMap。AssistCommandOnTestMap はスクリーンショットなし）のスクリーンショットは、描画あり（`-NullRHI` なし）のときだけ `Saved/Screenshots/` に保存されます。
 - Phase 4A で追加したテスト（`.Action.*` 10 件、`.Integration.LockOnCollisionEffectsAndDestroy`、`.Samples.LockOnAndGroupOnTestMap`）の確認内容:
   - ロック開始・解除（ブレンド中に 1 フレーム 40cm 超の飛びがない）、敵が周回・プレイヤーが移動しても両方が画面内
   - 近距離・遠距離のアーム長と FOV、重なり・真上でも NaN にならず Yaw を保持
@@ -2264,3 +2264,95 @@ Blueprint: `Suppress ACF Camera Assistance` / `Release ACF Camera Assistance Sup
 - Input Source = Control Rotation では、補助も入力の判定もありません（29 章）。
 - 補助の ON / OFF と Recenter Heading は Runtime Tuning では変えられません（Preset で変更）。
 - Editor で人が操作して見る確認（スティック・マウスでの操作感）は未実施です。自動テスト（実際の PCM・World を含む）で確認しています。
+
+## 31. Camera Assistance の操作感の確認（Phase 7B）
+
+7B-1（29 章）・7B-2（30 章）の補助を、人がスティックとマウスで操作して確かめるための手順です。**操作感の評価はまだ実施していません**（下の記録表はすべて「未実施」）。自動テストで判定できることと、人が判断することを分けています。
+
+### なぜコマンドが必要か
+
+Movement Assistance は `Input Source = Camera Input` のときだけ動きます。一方、サンプルの Preset はすべて `Control Rotation` で、サンプルマップにも本プロジェクトにも、`Add Camera Input` / `Set Camera Input Rate` を呼ぶ入力がありません（`BP_ACFOrbitInputTest` は BeginPlay で 1 回入力するだけ）。そこで、確認用のコンソールコマンド `ACF.Sample.Assist` を追加しました（サンプル用。Shipping では無効。ACF の入力機能ではありません）。
+
+- `DA_ACFSample_ThirdPerson`（Orbital Follow + Combat + Collision）の **一時的な複製** を要求します。アセットは変更しません。
+- 複製の Orbital Follow だけを `Input Source = Camera Input`、`Sensitivity = 1`、`Initial Rotation = Upstream Camera`（切り替えで向きが飛ばない）にし、補助の ON / OFF と Heading をコマンドで決めます。
+- 毎フレーム、プレイヤーの **右スティックを毎秒のレート**（`Set Camera Input Rate`）、**マウスを差分**（`Add Camera Input`）として ACF に渡します。スティックの値はエンジンの軸の Dead Zone の後の値です。
+- Pawn の移動はコントロール回転が基準なので、コントロール回転を ACF のカメラに合わせ続けます（カメラの向きに歩けます）。
+
+### 準備
+
+1. `/ActionCameraFramework/Samples/L_ACFCameraTest` を開いて PIE（9 章の準備と同じ。RetroRender のルックを外すなら `Retro.Preset OFF`）。
+2. Window > Developer Tools > Debug > ACF Camera Tuning（25 章）を開き、PIE のプレイヤーを選びます。Debugger（27 章）の「Assistance」で状態・理由・Input activity が見えます。
+3. コンソールで `ACF.Sample.Assist On`（Target Facing）または `ACF.Sample.Assist On Movement`。
+4. パネルで要求 `Sample_Assist_On` を選び、Start Tuning すると数値を変えられます。
+
+### コマンド
+
+| コマンド | 内容 |
+|---|---|
+| `ACF.Sample.Assist On [Facing\|Movement] [Preset=ThirdPerson]` | 補助 ON の複製を要求し、入力の転送を始める |
+| `ACF.Sample.Assist Off [Preset]` | 同じ入力の経路で補助 OFF（OFF / ON の比較用） |
+| `ACF.Sample.Assist Heading <Facing\|Movement>` | Recenter Heading をその場で切り替える（調整中のコピーにも反映） |
+| `ACF.Sample.Assist RealTime <0\|1>` | `Input Rate Ignores Time Dilation` |
+| `ACF.Sample.Assist Drift <x>` | スティックに一定の値を足す（ドリフトの再現。0.02 × 180 = 3.6 deg/s） |
+| `ACF.Sample.Assist Stick <deg/s>` / `Mouse <deg/count>` | スティックを倒し切ったときの速さ（既定 180）/ マウス 1 カウントの角度（既定 0.1） |
+| `ACF.Sample.Assist Nudge <deg>` | `Add Camera Input` を 1 回だけ呼ぶ（Pause 中の入力の確認用） |
+| `ACF.Sample.Assist Release` | 転送を止め、UE カメラへ戻す |
+
+エンジンのコマンド: フレームレート `t.MaxFPS 30` / `60` / `120`（先に `r.VSync 0`）、Time Dilation `slomo 0.5`（戻すのは `slomo 1`）、Pause は `pause`（もう一度で再開）。
+
+### 比較する項目と変え方
+
+| 比較 | 変え方 |
+|---|---|
+| Movement Assistance OFF / ON | `ACF.Sample.Assist Off` / `On`（同じ入力の経路で比べられる） |
+| Target Facing / Movement Direction | `ACF.Sample.Assist Heading Facing` / `Movement` |
+| Input Activity Threshold | パネルの `Input Activity Threshold`（0 = 7B-1 の挙動、5 = 既定、15 など） |
+| Recenter Delay / Recenter Time | パネルの `Recenter Delay` / `Recenter Time` |
+| 移動速度の閾値 | パネルの `Start Speed Threshold` / `Stop Speed Threshold`（と `Required Movement Duration`） |
+| Max Assistance Yaw Speed | パネルの `Max Assistance Yaw Speed`（45 / 90 / 180） |
+| 後退の除外・角度の Dead Zone | パネルの `Backward Exclusion Angle` / `Angular Dead Zone` |
+| スティックの時間の基準 | `ACF.Sample.Assist RealTime 0` / `1` |
+| **Tuning で変えられない値**（Rotation Damping、Recenter Pitch、Lookahead の Smoothing = 速度の平滑化、Pivot Damping など） | PIE を止め、Editor で `DA_ACFSample_ThirdPerson` の Orbital Follow を変え、PIE して `ACF.Sample.Assist On` をやり直す（コマンドはアセットの値を複製するので、入力・補助の ON / OFF・Heading 以外の変更はそのまま使われる）。**保存しない**で比較し、終わったら Revert する |
+
+- パネルの Apply（26 章）は、この要求では一時的な複製に書くだけで、アセットには反映されません。良い値はメモして、ゲームの Preset に設定してください。
+- サンプルの Orbital Follow は Rotation Damping 0 で、`Recenter Pitch` が ON（補助中は Pitch も Initial Pitch -15° へ戻る）です。補助の開始・終了の速度の変化を見るときは、この 2 つを Preset で変えた場合とも比べてください。
+
+### 確認する操作と期待する挙動
+
+既定値（Delay 2 s、Time 0.5 s、Start / Stop 150 / 75 cm/s、継続 0.3 s、後退の除外 45°、Dead Zone 5°、最大 90 deg/s、入力の閾値 5 deg/s）で、`ACF.Sample.Assist On Movement` から始めます。
+
+| # | 操作 | 期待する挙動 | 見る観点 |
+|---|---|---|---|
+| 1 | 止まったまま右スティックをゆっくり倒して視点を調整する | 倒した量に応じて回る。止まっている間、補助は動かない（Waiting / Below Speed） | 意図した方向へ動かせるか |
+| 2 | 走りながら右スティックをゆっくり倒す（閾値の前後: 5 deg/s = スティック約 0.03） | 閾値以上なら補助が止まり、手の通りに回る。閾値未満の極めて遅い操作は補助と同時に足され、補助（最大 90 deg/s）に負ける | **小さな手動入力と補助の競合**。手動操作を妨げないか |
+| 3 | スティックを離して走り続ける | 離してから Recenter Delay（2 s）後に、移動方向へ寄り始める（最大 90 deg/s） | 補助の開始が自然か。急激でないか |
+| 4 | `ACF.Sample.Assist Drift 0.02` で走る（ドリフト 3.6 deg/s）→ `Drift 0.05`（9 deg/s）→ `Drift 0` | 0.02 ではカメラがゆっくり流れるが補助は続く（Input activity は「below threshold」）。0.05 では手動入力になり補助しない。閾値 0（パネル）では 0.02 でも補助しない | 小さな入力と補助の競合 |
+| 5 | 横に走る（Movement Direction と Target Facing を比べる） | Movement: 走る方向へ寄る。Facing: キャラクターの向きへ寄る（向きを移動方向に合わせるキャラクターでは同じ） | 開始が自然か |
+| 6 | カメラに向かって走る | 回らない（Moving Toward Camera）。真後ろ ±45° は無視 | 急激な回転が起きないか |
+| 7 | 走りながら急に 180° 方向転換する | カメラへ向かう向きになるので回らない。135° 以内の転換には寄る | 急激な回転が起きないか |
+| 8 | Lock-On の開始・解除（`ACF.Sample.LockOn 0` / `ACF.Sample.LockOff`） | ロック中は補助しない。解除後は向きがそのまま残り、Recenter Delay から待つ（解除の瞬間に回らない） | 終了と再開が自然か |
+| 9 | Combat 中（`ACF.Sample.Combat On` → `Off`） | 補助は続く（止めたいならゲームが Suppress）。Combat の距離・FOV の変化と回転が同時に起きる | 戦闘中に邪魔にならないか |
+| 10 | `pause` → `ACF.Sample.Assist Nudge 30` → `pause` で再開 | Pause 中は動かない。再開した最初のフレームで 30° 回る（溜まった入力が 1 回で使われる。30 章の制限）。サンプルの転送は Pause 中のマウスを読まない | 再開時の飛びが許容できるか |
+| 11 | `slomo 0.5` で走り、スティックを回す（`RealTime 0` / `1`） | 補助・待ち時間はゲーム時間（実時間では半分の速さ・2 倍の待ち）。RealTime 0 ではスティックも半分の速さ、1 では通常の速さ | 操作の速さが期待どおりか |
+| 12 | `t.MaxFPS 30` / `60` / `120` で 1〜4 を繰り返す | 補助の開始時刻・速さ・ドリフトの判定が同じ | フレームレートで印象が変わらないか |
+
+### 自動テストで判定済みのこと / 人が判断すること
+
+| 項目 | 自動テスト（すべて Pass） | 人が判断すること |
+|---|---|---|
+| OFF のとき従来どおり | `.Assistance.TargetFacingBitwiseCompatible`、`.Assistance.Input.CompatibilityAndPlayers`（ビット単位） | — |
+| ドリフト・ジッターで止まらない、明確な入力で即停止、再開のタイミング | `.Assistance.Input.NoiseDoesNotBlock` / `ClearInputStopsAndResumes`（30 / 60 / 120 fps） | 閾値 5 deg/s が手の感覚として適切か（#2・#4） |
+| マウスとスティックの単位、フレームレート | `.Assistance.Input.FrameRateIndependentUnits`、`.Assistance.FrameRateAndHitches` | 印象が同じか（#12） |
+| ヒステリシス・継続時間・Delay | `.Assistance.StartConditionsAndDuration` / `SpeedHysteresis` | 開始のタイミングが自然か（#3） |
+| 最大 Yaw 速度・最短角度・後退の除外 | `.Assistance.MaxYawSpeed` / `ShortestAngleAcrossWrap` / `BackwardExclusionAndTurns` | 回る速さ・始まりと終わりの速度の変化が急でないか（#3・#6・#7） |
+| Lock-On・Finisher・Combat・Sequencer | `.Sequencer.Assistance.LockOnFinisherCombatAndSequencer` | 解除後の待ちの長さが自然か（#8・#9） |
+| Pause・Time Dilation | `.Assistance.PauseAndTimeDilation`、`.Assistance.Input.TimeDilation`、`.Sequencer.Assistance.InputNoiseDilationAndPlayers` | 再開の飛び・スローモーションの操作感（#10・#11） |
+| このコマンド自体 | `.Samples.AssistCommandOnTestMap`（複製の設定、ドリフトの転送と判定、コントロール回転、切り替え、Release） | — |
+
+### 記録表
+
+操作感は 5 つの観点で評価します: **A** 意図した方向へ視点を動かせるか、**B** 補助の開始が自然か、**C** 補助の終了が自然か、**D** 急激な回転が起きないか、**E** カメラが手動操作を妨げないか。評価は ○ / △ / ×、気づいたことは値（Delay・Time・閾値・最大速度・fps）と一緒に書きます。
+
+| # | 操作 | 設定 | A | B | C | D | E | メモ |
+|---|---|---|---|---|---|---|---|---|
+| 1〜12 | （上の表） | 既定 | 未実施 | 未実施 | 未実施 | 未実施 | 未実施 | 人による操作は未実施 |
