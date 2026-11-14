@@ -33,5 +33,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Requests", meta = (ClampMin = "0.1", Units = s))
 	float RequestRetryMaxDelay = 8.f;
 
+	/**
+	 * Phase 7C-2A: a pawn that moves farther than this between two zone updates (one frame) is treated as teleported: its zone
+	 * is resolved again at once, without Enter / Exit Delay and Exit Margin, and the zone camera changes with a cut. The game's
+	 * NotifyTeleport on the player's ACF camera and a new pawn count as a teleport too.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Selection", meta = (ClampMin = "1.0", Units = cm))
+	float TeleportDistance = 1000.f;
+
 	virtual FName GetCategoryName() const override { return TEXT("Plugins"); }
 };

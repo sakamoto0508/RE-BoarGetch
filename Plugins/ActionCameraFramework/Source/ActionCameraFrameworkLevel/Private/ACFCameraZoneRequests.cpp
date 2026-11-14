@@ -27,6 +27,20 @@ namespace ACFCameraZoneRequestImpl
 		return false;
 	}
 
+	/** Would a new request at Priority be the one in control (no request above it)? */
+	static bool WouldBeBest(UACFCameraDirector& Director, int32 Priority)
+	{
+		const FACFCameraRequestHandle Best = Director.GetBestRequest();
+		if (!Best.IsValid())
+		{
+			return true;
+		}
+		TArray<FACFCameraRequestInfo> Infos;
+		Director.GetRequestInfos(Infos);
+		const FACFCameraRequestInfo* Info = Infos.FindByPredicate([Best](const FACFCameraRequestInfo& Entry) { return Entry.Handle == Best; });
+		return !Info || Info->Priority <= Priority; // equal priority: the newest (this one) wins
+	}
+
 	static FACFCameraTarget MakeTarget(AActor* Actor)
 	{
 		FACFCameraTarget Target;
@@ -149,6 +163,13 @@ bool FACFCameraZoneRequestState::Request(const FACFCameraZoneRequestContext& Con
 	Params.Instigator = &Zone; // a zone that goes away without EndPlay still takes its request with it
 	Params.bOverrideBlendIn = Zone.bOverrideBlendIn;
 	Params.BlendIn = Zone.BlendIn;
+	if (Context.bCut && ACFCameraZoneRequestImpl::WouldBeBest(*Director, Context.Priority))
+	{
+		// Teleport: no blend across the level. Only when this request takes the screen now; below a Lock-On / Finisher the
+		// zone keeps its Blend In for when it is revealed.
+		Params.bOverrideBlendIn = true;
+		Params.BlendIn = FACFCameraBlendSettings::MakeCut();
+	}
 	Params.FollowTarget = Context.FollowTarget;
 	Params.LookAtTarget = ACFCameraZoneRequestImpl::MakeTarget(Zone.LookAtTarget); // empty if unset or destroyed
 	Params.DebugName = FName(*FString::Printf(TEXT("Zone %s"), *GetNameSafe(Zone.GetOwner())));
@@ -206,7 +227,7 @@ void FACFCameraZoneRequestState::Leave(const FACFCameraZoneRequestContext& Conte
 		}
 		return;
 	}
-	const FACFCameraBlendSettings BlendOut = OldZone ? OldZone->GetExitBlend() : FACFCameraBlendSettings();
+	const FACFCameraBlendSettings BlendOut = Context.bCut ? FACFCameraBlendSettings::MakeCut() : OldZone ? OldZone->GetExitBlend() : FACFCameraBlendSettings();
 	// Any other live request is below the zone (the zone is the best one): it takes over.
 	const bool bRequestBelow = Director->GetNumRequests() > 1;
 	if (bRequestBelow)

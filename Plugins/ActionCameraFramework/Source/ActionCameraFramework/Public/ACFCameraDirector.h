@@ -285,6 +285,12 @@ public:
 	/** Drops interpolation history of every rig (next frame snaps). bCutBlend also ends a running blend. */
 	void NotifyTeleport(bool bCutBlend);
 
+	/**
+	 * Phase 7C-2A (read only): how many times NotifyTeleport was called on this director. Systems outside the director (the
+	 * Camera Zone subsystem) compare it between frames to learn that the game teleported the player; nothing else depends on it.
+	 */
+	uint32 GetNumTeleportNotifications() const { return NumTeleportNotifications; }
+
 	/** Sets the orbit rotation (world) of the request's Orbital Follow nodes. False if none. */
 	bool SetOrbitRotation(FACFCameraRequestHandle Handle, const FRotator& Rotation, bool bInstant);
 
@@ -507,6 +513,9 @@ private:
 	FACFCameraRequestHandle ActiveHandle;
 	uint64 NextSequence = 0;
 	uint64 LastEvaluatedFrame = MAX_uint64;
+
+	/** Phase 7C-2A: NotifyTeleport calls (GetNumTeleportNotifications). */
+	uint32 NumTeleportNotifications = 0;
 	float LastEvaluatedDeltaTime = 0.f;
 	int32 LastRigEvaluationCount = 0;
 	FACFCameraOutputConstraint OutputConstraint;

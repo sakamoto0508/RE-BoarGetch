@@ -95,6 +95,8 @@ namespace ACFZoneRequestTests
 			Zone->BlendIn = BlendIn > 0.f ? LinearBlend(BlendIn) : FACFCameraBlendSettings::MakeCut();
 			Zone->bOverrideBlendOut = true;
 			Zone->BlendOut = BlendOut > 0.f ? LinearBlend(BlendOut) : FACFCameraBlendSettings::MakeCut();
+			Zone->EnterRotation = EACFCameraZoneRotationHandoff::KeepView; // opt-in since 7C-2A: these tests check the handoff
+			Zone->ExitRotation = EACFCameraZoneRotationHandoff::KeepView;
 			Keep.Emplace(Zone);
 			return Zone;
 		}

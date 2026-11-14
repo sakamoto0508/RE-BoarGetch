@@ -25,6 +25,21 @@ namespace ACFCameraZoneSubsystemImpl
 	{
 		return Player ? Player->GetSubsystem<UACFCameraSubsystem>() : nullptr;
 	}
+
+	/** Zone A -> zone B waits max(A's Exit Delay, B's Enter Delay); entering waits the Enter Delay, leaving the Exit Delay. */
+	static float RequiredDelay(const UACFCameraZoneComponent* From, const UACFCameraZoneComponent* To)
+	{
+		float Delay = 0.f;
+		if (From)
+		{
+			Delay = FMath::Max(Delay, From->ExitDelay);
+		}
+		if (To)
+		{
+			Delay = FMath::Max(Delay, To->EnterDelay);
+		}
+		return FMath::IsFinite(Delay) ? Delay : 0.f;
+	}
 }
 
 bool UACFCameraZoneSubsystem::DoesSupportWorldType(const EWorldType::Type WorldType) const
@@ -69,7 +84,7 @@ void UACFCameraZoneSubsystem::NotifyZoneChanged(UACFCameraZoneComponent* Zone)
 	{
 		if (State.Player.IsValid())
 		{
-			Resolve(State);
+			Resolve(State, EResolveMode::Normal, 0.f);
 		}
 	}
 }
@@ -110,59 +125,152 @@ UACFCameraZoneSubsystem::FPlayerState& UACFCameraZoneSubsystem::FindOrAddState(U
 
 UACFCameraZoneComponent* UACFCameraZoneSubsystem::UpdatePlayer(ULocalPlayer* Player, const FVector* Location)
 {
+	FACFCameraZonePlayerUpdate Update;
+	Update.Location = Location;
+	return UpdatePlayer(Player, Update);
+}
+
+UACFCameraZoneComponent* UACFCameraZoneSubsystem::UpdatePlayer(ULocalPlayer* Player, const FACFCameraZonePlayerUpdate& Update)
+{
 	if (!Player)
 	{
 		return nullptr;
 	}
 	FPlayerState& State = FindOrAddState(Player);
-	State.bHasLocation = Location && !Location->ContainsNaN();
-	State.Location = State.bHasLocation ? *Location : FVector::ZeroVector;
-	Resolve(State);
+	const bool bHasLocation = Update.Location && !Update.Location->ContainsNaN();
+	EResolveMode Mode = EResolveMode::Normal;
+	if (!bHasLocation)
+	{
+		// No pawn: nothing to follow, the zone is left at once. The next pawn starts without history.
+		Mode = EResolveMode::Immediate;
+		State.LastPawn.Reset();
+	}
+	else
+	{
+		bool bTeleport = Update.bTeleport;
+		if (Update.Pawn)
+		{
+			if (State.LastPawn.Get() != Update.Pawn || State.LastPawn.IsExplicitlyNull())
+			{
+				// A new pawn (first one, possession, respawn): no movement history and no pending change of the old pawn.
+				bTeleport = true;
+				State.LastPawn = Update.Pawn;
+			}
+			else if (State.bHasLocation && FVector::DistSquared(State.Location, *Update.Location) > FMath::Square(static_cast<double>(GetDefault<UACFCameraZoneSettings>()->TeleportDistance)))
+			{
+				bTeleport = true; // the same pawn jumped
+			}
+		}
+		if (bTeleport)
+		{
+			Mode = EResolveMode::Teleport;
+			++State.NumTeleports;
+		}
+	}
+	State.bHasLocation = bHasLocation;
+	State.Location = bHasLocation ? *Update.Location : FVector::ZeroVector;
+	Resolve(State, Mode, FMath::IsFinite(Update.DeltaTime) ? FMath::Max(Update.DeltaTime, 0.f) : 0.f);
 	return State.Selected.Get();
 }
 
-void UACFCameraZoneSubsystem::Resolve(FPlayerState& State)
+bool UACFCameraZoneSubsystem::IsUsable(const UACFCameraZoneComponent* Zone) const
 {
-	UACFCameraZoneComponent* Previous = State.Selected.Get();
-	UACFCameraZoneComponent* Next = nullptr;
-	if (State.bHasLocation)
-	{
-		// Only zones that contain the point (or the current one within its margin) become candidates; the others cannot win.
-		TArray<FACFCameraZoneCandidate, TInlineAllocator<16>> Candidates;
-		TArray<UACFCameraZoneComponent*, TInlineAllocator<16>> Owners;
-		for (const TWeakObjectPtr<UACFCameraZoneComponent>& Entry : Zones)
-		{
-			UACFCameraZoneComponent* Zone = Entry.Get();
-			if (!Zone || !Zone->IsZoneEnabled() || !Zone->GetShapeComponent())
-			{
-				continue;
-			}
-			FACFCameraZoneCandidate Candidate;
-			Candidate.bCurrent = Zone == Previous;
-			Candidate.bInside = Zone->ContainsPoint(State.Location, 0.0);
-			Candidate.bInsideWithMargin = Candidate.bInside || (Candidate.bCurrent && Zone->ContainsPoint(State.Location, Zone->ExitMargin));
-			if (!ACFCameraZoneResolver::IsEligible(Candidate))
-			{
-				continue;
-			}
-			Candidate.Priority = Zone->ZonePriority;
-			Candidate.Volume = Zone->GetZoneVolume();
-			Candidate.StableKey = Zone->GetStableKey();
-			Candidates.Add(MoveTemp(Candidate));
-			Owners.Add(Zone);
-		}
-		const int32 Winner = ACFCameraZoneResolver::Resolve(Candidates);
-		Next = Winner != INDEX_NONE ? Owners[Winner] : nullptr;
-	}
-	State.Selected = Next;
-	if (Next != Previous)
-	{
-		OnZoneSelectionChanged.Broadcast(State.Player.Get(), Previous, Next);
-	}
-	SyncRequest(State);
+	return Zone && Zone->IsZoneEnabled() && Zone->GetShapeComponent() && Zones.Contains(Zone);
 }
 
-void UACFCameraZoneSubsystem::SyncRequest(FPlayerState& State)
+UACFCameraZoneComponent* UACFCameraZoneSubsystem::FindCandidate(const FPlayerState& State, const UACFCameraZoneComponent* Selected, bool bUseMargin) const
+{
+	if (!State.bHasLocation)
+	{
+		return nullptr;
+	}
+	// Only zones that contain the point (or the selected one within its margin) become candidates; the others cannot win.
+	TArray<FACFCameraZoneCandidate, TInlineAllocator<16>> Candidates;
+	TArray<UACFCameraZoneComponent*, TInlineAllocator<16>> Owners;
+	for (const TWeakObjectPtr<UACFCameraZoneComponent>& Entry : Zones)
+	{
+		UACFCameraZoneComponent* Zone = Entry.Get();
+		if (!Zone || !Zone->IsZoneEnabled() || !Zone->GetShapeComponent())
+		{
+			continue;
+		}
+		FACFCameraZoneCandidate Candidate;
+		Candidate.bCurrent = Zone == Selected;
+		Candidate.bInside = Zone->ContainsPoint(State.Location, 0.0);
+		Candidate.bInsideWithMargin = Candidate.bInside || (bUseMargin && Candidate.bCurrent && Zone->ContainsPoint(State.Location, Zone->ExitMargin));
+		if (!ACFCameraZoneResolver::IsEligible(Candidate))
+		{
+			continue;
+		}
+		Candidate.Priority = Zone->ZonePriority;
+		Candidate.Volume = Zone->GetZoneVolume();
+		Candidate.StableKey = Zone->GetStableKey();
+		Candidates.Add(MoveTemp(Candidate));
+		Owners.Add(Zone);
+	}
+	const int32 Winner = ACFCameraZoneResolver::Resolve(Candidates);
+	return Winner != INDEX_NONE ? Owners[Winner] : nullptr;
+}
+
+void UACFCameraZoneSubsystem::Resolve(FPlayerState& State, EResolveMode Mode, float DeltaTime)
+{
+	UACFCameraZoneComponent* Previous = State.Selected.Get();
+	// A selected zone that is gone (destroyed, streamed out), disabled or without shape is never kept, not even for a delay.
+	const bool bSelectedInvalid = !State.Selected.IsExplicitlyNull() && !IsUsable(Previous);
+	if (bSelectedInvalid && Mode == EResolveMode::Normal)
+	{
+		Mode = EResolveMode::Immediate;
+	}
+	if (State.bHasPending && !State.Pending.IsExplicitlyNull() && !IsUsable(State.Pending.Get()))
+	{
+		State.bHasPending = false; // the waiting zone went away: no reference to it is kept
+		State.Pending.Reset();
+	}
+	const UACFCameraZoneComponent* Current = bSelectedInvalid ? nullptr : Previous;
+	UACFCameraZoneComponent* Candidate = FindCandidate(State, Current, /*bUseMargin*/ Mode != EResolveMode::Teleport);
+
+	bool bCommit = false;
+	if (!bSelectedInvalid && Candidate == Previous)
+	{
+		State.bHasPending = false; // back in the selected zone (or still there): the waiting change is dropped
+		State.Pending.Reset();
+		State.PendingElapsed = 0.f;
+	}
+	else if (Mode != EResolveMode::Normal)
+	{
+		bCommit = true;
+	}
+	else
+	{
+		const float Required = ACFCameraZoneSubsystemImpl::RequiredDelay(Current, Candidate);
+		if (!State.bHasPending || State.Pending.Get() != Candidate)
+		{
+			State.bHasPending = true; // a new candidate: the wait starts now
+			State.Pending = Candidate;
+			State.PendingElapsed = 0.f;
+		}
+		else
+		{
+			State.PendingElapsed += DeltaTime;
+		}
+		bCommit = State.PendingElapsed >= Required - 1e-4f;
+	}
+
+	if (bCommit)
+	{
+		State.Selected = Candidate;
+		State.bHasPending = false;
+		State.Pending.Reset();
+		State.PendingElapsed = 0.f;
+		if (Candidate != Previous || bSelectedInvalid)
+		{
+			OnZoneSelectionChanged.Broadcast(State.Player.Get(), Previous, Candidate);
+		}
+	}
+	SyncRequest(State, /*bCut*/ bCommit && Mode == EResolveMode::Teleport);
+}
+
+void UACFCameraZoneSubsystem::SyncRequest(FPlayerState& State, bool bCut)
 {
 	ULocalPlayer* Player = State.Player.Get();
 	UACFCameraSubsystem* Camera = ACFCameraZoneSubsystemImpl::GetCamera(Player);
@@ -202,6 +310,7 @@ void UACFCameraZoneSubsystem::SyncRequest(FPlayerState& State)
 			}
 		};
 	}
+	Context.bCut = bCut;
 	Context.Time = World->GetRealTimeSeconds();
 	Context.Priority = Settings->ZoneRequestPriority;
 	Context.RetryDelay = Settings->RequestRetryDelay;
@@ -222,16 +331,22 @@ void UACFCameraZoneSubsystem::ReleasePlayer(FPlayerState& State)
 	const UACFCameraSubsystem* Camera = ACFCameraZoneSubsystemImpl::GetCamera(State.Player.Get());
 	State.Request.Release(Camera ? Camera->GetDirector() : nullptr);
 	State.Selected.Reset();
+	State.bHasPending = false;
+	State.Pending.Reset();
+	State.PendingElapsed = 0.f;
 }
 
 void UACFCameraZoneSubsystem::ResolvePlayersOf(const UACFCameraZoneComponent* Zone)
 {
 	for (FPlayerState& State : Players)
 	{
-		// The weak reference of a zone being destroyed can already be stale: those players are resolved too.
-		if (State.Player.IsValid() && (State.Selected.Get() == Zone || State.Selected.IsStale()))
+		// The weak reference of a zone being destroyed can already be stale: those players are resolved too. A selected zone
+		// that went away is left at once (Resolve); a pending one is dropped.
+		const bool bSelected = State.Selected.Get() == Zone || State.Selected.IsStale();
+		const bool bPending = State.bHasPending && (State.Pending.Get() == Zone || State.Pending.IsStale());
+		if (State.Player.IsValid() && (bSelected || bPending))
 		{
-			Resolve(State);
+			Resolve(State, EResolveMode::Normal, 0.f);
 		}
 	}
 }
@@ -246,6 +361,26 @@ const FACFCameraZoneRequestState* UACFCameraZoneSubsystem::GetRequestState(const
 {
 	const FPlayerState* Found = Players.FindByPredicate([Player](const FPlayerState& State) { return State.Player.Get() == Player; });
 	return Found ? &Found->Request : nullptr;
+}
+
+bool UACFCameraZoneSubsystem::GetPendingZone(const ULocalPlayer* Player, UACFCameraZoneComponent*& OutZone, float& OutElapsed) const
+{
+	OutZone = nullptr;
+	OutElapsed = 0.f;
+	const FPlayerState* Found = Players.FindByPredicate([Player](const FPlayerState& State) { return State.Player.Get() == Player; });
+	if (!Found || !Found->bHasPending)
+	{
+		return false;
+	}
+	OutZone = Found->Pending.Get();
+	OutElapsed = Found->PendingElapsed;
+	return true;
+}
+
+int32 UACFCameraZoneSubsystem::GetNumTeleports(const ULocalPlayer* Player) const
+{
+	const FPlayerState* Found = Players.FindByPredicate([Player](const FPlayerState& State) { return State.Player.Get() == Player; });
+	return Found ? Found->NumTeleports : 0;
 }
 
 UACFCameraZoneComponent* UACFCameraZoneSubsystem::GetSelectedZone(const ULocalPlayer* Player) const
@@ -289,11 +424,24 @@ void UACFCameraZoneSubsystem::Tick(float DeltaTime)
 		}
 		const APawn* Pawn = Controller->GetPawn();
 		const FVector Location = Pawn ? Pawn->GetActorLocation() : FVector::ZeroVector;
-		UpdatePlayer(Player, Pawn ? &Location : nullptr);
-		if (FPlayerState* State = Players.FindByPredicate([Player](const FPlayerState& Entry) { return Entry.Player.Get() == Player; }))
+		FACFCameraZonePlayerUpdate Update;
+		Update.Location = Pawn ? &Location : nullptr;
+		Update.DeltaTime = DeltaTime; // game time (time dilation applies); no tick while paused, so no delay passes
+		Update.Pawn = Pawn;
 		{
-			State->bDrivenByTick = true;
+			// The game's NotifyTeleport on this player's ACF camera since the last frame.
+			FPlayerState& State = FindOrAddState(Player);
+			const UACFCameraSubsystem* Camera = ACFCameraZoneSubsystemImpl::GetCamera(Player);
+			if (const UACFCameraDirector* Director = Camera ? Camera->GetDirector() : nullptr)
+			{
+				const uint32 Count = Director->GetNumTeleportNotifications();
+				Update.bTeleport = State.bHasTeleportCount && Count != State.LastTeleportCount;
+				State.LastTeleportCount = Count;
+				State.bHasTeleportCount = true;
+			}
+			State.bDrivenByTick = true;
 		}
+		UpdatePlayer(Player, Update);
 	}
 	// A player this driver updated that is no longer one of this World's players (removed from the GameInstance, or its
 	// controller is elsewhere): its zone request goes now and its state is dropped, not when the player object is garbage
@@ -332,8 +480,8 @@ namespace ACFCameraZoneDebug
 		UE_LOG(LogTemp, Display, TEXT("ACF.Zone.Status: %d zone(s) in %s"), Zones.Num(), *World->GetName());
 		for (const UACFCameraZoneComponent* Zone : Zones)
 		{
-			UE_LOG(LogTemp, Display, TEXT("  %s: priority %d, %s, exit margin %.0f cm, volume %.3g cm3%s"), *GetNameSafe(Zone->GetOwner()), Zone->ZonePriority,
-				Zone->IsZoneEnabled() ? TEXT("enabled") : TEXT("disabled"), Zone->ExitMargin, Zone->GetZoneVolume(), Zone->GetShapeComponent() ? TEXT("") : TEXT(" (no shape)"));
+			UE_LOG(LogTemp, Display, TEXT("  %s: priority %d, %s, exit margin %.0f cm, enter / exit delay %.2f / %.2f s, volume %.3g cm3%s"), *GetNameSafe(Zone->GetOwner()), Zone->ZonePriority,
+				Zone->IsZoneEnabled() ? TEXT("enabled") : TEXT("disabled"), Zone->ExitMargin, Zone->EnterDelay, Zone->ExitDelay, Zone->GetZoneVolume(), Zone->GetShapeComponent() ? TEXT("") : TEXT(" (no shape)"));
 		}
 		if (const UGameInstance* GameInstance = World->GetGameInstance())
 		{
@@ -349,7 +497,11 @@ namespace ACFCameraZoneDebug
 						: Request->IsWaitingForRetry() ? FString::Printf(TEXT("lost %d time(s), retry at %.2f"), Request->GetNumLost(), Request->GetNextRetryTime())
 						: FString(TEXT("no request"));
 				}
-				UE_LOG(LogTemp, Display, TEXT("  player %s: %s, zone request %s"), *GetNameSafe(Player), Selected ? *GetNameSafe(Selected->GetOwner()) : TEXT("no zone"), *RequestText);
+				UACFCameraZoneComponent* Pending = nullptr;
+				float Elapsed = 0.f;
+				const FString PendingText = Subsystem->GetPendingZone(Player, Pending, Elapsed)
+					? FString::Printf(TEXT(", pending %s for %.2f s"), Pending ? *GetNameSafe(Pending->GetOwner()) : TEXT("no zone"), Elapsed) : FString();
+				UE_LOG(LogTemp, Display, TEXT("  player %s: %s%s, zone request %s"), *GetNameSafe(Player), Selected ? *GetNameSafe(Selected->GetOwner()) : TEXT("no zone"), *PendingText, *RequestText);
 			}
 		}
 	}

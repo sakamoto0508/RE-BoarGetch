@@ -389,6 +389,7 @@ bool FACFZoneWorldRequestPlayersTest::RunTest(const FString& Parameters)
 	{
 		F.Test->TestTrue(FString::Printf(TEXT("Exploration camera at the control yaw 0 (%s)"), *F.PCM()->GetCameraRotation().ToString()), FMath::Abs(FRotator::NormalizeAxis(F.PCM()->GetCameraRotation().Yaw)) < 1.0);
 		F.A = F.Zone(F.Origin, FVector(300.0, 300.0, 300.0), 0, F.Fixed(F.Origin + FVector(-600.0, 0.0, 300.0))); // view (-10, 45)
+		F.A->GetZone()->ExitRotation = EACFCameraZoneRotationHandoff::KeepView; // opt-in (7C-2A)
 		return true;
 	});
 	Steps.Add([](FFlow& F) { return F.Waited(3); });

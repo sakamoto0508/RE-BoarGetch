@@ -21,7 +21,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
 - Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A 完了（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映、7A-4 Profiler / Debugger / Composition が完了。24〜27 章）
 - Phase 7B 完了。7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance。29 章）、7B-2（カメラ入力の処理: 手動入力の判定、Time Dilation、補助の値の Runtime Tuning。30 章）。操作感の確認の手順と `ACF.Sample.Assist`（専用 Preset `DA_ACFSample_Assist`、調整値の保存に対応）を用意（31 章）。人による確認は Stop Speed Threshold の 1 項目だけ実施。7B-3（新しい入力機能）は追加せずに 7B を終える
-- Phase 7C-1 完了（32 章）。7C-1A（Camera Zone の選択: 新モジュール `ActionCameraFrameworkLevel`、Zone Actor / Component、Priority とヒステリシスの決定的な解決、ローカルプレイヤーごとの状態）、7C-1B（Zone のカメラの要求: プレイヤーごとに最大 1 つ、Priority 5、Zone の Blend In / Out、対象の要求だけの向きの引き継ぎ、外部で消えた要求の遅延再要求）。Core の変更なし。滞留時間・Teleport は 7C-2
+- Phase 7C-1 完了、7C-2A 完了（32 章）。7C-1A（Camera Zone の選択: 新モジュール `ActionCameraFrameworkLevel`、Zone Actor / Component、Priority とヒステリシスの決定的な解決、ローカルプレイヤーごとの状態）、7C-1B（Zone のカメラの要求: プレイヤーごとに最大 1 つ、Priority 5、Zone の Blend In / Out、対象の要求だけの向きの引き継ぎ、外部で消えた要求の遅延再要求）。7C-2A（Enter / Exit Delay と Pending Candidate、Teleport の Cut、Pawn の差し替え、Keep View を Opt-in に。Core は読み取り専用の `GetNumTeleportNotifications` だけ）。Lock-On / Finisher からの復帰の姿勢は 7C-2B
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -32,7 +32,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 | 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Completed（B-1〜B-11） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Done（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 PIE の Camera Tuning パネル: 完了、25 章。7A-3 アセットへの反映（Apply / Undo / Redo / Save）: 完了、26 章。7A-4 Profiler / Debugger / Composition: 完了、27 章） |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Done（7B-1 移動方向へのカメラ補助: 完了、29 章。7B-2 カメラ入力の処理と補助との連携: 完了、30 章。操作感の確認の準備と調整値の保存: 31 章。7B-3 の新しい入力機能は追加しない） |
-| 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | In Progress（7C-1A Zone の選択・7C-1B Zone のカメラの要求: 完了、32 章。7C-2 滞留時間・Teleport、7C-3 Editor・サンプル・性能: 未着手） |
+| 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | In Progress（7C-1A Zone の選択・7C-1B Zone のカメラの要求・7C-2A 滞留時間 / Teleport / Pawn: 完了、32 章。7C-2B Lock-On / Finisher からの復帰の姿勢、7C-3 Editor・サンプル・性能: 未着手） |
 | 7D | Advanced Occlusion Handling（複数点の遮蔽判定、可視率、一時透過。Trace 数を計測） | Not Started |
 | 7E | Camera Recorder / Replay（カメラ出力の再生。ゲームプレイの完全再現とは区別） | Not Started |
 | 7F | Spline / Rail Camera（Sequencer と重複する機能は実装しない） | Not Started |
@@ -852,7 +852,7 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **248 件が登録**されています（テスト名の数。Phase 7C-1B の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **254 件が登録**されています（テスト名の数。Phase 7C-2A の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
@@ -863,25 +863,25 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
   | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 3 | 5 | — | 実行 |
   | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件、投影 1 件を含む） | 30 | — | 実行 |
   | `.Projection`（構図計算と描画の投影、28 章） | 2 | 実行 | 実行 |
-  | `.Zone`（Camera Zone、32 章。`.Zone.Resolver` 2、`.Zone.Geometry` 1、`.Zone.Requests` 7、実 World の `.Zone.World` 4） | 14 | 10（`.Zone.World` 以外） | 実行 |
+  | `.Zone`（Camera Zone、32 章。`.Zone.Resolver` 2、`.Zone.Geometry` 1、`.Zone.Requests` 7、実 World の `.Zone.Dwell` 4・`.Zone.World` 6） | 20 | 10（`.Zone.World` / `.Zone.Dwell` 以外） | 実行 |
   | `.Assistance`（移動方向へのカメラ補助 13 件、29 章。カメラ入力 `.Assistance.Input` 6 件、30 章） | 19 | 実行 | 実行 |
   | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1、`.Assistance` 3） | 43 | — | 実行 |
   | `.Samples`（`ACF.Sample.Assist` の 1 件、31 章を含む） | 7 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
   | `.Profile.AssistanceVariants`（補助の状態ごとの性能、29 章・30 章） | 1 | `-ACFProfile` でだけ計測 | 同左 |
-  | 合計 | 248 | 158 | 223 |
+  | 合計 | 254 | 158 | 229 |
 
-- **最新の結果（Phase 7C-1B、2026-11-14。unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
+- **最新の結果（Phase 7C-2A、2026-11-14。unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
-  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 223 | 214 / 0 / 9 | `.Samples` 7 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
-  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 223 | 214 / 0 / 9 | 同上 |
+  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 229 | 220 / 0 / 9 | `.Samples` 7 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
+  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 229 | 220 / 0 / 9 | 同上 |
   | Editor（`--context editor`、`-NullRHI`） | 158 | 157 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
-  | Editor（`--context editor-rendered`、描画あり。`.Editor` 25 件。3 回繰り返し） | 25 | 25 / 0 / 0（3 回とも） | |
-  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 7 件を含む） | 223 | 221 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
-  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 223 | 221 / 0 / 2 | 同上 |
-  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 223 | 223 / 0 / 0 | |
+  | Editor（`--context editor-rendered`、描画あり。`.Editor` 25 件） | 25 | 25 / 0 / 0 | |
+  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 7 件を含む） | 229 | 227 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 229 | 227 / 0 / 2 | 同上 |
+  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 229 | 229 / 0 / 0 | |
   | 繰り返し（Editor、Phase 7A 最終安定化の時点）: `.Projection` + `.Tuning` + `.Editor.TuningApply` + `.Editor.Diagnostics` ×2 | 48 | 48 / 0 / 0 | |
 
   全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 で見つけ、7A-1 のコードでも同じ値で再現したもの）は、2 人目のローカルプレイヤーの Pawn が残っていたのが原因で、テスト環境側で修正済みです（22 章「ローカルプレイヤーと Pawn」）。
@@ -2400,19 +2400,19 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 - 補助の ON / OFF・Recenter Heading・`Input Rate Ignores Time Dilation` は Runtime Tuning のパラメータではありません（Preset で変更。`ACF.Sample.Assist` の切り替えは保存されない）。
 - 人による操作感の確認は、上の 1 項目以外は未実施です。
 
-## 32. Camera Zone（Phase 7C-1: Zone の選択とカメラの要求）
+## 32. Camera Zone（Phase 7C-1 / 7C-2A: Zone の選択・カメラの要求・滞留時間・Teleport）
 
-プレイヤーが入った空間に応じてカメラを切り替える Camera Zone です。7C-1A で「どの Zone にいるか」を決め、7C-1B でその Zone のカメラを既存の Camera Director に要求します。滞留時間（Enter / Exit Delay）と Teleport の扱いは 7C-2、Editor の表示・サンプルマップ・性能の最適化は 7C-3 です。
+プレイヤーが入った空間に応じてカメラを切り替える Camera Zone です。7C-1A で「どの Zone にいるか」を決め、7C-1B でその Zone のカメラを既存の Camera Director に要求し、7C-2A で滞留時間（Enter / Exit Delay）・Teleport・Pawn の差し替えを扱います。Lock-On / Finisher から Zone へ戻るときの姿勢の連続性は 7C-2B、Editor の表示・サンプルマップ・性能の最適化は 7C-3 です。
 
 ### 構成
 
-- 新しい Runtime モジュール **`ActionCameraFrameworkLevel`**（Core に依存し、Core からは参照されない。23 章）。7C-1B で Core に加えた変更はありません（公開済みの API だけを使用）。
+- 新しい Runtime モジュール **`ActionCameraFrameworkLevel`**（Core に依存し、Core からは参照されない。23 章）。7C-1B で Core に加えた変更はありません（公開済みの API だけを使用）。7C-2A で Director に読み取り専用の `GetNumTeleportNotifications()`（`NotifyTeleport` の呼び出し回数）を 1 つ追加しました（ゲームの Teleport の通知を Zone 側が知る手段が他に無いため。Director の挙動は変わりません）。
 - **`AACFCameraZone`**: レベルに置く Actor。Box（Zone の形。衝突なし・Overlap イベントなし・ゲーム中は非表示、エディターでは水色の線で表示）と、ロジックの `UACFCameraZoneComponent`。
 - **`UACFCameraZoneComponent`**: 同じ Actor の Box または Sphere を形として使います（`Shape` で指定。空なら Root、なければ最初の Box / Sphere）。ほかの Actor に追加して使うこともできます。
-  - Zone: `Zone Priority`（int）、`Exit Margin`（cm、既定 50）、`Zone Enabled`（実行中は `Set Zone Enabled`）。
-  - Camera（7C-1B）: `Preset`、`Look At Target`（レベルの Actor）、`Blend In` / `Blend Out`（チェックを入れると上書き。外すと Preset の Default Blend In / Out）、`Enter Rotation` / `Exit Rotation`（下の「向きの引き継ぎ」）。
+  - Zone: `Zone Priority`（int）、`Exit Margin`（cm、既定 50）、`Enter Delay` / `Exit Delay`（秒、既定 0。7C-2A）、`Zone Enabled`（実行中は `Set Zone Enabled`）。
+  - Camera（7C-1B）: `Preset`、`Look At Target`（レベルの Actor）、`Blend In` / `Blend Out`（チェックを入れると上書き。外すと Preset の Default Blend In / Out）、`Enter Rotation` / `Exit Rotation`（下の「向きの引き継ぎ」。既定は `Use Camera Setting`）。
 - **`UACFCameraZoneSubsystem`**（World Subsystem）: Zone の一覧、ローカルプレイヤーごとの選択と、Zone のカメラの要求。
-- **`UACFCameraZoneSettings`**（Project Settings > Plugins > Action Camera Framework Zones）: `Zone Request Priority`（既定 5）、`Request Retry Delay`（既定 1 秒）、`Request Retry Max Delay`（既定 8 秒）。
+- **`UACFCameraZoneSettings`**（Project Settings > Plugins > Action Camera Framework Zones）: `Zone Request Priority`（既定 5）、`Request Retry Delay`（既定 1 秒、最小 0.1 秒）、`Request Retry Max Delay`（既定 8 秒）、`Teleport Distance`（既定 1000 cm。7C-2A）。
 
 ### 選択の仕組み（7C-1A）
 
@@ -2428,6 +2428,26 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 - **ローカルプレイヤーごと**: 状態はローカルプレイヤー単位です。Pawn が無いプレイヤーは何も選びません。
 - **Zone の破棄・無効化**: `EndPlay`（破棄・Level Streaming のアンロード・プレイの終了）で一覧から外れ、その Zone を選んでいたプレイヤーは **その場で** 最後の位置から解決し直します（次の Zone、または無し）。`Set Zone Enabled(false)` も同じ（Margin なしで即座に外れる）。有効にしたときも、中にいるプレイヤーはその場で選び直します。
 - **通知**: 選択が変わると `UACFCameraZoneSubsystem::OnZoneSelectionChanged`（C++、ローカルプレイヤー・前の Zone・新しい Zone）。
+
+### 滞留時間・Teleport・Pawn（7C-2A）
+
+**選択と Pending Candidate を分ける**: Resolver の答え（Candidate）が選択と違っても、すぐには選択を変えません。その Candidate を **Pending Candidate** として待ち、同じ Candidate が必要な時間続いたときだけ選択を変えます。待っている間は Zone の要求も変えないので、境界を往復しても要求は作られません。
+
+- **待ち時間**: Zone 無し → Z は Z の `Enter Delay`、Z → 無しは Z の `Exit Delay`、**A → B は max(A の Exit Delay, B の Enter Delay)**（どちらの Zone の設定も満たす）。0 なら同じフレームで切り替わります（7C-1 と同じ）。
+- **Candidate が変わったら最初から**: 待っている間に Candidate が別の Zone（または無し）に変わると、待ち時間は 0 から数え直します。Candidate が選択中の Zone に戻ると、待っていた変更は捨てます。
+- **Exit Margin はそのまま**: Candidate の計算では、選択中の Zone に Exit Margin を使います（7C-1A と同じ）。Margin の内側は「まだ選択中の Zone」で、Pending にもなりません。
+- **時間**: ゲームの時間（Time Dilation が効く）で、毎フレームの更新ごとに進みます。Pause 中は Zone Subsystem 自体が Tick しないので、待ち時間は進まず、そのまま残ります（再開すると続きから）。
+- **待たないもの**（その場で選択を変える）: 選択中の Zone の無効化・破棄・Streaming のアンロード（無効な Zone を待つ間も持たない）、Pawn が無くなったとき（Zone の要求も解除）、Teleport、Pawn の差し替え。Pending の Zone が破棄・無効化されたら、その Pending を捨てます（参照を残しません）。Zone を有効にしたときは、普通の Candidate として Enter Delay を待ちます。
+
+**Teleport**: 次のどれかを Teleport として扱います。
+
+- 同じ Pawn が 1 回の更新（1 フレーム）で `Teleport Distance`（既定 1000 cm）より遠くへ移った。
+- ゲームがそのプレイヤーの ACF カメラに `NotifyTeleport` を呼んだ（前のフレームから呼び出し回数が増えた）。
+- Pawn が替わった（下の「Pawn の差し替え」）。
+
+Teleport のときは、Enter / Exit Delay と Exit Margin を使わずにその場で解決し直し、Zone のカメラの変化を **Cut** にします（Zone → Zone は新しい Zone の要求の Blend In を Cut に、Zone → 無しは Cut で解除）。遠く離れた場所の間を Blend しません。ただし Cut にするのは、Zone の要求がその場で画面を持つときだけです。Lock-On / Finisher が画面を持っているときは、それらの要求には触れず（画面は変わらない）、Zone の要求は普段の Blend In で出します（Lock-On が終わったときに、その要求の Blend Out / Return Blend と Zone の設定で普段どおりに戻る）。Zone Subsystem は `NotifyTeleport` を自分からは呼びません（Lock-On などの補間をリセットしてしまうため）。各カメラの Node の補間は、これまでどおり Node 自身の Teleport 検出（Target Motion の Teleport Distance）とゲームの `NotifyTeleport` に任せます。
+
+**Pawn の差し替え**（Possess・リスポーン）: 前のフレームと違う Pawn は、移動の履歴（前の位置）と待っていた変更を引き継がず、Teleport と同じようにその場で解決します。Zone が同じなら要求はそのままで、Follow Target だけ新しい Pawn に替えます。Pawn が無くなったら（破棄・UnPossess）、Zone の選択をその場で外し、要求を解除します。同じ Pawn をもう一度 Possess したときも新しい Pawn として扱います。
 
 ### カメラの要求（7C-1B）
 
@@ -2449,19 +2469,20 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 - 「画面にある」は、Director の Active Request が Zone の要求で、しかもいま最も強い要求（`GetBestRequest`）であること。同じフレームに上の要求が来ていれば「隠れている」として扱います。
 - **遷移の途中の割り込み**: Zone 間の Blend の途中で別の Zone に入る、Zone の Blend 中に出る、探索カメラへの戻りの途中で再び入る、のどれも Director の既存の規則（割り込みは画面の姿勢のスナップショットから）で Blend します（テストで確認）。
 
-**向きの引き継ぎ**（`Enter Rotation` / `Exit Rotation`。既定 `Keep View`、`Use Camera Setting` で無効）:
+**向きの引き継ぎ**（`Enter Rotation` / `Exit Rotation`。**7C-2A から既定は `Use Camera Setting`（何もしない）で、`Keep View` は明示的に選ぶ Opt-in**）:
 
 - `SetAllOrbitRotations` は使いません。対象は **Zone の要求自身**（入るとき）と、**画面の Zone のカメラから引き継ぐ要求**（出るとき）だけで、どちらも画面のカメラのとき（上に Lock-On / Finisher が無いとき）にだけ行います。Lock-On / Finisher の要求の向き、Control Rotation は、それらが画面にある間は変えません。
 - 入るとき: Zone の要求に `SetOrbitRotation(いまの画面の回転、即時)`（Pitch / Yaw）。Preset の Initial Rotation より後に適用されるので、Zone のカメラは直前の画面の向きから始まります。Orbital Follow の無いカメラ（固定カメラなど）には何もしません。
 - 出るとき（下に要求があるとき）: 引き継ぐ要求（解除後の `GetBestRequest`）に `SetOrbitRotation(Zone のカメラの回転、即時)`。探索カメラは Zone のカメラが見ていた向きから続き、Blend Out で位置が戻ります。
-- **Control Rotation のカメラ**: Orbital Follow の `Input Source` が `Control Rotation` のカメラは毎フレーム Control Rotation から向きを取るので、Orbit の設定だけでは向きが保てません。引き継ぐ側がそのカメラのときは、代わりにプレイヤーの Control Rotation を画面の回転（Pitch / Yaw、Roll 0）にします。Control Rotation で移動の向きを決めるゲームでは、Zone を出た瞬間に移動の基準も Zone のカメラの向きになります。それを避けたい Zone は `Exit Rotation = Use Camera Setting` にしてください（Control Rotation は変えず、探索カメラは元の向きへ Blend で戻ります）。
+- **Control Rotation のカメラ**: Orbital Follow の `Input Source` が `Control Rotation` のカメラは毎フレーム Control Rotation から向きを取るので、Orbit の設定だけでは向きが保てません。引き継ぐ側がそのカメラのときは、代わりにプレイヤーの Control Rotation を画面の回転（Pitch / Yaw、Roll 0）にします。Control Rotation で移動の向きを決めるゲームでは、Zone を出た瞬間に移動の基準（キャラクターの向き、`Use Controller Rotation Yaw` の Pawn の向き）も Zone のカメラの向きになり、入力中の移動方向が急に変わります。この副作用のため、7C-2A で既定を `Use Camera Setting`（Control Rotation は変えず、探索カメラは元の向きへ Blend で戻る）に変え、`Keep View` は Zone ごとの Opt-in にしました。
 
 **寿命**:
 
 - Zone を出る・無効化・破棄・Level Streaming のアンロードでは、その場で要求を解除します（上の表）。
 - World の終了（Subsystem の `Deinitialize`、`ReleaseAllZoneRequests`）: すべてのプレイヤーの Zone の要求を `ReleaseCamera` で解除し、選択を消します。World の破棄中（`bIsTearingDown`）の解決も同じです。
 - ローカルプレイヤーの削除、別の World への移動: 次のフレームにその要求を解除し、状態を消します（GC を待ちません）。ローカルプレイヤーと一緒にその ACF カメラも無くなる場合は、要求もカメラと一緒に消えます。
-- **外部で要求が消えたとき**（ゲームが `ReleaseCamera` / `Release All Cameras` で外した、Instigator が消えた）: 毎フレーム Handle の生存を確認し、消えていたら Active を空にして、同じ Zone にいる間は **`Request Retry Delay` 後に 1 回だけ要求し直します**。続けて消されるたびに待ち時間を 2 倍（`Request Retry Max Delay` まで）にするので、ゲームが解除し続けても毎フレーム要求を作り続けることはありません。要求が `Request Retry Max Delay` の間生き残るか、選択が変わると待ち時間は最初に戻ります。
+- **外部で要求が消えたとき**（ゲームが `ReleaseCamera` / `Release All Cameras` で外した、Instigator が消えた）。Zone Subsystem は「意図した解除」と「事故」を区別できないので、どちらも **「Zone にいる限り Zone のカメラを保つ」** 側に倒します: 毎フレーム Handle の生存を確認し、消えていたら Active を空にして、同じ Zone にいる間は **`Request Retry Delay` 後に 1 回だけ要求し直します**。続けて消されるたびに待ち時間を 2 倍（`Request Retry Max Delay` まで）にするので、ゲームが解除し続けても毎フレーム要求を作り続けることはありません。要求が `Request Retry Max Delay` の間生き残るか、選択が変わると待ち時間は最初に戻ります。
+- **意図して Zone のカメラを止めたいとき**: Zone の要求を `ReleaseCamera` で外すのではなく、その Zone を `Set Zone Enabled(false)` にするか、Zone より高い Priority の要求を出してください（Lock-On と同じ扱いになり、Zone の要求はその下に残ります）。外された要求は上の規則で戻ってきます。
 - **Preset の無い Zone**: 選択はされますが、要求は出しません（Zone ごとに 1 回だけ警告ログ）。失敗した Zone は、選択が変わるまで要求し直しません。
 - **無効な Look At Target**: 未設定・破棄済みの Actor は Look-At なしで要求します（失敗にはしない）。
 
@@ -2486,16 +2507,24 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 | `.Zone.Requests.InterruptedBlends` | Zone 間の Blend 中に別の Zone、Blend 中に出る、戻りの途中で再び入る: どれも画面の姿勢から（飛ばない） |
 | `.Zone.Requests.PriorityContract` | Zone の要求は Priority 5、同じ Priority のゲームの要求の警告（1 回）、Zone の要求は常に 1 つ |
 | `.Zone.World.RequestLifecycle`（実 World） | ACF の要求が無い状態から Zone のカメラが実際の画面に出る、重なった Zone の Priority、無効化・有効化・破棄・Streaming のアンロードでその場で解除、外部の解除と遅れての再要求、World 終了の解除、無効 / 有効な Look At Target、最後に要求が残らない |
+| `.Zone.Dwell.BoundaryJitterAtFrameRates`（実 World、同期） | 30 / 60 / 120 fps で境界を 0.2 秒周期・±100 cm で 2 秒往復: 選択の変化 0・要求 0。片側に留まると 0.3 秒（1 フレーム以内の遅れ）で切り替え、要求は 1 つ |
+| `.Zone.Dwell.CandidateChangesWhileWaiting`（実 World、同期） | 待ち中に Candidate が A → B に変わると 0 から数え直し（A は選ばれない）、選択中の Zone に戻ると Pending を捨てる、A → B は max(Exit, Enter)、出るのは Exit Delay、2 人のプレイヤーの待ちは独立 |
+| `.Zone.Dwell.RemovalWhileWaiting`（実 World、同期） | Pending の Zone の破棄で Pending を捨てる、選択中の Zone の無効化・Streaming のアンロード・破棄は Exit Delay を待たずに外れ要求も解除、再び有効にした Zone は Enter Delay を待つ |
+| `.Zone.Dwell.TeleportAndPawnChange`（実 World、同期） | 最初の Pawn はすぐ選択、500 cm の移動は Teleport でない、A → B・Zone の外への Teleport は Delay なし、Margin の内側への Teleport でも外れる、Teleport の指示、Pawn の差し替えで前の Pawn の Pending を捨てる、Pawn が無いとすぐ解除、同じ Pawn の再 Possess |
+| `.Zone.World.TeleportCuts`（実 World） | 実際の Pawn の Teleport: Zone へ・Zone 間・Zone の外へ、どれも Cut（実際の画面の位置も確認）、Lock-On 中の Teleport で Lock-On が画面を保ち、Lock-On の終了後は Zone の Blend In（Cut は残らない）、Finisher 中の Teleport で Finisher が画面を保ち終了後は新しい Zone、`NotifyTeleport` で Delay を待たずに選択 |
+| `.Zone.World.PauseAndPossession`（実 World） | Pause 中は待ち時間が進まず選択もされない、再開後に Delay で選択、新しい Pawn の Possess で同じ要求のまま Follow Target が新しい Pawn、Pawn の破棄で選択と要求をすぐ解除、元の Pawn の再 Possess で Delay なしに選択 |
 | `.Zone.World.ControlRotationAndTwoPlayers`（実 World） | Control Rotation の探索カメラへ戻ると Control Rotation が Zone の向きになり、画面の向きが保たれる、2 人のローカルプレイヤーがそれぞれ自分の Zone の要求を自分の ACF カメラに持つ、片方の無効化が他方に影響しない、削除したプレイヤーの要求が残らない |
 
 `.Zone.Requests.*` は World なしの Director で、毎フレーム「Zone の更新 → カメラの評価」の順に進めます（実際の Tick の順と同じ）。
 
-### 既知の制限（7C-1）
+### 既知の制限（7C-1 / 7C-2A）
 
-- 滞留時間（Enter / Exit Delay）と Teleport の扱いはまだありません（7C-2）。境界での振動は Exit Margin だけで防いでいます。
+- Teleport の距離の判定は「1 回の更新での移動距離」です。とても速い移動（1 フレームに Teleport Distance を超える）も Teleport として扱われます（Cut になる）。その場合は Teleport Distance を大きくしてください。
+- 待ち時間はゲームの時間です（Time Dilation でスローになると待ちも長くなる）。
+- 外部で意図して外された要求も、Zone にいる間は遅れて戻ってきます（上の「意図して Zone のカメラを止めたいとき」）。
 - 形は Box と Sphere だけです（Capsule・Brush の Volume は未対応）。判定する点は Pawn の位置（Actor の原点）です。
 - Zone の数に比例する線形の走査です（空間の索引なし）。性能は 7C-3 で計測します。
 - Blueprint からは Zone の設定と `Set Zone Enabled` / `Is Zone Enabled` だけです（選択・要求の取得とイベントは C++）。
-- Lock-On / Finisher の下で Zone が替わった場合、上の要求が終わるときの向きは引き継ぎません（新しい Zone のカメラは Preset の Initial Rotation から始まります。戻りの Blend は上の要求の設定）。
+- Lock-On / Finisher の下で Zone が替わった場合、上の要求が終わるときの向きは引き継ぎません（新しい Zone のカメラは Preset の Initial Rotation から始まります。戻りの Blend は上の要求の設定）。Lock-On / Finisher から Zone へ戻るときの姿勢の連続性は 7C-2B で扱います。
 - 実行中に Zone の `Preset` / `Blend` を書き換えても、出している要求には反映されません（次に選ばれたときから）。
 - 人による Editor 上の操作感の確認は未実施です（7C-3 のサンプルマップで行う予定）。

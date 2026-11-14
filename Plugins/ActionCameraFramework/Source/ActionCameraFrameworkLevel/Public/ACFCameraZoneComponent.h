@@ -51,6 +51,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Zone", meta = (ClampMin = "0.0", Units = cm))
 	float ExitMargin = 50.f;
 
+	/**
+	 * Phase 7C-2A: seconds (game time, not while paused) a player must stay in this zone before it is selected. Zone A to
+	 * zone B waits max(A's Exit Delay, B's Enter Delay). 0: at once. Teleports, a new pawn, a disabled / removed zone and
+	 * a player without pawn do not wait.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Zone", meta = (ClampMin = "0.0", Units = s))
+	float EnterDelay = 0.f;
+
+	/** Phase 7C-2A: seconds a player must be out of this zone (beyond Exit Margin) before it is left. See Enter Delay. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Zone", meta = (ClampMin = "0.0", Units = s))
+	float ExitDelay = 0.f;
+
 	/** The shape: a Box or Sphere component of the owner. Empty: the owner's first Box or Sphere component. */
 	UPROPERTY(EditAnywhere, Category = "Zone", meta = (UseComponentPicker, AllowedClasses = "/Script/Engine.BoxComponent,/Script/Engine.SphereComponent"))
 	FComponentReference Shape;
@@ -81,13 +93,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera", meta = (EditCondition = "bOverrideBlendOut"))
 	FACFCameraBlendSettings BlendOut;
 
-	/** Rotation of this zone's camera when it takes over. */
+	/**
+	 * Rotation of this zone's camera when it takes over. Default Use Camera Setting (7C-2A): Keep View is an opt-in.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
-	EACFCameraZoneRotationHandoff EnterRotation = EACFCameraZoneRotationHandoff::KeepView;
+	EACFCameraZoneRotationHandoff EnterRotation = EACFCameraZoneRotationHandoff::UseCameraSetting;
 
-	/** Rotation of the camera that takes over when the player leaves this zone for no zone. */
+	/**
+	 * Rotation of the camera that takes over when the player leaves this zone for no zone. Default Use Camera Setting (7C-2A):
+	 * Keep View is an opt-in, because for a camera driven by the Control Rotation it sets the player's control rotation
+	 * (the movement direction of most games changes with it).
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
-	EACFCameraZoneRotationHandoff ExitRotation = EACFCameraZoneRotationHandoff::KeepView;
+	EACFCameraZoneRotationHandoff ExitRotation = EACFCameraZoneRotationHandoff::UseCameraSetting;
 
 	/** Blend Out if overridden, else the preset's Default Blend Out (a default blend without preset). */
 	FACFCameraBlendSettings GetExitBlend() const;

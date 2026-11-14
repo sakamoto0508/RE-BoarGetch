@@ -634,6 +634,7 @@ void UACFCameraDirector::SetCameraInputRate(const FVector2D& Rate)
 
 void UACFCameraDirector::NotifyTeleport(bool bCutBlend)
 {
+	++NumTeleportNotifications;
 	for (FACFCameraRequestEntry& Entry : Requests)
 	{
 		Entry.Rig.ResetInterpolation();

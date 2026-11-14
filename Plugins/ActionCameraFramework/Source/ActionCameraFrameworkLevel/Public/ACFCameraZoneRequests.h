@@ -45,6 +45,12 @@ struct FACFCameraZoneRequestContext
 	/** Sets the player's control rotation (rotation handoff to a camera driven by the Control Rotation). Optional. */
 	TFunction<void(const FRotator&)> SetControlRotation;
 
+	/**
+	 * Phase 7C-2A: the selection changed by a teleport (or a new pawn): the change is a cut on screen (the new zone's camera
+	 * cuts in when it takes the screen; leaving cuts back). A Lock-On / Finisher above the zone keeps its own blends.
+	 */
+	bool bCut = false;
+
 	/** Seconds (real time) for the retry delays. */
 	double Time = 0.0;
 

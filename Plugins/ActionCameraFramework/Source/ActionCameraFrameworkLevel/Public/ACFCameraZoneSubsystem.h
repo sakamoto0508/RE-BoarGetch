@@ -8,6 +8,26 @@
 class UACFCameraZoneComponent;
 class ULocalPlayer;
 class UACFCameraSubsystem;
+class AActor;
+
+/** Phase 7C-2A: one update of a player's zone (the frame driver fills everything; direct calls may set only Location). */
+struct FACFCameraZonePlayerUpdate
+{
+	/** The point tested against the zones (the pawn location). Null: no pawn; the zone is left at once. */
+	const FVector* Location = nullptr;
+
+	/** Game time since the previous update (Enter / Exit Delay). 0: no time passes. */
+	float DeltaTime = 0.f;
+
+	/**
+	 * The pawn the location belongs to. A different pawn than in the previous update (possession, respawn) is resolved like a
+	 * teleport; a jump of more than Teleport Distance of the same pawn too. Null: no pawn tracking (direct calls).
+	 */
+	const AActor* Pawn = nullptr;
+
+	/** Teleport (the game's NotifyTeleport, or the caller): resolved at once, no delay, no Exit Margin, cut. */
+	bool bTeleport = false;
+};
 
 /**
  * Phase 7C-1A: the Camera Zones of a World and the zone each local player has selected (README 32 章).
@@ -20,6 +40,10 @@ class UACFCameraSubsystem;
  *   pawn selects nothing.
  * - A zone that unregisters or is disabled is left at once: the players that had selected it are resolved again from
  *   their last location (the next zone, or none), without waiting for the next frame.
+ * - 7C-2A: a different zone (the Pending Candidate) must stay the resolver's answer for the Enter / Exit Delay before it
+ *   becomes the selection; a change of the candidate restarts the wait, the candidate going back to the selection drops it
+ *   (no request is made while waiting). Teleports (distance, the game's NotifyTeleport), a new pawn, a pawn that goes, a
+ *   disabled / removed selected zone change the selection at once (teleports also without Exit Margin, with cuts).
  * - 7C-1B: after every resolve the player's zone camera request is brought in line with the selection
  *   (FACFCameraZoneRequestState: at most one request per player, Priority UACFCameraZoneSettings::ZoneRequestPriority).
  *   The request is released when the zone is left, disabled, destroyed or streamed out, when the player leaves this World
@@ -57,6 +81,18 @@ public:
 	 */
 	UACFCameraZoneComponent* UpdatePlayer(ULocalPlayer* Player, const FVector* Location);
 
+	/** 7C-2A: the same with game time (Enter / Exit Delay), the pawn (teleport / pawn change detection) and a teleport hint. */
+	UACFCameraZoneComponent* UpdatePlayer(ULocalPlayer* Player, const FACFCameraZonePlayerUpdate& Update);
+
+	/**
+	 * 7C-2A: the zone waiting to become the player's selection (Enter / Exit Delay). False if none is waiting. OutZone null
+	 * with true: leaving to no zone is waiting.
+	 */
+	bool GetPendingZone(const ULocalPlayer* Player, UACFCameraZoneComponent*& OutZone, float& OutElapsed) const;
+
+	/** 7C-2A: teleports (distance, NotifyTeleport, hint) and pawn changes seen for the player. Tests / debugging. */
+	int32 GetNumTeleports(const ULocalPlayer* Player) const;
+
 	/** The player's selected zone, null if none (or the player is unknown). */
 	UACFCameraZoneComponent* GetSelectedZone(const ULocalPlayer* Player) const;
 
@@ -85,13 +121,37 @@ private:
 		/** Updated by the frame driver (a player of the GameInstance), not only by direct UpdatePlayer calls. */
 		bool bDrivenByTick = false;
 		FACFCameraZoneRequestState Request;
+		/** 7C-2A: the candidate waiting for its delay (bHasPending with a null zone: leaving to no zone). */
+		TWeakObjectPtr<UACFCameraZoneComponent> Pending;
+		bool bHasPending = false;
+		float PendingElapsed = 0.f;
+		/** 7C-2A: the pawn of the last update (pawn changes), the director's teleport count of the last frame. */
+		TWeakObjectPtr<const AActor> LastPawn;
+		uint32 LastTeleportCount = 0;
+		bool bHasTeleportCount = false;
+		int32 NumTeleports = 0;
+	};
+
+	/** How a resolve may change the selection. */
+	enum class EResolveMode : uint8
+	{
+		/** Through the Pending Candidate and its delay; Exit Margin applies. */
+		Normal,
+		/** At once (no delay): the selected zone went away / was disabled, or there is no pawn. Exit Margin applies. */
+		Immediate,
+		/** At once, without Exit Margin, and the camera change is a cut (teleport, new pawn). */
+		Teleport,
 	};
 
 	FPlayerState& FindOrAddState(ULocalPlayer* Player);
-	void Resolve(FPlayerState& State);
+	void Resolve(FPlayerState& State, EResolveMode Mode = EResolveMode::Normal, float DeltaTime = 0.f);
+	/** The resolver's answer at the player's location (Exit Margin for the selected zone when bUseMargin). */
+	UACFCameraZoneComponent* FindCandidate(const FPlayerState& State, const UACFCameraZoneComponent* Selected, bool bUseMargin) const;
+	/** Registered, enabled, with a shape. */
+	bool IsUsable(const UACFCameraZoneComponent* Zone) const;
 	void ResolvePlayersOf(const UACFCameraZoneComponent* Zone);
 	/** 7C-1B: brings the player's zone camera request in line with its selection. */
-	void SyncRequest(FPlayerState& State);
+	void SyncRequest(FPlayerState& State, bool bCut = false);
 	/** Releases the player's zone request (no blend override) and forgets its selection. */
 	void ReleasePlayer(FPlayerState& State);
 

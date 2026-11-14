@@ -353,7 +353,9 @@ bool FACFZoneWorldTest::RunTest(const FString& Parameters)
 	UACFCameraZoneComponent* Expected = T1->GetZone()->GetStableKey() < T2->GetZone()->GetStableKey() ? T1->GetZone() : T2->GetZone();
 	TestTrue(TEXT("Exact tie: the smaller stable key"), W.Subsystem->UpdatePlayer(Player2.Get(), &InT) == Expected);
 
-	// A removed local player is dropped from the states.
+	// A removed local player is dropped from the states. Collect first: a bare local player released by an earlier test may
+	// still be alive and counted (7C-2A).
+	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
 	const int32 StatesBefore = W.Subsystem->GetNumPlayerStates();
 	Player2.Reset();
 	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
