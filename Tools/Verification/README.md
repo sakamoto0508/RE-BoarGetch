@@ -114,9 +114,9 @@ python Tools/Verification/VerifyPublicApi.py --baseline origin/main --stage-sele
 | ファイル | 状況 |
 |---|---|
 | 全ファイル | **動作未検証**（2026-11-02の修正後は一度も実行していません。構文の静的確認のみ） |
-| `PieSmoke.py` | 修正前の版は2026-10-02に4 Level・34項目で成功した記録があります（`Source/REBoarGetch/RefactorReport.md`）。修正後は、対象Levelの変更（`Stage1`→`L_Stage01`）と`-UserDir`による隔離を加えています。 |
+| `PieSmoke.py` | 修正前の版は2026-10-02に4 Level・34項目で成功した記録があります（削除済みの作業報告`Source/REBoarGetch/RefactorReport.md`。Git履歴のコミット`8a7b236`で参照できます）。修正後は、対象Levelの変更（`Stage1`→`L_Stage01`）と`-UserDir`による隔離を加えています。 |
 | `StageSelectPieSmoke.py` | Widget名（`Text_StageStatus`など）は、2026-10-03時点のWBP構成を前提にしています。 |
 
 ## 旧パスとの対応
 
-過去の作業報告（`RefactorReport.md`、`StageSelectRefactorReport.md`）にある`Verification/<ファイル名>`は、現在は`Tools/Verification/<ファイル名>`です。報告書の中のコマンドは当時の記録で、`-ExpectedTests 8`などの値も当時のものです。
+過去の作業報告（`Source/REBoarGetch/RefactorReport.md`、`StageSelectRefactorReport.md`。現在は削除済みで、Git履歴のコミット`8a7b236`・`ae069f4`で参照できます）にある`Verification/<ファイル名>`は、現在は`Tools/Verification/<ファイル名>`です。報告書の中のコマンドは当時の記録で、`-ExpectedTests 8`などの値も当時のものです。

@@ -13,8 +13,9 @@ so without an active URetroRenderComponent the materials output the same values 
   - textures   : UVs -> MF_RetroTexel, MipValueMode=Derivative with gradients of the unsnapped UV
                  (same mip selection as before, including the view mip bias used by TSR)
 Engine-content materials (Interchange FBX Phong used by the Player/Boar) are duplicated into
-/Game/Art/Rendering/Retro/Materials and only the project's material instances are reparented (recorded for revert).
-Writes Plugins/RetroRender/Scripts/PatchRetroMaterials.json.
+/RetroRender/Materials (plugin content) and only the project's material instances are reparented (recorded for revert).
+Targets come from <Project>/Config/RetroRender/RetroRenderProject.json (or -RetroConfig=<path>).
+Writes the patch record to <Project>/Config/RetroRender/PatchRecord.json (see retro_project.py).
 """
 from pathlib import Path
 import json
@@ -22,13 +23,17 @@ import sys
 import unreal
 
 HERE = Path(__file__).resolve().parent
-RECORD = HERE / 'PatchRetroMaterials.json'
-ROOT = '/Game/Art/Rendering/Retro'
+sys.path.insert(0, str(HERE))
+import retro_project  # noqa: E402  同じフォルダの共通モジュール
+RECORD = retro_project.RECORD_PATH
+ROOT = retro_project.PLUGIN_ROOT
+CONFIG = retro_project.load_config()
+retro_project.scan_plugin_content()
 TAG = 'RetroRender'
 lib = unreal.EditorAssetLibrary
 mel = unreal.MaterialEditingLibrary
 # Flags come from the editor command line (batch runs) or from sys.argv (run from the Retro Render panel).
-args = unreal.SystemLibrary.get_command_line() + ' ' + ' '.join(sys.argv[1:])
+args = retro_project.command_args()
 LEVEL_SCAN = '-RetroLevelScan' in args
 DRY_RUN = '-RetroDryRun' in args
 SCAN_RESULT = Path(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir())) / 'RetroRender' / 'LevelScan.json'
@@ -38,54 +43,23 @@ CAN_DELETE = True  # RemoveRetroExpressions works in commandlets too
 PURGE = '-RetroPurge' in args
 WPO = unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET
 
-FBX_PHONG = '/InterchangeAssets/Materials/FBXLegacyPhongSurfaceMaterial'
-FBX_COPY = ROOT + '/Materials/M_RetroFBXPhong'
+FBX_PHONG = retro_project.FBX_PHONG
+FBX_COPY = retro_project.FBX_COPY
 # path -> features. 'world': affine on WorldPosition (world-aligned ground textures), 'uv': affine on TexCoord.
-TARGETS = {
-    '/Game/InportAssets/LevelPrototyping/Materials/M_FlatCol': {'snap'},
-    # LowPoly pack: its materials already use MPC_GlobalWind + MPC_UnlitStrength (UE allows 2 per material), so they
-    # use MF_RetroVertexSnap_LP, which reads the same scalars from MPC_UnlitStrength ('snap_lp').
-    '/Game/InportAssets/LPRiverForest/Materials/M_LowPoly': {'snap_lp'},
-    '/Game/InportAssets/LPRiverForest/Materials/M_LowPolyGrass': {'snap_lp'},
-    # Water samples its texture in the vertex shader (waves): no affine/texel (interpolators and DDX are pixel-only).
-    '/Game/InportAssets/LPRiverForest/Materials/M_LowPolyWater': {'snap_lp'},
-    '/Game/Stage01/Ground/Materials/M_Grass_LowPoly_World': {'snap', 'texel', 'world'},
-    '/Game/Stage01/Ground/Materials/M_Ground_LowPoly_World': {'snap', 'texel', 'world'},
-    '/Game/BP/Cage/Materials/M_Cage_White': {'snap'},
-    '/Game/BP/Cage/Materials/M_Cage_Yellow': {'snap'},
-    '/Game/BP/Cage/Materials/M_Cage_Glow': {'snap'},
-    '/Game/BP/Cage/Materials/M_Cage_Navy': {'snap'},
-    FBX_COPY: {'snap', 'texel', 'uv'},
-    # Cage materials copied to /Game/Art/Materials/Cage (used by L_Stage01); copies of the patched ones above.
-    '/Game/Art/Materials/Cage/M_Cage_White': {'snap'},
-    '/Game/Art/Materials/Cage/M_Cage_Yellow': {'snap'},
-    '/Game/Art/Materials/Cage/M_Cage_Glow': {'snap'},
-    '/Game/Art/Materials/Cage/M_Cage_Navy': {'snap'},
-    # L_Stage01 (new Stage1): Farm_House trims.
-    '/Game/InportAssets/Farm_House/Materials/MM_Hybrid_Trim': {'snap'},
-    # Lobby / GadgetLab / Archive. Flat-colour or emissive surfaces: vertex snap only. The facility sky is not
-    # snapped (a sky must not wobble); Interchange glTF / engine BasicShape materials are engine content.
-    '/Game/Lobby/Materials/M_Lobby_CyanEdge': {'snap'},
-    '/Game/Lobby/Materials/M_Architecture_SoftWhite': {'snap'},
-    '/Game/Lobby/Materials/M_Architecture_CeilingWhite': {'snap'},
-    '/Game/Lobby/Materials/M_StageSelect_HoloPanel': {'snap'},
-    '/Game/Lobby/Materials/M_Facility_ExhibitHologram': {'snap'},
-    '/Game/Lobby/Materials/M_Lobby_ResearchHologram': {'snap'},
-    '/Game/Lobby/Materials/M_DataPortal_Tunnel': {'snap'},
-    '/Game/InportAssets/Clinic/Materials/M_Default_Master': {'snap'},
-    '/Game/InportAssets/Clinic/Materials/M_Translucent_Master': {'snap'},
-    '/Game/InportAssets/Clinic/Materials/M_Lights': {'snap'},
-    '/Game/InportAssets/Clinic/Materials/M_Screen': {'snap'},
-    '/Game/InportAssets/Clinic/Materials/M_Grid': {'snap'},
-    '/Game/InportAssets/Clinic/Materials/M_Grid2': {'snap'},
-}
+# パッチ対象はプロジェクト側の設定（retro_project.CONFIG_PATH）から読む。FBX Phong の複製はプラグイン内なので常に対象。
+TARGETS = dict(CONFIG['targets'])
+TARGETS[FBX_COPY] = {'snap', 'texel', 'uv'}
 # Materials found by -RetroLevelScan in earlier runs.
 if RECORD.exists():
     for _path, _features in json.loads(RECORD.read_text(encoding='utf-8')).get('auto_targets', {}).items():
         TARGETS.setdefault(_path, set(_features))
+# MF_RetroVertexSnap_LP はプロジェクトの追加 MPC（snap_collections）を参照するので、無い環境もある。
+# 'snap_lp' を使う対象か snap_collections があるときだけ読み込む。
 MF = {name: unreal.load_asset(ROOT + '/' + name) for name in
-      ['MF_RetroVertexSnap', 'MF_RetroVertexSnap_LP', 'MF_RetroAffine3', 'MF_RetroAffine2', 'MF_RetroTexel']}
-assert all(MF.values()), 'Run SetupRetroAssets.py first'
+      ['MF_RetroVertexSnap', 'MF_RetroAffine3', 'MF_RetroAffine2', 'MF_RetroTexel']}
+assert all(MF.values()), 'RetroRender plugin content missing under %s; run SetupRetroAssets.py' % ROOT
+if (any('snap_lp' in f for f in TARGETS.values()) or CONFIG['snap_collections']) and lib.does_asset_exist(ROOT + '/MF_RetroVertexSnap_LP'):
+    MF['MF_RetroVertexSnap_LP'] = unreal.load_asset(ROOT + '/MF_RetroVertexSnap_LP')
 report = {'patched': {}, 'reparented': [], 'errors': {}}
 
 
@@ -385,7 +359,7 @@ def scan_level():
                     bases.setdefault(base.get_path_name().split('.')[0], [base, 0])[1] += 1
                     if base.get_path_name().split('.')[0] == FBX_PHONG and isinstance(mi, unreal.MaterialInstanceConstant)                             and mi.get_path_name().startswith('/Game/'):
                         fbx_instances[mi.get_path_name()] = mi
-    lp_mpc = '/Game/InportAssets/LPRiverForest/Materials/Common/MPC_UnlitStrength.MPC_UnlitStrength'
+    snap_mpcs = {p if '.' in p else p + '.' + p.split('/')[-1] for p in CONFIG['snap_collections']}
     decisions = {}
     for path, (base, uses) in sorted(bases.items()):
         name = path.split('/')[-1]
@@ -403,7 +377,7 @@ def scan_level():
             decisions[path] = ('ok', 'already patched', uses)
         else:
             used = collections_used(base)
-            if lp_mpc in used:
+            if snap_mpcs & used and MF.get('MF_RetroVertexSnap_LP'):
                 decisions[path] = ('patch', 'snap_lp', uses)
             elif len(used) >= 2:
                 decisions[path] = ('skip', 'already uses 2 parameter collections (UE limit)', uses)
@@ -443,7 +417,7 @@ if LEVEL_SCAN:
         outcome['materials'][FBX_PHONG]['decision'] = 'reparented'
     if not DRY_RUN:
         previous['auto_targets'] = auto
-        RECORD.write_text(json.dumps(previous, ensure_ascii=False, indent=1), encoding='utf-8')
+        retro_project.save_record(previous)
     SCAN_RESULT.parent.mkdir(parents=True, exist_ok=True)
     SCAN_RESULT.write_text(json.dumps(outcome, ensure_ascii=False, indent=1), encoding='utf-8')
     counts = {}
@@ -514,7 +488,7 @@ else:
 if not LEVEL_SCAN:
     # Keep the materials discovered by level scans across normal patch/unpatch runs.
     report['auto_targets'] = (json.loads(RECORD.read_text(encoding='utf-8')) if RECORD.exists() else {}).get('auto_targets', {})
-    RECORD.write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding='utf-8')
+    retro_project.save_record(report)
 log('COMPLETE errors=%d' % len(report['errors']))
 
 if '-RetroQuit' in unreal.SystemLibrary.get_command_line():

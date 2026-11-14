@@ -1,28 +1,17 @@
 """Read-only integrity check of patched materials: WPO goes through the snap function (with the original chain
 where one existed) and every texel-snapped sample has UV + gradient inputs. Prints [RetroCheck] OK/FAIL lines."""
-import unreal
-mel = unreal.MaterialEditingLibrary
-CHAINED = {'M_LowPoly': 'MaterialExpressionAdd_5', 'M_LowPolyGrass': 'MaterialExpressionMultiply_2',
-           'M_LowPolyWater': 'MaterialExpressionReroute_13'}
-TARGETS = ['/Game/InportAssets/LevelPrototyping/Materials/M_FlatCol', '/Game/InportAssets/LPRiverForest/Materials/M_LowPoly',
-           '/Game/InportAssets/LPRiverForest/Materials/M_LowPolyGrass', '/Game/InportAssets/LPRiverForest/Materials/M_LowPolyWater',
-           '/Game/Stage01/Ground/Materials/M_Grass_LowPoly_World', '/Game/Stage01/Ground/Materials/M_Ground_LowPoly_World',
-           '/Game/BP/Cage/Materials/M_Cage_White', '/Game/BP/Cage/Materials/M_Cage_Yellow', '/Game/BP/Cage/Materials/M_Cage_Glow',
-           '/Game/BP/Cage/Materials/M_Cage_Navy', '/Game/Art/Rendering/Retro/Materials/M_RetroFBXPhong',
-           '/Game/Art/Materials/Cage/M_Cage_White', '/Game/Art/Materials/Cage/M_Cage_Yellow', '/Game/Art/Materials/Cage/M_Cage_Glow',
-           '/Game/Art/Materials/Cage/M_Cage_Navy', '/Game/InportAssets/Farm_House/Materials/MM_Hybrid_Trim',
-           '/Game/Lobby/Materials/M_Lobby_CyanEdge', '/Game/Lobby/Materials/M_Architecture_SoftWhite',
-           '/Game/Lobby/Materials/M_Architecture_CeilingWhite', '/Game/Lobby/Materials/M_StageSelect_HoloPanel',
-           '/Game/Lobby/Materials/M_Facility_ExhibitHologram', '/Game/Lobby/Materials/M_Lobby_ResearchHologram',
-           '/Game/Lobby/Materials/M_DataPortal_Tunnel', '/Game/InportAssets/Clinic/Materials/M_Default_Master',
-           '/Game/InportAssets/Clinic/Materials/M_Translucent_Master', '/Game/InportAssets/Clinic/Materials/M_Lights',
-           '/Game/InportAssets/Clinic/Materials/M_Screen', '/Game/InportAssets/Clinic/Materials/M_Grid',
-           '/Game/InportAssets/Clinic/Materials/M_Grid2']
 from pathlib import Path as _Path
-import json as _json
-_record = _Path(__file__).resolve().parent / 'PatchRetroMaterials.json'
-if _record.exists():
-    TARGETS += [t for t in _json.loads(_record.read_text(encoding='utf-8')).get('auto_targets', {}) if t not in TARGETS]
+import sys as _sys
+import unreal
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+import retro_project  # noqa: E402  同じフォルダの共通モジュール
+mel = unreal.MaterialEditingLibrary
+retro_project.scan_plugin_content()
+# 対象: プロジェクト設定の targets + プラグイン内の M_RetroFBXPhong + レベルスキャンで見つかったもの（パッチ記録）。
+_config = retro_project.load_config()
+CHAINED = _config['chained']
+TARGETS = list(_config['targets']) + [retro_project.FBX_COPY]
+TARGETS += [t for t in retro_project.load_record().get('auto_targets', {}) if t not in TARGETS]
 TARGETS = [t for t in TARGETS if unreal.EditorAssetLibrary.does_asset_exist(t)]
 fails = 0
 for path in TARGETS:

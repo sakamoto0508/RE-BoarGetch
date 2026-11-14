@@ -2,7 +2,8 @@
 #include "Components/PrimitiveComponent.h"
 #include "Dom/JsonObject.h"
 #include "EngineUtils.h"
-#include "IPythonScriptPlugin.h"
+#include "Editor.h"
+#include "Modules/ModuleManager.h"
 #include "Interfaces/IPluginManager.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialExpression.h"
@@ -57,17 +58,16 @@ namespace RetroLevelMaterials
 
 	FString RunLevelScan(bool bDryRun)
 	{
-		IPythonScriptPlugin* Python = IPythonScriptPlugin::Get();
-		if (!Python || !Python->IsPythonAvailable()) return TEXT("Python Editor Script Plugin is not available.");
+		// Python プラグインはリンクしない（任意依存）ので、モジュールが読み込まれているかだけ調べる。
+		if (!GEditor || !FModuleManager::Get().IsModuleLoaded(TEXT("PythonScriptPlugin"))) return TEXT("Python Editor Script Plugin is not enabled. Enable it in Edit > Plugins to use Scan / Patch Level Materials.");
 		const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("RetroRender"));
 		if (!Plugin) return TEXT("RetroRender plugin not found.");
 		const FString Script = FPaths::ConvertRelativePathToFull(Plugin->GetBaseDir() / TEXT("Scripts/PatchRetroMaterials.py"));
 		const FString ResultFile = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("RetroRender/LevelScan.json"));
 		IFileManager::Get().Delete(*ResultFile);
-		FPythonCommandEx Command;
-		Command.ExecutionMode = EPythonCommandExecutionMode::ExecuteFile;
-		Command.Command = FString::Printf(TEXT("\"%s\" -RetroLevelScan%s"), *Script, bDryRun ? TEXT(" -RetroDryRun") : TEXT(""));
-		Python->ExecPythonCommandEx(Command);
+		// "py <file> <args>" は同期実行され、引数は sys.argv に渡る。結果はスクリプトが ResultFile に書く。
+		GEditor->Exec(GEditor->GetEditorWorldContext().World(),
+			*FString::Printf(TEXT("py \"%s\" -RetroLevelScan%s"), *Script, bDryRun ? TEXT(" -RetroDryRun") : TEXT("")));
 
 		FString Text;
 		TSharedPtr<FJsonObject> Root;

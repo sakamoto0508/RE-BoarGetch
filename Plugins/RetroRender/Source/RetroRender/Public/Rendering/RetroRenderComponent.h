@@ -32,6 +32,8 @@ public:
 	UPROPERTY(EditAnywhere, Category="Retro") TSoftObjectPtr<UMaterialParameterCollection> ParameterCollection;
 	// Other collections that also carry geometry scalars (for materials already at UE's 2-collection limit).
 	// Only parameters that exist in a collection are written.
+	// プロジェクト全体で使う MPC は Project Settings > Retro Render > Additional Parameter Collections に設定する。
+	// ここはこのコンポーネントだけに追加したい場合用（設定側と合わせて使われる）。
 	UPROPERTY(EditAnywhere, Category="Retro") TArray<TSoftObjectPtr<UMaterialParameterCollection>> SharedCollections;
 	// Preset used when the world starts (and shown in the editor viewport).
 	UPROPERTY(EditAnywhere, Category="Retro") ERetroRenderPreset InitialPreset = ERetroRenderPreset::OFF;

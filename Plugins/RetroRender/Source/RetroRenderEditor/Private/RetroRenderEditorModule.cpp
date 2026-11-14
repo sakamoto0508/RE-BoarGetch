@@ -1,5 +1,8 @@
 #include "Modules/ModuleManager.h"
 #include "Editor.h"
+#include "GameDelegates.h"
+#include "Misc/PackageName.h"
+#include "Rendering/RetroRenderComponent.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "RetroLevelMaterials.h"
 #include "Rendering/RetroRenderSettings.h"
@@ -19,6 +22,25 @@ static const FName RetroTabName("RetroRender");
 class FRetroRenderEditorModule : public IModuleInterface
 {
 	FDelegateHandle MapOpenedHandle;
+	FDelegateHandle ModifyCookHandle;
+
+	// ゲーム中に自動生成される Retro Render アクタは共有アセットをソフト参照で読むだけなので、
+	// どのパッケージからも参照されず、クック対象から漏れる。ここで明示的にクックリストへ追加する。
+	static void AddRetroPackagesToCook(TConstArrayView<const ITargetPlatform*>, TArray<FName>& PackagesToCook, TArray<FName>&)
+	{
+		const URetroRenderComponent* Defaults = GetDefault<URetroRenderComponent>();
+		TArray<FSoftObjectPath> Paths = {Defaults->Material.ToSoftObjectPath(), Defaults->PresetData.ToSoftObjectPath(),
+			Defaults->ParameterCollection.ToSoftObjectPath()};
+		for (const TSoftObjectPtr<UMaterialParameterCollection>& Extra : GetDefault<URetroRenderSettings>()->AdditionalParameterCollections)
+		{
+			Paths.Add(Extra.ToSoftObjectPath());
+		}
+		for (const FSoftObjectPath& Path : Paths)
+		{
+			const FName Package = Path.GetLongPackageFName();
+			if (!Package.IsNone() && FPackageName::DoesPackageExist(Package.ToString())) PackagesToCook.AddUnique(Package);
+		}
+	}
 public:
 	virtual void StartupModule() override
 	{
@@ -32,6 +54,7 @@ public:
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Viewports"));
 
 		MapOpenedHandle = FEditorDelegates::OnMapOpened.AddRaw(this, &FRetroRenderEditorModule::OnMapOpened);
+		ModifyCookHandle = FGameDelegates::Get().GetModifyCookDelegate().AddStatic(&FRetroRenderEditorModule::AddRetroPackagesToCook);
 
 		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateLambda([]()
 		{
@@ -63,6 +86,7 @@ public:
 	virtual void ShutdownModule() override
 	{
 		FEditorDelegates::OnMapOpened.Remove(MapOpenedHandle);
+		FGameDelegates::Get().GetModifyCookDelegate().Remove(ModifyCookHandle);
 		if (UToolMenus::IsToolMenuUIEnabled()) UToolMenus::UnregisterOwner(RetroTabName);
 		if (FSlateApplication::IsInitialized()) FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(RetroTabName);
 	}

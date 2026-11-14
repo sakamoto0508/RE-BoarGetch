@@ -25,7 +25,7 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Boar|Identity")
 	FName BoarUniqueId;
 	/** 捕獲Componentを生成します。TickはBeginPlay後、スタミナを使う種別だけ有効になります。 */
-	ABoarBase();
+	ABoarBase(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 	/** GameModeからBeginPlay前に呼べる、個体設定の初期化です。 */
 	void InitializeForStage();
 	/** 種別設定と初期スタミナを適用します。 */

@@ -531,12 +531,17 @@ void ABoarPlayerController::HandleStageGameOver()
 	if (!Widget || !Missing.IsEmpty())
 	{
 		bGameOverUIUnavailable = true;
+		// UE_LOGは複文に展開されるため、if/elseは波括弧で囲む。
 		if (!Widget)
+		{
 			UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: GameOverWidgetClass (%s) is unset or could not be created. GameOver screen is not shown."),
 			       *GetNameSafe(GetClass()), *GetNameSafe(GameOverWidgetClass.Get()));
+		}
 		else
+		{
 			UE_LOG(LogTemp, Error, TEXT("[GameOver] %s (%s.GameOverWidgetClass): missing required widgets: %s. GameOver screen is not shown."),
 			       *GetNameSafe(Widget->GetClass()), *GetNameSafe(GetClass()), *FString::Join(Missing, TEXT(", ")));
+		}
 		// Viewport未追加・Delegate未登録なので、参照を持たなければGCで破棄されます。
 		return;
 	}
