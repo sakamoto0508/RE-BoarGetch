@@ -20,6 +20,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
 - Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A 完了（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映、7A-4 Profiler / Debugger / Composition が完了。24〜27 章）
+- Phase 7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance）完了（29 章）。7B-2（入力の加工）は未着手
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -29,7 +30,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
 | 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Completed（B-1〜B-11） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Done（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 PIE の Camera Tuning パネル: 完了、25 章。7A-3 アセットへの反映（Apply / Undo / Redo / Save）: 完了、26 章。7A-4 Profiler / Debugger / Composition: 完了、27 章） |
-| 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Not Started |
+| 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | In Progress（7B-1 移動方向へのカメラ補助: 完了、29 章。7B-2 入力の加工: 未着手） |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
 | 7D | Advanced Occlusion Handling（複数点の遮蔽判定、可視率、一時透過。Trace 数を計測） | Not Started |
 | 7E | Camera Recorder / Replay（カメラ出力の再生。ゲームプレイの完全再現とは区別） | Not Started |
@@ -155,6 +156,7 @@ Look At と Rotation Composer の **Target Source** は、Look At Target / Follo
 | Input | Sensitivity / Invert Yaw / Invert Pitch | 感度と反転 |
 | Initial | Initial Rotation / Yaw / Pitch | 開始時の向き: 対象の背後 / ControlRotation / 直前のカメラ / 固定 |
 | Idle | Recenter When Idle / Delay / Time | 入力が一定時間無ければ、対象の背後へゆっくり戻ります |
+| Idle / Movement Assistance | Enable Movement Assistance / Recenter Heading / 速度の閾値 / 継続時間 / 後退の除外 / Dead Zone / 最大 Yaw 速度 | 移動中だけ、移動方向（または対象の背後）へカメラを寄せます（Phase 7B-1、29 章）。既定は OFF |
 
 `Orbital Follow`（Input Source = Control Rotation）+ `Collision` は、SpringArm の Socket と完全に一致します（実機の BP_PlayerCharacter で誤差 0.000cm / 0.000°）。
 
@@ -848,34 +850,36 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **205 件が登録**されています（テスト名の数。Phase 7A 最終安定化の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **223 件が登録**されています（テスト名の数。Phase 7B-1 の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
   | `.Director` 8、`.Nodes` 5、`.ThirdPerson` 11、`.Effects` 9、`.Action` 10、`.Constraints` 7、`.Sequence` 6、`.Authority` 3 | 59 | 実行 | 実行 |
-  | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 12、`.Profiler` 3 | 30 | 実行 | 実行 |
+  | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 13、`.Profiler` 3 | 31 | 実行 | 実行 |
   | `.Tuning`（Runtime Tuning、24 章。FOV の回避策 1 件を含む） | 10 | 実行 | 実行 |
-  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 7 件、26 章。診断 `.Editor.Diagnostics` 5 件、27 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 4 件を含む） | 22 | 実行 | — |
+  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 7 件、26 章。診断 `.Editor.Diagnostics` 6 件、27 章・29 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 4 件を含む） | 23 | 実行 | — |
   | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 3 | 5 | — | 実行 |
   | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件、投影 1 件を含む） | 30 | — | 実行 |
   | `.Projection`（構図計算と描画の投影、28 章） | 2 | 実行 | 実行 |
-  | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1） | 40 | — | 実行 |
+  | `.Assistance`（移動方向へのカメラ補助、29 章） | 13 | 実行 | 実行 |
+  | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1、`.Assistance` 2） | 42 | — | 実行 |
   | `.Samples` | 6 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
-  | 合計 | 205 | 123 | 183 |
+  | `.Profile.AssistanceVariants`（補助の状態ごとの性能、29 章） | 1 | `-ACFProfile` でだけ計測 | 同左 |
+  | 合計 | 223 | 139 | 200 |
 
-- **最新の結果（Phase 7A 最終安定化、2026-11-14）**
+- **最新の結果（Phase 7B-1、2026-11-14。クリーンな unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
-  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 183 | 176 / 0 / 7 | `.Samples` 6 件と `.Profile.Scenarios` は空のマップでは検証しない |
-  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 183 | 176 / 0 / 7 | 同上 |
-  | Editor（`--context editor`、`-NullRHI`） | 123 | 123 / 0 / 0 | |
-  | Editor（`--context editor-rendered`、描画あり。`.Editor` 22 件） | 22 | 22 / 0 / 0 | |
-  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 183 | 182 / 0 / 1 | `.Profile.Scenarios`（`-ACFProfile` なし） |
-  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 183 | 182 / 0 / 1 | 同上 |
-  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 183 | 183 / 0 / 0 | |
-  | 繰り返し（Editor）: `.Projection` + `.Tuning` + `.Editor.TuningApply` + `.Editor.Diagnostics` ×2 | 48 | 48 / 0 / 0 | |
+  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 200 | 192 / 0 / 8 | `.Samples` 6 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
+  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 200 | 192 / 0 / 8 | 同上 |
+  | Editor（`--context editor`、`-NullRHI`） | 139 | 138 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | Editor（`--context editor-rendered`、描画あり。`.Editor` 23 件） | 23 | 23 / 0 / 0 | |
+  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 200 | 198 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 200 | 198 / 0 / 2 | 同上 |
+  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 200 | 200 / 0 / 0 | |
+  | 繰り返し（Editor、Phase 7A 最終安定化の時点）: `.Projection` + `.Tuning` + `.Editor.TuningApply` + `.Editor.Diagnostics` ×2 | 48 | 48 / 0 / 0 | |
 
   全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 で見つけ、7A-1 のコードでも同じ値で再現したもの）は、2 人目のローカルプレイヤーの Pawn が残っていたのが原因で、テスト環境側で修正済みです（22 章「ローカルプレイヤーと Pawn」）。
 
@@ -1351,6 +1355,15 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 | `ACF.Param.ZeroDistance` | Warning | カメラが中心に重なる（Orbital Follow の Distance 0、Lock-On の腕の長さが両方 0、Aim At Anchor の Shot Anchor の Camera Offset 0） |
 | `ACF.Param.Normalized` | Info | 実行時に補正される値（Soft Zone < Dead Zone、Pitch の範囲外の Initial Pitch / Base Pitch） |
 | `ACF.Blend.MissingCurve` | Warning | Custom のブレンドに Curve がない（Linear になる） |
+| `ACF.Assist.ThresholdsInverted` | Warning | Movement Assistance: Stop Speed Threshold > Start Speed Threshold（ヒステリシスなし。29 章） |
+| `ACF.Assist.NoYawSpeed` | Error | Movement Assistance: Max Assistance Yaw Speed が 0 以下（補助が一切回らない。実行時は Invalid Settings） |
+| `ACF.Assist.AlwaysExcluded` | Warning | Backward Exclusion Angle が 180 以上（どの向きも「カメラへ向かう」扱い） |
+| `ACF.Assist.DeadZoneCoversAll` | Warning | Angular Dead Zone ≥ 180 − Backward Exclusion Angle（受け付ける向きがすべて Dead Zone の中） |
+| `ACF.Assist.ControlRotationInput` | Warning | Input Source = Control Rotation で Movement Assistance（ACF は Control Rotation を書かないので効かない） |
+| `ACF.Assist.FollowTargetYaw` | Warning | Recenter Heading = Movement Direction と Follow Target Yaw の併用（Follow Target Yaw が優先し、補助は無効） |
+| `ACF.Assist.HeadingNeedsAssistance` | Warning | Recenter When Idle で Heading = Movement Direction だが Movement Assistance が OFF（Target Facing として動く） |
+
+補助の負の速度・負の待ち時間・0〜180 の外の角度・NaN / Inf は、上の `ACF.Param.OutOfRange` / `ACF.Param.NonFinite` で検出します（Movement Assistance が OFF のときは範囲を調べず、NaN / Inf だけ Warning）。
 
 機能に依存する値は、その機能が ON のときだけ範囲を調べます（例: `Override Field Of View` が OFF の FOV、Curve = Cut のブレンドの時間、`Use Rings` が OFF のリングの距離）。判定にはプロパティの `EditCondition`（`bFlag` / `!bFlag` / `Enum == 値` / `Enum != 値` と `||` / `&&`）を使い、読めない条件は「ON」とみなします（調べすぎる方に倒す）。
 
@@ -1918,3 +1931,185 @@ ACF の構図計算（Composer・Lock-On・Group Framing・Framing Recovery）�
 - 上流のカメラより後に、縦横比や投影の設定を変える Camera Modifier がある場合、それは反映しません（ACF は自分が受け取った上流の POV の設定を使う）。
 - Off-center の投影（`OffCenterProjectionOffset`）は FOV のスケールにだけ反映し、画面の中心のずれは構図に入れていません。
 - 立体視（ステレオ）の投影は対象外です。
+
+---
+
+## 29. 移動方向へのカメラ補助（Phase 7B-1）
+
+Orbital Follow の既存の Recenter を拡張し、プレイヤーが移動している間だけ、カメラを移動方向（または対象の背後）へ自動で寄せます。新しい Node や独立した補助システムは作っていません。Recenter の計算（`Recenter Time` の指数的な追従）は 1 つだけで、補助は「いつ・どこへ・どれだけの速さで」を決めます。
+
+### Target Facing と Movement Direction
+
+| Recenter Heading | 向かう先 | 使う場面 |
+|---|---|---|
+| Target Facing（既定） | 対象の向き + Initial Yaw（Phase 2 の Recenter と同じ） | キャラクターが移動方向を向く（Orient Rotation To Movement）ゲーム |
+| Movement Direction | 対象の水平の移動方向 + Initial Yaw | ストレイフ・後ずさりがあり、向きと移動方向が一致しないゲーム |
+
+- `Enable Movement Assistance` が OFF（既定）なら、Phase 2 の `Recenter When Idle` がそのまま動きます。補助の設定値は使われず、姿勢はビット単位で従来と同じです（テストで確認）。Heading = Movement Direction は補助が ON のときだけ有効です（OFF では Target Facing として動き、Preset の検証が警告します）。
+- 補助を ON にすると、Recenter は **移動中だけ** 動きます（`Recenter When Idle` が ON でも、静止中は戻しません）。
+
+### 設定例
+
+```
+Orbital Follow
+  Input Source                 = Camera Input
+  Enable Movement Assistance   = true
+  Recenter Heading             = Movement Direction
+  Recenter Delay               = 1.0   (入力・抑制が終わってからの待ち)
+  Recenter Time                = 0.5   (寄せる速さの時定数)
+  Start / Stop Speed Threshold = 150 / 75 cm/s
+  Required Movement Duration   = 0.3 s
+  Backward Exclusion Angle     = 45 deg
+  Angular Dead Zone            = 5 deg
+  Max Assistance Yaw Speed     = 90 deg/s
+  Recenter Pitch               = 任意（ON なら Initial Pitch へも戻す）
+```
+
+| 設定 | 既定 | 意味 |
+|---|---|---|
+| Enable Movement Assistance | false | 補助を使う |
+| Recenter Heading | Target Facing | 向かう先（上の表） |
+| Start Speed Threshold | 150 cm/s | この水平速度以上で「移動中」になる |
+| Stop Speed Threshold | 75 cm/s | 移動中はこの速度を下回るまで「移動中」のまま（ヒステリシス。Start より大きい値は Start として扱う） |
+| Required Movement Duration | 0.3 s | 「移動中」がこの時間続いてから補助を始める |
+| Backward Exclusion Angle | 45° | 向かう先がカメラの真後ろ方向からこの角度以内（= カメラへ向かって移動）なら補助しない |
+| Angular Dead Zone | 5° | Yaw の差のうち、この角度を超えた分だけを寄せる |
+| Max Assistance Yaw Speed | 90°/s | 補助が加える Yaw の上限 |
+
+### 開始・停止の条件
+
+- **速度**: 追従対象の位置の差分から求めた平滑化済みの速度（下の「速度の取得」）の、World Up（Z）に垂直な成分だけを使います。ジャンプ・坂の上下では向かう先が変わりません。
+- **ヒステリシス**: 「移動中」は Start 以上で始まり、Stop を下回ると終わります。閾値付近の速度でも ON / OFF を繰り返しません（Stop = Start にすると毎フレーム切り替わることをテストで確認）。
+- **2 つの待ちは重なる（足し算ではない）**: `Recenter Delay`（最後の手動入力・抑制などが終わってから）と `Required Movement Duration`（移動が続いた時間）は同時に数え、**両方を満たした最初のフレーム**で始まります。走りながらカメラを回して手を離した場合は、Recenter Delay だけ待って補助が始まります。
+- **後退の除外**: 向かう先と、画面のカメラの Yaw（前のフレームの Damping 後の値）の最短の差が `180 − Backward Exclusion Angle` を超えると補助しません。既定 45° では 135° までの方向転換は追従し、真後ろ ±45° は無視します。カメラへ向かって走っても 180° 回転しません。追従中に急に反転した場合も同じです。
+- **Yaw の差は最短角度**: 359° → 1° は +2° 回ります（大回りしない）。±180° の境界も同じです。
+- **Dead Zone**: 差のうち Dead Zone を超えた分だけを目標にするので、Dead Zone の境目で止まったり動いたりしません。差が Dead Zone の中なら状態は Assisting、理由は Aligned です。
+
+### 優先順位
+
+上ほど優先です。上の条件があるフレームは、下の条件を見ずにそこで止まります。
+
+1. **明示的な回転指定**（`Set ACF Orbit Rotation` / `SetAllOrbitRotations`）: そのフレームは補助しない（Suppressed / Explicit Rotation）
+2. **手動の Camera Input**（`Add Camera Input` / `Set Camera Input Rate`）: 入力のあったフレームは即座に補助を止め、入力分だけ動く（Suppressed / Manual Input）
+3. **Suppress Camera Assistance**（下の API）
+4. **外部 ViewTarget と制御中の要求**: 出力バイパス（Sequencer の Camera Cut）・Suppress Output の間（View Not Shown）、その Rig が制御中の要求でない間（Not In Control）
+5. **Recenter Delay**
+6. **移動の条件**（速度のヒステリシス・継続時間・後退の除外）
+7. **既存の Rotation Damping**（補助が動かした目標 Yaw を、通常の入力と同じように Damping する）
+
+1〜4 の間は Recenter Delay の時間を 0 に戻すので、**どれが終わっても待ちからやり直します**（外部 ViewTarget から戻った直後・抑制を解除した直後に急に回り出さない）。この他に、`Input Source = Control Rotation`（ACF は Control Rotation を書かない）と、Heading = Movement Direction と `Follow Target Yaw` の併用は Disabled です。
+
+**Follow Target Yaw との関係**: Follow Target Yaw が優先です。Movement Direction との併用では補助は無効になり、カメラは対象の向きにだけ追従します。Target Facing + Follow Target Yaw + 補助では、「対象の向きに対する相対角」を Initial Yaw へ戻します（対象の回転そのものは従来どおり付いてくるので、最大 Yaw 速度は補助の分だけに掛かります）。
+
+### 回転速度とフレームレート
+
+- 1 フレームの補助の量 = min(`Dead Zone を超えた差 × (1 − exp(−dt / Recenter Time))`, `Max Assistance Yaw Speed × dt`)。差より大きくならないので、ヒッチ（大きな dt）でも行き過ぎ・反転しません。
+- **最大 Yaw 速度は Recenter が作る Yaw の変化（目標 Yaw）に掛けます**。最終的なカメラの Yaw は、その後の Rotation Damping でさらに遅くなるだけなので、補助による回転は最終の Yaw でも上限を超えません（Damping 0 / 0.2 の両方で、毎フレームの変化が `Max × dt` 以下であることを 30 / 60 / 120 fps と 0.25 s のヒッチで確認）。手動入力・Follow Target Yaw による回転には掛けません。
+- 30 / 60 / 120 fps で同じ時刻の Yaw の差は 4° 以内（開始フレームの量子化 1 フレーム分）。
+- **Pause**: PCM のカメラ更新が止まる・DeltaTime 0 の評価では、待ち時間も Yaw も進みません。NaN / 負 / Inf の DeltaTime は Director が 0 として扱います。
+- **Time Dilation**: 待ち時間・速度・回転はすべてゲーム時間です（PCM が渡す、Dilation 後の DeltaTime）。スローモーション中は実時間あたりの回転も遅くなり、速度はゲーム時間で測るので閾値の判定は変わりません。
+
+### 速度の取得
+
+- 速度は **その Orbital Follow 自身の追跡状態**（`FACFCameraOrbitState::Tracking.SmoothedVelocity`）から取ります。Lookahead と同じ値で、追加の計算・アロケーションはありません。
+- 要求ごと・Node ごとの状態なので、2 つの Rig の間で共有されず、Node の評価順にも依存しません。Actor の Velocity ではなく **位置の差分** なので、Root Motion・移動する床・`SetActorLocation` でも正しく測れます（床と一緒に動く場合は床の動きも含みます）。
+- 平滑化の時定数は `Target Motion > Lookahead > Smoothing`（既定 0.25 s）です。Lookahead の時間が 0 でも速度は測っています。
+- テレポート（`Teleport Distance` を超える移動、`Notify Teleport`）では速度の履歴を捨て、待ちからやり直します。Teleport Distance 未満の大きな瞬間移動は「速い移動」として扱われるので、ゲームのワープには `Notify ACF Teleport` を呼んでください。非有限の速度は 0 として扱います。
+- 隠れていた Rig（Lock-On・Finisher・他の要求の間）は評価されないので、補助も進みません。再び制御を得た評価（Activate）で速度と待ちをリセットするので、**再表示の瞬間に回りません**（同じ Yaw のまま、Recenter Delay から待つ）。
+
+### Request / Rig との関係
+
+| 状況 | 補助 |
+|---|---|
+| 要求の切り替え・Lock-On の開始 | 新しい要求が制御し、古い Orbital Follow は評価されない（進まない） |
+| Lock-On の解除・Finisher の終了 | Orbital Follow が再び制御。Yaw はそのまま、待ちからやり直す |
+| 2 つの Rig の Blend 中 | 入ってくる側（制御中の要求）だけが補助する（Activate 直後なので、まず Recenter Delay を待つ）。出ていく側（Live の Blend 元）と、UE カメラへ戻る Blend 中の解放済みの要求は評価されるが補助しない（Not In Control）。手動入力は従来どおり両方の Rig に入る |
+| Combat Camera | 補助は続く（止めたい場合は Combat の開始・終了で Suppress / Release する） |
+| Camera Sequence / Finisher | Sequence の Shot が制御している間、Orbital Follow は隠れている |
+| Sequencer の Camera Cut（外部 ViewTarget） | 裏で評価は続くが補助しない（View Not Shown）。戻ったら待ちから |
+| Suppress Output | 同上 |
+| PCM の作り直し | 状態は Director にあるので影響なし（抑制も Source が持ち続ける） |
+| 複数の LocalPlayer | プレイヤーごとの Director・要求・抑制。互いに影響しない |
+
+### Suppress Camera Assistance
+
+```cpp
+// エイム中・メニュー・演出中など、補助だけを止める（手動の Camera Input は止めない）
+UACFCameraSubsystem* Acf = LocalPlayer->GetSubsystem<UACFCameraSubsystem>();
+Acf->SuppressCameraAssistance(this);           // Source = this（Blueprint では Self が既定）
+// ...
+Acf->ReleaseCameraAssistanceSuppression(this); // 最後の Source が外れると、待ちから再開
+const bool bSuppressed = Acf->IsCameraAssistanceSuppressed();
+```
+
+Blueprint: `Suppress ACF Camera Assistance` / `Release ACF Camera Assistance Suppression` / `Is ACF Camera Assistance Suppressed`。
+
+- Source ごとの登録です。同じ Source を何度登録しても 1 つ。複数の Source が同時に抑制でき、すべて解除されたときだけ補助が戻ります。null は無視します（警告ログ）。
+- Source は弱参照です。**破棄された Source の抑制は次の評価で自動的に外れます**。後で同じアドレスに作られた別のオブジェクトを、前の Source と取り違えることはありません（`TWeakObjectPtr` のシリアル番号で比較）。この仕組みは Suppress Output と同じもので、両方が `FACFCameraSourceSet` を使います（Suppress Output の動作は変えていません）。
+- **World**: Source が World に属している場合（Actor・Component）、その World が破棄・終了処理に入った（PIE の終了・マップ移動）か、カメラが別の World で評価された時点で外れます（GC を待たない）。World に属さない Source（Subsystem・GameInstance など）は、自分が破棄されるまで有効です。
+- **LocalPlayer の削除**: プレイヤーの Subsystem・Director ごと消えるので、抑制も消えます。他のプレイヤーには影響しません。
+- **要求の終了・PCM の作り直し**: 抑制はプレイヤー単位で Source が持つので、要求の追加・解放・PCM の作り直しでは変わりません。
+- 不要になったら Release してください（Source を残したまま忘れると、その Source が破棄されるまで補助が止まったままです）。
+
+### Dead Zone・入力・Control Rotation の制限
+
+- **スティックの Dead Zone はゲーム側で処理してください**。ACF は渡された Camera Input の値をそのまま「入力あり」と判定します。スティックの小さなノイズを渡すと、補助が毎フレーム止まります（入力の加工は Phase 7B-2）。上の `Angular Dead Zone` はカメラの角度の Dead Zone で、入力の Dead Zone ではありません。
+- **Input Source = Control Rotation** では補助は動きません（Disabled / Control Rotation Input）。PlayerController が回転を持ち、ACF は Control Rotation を書かないためです。Control Rotation で補助したい場合は、ゲーム側で Control Rotation を回してください（Preset の検証が警告します）。
+
+### Debugger と Preset の検証
+
+- 7A-4 の Debugger（27 章）の「Assistance」に、制御中のカメラの補助を表示します: モード（Movement Assistance / Phase 2 の Idle recenter）、状態（Disabled / Waiting / Assisting / Suppressed）、向かう先の種類、目標 Yaw、移動速度と継続時間、待ち時間 / Recenter Delay、Suppress の有無（Source の数）、補助しない理由。
+- Node は数値と enum だけを書き、文字列は Debugger が UI の更新のときに作ります（評価で文字列は作りません。Shipping では Debug のデータごと無くなります）。
+- Preset の検証（21 章）: `ACF.Assist.*` の 7 項目と、補助の値の範囲・NaN / Inf。
+
+### Runtime Tuning（7A）について
+
+補助の設定は 7A の Runtime Tuning（24〜26 章）のパラメータには **追加していません**。Tuning のパラメータは enum・UI・Change Set・Apply のテストまで一式で増やす必要があり、補助の 8 項目を加えると 7A の 4 項目より大きくなります。補助の調整は Preset の編集と PIE で行えるので、7B-2（入力の加工）で入力の設定と一緒に Tuning の対象にするかを判断します。
+
+### テスト
+
+| テスト | 内容 |
+|---|---|
+| `.Assistance.ManualInputHasPriority` | 入力のフレームは入力量だけ動き補助しない、入力後は Recenter Delay（30 フレーム）で再開、スティックを倒し続ける間は補助しない |
+| `.Assistance.StartConditionsAndDuration` | 静止中は回らない（Recenter When Idle でも）、速度が閾値に達してから継続時間（18 フレーム）で開始、Delay 1.0 と継続 0.3 は重なる（60 フレーム） |
+| `.Assistance.SpeedHysteresis` | Start と Stop の間で状態を保つ、閾値付近（140 / 160 が交互）で開始は 1 回、Stop = Start では何度も切り替わる |
+| `.Assistance.BackwardExclusionAndTurns` | 180° / −170° / 150° / −140° へは回らない、90° / 120° / −130° へは一方向に回る、追従中の反転で回らない、その後の 90° の転換には追従 |
+| `.Assistance.ShortestAngleAcrossWrap` | 359 → 1、1 → 359、170 → −170、−170 → 170 が最短の向きで、始点から差より遠くへ行かない |
+| `.Assistance.MaxYawSpeed` | Damping 0 / 0.2 × 30 / 60 / 120 fps / 0.25 s で毎フレーム `90 × dt` 以下、90° に約 1 s |
+| `.Assistance.FrameRateAndHitches` | 30 / 60 / 120 fps の Yaw の差が 4° 以内、0.5 s のヒッチで 45° 以下・同じ向き・行き過ぎなし |
+| `.Assistance.PauseAndTimeDilation` | DeltaTime 0 の 300 フレームで待ち・Yaw が進まない、Time Dilation 0.5 はゲーム時間で同じ結果 |
+| `.Assistance.TargetFacingBitwiseCompatible` | 補助 OFF なら補助の設定値・Heading を変えても 600 フレームの姿勢がビット単位で同じ、Phase 2 の式と一致 |
+| `.Assistance.FollowTargetYawPriority` | Movement Direction + Follow Target Yaw は Disabled で対象の向きにだけ追従、Target Facing + Follow Target Yaw は相対角を戻す（90°/s 以下）、明示的な回転のフレーム |
+| `.Assistance.TeleportAndInvalidValues` | テレポート検出・Notify Teleport で待ちから、NaN / 負 / Inf の DeltaTime で進まない、極小 dt の巨大速度でも `Max × dt` 以下、NaN / 0 / 負の最大速度・NaN の Dead Zone は Invalid Settings |
+| `.Assistance.SuppressionSources` | 同じ Source は 1 回、2 つの Source、null を無視、抑制中も手動入力は効く、解除で待ちから、破棄した Source が外れる・新しいオブジェクトと取り違えない、別 World・破棄した World の Source が外れる |
+| `.Assistance.RequestsBlendAndExternalView` | 高優先度の要求の間は進まず、戻った瞬間に回らない、出力バイパス・Suppress Output の間は止まり待ちから、UE カメラへ戻る Blend 中は Not In Control |
+| `.PresetValidation.MovementAssistance` | 既定値で何も出ない、負の速度・時間・角度、逆転、NaN / Inf、最大速度 0 以下、Control Rotation、Follow Target Yaw、補助なしの Movement Direction |
+| `.Sequencer.Assistance.PlayersSuppressionPcmAndDebugger`（実際の PCM） | 2 人のローカルプレイヤーが独立、PCM が補助後の Yaw を描画、Suppress（重複・手動入力・Source の破棄）、PCM の作り直しの後も抑制は Source が保持し解除後に補助が続く、2 人目を削除しても 1 人目に影響なし、**毎フレーム Debugger の状態と実際の回転が一致** |
+| `.Sequencer.Assistance.LockOnFinisherCombatAndSequencer`（実際の PCM・Level Sequence） | Lock-On・Finisher の後に Yaw が飛ばず待ちから、Combat 中も補助、Sequencer の Camera Cut 中は止まり戻ったら待ちから、毎フレーム Debugger と一致 |
+| `.Editor.Diagnostics.DebuggerShowsAssistance` | Debugger の各行（状態・理由・速度・待ち時間・目標 Yaw・抑制）が Node の状態と一致 |
+| `.Profile.AssistanceVariants`（`-ACFProfile` のときだけ計測） | 補助の状態ごとの CPU 時間・アロケーション・姿勢（下の「性能」） |
+
+### 性能
+
+- **B-1 の 8 シナリオ**（サンプルの Preset は補助を使わない）を、変更前（`a15a93b`）と変更後で、同じ手順で計測しました。ACF の出力姿勢は 8 シナリオ × 600 フレームすべてで **ビット単位で一致**（Sequencer の背景評価のシナリオでは、描画されているのは Sequencer 自身のカメラで、その再生位置のわずかな差だけが出る）。アロケーション数・バイト数は全シナリオで完全に一致。ACF の合計時間の平均は、変更前の 2 回の計測と同程度の揺れの範囲（シナリオにより −9 〜 +3 %、両方向）。
+- **補助の状態ごと**（単独の Director、Orbital Follow だけ、9 ラウンド × 4000 回の評価の中央値。補助の分が見えやすい最小の構成）:
+
+  | 状態 | µs / 評価 | Recenter なしとの差 | アロケーション（600 回） |
+  |---|---|---|---|
+  | Recenter なし | 1.400 | — | 0 |
+  | 補助 OFF（Phase 2 の Recenter） | 1.376 | −0.025 | 0 |
+  | 補助 ON・待機中 | 1.427 | +0.026 | 0 |
+  | 補助 ON・追従中 | 1.456 | +0.055 | 0 |
+  | 補助 ON・手動入力で抑制中 | 1.442 | +0.041 | 0 |
+
+  追従中でも 1 評価あたり約 0.05 µs（B-1 のシナリオの合計 40〜70 µs の 0.1 % 程度）で、アロケーションはありません。結果は `Saved/ACFProfile/7B1_Assistance.md`。
+- B-1 の計測は、各シナリオの 1 回目の実行の姿勢を `Saved/ACFProfile/B1_<シナリオ>_pose.csv` にも書くようにしました（ビルド間の比較用。ACF の計測区間の外で書くので、計測値には入りません）。
+
+### 残る制限
+
+- 速度は追従対象の位置の差分です。移動する床・乗り物の上では床の動きも「移動」に含まれます。Teleport Distance 未満のワープは速い移動として扱われます（`Notify ACF Teleport` を呼ぶ）。
+- 平滑化の時定数は Lookahead の Smoothing と共通です（補助だけ別の値にはできません）。
+- Combat 中も補助は動きます。戦闘中に止めたい場合はゲーム側で Suppress Camera Assistance を使ってください。
+- Input Source = Control Rotation では補助できません。入力の Dead Zone・感度・加速は 7B-2 の範囲です。
+- 補助の設定は Runtime Tuning（7A）では変更できません（7B-2 で判断）。
+- Editor で人が操作して見る確認（操作感）は未実施です。自動テスト（実際の PCM・Level Sequence を含む）で確認しています。

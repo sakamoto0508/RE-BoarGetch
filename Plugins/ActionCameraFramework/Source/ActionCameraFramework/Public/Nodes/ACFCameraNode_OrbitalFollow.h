@@ -55,6 +55,30 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraOrbitState
 	bool bHasPendingRotation = false;
 	bool bPendingInstant = false;
 	FRotator PendingRotation = FRotator::ZeroRotator;
+
+	// --- Phase 7B-1: movement assistance (only used with Enable Movement Assistance) ------------------------------
+	/** Seconds without any blocker (input, explicit rotation, suppression, view not shown, not in control, activation). */
+	float AssistIdleTime = 0.f;
+	/** Seconds the target has been moving (speed hysteresis below). Runs at the same time as AssistIdleTime. */
+	float MovementTime = 0.f;
+	/** Speed hysteresis: true from Start Speed Threshold until the speed drops below Stop Speed Threshold. */
+	bool bMoving = false;
+	/** Last evaluation's horizontal speed (cm/s, from the tracked target's smoothed velocity) and heading. */
+	float MovementSpeed = 0.f;
+	bool bHasHeading = false;
+	float HeadingYaw = 0.f;
+	EACFCameraAssistanceState AssistanceState = EACFCameraAssistanceState::Disabled;
+	EACFCameraAssistanceReason AssistanceReason = EACFCameraAssistanceReason::NotEnabled;
+
+	/** Forgets the movement history and restarts the waits (activation, teleport, interpolation reset). */
+	void ResetAssistance()
+	{
+		AssistIdleTime = 0.f;
+		MovementTime = 0.f;
+		bMoving = false;
+		MovementSpeed = 0.f;
+		bHasHeading = false;
+	}
 };
 
 /**
@@ -155,15 +179,56 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle")
 	bool bRecenterWhenIdle = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle", meta = (EditCondition = "bRecenterWhenIdle", ClampMin = "0.0", Units = s))
+	/** Seconds without input before recentering starts. With Movement Assistance: without any blocker (README 29 章). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle", meta = (EditCondition = "bRecenterWhenIdle || bEnableMovementAssistance", ClampMin = "0.0", Units = s))
 	float RecenterDelay = 2.f;
 
 	/** Time constant of the recentering motion. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle", meta = (EditCondition = "bRecenterWhenIdle", ClampMin = "0.01", Units = s))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle", meta = (EditCondition = "bRecenterWhenIdle || bEnableMovementAssistance", ClampMin = "0.01", Units = s))
 	float RecenterTime = 0.5f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle", meta = (EditCondition = "bRecenterWhenIdle"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle", meta = (EditCondition = "bRecenterWhenIdle || bEnableMovementAssistance"))
 	bool bRecenterPitch = true;
+
+	// --- Movement assistance (Phase 7B-1, README 29 章) ---------------------------------------------------------------
+	/**
+	 * Recenter only while the follow target moves, towards Recenter Heading, at most Max Assistance Yaw Speed, and only for
+	 * the request in control while ACF is on screen. Manual input stops it at once. Works with or without Recenter When
+	 * Idle (with assistance on, standing still never recenters). Off = the recenter of Phase 2, unchanged.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance")
+	bool bEnableMovementAssistance = false;
+
+	/** What the recenter turns towards. Movement Direction needs Enable Movement Assistance (without it: Target Facing). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bRecenterWhenIdle || bEnableMovementAssistance"))
+	EACFCameraRecenterHeading RecenterHeading = EACFCameraRecenterHeading::TargetFacing;
+
+	/** Horizontal speed (perpendicular to world up) at which the target counts as moving. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bEnableMovementAssistance", ClampMin = "0.0", Units = CentimetersPerSecond))
+	float StartSpeedThreshold = 150.f;
+
+	/** Once moving, the target stops counting as moving below this speed (hysteresis: at most Start Speed Threshold). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bEnableMovementAssistance", ClampMin = "0.0", Units = CentimetersPerSecond))
+	float StopSpeedThreshold = 75.f;
+
+	/** The target must keep moving this long before assistance starts (counted at the same time as Recenter Delay). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bEnableMovementAssistance", ClampMin = "0.0", Units = s))
+	float RequiredMovementDuration = 0.3f;
+
+	/**
+	 * No assistance while the heading points towards the camera within this angle of straight back (running at the camera
+	 * never swings it 180 degrees). 45 = headings more than 135 degrees away from the camera direction are ignored.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bEnableMovementAssistance", ClampMin = "0.0", ClampMax = "180.0", Units = deg))
+	float BackwardExclusionAngle = 45.f;
+
+	/** The camera only turns by the part of the yaw difference beyond this angle (no creeping for small differences). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bEnableMovementAssistance", ClampMin = "0.0", ClampMax = "180.0", Units = deg))
+	float AngularDeadZone = 5.f;
+
+	/** Upper bound of the yaw the assistance adds per second (before Rotation Damping, which only slows it further). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bEnableMovementAssistance", ClampMin = "0.01", Units = DegreesPerSecond))
+	float MaxAssistanceYawSpeed = 90.f;
 
 	/** Distance for a given absolute pitch (rings or constant). */
 	float GetDistanceForPitch(float Pitch) const;
@@ -176,4 +241,12 @@ public:
 	virtual void OnActivated(const FACFCameraNodeContext& Context, FInstancedStruct* RuntimeState) const override;
 	virtual void ResetInterpolation(FInstancedStruct* RuntimeState) const override;
 	virtual void Evaluate(const FACFCameraNodeContext& Context, FACFCameraPose& InOutPose, FInstancedStruct* RuntimeState) const override;
+
+private:
+	/**
+	 * Phase 7B-1: the recenter with Movement Assistance (one evaluation with DeltaTime > 0). Same recenter step as without it
+	 * (exponential with Recenter Time towards the home yaw); the assistance decides when it runs, the heading, the dead zone
+	 * and the yaw speed limit.
+	 */
+	void UpdateMovementAssistance(const FACFCameraNodeContext& Context, FACFCameraOrbitState& State, float TargetYaw, bool bHadInput, bool bExplicitRotation) const;
 };

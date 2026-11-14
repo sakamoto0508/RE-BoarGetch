@@ -374,6 +374,30 @@ FACFCameraDiagnosticsModel::FDebugView FACFCameraDiagnosticsModel::ReadDebug() c
 		Add(TEXT("Rig"), TEXT("Composer"), FString::Printf(TEXT("target on screen (%.3f, %.3f), aim (%.3f, %.3f), dead zone (%.2f, %.2f)"), D.TargetOnScreen.X, D.TargetOnScreen.Y,
 			D.ScreenPosition.X, D.ScreenPosition.Y, D.DeadZone.X, D.DeadZone.Y));
 	}
+	// Phase 7B-1: camera assistance of the camera in control (Orbital Follow recenter / Movement Assistance). Formatted here, at
+	// UI rate, from the plain values the node published; the evaluation itself builds no string.
+	{
+		auto EnumText = [](const UEnum* Enum, int64 Value) { return Enum->GetDisplayNameTextByValue(Value).ToString(); };
+		const int32 NumSources = Director->GetNumAssistanceSuppressions();
+		const FString Suppression = NumSources > 0 ? FString::Printf(TEXT("suppressed by %d source(s)"), NumSources) : FString(TEXT("not suppressed"));
+		if (D.bHasAssistance)
+		{
+			Add(TEXT("Assistance"), TEXT("Assistance mode"), D.bAssistanceEnabled ? TEXT("Movement Assistance") : TEXT("Idle recenter (Recenter When Idle, Phase 2)"));
+			Add(TEXT("Assistance"), TEXT("Assistance state"), EnumText(StaticEnum<EACFCameraAssistanceState>(), static_cast<int64>(D.AssistanceState)));
+			Add(TEXT("Assistance"), TEXT("Heading source"), EnumText(StaticEnum<EACFCameraRecenterHeading>(), static_cast<int64>(D.AssistanceHeading)));
+			Add(TEXT("Assistance"), TEXT("Target yaw"), D.bHasAssistanceTargetYaw ? FString::Printf(TEXT("%.2f deg"), D.AssistanceTargetYaw) : FString(TEXT("- (not moving)")));
+			Add(TEXT("Assistance"), TEXT("Movement speed"), D.bAssistanceEnabled ? FString::Printf(TEXT("%.1f cm/s (moving %.2f / %.2f s)"), D.AssistanceMovementSpeed,
+				D.AssistanceMovementTime, D.AssistanceRequiredMovementTime) : FString(TEXT("- (not measured without Movement Assistance)")));
+			Add(TEXT("Assistance"), TEXT("Waiting time"), FString::Printf(TEXT("%.2f / %.2f s"), D.AssistanceWaitTime, D.AssistanceRecenterDelay));
+			Add(TEXT("Assistance"), TEXT("Assistance suppression"), Suppression);
+			Add(TEXT("Assistance"), TEXT("Not assisting because"), D.AssistanceReason == EACFCameraAssistanceReason::None ? FString(TEXT("-"))
+				: EnumText(StaticEnum<EACFCameraAssistanceReason>(), static_cast<int64>(D.AssistanceReason)));
+		}
+		else
+		{
+			Add(TEXT("Assistance"), TEXT("Assistance mode"), FString::Printf(TEXT("none (no Orbital Follow with recenter in the camera in control), %s"), *Suppression));
+		}
+	}
 #endif
 	const FACFCameraSolverReport& S = Director->GetLastSolverReport();
 	Add(TEXT("Rig"), TEXT("Deoccluder"), FString::Printf(TEXT("%d checked, %d hidden%s%s, correction %.1f cm, FOV recovery %.2f, %d trace(s)"), S.NumCheckedSubjects, S.NumOccluded,

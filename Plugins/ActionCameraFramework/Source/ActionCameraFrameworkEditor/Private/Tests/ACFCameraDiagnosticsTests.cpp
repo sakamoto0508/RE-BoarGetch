@@ -21,6 +21,7 @@
 #include "Nodes/ACFCameraNode_Collision.h"
 #include "Nodes/ACFCameraNode_FixedPose.h"
 #include "Nodes/ACFCameraNode_Follow.h"
+#include "Nodes/ACFCameraNode_OrbitalFollow.h"
 #include "SACFCameraTuningPanel.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "UObject/StrongObjectPtr.h"
@@ -221,6 +222,89 @@ bool FACFDiagnosticsDebuggerTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("7. Health count = the director's diagnostics"), View.Health.TotalIssues, A.Director->GetHealthDiagnostics().TotalIssues);
 	TestTrue(TEXT("7. Health row shows the count"), View.Health.TotalIssues > 0 && FDiag::FindRow(View, TEXT("Health issues"))->Value.StartsWith(FString::FromInt(View.Health.TotalIssues)));
 	TestTrue(TEXT("7. The last issue is shown"), FDiag::FindRow(View, TEXT("Last issue"))->Value.Contains(TEXT("ACF7A4HealthProbe")));
+	return true;
+}
+
+// Phase 7B-1: the assistance rows show the state the node really has (mode, state, heading, target yaw, speed, waits,
+// suppression, reason), formatted by the panel from the plain values the node published.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFDiagnosticsAssistanceTest, "ActionCameraFramework.Editor.Diagnostics.DebuggerShowsAssistance", ACFDiagnosticsTests::Flags)
+bool FACFDiagnosticsAssistanceTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFDiagnosticsTests;
+	TStrongObjectPtr<UACFCameraDirector> Director(NewObject<UACFCameraDirector>());
+	TStrongObjectPtr<USceneComponent> Target(NewObject<USceneComponent>(GetTransientPackage(), NAME_None, RF_Transient));
+	Target->SetMobility(EComponentMobility::Movable);
+	TStrongObjectPtr<UACFCameraPreset> Preset(NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient));
+	Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+	Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+	UACFCameraNode_OrbitalFollow* Orbit = NewObject<UACFCameraNode_OrbitalFollow>(Preset.Get());
+	Orbit->InitialRotation = EACFCameraOrbitInitialRotation::Fixed;
+	Orbit->InitialYaw = 0.f;
+	Orbit->bEnableMovementAssistance = true;
+	Orbit->RecenterHeading = EACFCameraRecenterHeading::MovementDirection;
+	Orbit->RecenterDelay = 0.3f;
+	Preset->Nodes.Add(Orbit);
+	FACFCameraRequestParams Params;
+	Params.FollowTarget.Component = Target.Get();
+	const FACFCameraRequestHandle Handle = Director->AddRequest(Preset.Get(), Params);
+	FACFCameraTuningPanelModel Model;
+	Model.SetDirectorForTesting(Director.Get());
+	Model.SelectRequest(Handle);
+	FDiag Diag(Model);
+	uint64 Frame = 300000;
+	FVector Velocity = FVector::ZeroVector;
+	auto Step = [&](int32 Frames)
+	{
+		for (int32 I = 0; I < Frames; ++I)
+		{
+			Target->SetWorldLocation(Target->GetComponentLocation() + Velocity / 60.0);
+			FACFCameraEvaluationContext Context;
+			Context.DeltaTime = 1.f / 60.f;
+			Context.FrameNumber = ++Frame;
+			Context.UpstreamPose.FieldOfView = 90.f;
+			Director->Evaluate(Context);
+		}
+	};
+	auto Row = [](const FDiag::FDebugView& View, const TCHAR* Label) { const FDiag::FRow* R = FDiag::FindRow(View, Label); return R ? R->Value : FString(TEXT("<missing>")); };
+	auto Display = [](const UEnum* Enum, int64 Value) { return Enum->GetDisplayNameTextByValue(Value).ToString(); };
+	auto Matches = [&](const TCHAR* When)
+	{
+		const FDiag::FDebugView View = Diag.ReadDebug();
+		const FACFCameraRigDebug& D = Director->GetLastDebug();
+		TestEqual(FString::Printf(TEXT("%s: state row = the node's state"), When), Row(View, TEXT("Assistance state")), Display(StaticEnum<EACFCameraAssistanceState>(), static_cast<int64>(D.AssistanceState)));
+		TestEqual(FString::Printf(TEXT("%s: reason row = the node's reason"), When), Row(View, TEXT("Not assisting because")),
+			D.AssistanceReason == EACFCameraAssistanceReason::None ? FString(TEXT("-")) : Display(StaticEnum<EACFCameraAssistanceReason>(), static_cast<int64>(D.AssistanceReason)));
+		TestTrue(FString::Printf(TEXT("%s: speed row = the node's speed (%s)"), When, *Row(View, TEXT("Movement speed"))), Row(View, TEXT("Movement speed")).StartsWith(FString::Printf(TEXT("%.1f cm/s"), D.AssistanceMovementSpeed)));
+		TestTrue(FString::Printf(TEXT("%s: waiting row (%s)"), When, *Row(View, TEXT("Waiting time"))), Row(View, TEXT("Waiting time")) == FString::Printf(TEXT("%.2f / %.2f s"), D.AssistanceWaitTime, 0.3f));
+		return View;
+	};
+
+	Step(5);
+	FDiag::FDebugView View = Matches(TEXT("Standing"));
+	TestEqual(TEXT("Mode row"), Row(View, TEXT("Assistance mode")), FString(TEXT("Movement Assistance")));
+	TestEqual(TEXT("Heading row"), Row(View, TEXT("Heading source")), Display(StaticEnum<EACFCameraRecenterHeading>(), static_cast<int64>(EACFCameraRecenterHeading::MovementDirection)));
+	TestTrue(TEXT("Standing: Waiting"), Director->GetLastDebug().AssistanceState == EACFCameraAssistanceState::Waiting);
+	TestEqual(TEXT("Standing: no target yaw"), Row(View, TEXT("Target yaw")), FString(TEXT("- (not moving)")));
+
+	Velocity = FVector(0.0, 400.0, 0.0);
+	Step(90);
+	View = Matches(TEXT("Moving"));
+	TestTrue(TEXT("Moving: Assisting"), Director->GetLastDebug().AssistanceState == EACFCameraAssistanceState::Assisting);
+	TestEqual(TEXT("Moving: target yaw row = the movement direction"), Row(View, TEXT("Target yaw")), FString(TEXT("90.00 deg")));
+	TestEqual(TEXT("Not suppressed"), Row(View, TEXT("Assistance suppression")), FString(TEXT("not suppressed")));
+
+	TStrongObjectPtr<USceneComponent> Source(NewObject<USceneComponent>(GetTransientPackage(), NAME_None, RF_Transient));
+	Director->SuppressAssistance(Source.Get());
+	Step(3);
+	View = Matches(TEXT("Suppressed"));
+	TestTrue(TEXT("Suppressed: state"), Director->GetLastDebug().AssistanceState == EACFCameraAssistanceState::Suppressed);
+	TestEqual(TEXT("Suppression row"), Row(View, TEXT("Assistance suppression")), FString(TEXT("suppressed by 1 source(s)")));
+	Director->ReleaseAssistanceSuppression(Source.Get());
+
+	// A camera without recenter: one row says so.
+	Orbit->bEnableMovementAssistance = false;
+	Step(1);
+	TestTrue(TEXT("No recenter: one 'none' row"), Row(Diag.ReadDebug(), TEXT("Assistance mode")).StartsWith(TEXT("none")));
 	return true;
 }
 

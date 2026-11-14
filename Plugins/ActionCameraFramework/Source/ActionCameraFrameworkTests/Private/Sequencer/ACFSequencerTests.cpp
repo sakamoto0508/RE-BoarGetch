@@ -43,6 +43,8 @@
 #include "ACFSequencerSettings.h"
 #include "ACFCameraTestEnvironment.h"
 #include "ACFCameraTuningLibrary.h"
+#include "Nodes/ACFCameraNode_Combat.h"
+#include "Nodes/ACFCameraNode_OrbitalFollow.h"
 
 /**
  * Phase 5A: 実際の Level Sequence（Camera Cut Track）・PlayerCameraManager との結合テスト。ClientContext のみ:
@@ -131,6 +133,15 @@ namespace ACFSeqTest
 		double MaxStepChange = 0.0; // 1 フレームの移動量の変化の最大値（滑らかさ。カットや段差で大きくなる）
 		int32 BigJumps = 0; // 1 フレームで 200cm を超えた回数（カット）
 		TArray<EACFSequencerCameraPhase> Phases;
+		// Phase 7B-1 (assistance): the moved follow target and the debugger-vs-camera check of player 1.
+		TWeakObjectPtr<AActor> Mover;
+		FACFCameraRequestHandle AssistHandle;
+		bool bAssistHasLast = false;
+		bool bAssistInputThisFrame = false;
+		float AssistLastYaw = 0.f;
+		uint64 AssistLastFrame = 0;
+		int32 AssistChecked = 0;
+		int32 AssistMismatches = 0;
 
 		APlayerCameraManager* PCM() const { return Controller.IsValid() ? Controller->PlayerCameraManager.Get() : nullptr; }
 		UWorld* World() const { return Controller.IsValid() ? Controller->GetWorld() : nullptr; }
@@ -3599,5 +3610,331 @@ bool FACFSequencerTuningTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
 	return true;
 }
+
+// =================================================================================================
+// Phase 7B-1: Orbital Follow の移動方向アシスト（README 29 章）を実際の PCM・World・Level Sequence で確認する。
+
+#if !UE_BUILD_SHIPPING
+namespace ACFSeqTest
+{
+	/** Orbit (+ Combat) with Movement Assistance towards the movement direction; yaw 0 at the start. */
+	static UACFCameraPreset* MakeAssistPreset(FScenario& S, bool bWithCombat = false)
+	{
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		UACFCameraNode_OrbitalFollow* Orbit = NewObject<UACFCameraNode_OrbitalFollow>(Preset);
+		Orbit->Distance = 400.f;
+		Orbit->InitialRotation = EACFCameraOrbitInitialRotation::Fixed;
+		Orbit->InitialYaw = 0.f;
+		Orbit->InitialPitch = -15.f;
+		Orbit->bEnableMovementAssistance = true;
+		Orbit->RecenterHeading = EACFCameraRecenterHeading::MovementDirection;
+		Orbit->RecenterDelay = 0.3f;
+		Orbit->RecenterTime = 0.3f;
+		Orbit->bRecenterPitch = false;
+		Orbit->RequiredMovementDuration = 0.2f;
+		Orbit->AngularDeadZone = 0.f;
+		Orbit->MaxAssistanceYawSpeed = 90.f;
+		Preset->Nodes.Add(Orbit);
+		if (bWithCombat)
+		{
+			Preset->Nodes.Add(NewObject<UACFCameraNode_Combat>(Preset));
+		}
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		S.Keep.Emplace(Preset);
+		return Preset;
+	}
+
+	static const FACFCameraRigDebug& AssistDebug(UACFCameraSubsystem* Acf) { return Acf->GetDirector()->GetLastDebug(); }
+	static float AcfYaw(UACFCameraSubsystem* Acf) { return Acf->GetLastEvaluationResult().Pose.Rotation.Yaw; }
+
+	static FString DescribeAssist(UACFCameraSubsystem* Acf)
+	{
+		const FACFCameraRigDebug& D = AssistDebug(Acf);
+		return FString::Printf(TEXT("%s / %s, yaw %.2f, speed %.0f, wait %.2f"), *UEnum::GetValueAsString(D.AssistanceState), *UEnum::GetValueAsString(D.AssistanceReason),
+			AcfYaw(Acf), D.AssistanceMovementSpeed, D.AssistanceWaitTime);
+	}
+
+	/**
+	 * Moves player 1's follow target for Frames frames at Velocity (cm/s, fixed 1/60 s step) and checks every frame that the
+	 * debugger tells the truth: a frame reported Assisting (reason None) turned the ACF camera, a frame reported Waiting /
+	 * Suppressed / Disabled (without input) did not.
+	 */
+	static void MoveFor(TArray<FStep>& Steps, int32 Frames, const FVector& Velocity)
+	{
+		Steps.Add([](FScenario& S) { S.Counter = 0; S.bAssistHasLast = false; return true; });
+		Steps.Add([Frames, Velocity](FScenario& S)
+		{
+			const uint64 Evaluated = S.Acf->GetDirector()->GetLastEvaluatedFrame();
+			const float Yaw = AcfYaw(S.Acf.Get());
+			if (S.bAssistHasLast && Evaluated == S.AssistLastFrame + 1 && !S.bAssistInputThisFrame && S.Acf->IsActiveCamera(S.AssistHandle))
+			{
+				const FACFCameraRigDebug& D = AssistDebug(S.Acf.Get());
+				const bool bTurned = FMath::Abs(FRotator::NormalizeAxis(Yaw - S.AssistLastYaw)) > 1e-4f;
+				const bool bShouldTurn = D.AssistanceState == EACFCameraAssistanceState::Assisting && D.AssistanceReason == EACFCameraAssistanceReason::None;
+				const bool bShouldHold = D.AssistanceState != EACFCameraAssistanceState::Assisting;
+				++S.AssistChecked;
+				if ((bShouldTurn && !bTurned) || (bShouldHold && bTurned))
+				{
+					++S.AssistMismatches;
+					S.Test->AddInfo(FString::Printf(TEXT("Debugger mismatch at frame %llu: %s, yaw %.4f -> %.4f"), Evaluated, *DescribeAssist(S.Acf.Get()), S.AssistLastYaw, Yaw));
+				}
+			}
+			S.bAssistInputThisFrame = false;
+			S.bAssistHasLast = S.Acf->IsActiveCamera(S.AssistHandle); // a yaw of another camera is no reference
+			S.AssistLastYaw = Yaw;
+			S.AssistLastFrame = Evaluated;
+			if (AActor* Mover = S.Mover.Get())
+			{
+				Mover->SetActorLocation(Mover->GetActorLocation() + Velocity * FixedDt);
+			}
+			S.bRetry = ++S.Counter < Frames;
+			return true;
+		});
+	}
+
+	static FVector Along(float YawDegrees, float Speed)
+	{
+		return FRotator(0.f, YawDegrees, 0.f).Vector() * Speed;
+	}
+}
+
+// 複数ローカルプレイヤーの独立・Suppression の登録 / 解除 / Source 破棄・手動入力・PCM の作り直し・LocalPlayer の削除・
+// Debugger の表示と実際のカメラの一致。
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistPlayersSuppressionTest, "ActionCameraFramework.Sequencer.Assistance.PlayersSuppressionPcmAndDebugger", ACFSeqTest::Flags)
+bool FACFAssistPlayersSuppressionTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this);
+	static const FVector SecondLoc = Base + FVector(0.f, 8000.f, 0.f);
+	auto SecondAcf = [](FScenario& S) { return S.SecondPlayer.IsValid() ? S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>() : nullptr; };
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Mover = SpawnPoint(S, Base);
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.Mover.Get();
+		S.AssistHandle = S.Acf->RequestCamera(MakeAssistPreset(S), Params);
+		FString Error;
+		S.SecondPlayer = S.World()->GetGameInstance()->CreateLocalPlayer(FPlatformUserId::CreateFromInternalId(1), Error, true);
+		return S.Test->TestTrue(FString::Printf(TEXT("Second local player (%s)"), *Error), S.SecondPlayer.IsValid());
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([SecondAcf](FScenario& S)
+	{
+		UACFCameraSubsystem* Acf2 = SecondAcf(S);
+		if (!S.Test->TestNotNull(TEXT("Player 2 ACF"), Acf2) || !S.SecondPlayer->GetPlayerController(S.World()))
+		{
+			return false;
+		}
+		S.ActorB = SpawnPoint(S, SecondLoc); // player 2 follows a target that does not move
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.ActorB.Get();
+		S.HandleB = Acf2->RequestCamera(MakeAssistPreset(S), Params);
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	MoveFor(Steps, 90, Along(90.f, 400.f));
+	Steps.Add([SecondAcf](FScenario& S)
+	{
+		UACFCameraSubsystem* Acf2 = SecondAcf(S);
+		S.Test->TestTrue(FString::Printf(TEXT("Player 1 assists towards the movement (%s)"), *DescribeAssist(S.Acf.Get())),
+			AssistDebug(S.Acf.Get()).AssistanceState == EACFCameraAssistanceState::Assisting && AcfYaw(S.Acf.Get()) > 20.f);
+		S.Test->TestTrue(FString::Printf(TEXT("The PCM renders the assisted yaw (%.3f vs %.3f)"), S.PCM()->GetCameraRotation().Yaw, AcfYaw(S.Acf.Get())),
+			FMath::Abs(FRotator::NormalizeAxis(S.PCM()->GetCameraRotation().Yaw - AcfYaw(S.Acf.Get()))) < 1.f);
+		S.Test->TestTrue(FString::Printf(TEXT("Player 2 independent: its target stands, it waits (%s)"), *DescribeAssist(Acf2)),
+			AssistDebug(Acf2).AssistanceReason == EACFCameraAssistanceReason::BelowSpeed && FMath::IsNearlyEqual(AcfYaw(Acf2), 0.f, 1e-3f));
+		// Suppression by a source of player 1 only; manual input still works.
+		S.ActorC = SpawnPoint(S, Base + FVector(0.f, 0.f, 500.f));
+		S.Acf->SuppressCameraAssistance(S.ActorC.Get());
+		S.Acf->SuppressCameraAssistance(S.ActorC.Get());
+		S.Value = AcfYaw(S.Acf.Get());
+		return true;
+	});
+	MoveFor(Steps, 30, Along(90.f, 400.f));
+	Steps.Add([SecondAcf](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Same source twice: one suppression"), S.Acf->GetDirector()->GetNumAssistanceSuppressions(), 1);
+		S.Test->TestTrue(FString::Printf(TEXT("Suppressed: yaw held (%s)"), *DescribeAssist(S.Acf.Get())),
+			AssistDebug(S.Acf.Get()).AssistanceReason == EACFCameraAssistanceReason::SuppressedBySource && FMath::IsNearlyEqual(AcfYaw(S.Acf.Get()), static_cast<float>(S.Value), 1e-3f));
+		S.Test->TestFalse(TEXT("Player 2 not suppressed by player 1's source"), SecondAcf(S)->IsCameraAssistanceSuppressed());
+		S.Acf->AddCameraInput(FVector2D(5.0, 0.0));
+		S.bAssistInputThisFrame = true;
+		return true;
+	});
+	WaitFrames(Steps, 1);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(FString::Printf(TEXT("Manual input works while assistance is suppressed (%.3f -> %.3f)"), S.Value, AcfYaw(S.Acf.Get())),
+			FMath::IsNearlyEqual(FRotator::NormalizeAxis(AcfYaw(S.Acf.Get()) - static_cast<float>(S.Value)), 5.f, 1e-2f));
+		S.ActorC->Destroy(); // the source goes away without releasing
+		return true;
+	});
+	MoveFor(Steps, 2, Along(90.f, 400.f));
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestFalse(TEXT("Destroyed source: suppression released"), S.Acf->IsCameraAssistanceSuppressed());
+		S.Test->TestTrue(FString::Printf(TEXT("Released: waits again (%s)"), *DescribeAssist(S.Acf.Get())), AssistDebug(S.Acf.Get()).AssistanceReason == EACFCameraAssistanceReason::RecenterDelay);
+		// PCM recreated while a source suppresses: the suppression belongs to the source, not to the PCM.
+		S.ActorC = SpawnPoint(S, Base + FVector(0.f, 0.f, 600.f));
+		S.Acf->SuppressCameraAssistance(S.ActorC.Get());
+		APlayerCameraManager* Old = S.PCM();
+		S.OldCameraManager = Old;
+		S.Controller->SpawnPlayerCameraManager();
+		if (S.PCM() != Old)
+		{
+			Old->Destroy();
+		}
+		return S.Test->TestTrue(TEXT("A new PCM"), S.PCM() != S.OldCameraManager.Get());
+	});
+	MoveFor(Steps, 20, Along(90.f, 400.f));
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("New PCM: still suppressed by the source"), S.Acf->IsCameraAssistanceSuppressed()
+			&& AssistDebug(S.Acf.Get()).AssistanceReason == EACFCameraAssistanceReason::SuppressedBySource);
+		S.Test->TestNotNull(TEXT("New PCM: ACF output attached"), S.PCM()->FindCameraModifierByClass(UACFCameraOutputModifier::StaticClass()));
+		S.Test->TestTrue(TEXT("Release"), S.Acf->ReleaseCameraAssistanceSuppression(S.ActorC.Get()));
+		S.Value = AcfYaw(S.Acf.Get());
+		return true;
+	});
+	MoveFor(Steps, 60, Along(150.f, 400.f)); // a 60 degree turn from about 90
+	Steps.Add([SecondAcf](FScenario& S)
+	{
+		S.Test->TestTrue(FString::Printf(TEXT("New PCM: assistance continues after the release (%.2f -> %s)"), S.Value, *DescribeAssist(S.Acf.Get())),
+			AcfYaw(S.Acf.Get()) > S.Value + 5.f && S.PCM()->GetCameraRotation().Yaw > static_cast<float>(S.Value) + 5.f);
+		// Player 2 holds a suppression and is removed: nothing of it reaches player 1.
+		SecondAcf(S)->SuppressCameraAssistance(S.ActorB.Get());
+		ACFTestEnvironment::RemoveLocalPlayer(S.SecondPlayer.Get());
+		return true;
+	});
+	MoveFor(Steps, 10, Along(150.f, 400.f));
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestFalse(TEXT("Player 2 removed: its local player is gone"), S.SecondPlayer.IsValid() && S.World()->GetGameInstance()->GetLocalPlayers().Contains(S.SecondPlayer.Get()));
+		S.Test->TestFalse(TEXT("Player 1 not suppressed by player 2's source"), S.Acf->IsCameraAssistanceSuppressed());
+		S.Test->TestTrue(FString::Printf(TEXT("Debugger matches the camera every frame (%d frames checked, %d mismatches)"), S.AssistChecked, S.AssistMismatches),
+			S.AssistChecked > 150 && S.AssistMismatches == 0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
+// Lock-On / Finisher（隠れていた Rig は進まず、戻った瞬間に回らない）・Combat 中も補助・Sequencer の Camera Cut 中は停止。
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistLockOnSequencerTest, "ActionCameraFramework.Sequencer.Assistance.LockOnFinisherCombatAndSequencer", ACFSeqTest::Flags)
+bool FACFAssistLockOnSequencerTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Mover = SpawnPoint(S, Base);
+		S.ActorB = SpawnPoint(S, Base + FVector(1500.f, 300.f, 0.f)); // enemy
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.Mover.Get();
+		S.AssistHandle = S.Acf->RequestCamera(MakeAssistPreset(S, /*bWithCombat*/ true), Params);
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	MoveFor(Steps, 60, Along(60.f, 400.f));
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(FString::Printf(TEXT("Assisting before the lock-on (%s)"), *DescribeAssist(S.Acf.Get())), AssistDebug(S.Acf.Get()).AssistanceState == EACFCameraAssistanceState::Assisting);
+		// Lock-On: a higher request with the Lock-On node (the orbit request stays, hidden).
+		UACFCameraPreset* LockOn = NewObject<UACFCameraPreset>(GetTransientPackage(), NAME_None, RF_Transient);
+		LockOn->Nodes.Add(NewObject<UACFCameraNode_LockOn>(LockOn));
+		LockOn->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		LockOn->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		S.Keep.Emplace(LockOn);
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.Mover.Get();
+		Params.LookAtTarget.Actor = S.ActorB.Get();
+		Params.Priority = 50;
+		S.Value = AcfYaw(S.Acf.Get());
+		S.Handle = S.Acf->RequestCamera(LockOn, Params);
+		return true;
+	});
+	MoveFor(Steps, 60, Along(60.f, 400.f));
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Lock-On in control"), S.Acf->IsActiveCamera(S.Handle));
+		S.Acf->ReleaseCamera(S.Handle);
+		return true;
+	});
+	WaitFrames(Steps, 1);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Orbit back after the lock-on"), S.Acf->IsActiveCamera(S.AssistHandle));
+		S.Test->TestTrue(FString::Printf(TEXT("No rotation jump on return (%.3f -> %.3f)"), S.Value, AcfYaw(S.Acf.Get())), FMath::IsNearlyEqual(AcfYaw(S.Acf.Get()), static_cast<float>(S.Value), 1e-3f));
+		S.Test->TestTrue(FString::Printf(TEXT("Waits from the start after the lock-on (%s)"), *DescribeAssist(S.Acf.Get())),
+			AssistDebug(S.Acf.Get()).AssistanceReason == EACFCameraAssistanceReason::RecenterDelay);
+		// Finisher (camera sequence, 0.5 s).
+		S.Value = AcfYaw(S.Acf.Get());
+		S.Finisher = S.Acf->GetDirector()->PlayFinisherPreset(MakeFixedPreset(S, CineLoc, CineRot, CineFov), S.Mover.Get(), S.ActorB.Get(), 0.5f,
+			FACFCameraBlendSettings::MakeCut(), FACFCameraBlendSettings::MakeCut(), 100);
+		return true;
+	});
+	MoveFor(Steps, 20, Along(60.f, 400.f));
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(TEXT("Finisher in control"), S.Acf->GetDirector()->IsSequencePlaying(S.Finisher) && !S.Acf->IsActiveCamera(S.AssistHandle));
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return !S.Acf->GetDirector()->IsSequencePlaying(S.Finisher) && S.Acf->IsActiveCamera(S.AssistHandle); });
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(FString::Printf(TEXT("After the finisher: no jump, waiting (%.3f -> %s)"), S.Value, *DescribeAssist(S.Acf.Get())),
+			FMath::IsNearlyEqual(AcfYaw(S.Acf.Get()), static_cast<float>(S.Value), 1e-3f) && AssistDebug(S.Acf.Get()).AssistanceState != EACFCameraAssistanceState::Assisting);
+		// Combat: the assistance keeps working (suppress it from game code if a combat should stop it).
+		FACFCameraCombatState Combat;
+		Combat.bInCombat = true;
+		S.Acf->GetDirector()->SetCombatState(Combat);
+		S.Value = AcfYaw(S.Acf.Get());
+		return true;
+	});
+	MoveFor(Steps, 90, Along(150.f, 400.f));
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(FString::Printf(TEXT("In combat: still assisting (%.2f -> %s)"), S.Value, *DescribeAssist(S.Acf.Get())),
+			AssistDebug(S.Acf.Get()).bHasCombat && AssistDebug(S.Acf.Get()).AssistanceState == EACFCameraAssistanceState::Assisting && AcfYaw(S.Acf.Get()) > S.Value + 5.f);
+		S.Acf->GetDirector()->SetCombatState(FACFCameraCombatState());
+		// Sequencer camera cut: ACF evaluates in the background (bypassed), the assistance stops.
+		S.ActorA = SpawnCineCamera(S, CineLoc, CineRot);
+		S.SequenceA = MakeSequence(S, S.ActorA.Get(), 1.0);
+		SetReturnBlend(S, 0.f);
+		Player(S.SequenceA)->Play();
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	Steps.Add([](FScenario& S) { S.Value = AcfYaw(S.Acf.Get()); return S.Test->TestTrue(TEXT("Sequencer camera on screen"), S.Acf->IsOutputBypassed()); });
+	MoveFor(Steps, 30, Along(-120.f, 400.f)); // a direction the camera would turn to (90 degrees off)
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(FString::Printf(TEXT("Sequencer: not assisted while bypassed (%.3f -> %s)"), S.Value, *DescribeAssist(S.Acf.Get())),
+			AssistDebug(S.Acf.Get()).AssistanceReason == EACFCameraAssistanceReason::ViewNotShown && FMath::IsNearlyEqual(AcfYaw(S.Acf.Get()), static_cast<float>(S.Value), 1e-3f));
+		S.CameraNear(CineLoc, 0.1, TEXT("Sequencer camera shown"));
+		return true;
+	});
+	RetryUntil(Steps, [](FScenario& S) { return !S.Acf->IsOutputBypassed(); });
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(FString::Printf(TEXT("After the sequence: waits from the start (%s)"), *DescribeAssist(S.Acf.Get())),
+			AssistDebug(S.Acf.Get()).AssistanceState != EACFCameraAssistanceState::Assisting && FMath::IsNearlyEqual(AcfYaw(S.Acf.Get()), static_cast<float>(S.Value), 1e-3f));
+		return true;
+	});
+	MoveFor(Steps, 60, Along(-120.f, 400.f));
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestTrue(FString::Printf(TEXT("After the sequence: assisting again (%s)"), *DescribeAssist(S.Acf.Get())), AssistDebug(S.Acf.Get()).AssistanceState == EACFCameraAssistanceState::Assisting);
+		S.Test->TestTrue(FString::Printf(TEXT("Debugger matches the camera every frame (%d frames checked, %d mismatches)"), S.AssistChecked, S.AssistMismatches),
+			S.AssistChecked > 100 && S.AssistMismatches == 0);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+#endif // !UE_BUILD_SHIPPING
 
 #endif // WITH_DEV_AUTOMATION_TESTS

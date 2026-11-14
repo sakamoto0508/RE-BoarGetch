@@ -33,6 +33,51 @@ struct FACFCameraTransitionInfo
 	float SuppressionDuration = 0.f;
 };
 
+/**
+ * Sources of a per-player request that several systems can hold at the same time (output suppression, camera assistance
+ * suppression). Keyed weakly: a source counts once however often it is added, a destroyed (or garbage) source no longer
+ * counts, and a new object created at the address of a destroyed one is a different source (TWeakObjectPtr compares
+ * the object serial number, never just the address).
+ */
+struct ACTIONCAMERAFRAMEWORK_API FACFCameraSourceSet
+{
+	/** False for null or a source that is already in the set. */
+	bool Add(const UObject* Source)
+	{
+		if (!Source || Contains(Source))
+		{
+			return false;
+		}
+		Sources.Emplace(Source);
+		return true;
+	}
+	/** False if the source is not in the set. */
+	bool Remove(const UObject* Source)
+	{
+		return Source && Sources.RemoveAll([Source](const TWeakObjectPtr<const UObject>& Entry) { return Entry.Get(/*bEvenIfGarbage*/ true) == Source; }) > 0;
+	}
+	bool Contains(const UObject* Source) const
+	{
+		return Source && Sources.ContainsByPredicate([Source](const TWeakObjectPtr<const UObject>& Entry) { return Entry.Get(/*bEvenIfGarbage*/ true) == Source; });
+	}
+	/** Drops destroyed (or garbage) sources. True if any dropped. */
+	bool Prune()
+	{
+		return Sources.RemoveAll([](const TWeakObjectPtr<const UObject>& Entry) { return !Entry.IsValid(); }) > 0;
+	}
+	/**
+	 * Prune() and also sources that belong to a World that is cleaned up / tearing down (destroyed, PIE end, map travel:
+	 * before GC makes them invalid) or, when World is given, to another World than World. True if any dropped.
+	 */
+	bool PruneWorld(const UWorld* World);
+	int32 Num() const { return Sources.Num(); }
+	bool IsEmpty() const { return Sources.IsEmpty(); }
+	void Reset() { Sources.Reset(); }
+
+private:
+	TArray<TWeakObjectPtr<const UObject>, TInlineAllocator<2>> Sources;
+};
+
 /** Hard position constraint of the camera in control, kept between frames for the final output guard. */
 struct FACFCameraOutputConstraint
 {
@@ -184,6 +229,17 @@ public:
 
 	/** 現在の抑制要求の数（Source ごとに 1 つ。同じ Source の重複は数えない）。 */
 	int32 GetNumOutputSuppressions() const { return SuppressionSources.Num(); }
+
+	/**
+	 * Phase 7B-1: stops camera assistance (Orbital Follow Movement Assistance) of this player while at least one source holds
+	 * it; manual camera input is never affected. Same source rules as SuppressOutput: weak (a destroyed source releases), a
+	 * source counts once, sources of another World are dropped when the player's camera moves to a new World. When the last
+	 * one is released, the assistance restarts with its waits (Recenter Delay, Required Movement Duration).
+	 */
+	void SuppressAssistance(const UObject* Source);
+	bool ReleaseAssistanceSuppression(const UObject* Source);
+	bool IsAssistanceSuppressed() const { return AssistanceSuppressionSources.Num() > 0; }
+	int32 GetNumAssistanceSuppressions() const { return AssistanceSuppressionSources.Num(); }
 
 	/**
 	 * 画面を ACF 以外が握っているか（出力抑制中、または直前の評価が出力バイパス）。
@@ -386,7 +442,7 @@ private:
 	void BeginTransition(int32 NewActiveIndex, const FACFCameraEvaluationContext& Context);
 	float AdvanceTransition(float DeltaTime);
 	void EndTransition();
-	FACFCameraPose EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context, FACFCameraRigScratch& OutScratch);
+	FACFCameraPose EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context, FACFCameraRigScratch& OutScratch, bool bInControl);
 	void StartSuppressionFade(float BlendTime);
 	FACFCameraRequestHandle ResolveTuningHandle(FACFCameraRequestHandle Handle) const { return Handle.IsValid() ? Handle : ActiveHandle; }
 	FACFCameraTuningSession* FindTuningSession(FACFCameraRequestHandle Handle);
@@ -440,7 +496,9 @@ private:
 	UPROPERTY()
 	FACFCameraEvaluationResult LastResult;
 
-	TArray<TWeakObjectPtr<const UObject>> SuppressionSources;
+	FACFCameraSourceSet SuppressionSources;
+	/** Phase 7B-1: Suppress Camera Assistance. */
+	FACFCameraSourceSet AssistanceSuppressionSources;
 	float PendingSuppressionBlendTime = 0.f;
 	bool bSuppressionDirty = false;
 

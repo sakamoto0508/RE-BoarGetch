@@ -365,6 +365,65 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraCombatState
 	FACFCameraCombatProfile Profile;
 };
 
+/** Phase 7B-1: what the Orbital Follow recenter turns the camera towards (README 29 章). */
+UENUM(BlueprintType)
+enum class EACFCameraRecenterHeading : uint8
+{
+	/** Behind the follow target (its facing + Initial Yaw). The recenter of Phase 2; the default. */
+	TargetFacing,
+	/** Along the horizontal movement direction of the follow target (+ Initial Yaw). Needs Movement Assistance. */
+	MovementDirection,
+};
+
+/** Phase 7B-1: state of the movement assistance of an Orbital Follow (debugger / tests). */
+UENUM(BlueprintType)
+enum class EACFCameraAssistanceState : uint8
+{
+	/** Off, or cannot work with this configuration (see the reason). */
+	Disabled,
+	/** Allowed, but its start conditions are not met yet (delay, speed, duration, direction). */
+	Waiting,
+	/** Turning the camera (or holding it aligned with the heading). */
+	Assisting,
+	/** Stopped by a higher priority: an explicit rotation, manual input, Suppress Camera Assistance, the view not being shown, another request in control. */
+	Suppressed,
+};
+
+/** Phase 7B-1: why the movement assistance does not turn the camera this frame (None while it turns). */
+UENUM(BlueprintType)
+enum class EACFCameraAssistanceReason : uint8
+{
+	None,
+	/** Enable Movement Assistance is off. */
+	NotEnabled,
+	/** Input Source = Control Rotation: the PlayerController owns the rotation (ACF does not write it). */
+	ControlRotationInput,
+	/** Heading Movement Direction with Follow Target Yaw: Follow Target Yaw has priority. */
+	FollowTargetYaw,
+	/** A setting is not finite, or Max Assistance Yaw Speed <= 0. */
+	InvalidSettings,
+	/** Set Orbit Rotation this frame. */
+	ExplicitRotation,
+	/** Camera input this frame. */
+	ManualInput,
+	/** Suppress Camera Assistance by at least one source. */
+	SuppressedBySource,
+	/** ACF's camera is not on screen: an external view target (Sequencer camera cut) or Suppress Output. */
+	ViewNotShown,
+	/** This rig is not the request in control (the outgoing camera of a blend, or a released one). */
+	NotInControl,
+	/** No blocker for Recenter Delay seconds yet. */
+	RecenterDelay,
+	/** Horizontal speed below the threshold (Start, or Stop while moving). */
+	BelowSpeed,
+	/** Moving, but not for Required Movement Duration seconds yet. */
+	MovementDuration,
+	/** The heading points towards the camera (inside Backward Exclusion Angle). */
+	MovingTowardCamera,
+	/** Within Angular Dead Zone of the heading: nothing to turn. */
+	Aligned,
+};
+
 /**
  * Everything gathered before evaluating cameras for one frame (stage 1 of the pipeline).
  * Stack-only; never stored, so raw pointers are fine here.
@@ -416,6 +475,12 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationContext
 	 * ACameraActor を映している等）ため、この評価結果は画面に出ない。内部状態を最新に保つための裏評価である。
 	 */
 	bool bOutputBypassed = false;
+
+	/** Phase 7B-1: filled by the director. Some source suppresses camera assistance (manual input is never suppressed). */
+	bool bAssistanceSuppressed = false;
+
+	/** Phase 7B-1: filled by the director. Some source suppresses ACF's output (Suppress Output): ACF is not what the player sees. */
+	bool bOutputSuppressed = false;
 };
 
 /**

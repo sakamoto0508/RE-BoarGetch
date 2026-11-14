@@ -3,6 +3,7 @@
 #include "ACFCameraPreset.h"
 #include "ACFCameraSettings.h"
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
+#include "Engine/World.h"
 
 namespace ACFDirector
 {
@@ -215,11 +216,10 @@ void UACFCameraDirector::SuppressOutput(const UObject* Source, float BlendTime)
 		UE_LOG(LogActionCamera, Warning, TEXT("SuppressOutput ignored: source is null."));
 		return;
 	}
-	if (SuppressionSources.Contains(Source))
+	if (!SuppressionSources.Add(Source))
 	{
-		return;
+		return; // already suppressing
 	}
-	SuppressionSources.Add(Source);
 	if (SuppressionSources.Num() == 1)
 	{
 		bSuppressionDirty = true;
@@ -230,7 +230,7 @@ void UACFCameraDirector::SuppressOutput(const UObject* Source, float BlendTime)
 
 bool UACFCameraDirector::ReleaseOutputSuppression(const UObject* Source, float BlendTime)
 {
-	if (SuppressionSources.Remove(Source) == 0)
+	if (!SuppressionSources.Remove(Source))
 	{
 		return false;
 	}
@@ -245,15 +245,57 @@ bool UACFCameraDirector::ReleaseOutputSuppression(const UObject* Source, float B
 
 void UACFCameraDirector::PruneLostSuppressionSources()
 {
-	const int32 Before = SuppressionSources.Num();
-	SuppressionSources.RemoveAll([](const TWeakObjectPtr<const UObject>& Source) { return !Source.IsValid(); });
-	if (Before > 0 && SuppressionSources.IsEmpty())
+	if (SuppressionSources.Prune() && SuppressionSources.IsEmpty())
 	{
 		// The owner (e.g. a sequence actor) vanished without releasing: hand control back at once.
 		bSuppressionDirty = true;
 		PendingSuppressionBlendTime = 0.f;
 		ACFDirector::LogEvent(TEXT("Output suppression released (source lost)"));
 	}
+}
+
+// -------------------------------------------------------------------------------------------------
+// Camera assistance suppression (Phase 7B-1)
+
+bool FACFCameraSourceSet::PruneWorld(const UWorld* World)
+{
+	return Sources.RemoveAll([World](const TWeakObjectPtr<const UObject>& Entry)
+	{
+		const UObject* Object = Entry.Get();
+		if (!Object)
+		{
+			return true;
+		}
+		const UWorld* SourceWorld = Object->GetWorld();
+		if (!SourceWorld)
+		{
+			return false; // not part of a World (subsystem, game instance, asset): only its own destruction releases
+		}
+		return !SourceWorld->IsInitialized() || SourceWorld->bIsTearingDown || (World && SourceWorld != World);
+	}) > 0;
+}
+
+void UACFCameraDirector::SuppressAssistance(const UObject* Source)
+{
+	if (!Source)
+	{
+		UE_LOG(LogActionCamera, Warning, TEXT("SuppressCameraAssistance ignored: source is null."));
+		return;
+	}
+	if (AssistanceSuppressionSources.Add(Source))
+	{
+		ACFDirector::LogEvent(FString::Printf(TEXT("SuppressCameraAssistance by %s (%d source(s))"), *GetNameSafe(Source), AssistanceSuppressionSources.Num()));
+	}
+}
+
+bool UACFCameraDirector::ReleaseAssistanceSuppression(const UObject* Source)
+{
+	if (!AssistanceSuppressionSources.Remove(Source))
+	{
+		return false;
+	}
+	ACFDirector::LogEvent(FString::Printf(TEXT("ReleaseCameraAssistanceSuppression by %s (%d source(s) left)"), *GetNameSafe(Source), AssistanceSuppressionSources.Num()));
+	return true;
 }
 
 void UACFCameraDirector::StartSuppressionFade(float BlendTime)
@@ -348,6 +390,13 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 		StartSuppressionFade(PendingSuppressionBlendTime);
 		bSuppressionDirty = false;
 	}
+	// Phase 7B-1: assistance suppression of destroyed sources / sources of another World ends here (nothing to fade).
+	if (!AssistanceSuppressionSources.IsEmpty() && AssistanceSuppressionSources.PruneWorld(Context.World))
+	{
+		ACFDirector::LogEvent(FString::Printf(TEXT("Camera assistance suppression: lost source(s) dropped (%d left)"), AssistanceSuppressionSources.Num()));
+	}
+	Context.bAssistanceSuppressed = !AssistanceSuppressionSources.IsEmpty();
+	Context.bOutputSuppressed = IsOutputSuppressed();
 	BestIndex = FindBestRequestIndex();
 	const FACFCameraRequestHandle BestHandle = BestIndex != INDEX_NONE ? Requests[BestIndex].Handle : FACFCameraRequestHandle();
 	if (BestHandle != ActiveHandle)
@@ -388,13 +437,13 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	if (BestIndex != INDEX_NONE)
 	{
 		TargetEntry = &Requests[BestIndex];
-		TargetPose = EvaluateEntry(*TargetEntry, Context, TargetScratch);
+		TargetPose = EvaluateEntry(*TargetEntry, Context, TargetScratch, /*bInControl*/ true);
 	}
 	else if (LiveSource)
 	{
 		// Blending back to UE with a live source: the released camera keeps moving while it fades.
 		TargetEntry = LiveSource;
-		TargetPose = EvaluateEntry(*LiveSource, Context, TargetScratch);
+		TargetPose = EvaluateEntry(*LiveSource, Context, TargetScratch, /*bInControl*/ false); // released: no assistance
 	}
 	else
 	{
@@ -407,7 +456,7 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	if (bBlendingPose)
 	{
 		const bool bLiveBlend = LiveSource && LiveSource != TargetEntry;
-		const FACFCameraPose SourcePose = bLiveBlend ? EvaluateEntry(*LiveSource, Context, SourceScratch) : Transition.FromPose;
+		const FACFCameraPose SourcePose = bLiveBlend ? EvaluateEntry(*LiveSource, Context, SourceScratch, /*bInControl*/ false) : Transition.FromPose;
 		Result.Pose = FACFCameraPose::Blend(SourcePose, TargetPose, Alpha);
 		if (bLiveBlend && SourceScratch.bHasPivot && TargetScratch.bHasPivot)
 		{
@@ -542,11 +591,12 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	return LastResult;
 }
 
-FACFCameraPose UACFCameraDirector::EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context, FACFCameraRigScratch& OutScratch)
+FACFCameraPose UACFCameraDirector::EvaluateEntry(FACFCameraRequestEntry& Entry, const FACFCameraEvaluationContext& Context, FACFCameraRigScratch& OutScratch, bool bInControl)
 {
 	ACF_PROFILE_SCOPE(RigEvaluate);
 	FACFCameraPose Pose = Context.UpstreamPose;
-	const FACFCameraNodeContext NodeContext(Context, Entry.Params);
+	FACFCameraNodeContext NodeContext(Context, Entry.Params);
+	NodeContext.bInControl = bInControl; // Phase 7B-1: only the request in control is assisted
 	Health.CurrentRequest = Entry.Handle; // node reports name this request
 	Entry.Rig.Evaluate(NodeContext, Pose);
 	OutScratch = NodeContext.Scratch;

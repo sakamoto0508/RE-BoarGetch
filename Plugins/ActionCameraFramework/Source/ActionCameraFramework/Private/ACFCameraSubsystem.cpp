@@ -448,6 +448,24 @@ int32 UACFCameraSubsystem::GetNumOutputSuppressions() const
 	return Director ? Director->GetNumOutputSuppressions() : 0;
 }
 
+void UACFCameraSubsystem::SuppressCameraAssistance(UObject* Source)
+{
+	if (Director)
+	{
+		Director->SuppressAssistance(Source);
+	}
+}
+
+bool UACFCameraSubsystem::ReleaseCameraAssistanceSuppression(UObject* Source)
+{
+	return Director && Director->ReleaseAssistanceSuppression(Source);
+}
+
+bool UACFCameraSubsystem::IsCameraAssistanceSuppressed() const
+{
+	return Director && Director->IsAssistanceSuppressed();
+}
+
 bool UACFCameraSubsystem::IsOutputBypassed() const
 {
 	return Director && Director->GetLastResult().bOutputBypassed;

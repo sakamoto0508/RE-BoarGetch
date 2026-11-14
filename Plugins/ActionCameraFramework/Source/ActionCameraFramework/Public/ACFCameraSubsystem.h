@@ -229,6 +229,22 @@ public:
 	int32 GetNumOutputSuppressions() const;
 
 	/**
+	 * Phase 7B-1 (README 29 章): stops camera assistance (Orbital Follow Movement Assistance) of this player while held, e.g.
+	 * during aiming, a menu or a scripted moment. Manual camera input keeps working. Keyed by Source like Suppress Output:
+	 * a source counts once, destroying it releases, several sources stack; sources of another World are dropped when the
+	 * camera moves to a new World. After the last release the assistance starts again only after its waits.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Assistance", meta = (DefaultToSelf = "Source", DisplayName = "Suppress ACF Camera Assistance"))
+	void SuppressCameraAssistance(UObject* Source);
+
+	/** False if Source does not suppress assistance. */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Assistance", meta = (DefaultToSelf = "Source", DisplayName = "Release ACF Camera Assistance Suppression"))
+	bool ReleaseCameraAssistanceSuppression(UObject* Source);
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Assistance", meta = (DisplayName = "Is ACF Camera Assistance Suppressed"))
+	bool IsCameraAssistanceSuppressed() const;
+
+	/**
 	 * 現在の ViewTarget が Camera Modifier を通さないため、ACF の結果が画面に出ていないか
 	 * （Sequencer の Camera Cut が Camera Actor を映している間など）。この間も ACF は裏で評価を続ける。
 	 */

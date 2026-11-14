@@ -144,6 +144,7 @@ namespace ACFProfileScenarios
 		TArray<FScenarioDef> Scenarios;
 		TArray<TArray<FRunData>> Results; // [scenario][run]; last run = allocation run
 		TArray<TArray<FString>> AllocationSites;
+		TArray<FString> PoseLines; // Phase 7B-1: poses of the first run of the current scenario
 		FString OverheadText;
 		EPhase Phase = EPhase::Init;
 		int32 ScenarioIndex = 0;
@@ -228,6 +229,9 @@ namespace ACFProfileScenarios
 		if (RunIndex == 0)
 		{
 			FFileHelper::SaveStringToFile(ACFCameraProfiling::BuildCsv(P1), *(FPaths::ProjectSavedDir() / TEXT("ACFProfile") / FString::Printf(TEXT("B1_%s_run1.csv"), *Scenarios[ScenarioIndex].Name)));
+			PoseLines.Insert(TEXT("Frame,AcfX,AcfY,AcfZ,AcfPitch,AcfYaw,AcfRoll,AcfFov,Weight,ViewX,ViewY,ViewZ,ViewPitch,ViewYaw,ViewRoll,ViewFov"), 0);
+			FFileHelper::SaveStringArrayToFile(PoseLines, *(FPaths::ProjectSavedDir() / TEXT("ACFProfile") / FString::Printf(TEXT("B1_%s_pose.csv"), *Scenarios[ScenarioIndex].Name)));
+			PoseLines.Reset();
 		}
 	}
 
@@ -751,6 +755,16 @@ namespace ACFProfileScenarios
 				if (D->GetLastDebug().bCollisionHit) // collision frequency of the recorded frames (debug data of the last evaluation)
 				{
 					++CollisionHits;
+				}
+				if (RunIndex == 0 && PC.IsValid() && PC->PlayerCameraManager)
+				{
+					// Phase 7B-1: the poses of the first run (ACF result and rendered camera of the previous frame), full precision,
+					// so two builds can be compared value by value (B1_<scenario>_pose.csv).
+					const FACFCameraPose& P = D->GetLastResult().Pose;
+					const FMinimalViewInfo& V = PC->PlayerCameraManager->GetCameraCacheView();
+					PoseLines.Add(FString::Printf(TEXT("%d,%.17g,%.17g,%.17g,%.9g,%.9g,%.9g,%.9g,%.9g,%.17g,%.17g,%.17g,%.9g,%.9g,%.9g,%.9g"), FrameIndex - WarmupFrames,
+						P.Location.X, P.Location.Y, P.Location.Z, P.Rotation.Pitch, P.Rotation.Yaw, P.Rotation.Roll, P.FieldOfView, D->GetLastResult().Weight,
+						V.Location.X, V.Location.Y, V.Location.Z, V.Rotation.Pitch, V.Rotation.Yaw, V.Rotation.Roll, V.FOV));
 				}
 			}
 			if (CountQualifying() >= RecordFrames)

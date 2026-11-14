@@ -356,6 +356,61 @@ namespace ACFPresetValidationPrivate
 			LOCTEXT("ZeroDistanceFix", "Give the camera a distance from what it frames."), Property);
 	}
 
+	/**
+	 * Phase 7B-1: Orbital Follow movement assistance. Single values (negative speeds / times, angles outside 0..180, NaN) are
+	 * reported by FParameterWalker from the property metadata; these are the relations and the combinations that cannot work.
+	 */
+	void ValidateMovementAssistance(const FCollector& C, const UACFCameraNode_OrbitalFollow& Orbit, int32 Index)
+	{
+		if (!Orbit.bEnableMovementAssistance)
+		{
+			if (Orbit.RecenterHeading == EACFCameraRecenterHeading::MovementDirection && Orbit.bRecenterWhenIdle)
+			{
+				C.Add(ESeverity::Warning, TEXT("ACF.Assist.HeadingNeedsAssistance"), &Orbit, Index,
+					LOCTEXT("AssistHeadingOff", "Recenter Heading is Movement Direction but Enable Movement Assistance is off: the idle recenter turns behind the target (Target Facing)."),
+					LOCTEXT("AssistHeadingOffFix", "Turn on Enable Movement Assistance, or set Recenter Heading to Target Facing."), TEXT("RecenterHeading"));
+			}
+			return;
+		}
+		if (FMath::IsFinite(Orbit.StopSpeedThreshold) && FMath::IsFinite(Orbit.StartSpeedThreshold) && Orbit.StopSpeedThreshold > Orbit.StartSpeedThreshold)
+		{
+			C.Add(ESeverity::Warning, TEXT("ACF.Assist.ThresholdsInverted"), &Orbit, Index,
+				FText::Format(LOCTEXT("AssistThresholds", "Stop Speed Threshold ({0}) is above Start Speed Threshold ({1}): there is no hysteresis (Start Speed Threshold is used for stopping too), so a speed near it can start and stop the assistance every frame."),
+					FText::AsNumber(Orbit.StopSpeedThreshold), FText::AsNumber(Orbit.StartSpeedThreshold)),
+				LOCTEXT("AssistThresholdsFix", "Make Stop Speed Threshold smaller than Start Speed Threshold."), TEXT("StartSpeedThreshold / StopSpeedThreshold"));
+		}
+		if (FMath::IsFinite(Orbit.MaxAssistanceYawSpeed) && Orbit.MaxAssistanceYawSpeed <= 0.f)
+		{
+			C.Add(ESeverity::Error, TEXT("ACF.Assist.NoYawSpeed"), &Orbit, Index,
+				FText::Format(LOCTEXT("AssistNoSpeed", "Max Assistance Yaw Speed is {0}: the assistance can never turn the camera (it reports Invalid Settings)."), FText::AsNumber(Orbit.MaxAssistanceYawSpeed)),
+				LOCTEXT("AssistNoSpeedFix", "Use a positive speed (e.g. 90 deg/s)."), TEXT("MaxAssistanceYawSpeed"));
+		}
+		if (FMath::IsFinite(Orbit.BackwardExclusionAngle) && Orbit.BackwardExclusionAngle >= 180.f)
+		{
+			C.Add(ESeverity::Warning, TEXT("ACF.Assist.AlwaysExcluded"), &Orbit, Index,
+				LOCTEXT("AssistExcluded", "Backward Exclusion Angle is 180 or more: every heading counts as towards the camera, so the assistance never turns it."),
+				LOCTEXT("AssistExcludedFix", "Use an angle well below 180 (e.g. 45)."), TEXT("BackwardExclusionAngle"));
+		}
+		if (FMath::IsFinite(Orbit.AngularDeadZone) && FMath::IsFinite(Orbit.BackwardExclusionAngle) && Orbit.AngularDeadZone >= 180.f - FMath::Clamp(Orbit.BackwardExclusionAngle, 0.f, 180.f))
+		{
+			C.Add(ESeverity::Warning, TEXT("ACF.Assist.DeadZoneCoversAll"), &Orbit, Index,
+				LOCTEXT("AssistDeadZone", "Angular Dead Zone covers every heading the assistance accepts (180 - Backward Exclusion Angle): it never turns the camera."),
+				LOCTEXT("AssistDeadZoneFix", "Use a small dead zone (a few degrees)."), TEXT("AngularDeadZone"));
+		}
+		if (Orbit.InputSource == EACFCameraOrbitInputSource::ControlRotation)
+		{
+			C.Add(ESeverity::Warning, TEXT("ACF.Assist.ControlRotationInput"), &Orbit, Index,
+				LOCTEXT("AssistControlRotation", "Input Source is Control Rotation: the PlayerController owns the camera rotation and ACF does not write it, so Movement Assistance does nothing."),
+				LOCTEXT("AssistControlRotationFix", "Use Input Source Camera Input (feed the look input with Add Camera Input), or turn the control rotation in game code."), TEXT("InputSource"));
+		}
+		if (Orbit.RecenterHeading == EACFCameraRecenterHeading::MovementDirection && Orbit.bFollowTargetYaw)
+		{
+			C.Add(ESeverity::Warning, TEXT("ACF.Assist.FollowTargetYaw"), &Orbit, Index,
+				LOCTEXT("AssistFollowYaw", "Recenter Heading Movement Direction with Follow Target Yaw: Follow Target Yaw has priority and the movement assistance is disabled."),
+				LOCTEXT("AssistFollowYawFix", "Turn Follow Target Yaw off, or use Recenter Heading Target Facing."), TEXT("RecenterHeading / bFollowTargetYaw"));
+		}
+	}
+
 	/** Relations between parameters of one enabled node (single values are checked by FParameterWalker). */
 	void ValidateNodeSemantics(const FCollector& C, const UACFCameraNode& Node, int32 Index)
 	{
@@ -371,6 +426,7 @@ namespace ACFPresetValidationPrivate
 			{
 				CheckZeroDistance(C, Node, Index, TEXT("Distance"), LOCTEXT("OrbitZero", "Distance is 0: the camera sits on the pivot, so the orbit only rotates it (and Collision has no arm to sweep)."));
 			}
+			ValidateMovementAssistance(C, *Orbit, Index);
 		}
 		else if (const UACFCameraNode_LockOn* LockOn = Cast<UACFCameraNode_LockOn>(&Node))
 		{

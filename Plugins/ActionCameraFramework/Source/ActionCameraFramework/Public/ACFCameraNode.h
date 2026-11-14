@@ -74,6 +74,20 @@ struct FACFCameraRigDebug
 	FVector CollisionOrigin = FVector::ZeroVector;
 	FVector CollisionHit = FVector::ZeroVector;
 	FVector CollisionDesired = FVector::ZeroVector;
+	// Phase 7B-1: movement assistance of the Orbital Follow (plain values; the debugger formats them at UI rate).
+	bool bHasAssistance = false;
+	bool bAssistanceEnabled = false;
+	bool bAssistanceSuppressedBySource = false;
+	EACFCameraRecenterHeading AssistanceHeading = EACFCameraRecenterHeading::TargetFacing;
+	EACFCameraAssistanceState AssistanceState = EACFCameraAssistanceState::Disabled;
+	EACFCameraAssistanceReason AssistanceReason = EACFCameraAssistanceReason::NotEnabled;
+	bool bHasAssistanceTargetYaw = false;
+	float AssistanceTargetYaw = 0.f;
+	float AssistanceMovementSpeed = 0.f;
+	float AssistanceWaitTime = 0.f;
+	float AssistanceRecenterDelay = 0.f;
+	float AssistanceMovementTime = 0.f;
+	float AssistanceRequiredMovementTime = 0.f;
 };
 #endif
 
@@ -144,6 +158,13 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraNodeContext
 
 	/** Written by Body / Aim nodes, read by later nodes of the same rig evaluation. */
 	mutable FACFCameraRigScratch Scratch;
+
+	/**
+	 * Phase 7B-1: this rig belongs to the request in control (the active request, also while it blends in). False for the
+	 * outgoing camera of a blend and a released request blending out: they keep evaluating, but camera assistance does not
+	 * turn them. Set by the director.
+	 */
+	bool bInControl = true;
 
 	float GetDeltaTime() const { return Evaluation.DeltaTime; }
 };
