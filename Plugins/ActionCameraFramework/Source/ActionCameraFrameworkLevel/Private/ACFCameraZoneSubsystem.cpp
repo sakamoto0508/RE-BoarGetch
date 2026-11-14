@@ -59,6 +59,7 @@ void UACFCameraZoneSubsystem::Deinitialize()
 	ReleaseAllZoneRequests();
 	Zones.Reset();
 	Players.Reset();
+	SuppressionSources.Reset();
 	Super::Deinitialize();
 }
 
@@ -184,6 +185,9 @@ UACFCameraZoneComponent* UACFCameraZoneSubsystem::FindCandidate(const FPlayerSta
 	{
 		return nullptr;
 	}
+#if !UE_BUILD_SHIPPING
+	const uint64 GeometryStart = bRecordCost ? FPlatformTime::Cycles64() : 0;
+#endif
 	// Only zones that contain the point (or the selected one within its margin) become candidates; the others cannot win.
 	TArray<FACFCameraZoneCandidate, TInlineAllocator<16>> Candidates;
 	TArray<UACFCameraZoneComponent*, TInlineAllocator<16>> Owners;
@@ -208,7 +212,20 @@ UACFCameraZoneComponent* UACFCameraZoneSubsystem::FindCandidate(const FPlayerSta
 		Candidates.Add(MoveTemp(Candidate));
 		Owners.Add(Zone);
 	}
+#if !UE_BUILD_SHIPPING
+	const uint64 ResolverStart = bRecordCost ? FPlatformTime::Cycles64() : 0;
+#endif
 	const int32 Winner = ACFCameraZoneResolver::Resolve(Candidates);
+#if !UE_BUILD_SHIPPING
+	if (bRecordCost)
+	{
+		const uint64 End = FPlatformTime::Cycles64();
+		Cost.GeometryCycles += ResolverStart - GeometryStart;
+		Cost.ResolverCycles += End - ResolverStart;
+		Cost.ZonesTested += Zones.Num();
+		Cost.Candidates += Candidates.Num();
+	}
+#endif
 	return Winner != INDEX_NONE ? Owners[Winner] : nullptr;
 }
 
@@ -265,9 +282,24 @@ void UACFCameraZoneSubsystem::Resolve(FPlayerState& State, EResolveMode Mode, fl
 		if (Candidate != Previous || bSelectedInvalid)
 		{
 			OnZoneSelectionChanged.Broadcast(State.Player.Get(), Previous, Candidate);
+			if (OnZoneChanged.IsBound())
+			{
+				ULocalPlayer* Player = State.Player.Get();
+				OnZoneChanged.Broadcast(Player ? Player->GetPlayerController(GetWorld()) : nullptr, Previous, Candidate);
+			}
 		}
 	}
+#if !UE_BUILD_SHIPPING
+	const uint64 RequestStart = bRecordCost ? FPlatformTime::Cycles64() : 0;
+#endif
 	SyncRequest(State, /*bCut*/ bCommit && Mode == EResolveMode::Teleport);
+#if !UE_BUILD_SHIPPING
+	if (bRecordCost)
+	{
+		Cost.RequestCycles += FPlatformTime::Cycles64() - RequestStart;
+		++Cost.Updates;
+	}
+#endif
 }
 
 void UACFCameraZoneSubsystem::SyncRequest(FPlayerState& State, bool bCut)
@@ -315,7 +347,60 @@ void UACFCameraZoneSubsystem::SyncRequest(FPlayerState& State, bool bCut)
 	Context.Priority = Settings->ZoneRequestPriority;
 	Context.RetryDelay = Settings->RequestRetryDelay;
 	Context.RetryMaxDelay = Settings->RequestRetryMaxDelay;
-	State.Request.Update(Context, State.Selected.Get());
+	// 7C-3B: while zone requests are suppressed, the request follows "no zone" (released; the selection goes on).
+	State.Request.Update(Context, AreZoneRequestsSuppressed() ? nullptr : State.Selected.Get()); // a destroyed source no longer counts
+}
+
+bool UACFCameraZoneSubsystem::PruneSuppressionSources()
+{
+	return SuppressionSources.RemoveAll([](const TWeakObjectPtr<UObject>& Source) { return !Source.IsValid(); }) > 0;
+}
+
+void UACFCameraZoneSubsystem::SyncAllRequests()
+{
+	for (FPlayerState& State : Players)
+	{
+		if (State.Player.IsValid())
+		{
+			SyncRequest(State);
+		}
+	}
+}
+
+void UACFCameraZoneSubsystem::SuppressZoneRequests(UObject* Source)
+{
+	PruneSuppressionSources();
+	if (!Source || SuppressionSources.Contains(Source))
+	{
+		return;
+	}
+	const bool bWasSuppressed = !SuppressionSources.IsEmpty();
+	SuppressionSources.Add(Source);
+	if (!bWasSuppressed)
+	{
+		SyncAllRequests(); // the zone requests go now
+	}
+}
+
+bool UACFCameraZoneSubsystem::ReleaseZoneRequestSuppression(UObject* Source)
+{
+	PruneSuppressionSources();
+	const bool bRemoved = Source && SuppressionSources.Remove(Source) > 0;
+	if (bRemoved && SuppressionSources.IsEmpty())
+	{
+		SyncAllRequests(); // the players in a zone get its camera again now
+	}
+	return bRemoved;
+}
+
+bool UACFCameraZoneSubsystem::AreZoneRequestsSuppressed() const
+{
+	return SuppressionSources.ContainsByPredicate([](const TWeakObjectPtr<UObject>& Source) { return Source.IsValid(); });
+}
+
+UACFCameraZoneComponent* UACFCameraZoneSubsystem::GetZoneOfPlayer(const APlayerController* PlayerController) const
+{
+	return PlayerController ? GetSelectedZone(PlayerController->GetLocalPlayer()) : nullptr;
 }
 
 void UACFCameraZoneSubsystem::ReleaseAllZoneRequests()
@@ -401,6 +486,7 @@ bool UACFCameraZoneSubsystem::GetPlayerDebug(const ULocalPlayer* Player, FACFCam
 	const UWorld* World = GetWorld();
 	Out.RetryIn = Request.IsWaitingForRetry() && World ? FMath::Max(0.0, Request.GetNextRetryTime() - World->GetRealTimeSeconds()) : 0.0;
 	Out.bTrackingView = Request.IsTrackingView();
+	Out.bRequestsSuppressed = AreZoneRequestsSuppressed();
 	return true;
 }
 
@@ -453,6 +539,23 @@ void UACFCameraZoneSubsystem::Tick(float DeltaTime)
 	{
 		return;
 	}
+	// A destroyed suppression source releases its suppression (the requests come back with this frame's update).
+	PruneSuppressionSources();
+#if !UE_BUILD_SHIPPING
+	// ACF.Zone.Profile: the cost of this frame's updates goes into the running measurement.
+	const uint64 TickStart = ProfileFramesLeft > 0 ? FPlatformTime::Cycles64() : 0;
+	ON_SCOPE_EXIT
+	{
+		if (ProfileFramesLeft > 0)
+		{
+			ProfileTickCycles.Add(FPlatformTime::Cycles64() - TickStart);
+			if (--ProfileFramesLeft == 0)
+			{
+				ReportProfile();
+			}
+		}
+	};
+#endif
 	const TArray<ULocalPlayer*>& LocalPlayers = GameInstance->GetLocalPlayers();
 	for (ULocalPlayer* Player : LocalPlayers)
 	{
@@ -503,6 +606,32 @@ void UACFCameraZoneSubsystem::Tick(float DeltaTime)
 }
 
 #if !UE_BUILD_SHIPPING
+void UACFCameraZoneSubsystem::StartProfile(int32 Frames)
+{
+	ProfileFramesLeft = FMath::Clamp(Frames, 1, 100000);
+	ProfileTickCycles.Reset(ProfileFramesLeft);
+	SetCostRecording(true);
+	UE_LOG(LogTemp, Display, TEXT("ACF.Zone.Profile: measuring the next %d frames of %s (%d zone(s), %d player(s))."), ProfileFramesLeft, *GetNameSafe(GetWorld()), GetNumZones(), GetNumPlayerStates());
+}
+
+void UACFCameraZoneSubsystem::ReportProfile()
+{
+	TArray<double> Us;
+	Us.Reserve(ProfileTickCycles.Num());
+	for (const uint64 Cycles : ProfileTickCycles)
+	{
+		Us.Add(FPlatformTime::ToMilliseconds64(Cycles) * 1000.0);
+	}
+	Us.Sort();
+	auto At = [&Us](double Fraction) { return Us.IsEmpty() ? 0.0 : Us[FMath::Clamp(FMath::FloorToInt32(Fraction * (Us.Num() - 1) + 0.5), 0, Us.Num() - 1)]; };
+	const double Updates = FMath::Max(Cost.Updates, 1);
+	auto PerUpdate = [Updates](uint64 Cycles) { return FPlatformTime::ToMilliseconds64(Cycles) * 1000.0 / Updates; };
+	UE_LOG(LogTemp, Display, TEXT("ACF.Zone.Profile: %d frames, %d zone(s): Tick p50 %.2f us, p95 %.2f us, max %.2f us (counters included). Per player update: geometry %.2f us (%.0f zones tested), resolver %.2f us (%.1f candidates), request %.2f us."),
+		Us.Num(), GetNumZones(), At(0.5), At(0.95), Us.IsEmpty() ? 0.0 : Us.Last(), PerUpdate(Cost.GeometryCycles), Cost.ZonesTested / Updates, PerUpdate(Cost.ResolverCycles), Cost.Candidates / Updates, PerUpdate(Cost.RequestCycles));
+	SetCostRecording(false);
+	ProfileTickCycles.Empty();
+}
+
 namespace ACFCameraZoneDebug
 {
 	// ACF.Zone.Status: the registered zones and each local player's selection in this World.
@@ -516,7 +645,7 @@ namespace ACFCameraZoneDebug
 		}
 		TArray<UACFCameraZoneComponent*> Zones;
 		Subsystem->GetZones(Zones);
-		UE_LOG(LogTemp, Display, TEXT("ACF.Zone.Status: %d zone(s) in %s"), Zones.Num(), *World->GetName());
+		UE_LOG(LogTemp, Display, TEXT("ACF.Zone.Status: %d zone(s) in %s%s"), Zones.Num(), *World->GetName(), Subsystem->AreZoneRequestsSuppressed() ? TEXT(", zone requests SUPPRESSED") : TEXT(""));
 		for (const UACFCameraZoneComponent* Zone : Zones)
 		{
 			UE_LOG(LogTemp, Display, TEXT("  %s: priority %d, %s, exit margin %.0f cm, enter / exit delay %.2f / %.2f s, volume %.3g cm3%s"), *GetNameSafe(Zone->GetOwner()), Zone->ZonePriority,
@@ -544,6 +673,17 @@ namespace ACFCameraZoneDebug
 			}
 		}
 	}
+
+		// ACF.Zone.Profile [Frames=300]: cost of the zone frame driver in this World over the next frames (Development builds).
+	static void Profile(const TArray<FString>& Args, UWorld* World)
+	{
+		if (UACFCameraZoneSubsystem* Subsystem = World ? World->GetSubsystem<UACFCameraZoneSubsystem>() : nullptr)
+		{
+			Subsystem->StartProfile(Args.IsValidIndex(0) ? FCString::Atoi(*Args[0]) : 300);
+		}
+	}
+	static FAutoConsoleCommandWithWorldAndArgs GProfileCmd(TEXT("ACF.Zone.Profile"), TEXT("Measure the Camera Zone frame driver over the next [Frames=300] frames (p50 / p95 / max, geometry / resolver / request)."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Profile));
 
 	static FAutoConsoleCommandWithWorld GStatusCmd(TEXT("ACF.Zone.Status"), TEXT("Camera Zones of this World and each local player's selected zone (Phase 7C)."),
 		FConsoleCommandWithWorldDelegate::CreateStatic(&Status));

@@ -12,8 +12,11 @@ struct ACTIONCAMERAFRAMEWORKLEVEL_API FACFCameraZoneCandidate
 	int32 Priority = 0;
 	/** World volume of the shape (cm^3): among equal priorities, the smaller (more specific) zone wins. */
 	double Volume = 0.0;
-	/** Final tie-break (the component's path name): unique, and the same in every run of the same map. */
-	FString StableKey;
+	/**
+	 * Final tie-break (the component's path name): unique, and the same in every run of the same map. A view, not a copy
+	 * (7C-3B: copying the string allocated in every frame); the string must outlive the Resolve call.
+	 */
+	FStringView StableKey;
 	/** The point (the pawn) is inside the shape. */
 	bool bInside = false;
 	/** The point is inside the shape grown by Exit Margin (only used for the current zone). */

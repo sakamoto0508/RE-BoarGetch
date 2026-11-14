@@ -361,6 +361,10 @@ FACFCameraDiagnosticsModel::FDebugView FACFCameraDiagnosticsModel::ReadDebug() c
 					R.ActiveRequest == Z.ZoneRequest ? TEXT("in control") : *FString::Printf(TEXT("below %s"), Active ? *FString::Printf(TEXT("%s (pri %d)"), *Active->DebugName.ToString(), Active->Priority) : TEXT("another camera")),
 					Z.bTrackingView ? TEXT(", follows the view until it is shown (Keep View)") : TEXT(""));
 			}
+			else if (Z.bRequestsSuppressed && Z.Selected.IsValid())
+			{
+				ZoneRequest = TEXT("none: zone requests are suppressed (Suppress ACF Camera Zone Requests)");
+			}
 			else if (Z.bRequestFailed)
 			{
 				ZoneRequest = TEXT("none: the selected zone has no Camera Preset");

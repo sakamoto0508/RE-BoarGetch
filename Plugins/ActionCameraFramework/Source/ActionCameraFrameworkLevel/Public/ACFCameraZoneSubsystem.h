@@ -9,6 +9,26 @@ class UACFCameraZoneComponent;
 class ULocalPlayer;
 class UACFCameraSubsystem;
 class AActor;
+class APlayerController;
+
+/** Phase 7C-3B (Blueprint): the selected zone of a local player changed. Either zone can be null (no zone). */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FACFCameraZoneChangedSignature, APlayerController*, PlayerController, UACFCameraZoneComponent*, PreviousZone, UACFCameraZoneComponent*, NewZone);
+
+#if !UE_BUILD_SHIPPING
+/** Phase 7C-3B: cost of the zone updates since ResetCost (measurement, development builds only; off by default). */
+struct FACFCameraZoneCost
+{
+	/** Point-in-shape tests of the registered zones (FindCandidate's loop). */
+	uint64 GeometryCycles = 0;
+	/** ACFCameraZoneResolver::Resolve over the candidates. */
+	uint64 ResolverCycles = 0;
+	/** The zone request of the player (FACFCameraZoneRequestState::Update and its director calls). */
+	uint64 RequestCycles = 0;
+	int32 Updates = 0;
+	int32 ZonesTested = 0;
+	int32 Candidates = 0;
+};
+#endif
 
 /** Phase 7C-3A: what the zone subsystem knows about one player, for the Debugger (read only, copied). */
 struct FACFCameraZonePlayerDebug
@@ -31,6 +51,8 @@ struct FACFCameraZonePlayerDebug
 	/** Seconds until the retry (real time), when waiting. */
 	double RetryIn = 0.0;
 	bool bTrackingView = false;
+	/** 7C-3B: zone requests are suppressed (Suppress Zone Requests): the selection goes on, no request is kept. */
+	bool bRequestsSuppressed = false;
 };
 
 /** Phase 7C-2A: one update of a player's zone (the frame driver fills everything; direct calls may set only Location). */
@@ -72,7 +94,7 @@ struct FACFCameraZonePlayerUpdate
  *   The request is released when the zone is left, disabled, destroyed or streamed out, when the player leaves this World
  *   or is removed, and when the World ends.
  */
-UCLASS()
+UCLASS(BlueprintType)
 class ACTIONCAMERAFRAMEWORKLEVEL_API UACFCameraZoneSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
@@ -81,6 +103,39 @@ public:
 	/** Native: (local player, previous zone, new zone); either can be null. Called when the selection changes. */
 	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnZoneSelectionChanged, ULocalPlayer*, UACFCameraZoneComponent*, UACFCameraZoneComponent*);
 	FOnZoneSelectionChanged OnZoneSelectionChanged;
+
+	/** 7C-3B (Blueprint): the selected zone of a local player changed (after Enter / Exit Delay; at once for teleports). */
+	UPROPERTY(BlueprintAssignable, Category = "Action Camera|Zone", meta = (DisplayName = "On ACF Camera Zone Changed"))
+	FACFCameraZoneChangedSignature OnZoneChanged;
+
+	/** 7C-3B (Blueprint): the zone the player is in (its selected zone), null if none. */
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Zone", meta = (DisplayName = "Get ACF Camera Zone"))
+	UACFCameraZoneComponent* GetZoneOfPlayer(const APlayerController* PlayerController) const;
+
+	/**
+	 * 7C-3B: while at least one source suppresses them, no zone camera is requested for any player (the zone requests are
+	 * released now: with the zone's Blend Out when on screen); the selection and the delays go on. When the last source is
+	 * released (or destroyed), the players in a zone get its camera again. Use it to stop zone cameras on purpose (a cut
+	 * scene, a menu) instead of releasing the zone request, which the zone subsystem requests again. A source counts once.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Zone", meta = (DefaultToSelf = "Source", DisplayName = "Suppress ACF Camera Zone Requests"))
+	void SuppressZoneRequests(UObject* Source);
+
+	UFUNCTION(BlueprintCallable, Category = "Action Camera|Zone", meta = (DefaultToSelf = "Source", DisplayName = "Release ACF Camera Zone Request Suppression"))
+	bool ReleaseZoneRequestSuppression(UObject* Source);
+
+	UFUNCTION(BlueprintPure, Category = "Action Camera|Zone", meta = (DisplayName = "Are ACF Camera Zone Requests Suppressed"))
+	bool AreZoneRequestsSuppressed() const;
+
+#if !UE_BUILD_SHIPPING
+	/** 7C-3B: measures the cost of the zone updates (FACFCameraZoneCost). Off by default; tests / ACF.Zone.Profile. */
+	void SetCostRecording(bool bEnabled) { bRecordCost = bEnabled; Cost = FACFCameraZoneCost(); }
+	/** ACF.Zone.Profile: measures the next Frames frame updates and logs the result. */
+	void StartProfile(int32 Frames);
+	bool IsRecordingCost() const { return bRecordCost; }
+	void ResetCost() { Cost = FACFCameraZoneCost(); }
+	const FACFCameraZoneCost& GetCost() const { return Cost; }
+#endif
 
 	//~ UWorldSubsystem
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
@@ -187,6 +242,19 @@ private:
 	/** Releases the player's zone request (no blend override) and forgets its selection. */
 	void ReleasePlayer(FPlayerState& State);
 
+	/** 7C-3B: suppression sources still alive (drops the destroyed ones; true if any changed). */
+	bool PruneSuppressionSources();
+	/** Brings every player's zone request in line (after the suppression changed). */
+	void SyncAllRequests();
+
 	TArray<TWeakObjectPtr<UACFCameraZoneComponent>> Zones;
 	TArray<FPlayerState> Players;
+	TArray<TWeakObjectPtr<UObject>> SuppressionSources;
+#if !UE_BUILD_SHIPPING
+	void ReportProfile();
+	bool bRecordCost = false;
+	mutable FACFCameraZoneCost Cost;
+	int32 ProfileFramesLeft = 0;
+	TArray<uint64> ProfileTickCycles;
+#endif
 };

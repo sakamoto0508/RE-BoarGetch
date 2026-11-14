@@ -4,6 +4,7 @@
 
 #if !UE_BUILD_SHIPPING
 
+#include "ACFCameraSubsystem.h"
 #include "ACFCameraTypes.h"
 #include "ACFCameraZone.h"
 #include "ACFCameraZoneComponent.h"
@@ -12,6 +13,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "Engine/LocalPlayer.h"
 #include "HAL/IConsoleManager.h"
 
 namespace ACFCameraZoneSample
@@ -92,6 +94,12 @@ namespace ACFCameraZoneSample
 			}
 			Pawn->TeleportTo(Where, Facing);
 			PC->SetControlRotation(FRotator(-15.0, Facing.Yaw, 0.0));
+			// What a game does after a teleport (7C-3B): the cameras drop their history, and the zone subsystem resolves the
+			// zone at once with a cut (also for short jumps below Teleport Distance).
+			if (UACFCameraSubsystem* Acf = PC->GetLocalPlayer() ? PC->GetLocalPlayer()->GetSubsystem<UACFCameraSubsystem>() : nullptr)
+			{
+				Acf->NotifyTeleport(true);
+			}
 			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Zone Go: %s at %s. Walk west into the Plaza; the Corridor runs along the south wall, the Alcove is the north-west corner."),
 				*Pawn->GetName(), *Where.ToCompactString());
 		}

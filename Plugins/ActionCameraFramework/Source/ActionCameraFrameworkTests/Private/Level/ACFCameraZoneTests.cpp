@@ -46,7 +46,7 @@ namespace ACFZoneTests
 	inline FString Winner(TConstArrayView<FACFCameraZoneCandidate> Candidates)
 	{
 		const int32 Index = ACFCameraZoneResolver::Resolve(Candidates);
-		return Index == INDEX_NONE ? FString(TEXT("<none>")) : Candidates[Index].StableKey;
+		return Index == INDEX_NONE ? FString(TEXT("<none>")) : FString(Candidates[Index].StableKey);
 	}
 
 	/** A box zone for the pure simulation: transform, extent, priority, margin. */
@@ -77,7 +77,7 @@ namespace ACFZoneTests
 			Candidates.Add(C);
 		}
 		const int32 Index = ACFCameraZoneResolver::Resolve(Candidates);
-		Current = Index == INDEX_NONE ? FString() : Candidates[Index].StableKey;
+		Current = Index == INDEX_NONE ? FString() : FString(Candidates[Index].StableKey);
 		return Current;
 	}
 }

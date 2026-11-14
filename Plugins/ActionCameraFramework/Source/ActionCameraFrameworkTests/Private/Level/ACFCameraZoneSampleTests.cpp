@@ -44,6 +44,9 @@ namespace ACFZoneSampleTests
 		bool bSawPending = false;
 		bool bSawBypass = false;
 		int32 MaxZoneRequests = 0;
+		/** The rendered view while the plaza camera was in control (the last one seen). */
+		FRotator LastPlazaView = FRotator::ZeroRotator;
+		double Yaw() const { return Controller->PlayerCameraManager->GetCameraRotation().Yaw; }
 
 		APawn* Pawn() const { return Controller.IsValid() ? Controller->GetPawn() : nullptr; }
 		ULocalPlayer* Player() const { return Controller.IsValid() ? Controller->GetLocalPlayer() : nullptr; }
@@ -81,6 +84,10 @@ namespace ACFZoneSampleTests
 			bSawPending |= Zones->GetPendingZone(Player(), Pending, Elapsed);
 			bSawBypass |= Result().bOutputBypassed;
 			MaxZoneRequests = FMath::Max(MaxZoneRequests, NumZoneRequests());
+			if (Is(TEXT("Plaza")) && Result().ActiveRequest == ZoneRequest() && !Result().bIsBlending && Controller->PlayerCameraManager)
+			{
+				LastPlazaView = Controller->PlayerCameraManager->GetCameraRotation();
+			}
 		}
 
 		bool Wait(double Seconds)
@@ -291,6 +298,36 @@ bool FACFZoneSampleTest::RunTest(const FString& Parameters)
 		F.Test->TestTrue(TEXT("Alcove selected (higher priority inside the plaza)"), F.Is(TEXT("Alcove")));
 		F.Test->TestTrue(TEXT("Alcove camera in control"), F.Result().ActiveRequest == F.ZoneRequest());
 		F.Test->TestEqual(TEXT("Never more than one zone request"), F.MaxZoneRequests, 1);
+		// Keep View (the sample alcove): its close orbit starts from the plaza camera's view.
+		F.Test->TestTrue(FString::Printf(TEXT("Keep View: alcove yaw %.1f == plaza view yaw %.1f"), F.Yaw(), F.LastPlazaView.Yaw), FMath::Abs(FRotator::NormalizeAxis(F.Yaw() - F.LastPlazaView.Yaw)) < 3.0);
+		return true;
+	});
+	// Use Camera Setting: the alcove orbit starts from its preset's Initial Rotation (the UE camera, here yaw 0).
+	Steps.Add([](FFlow& F) { return F.WalkTo(PlazaPoint); });
+	Steps.Add([](FFlow& F) { return F.Wait(1.2); });
+	Steps.Add([](FFlow& F)
+	{
+		F.Test->TestTrue(TEXT("Back in the plaza"), F.Is(TEXT("Plaza")));
+		GEngine->Exec(F.World.Get(), TEXT("ACF.Sample.Zone KeepView Off"));
+		F.Controller->SetControlRotation(FRotator(-15.0, 0.0, 0.0));
+		return true;
+	});
+	Steps.Add([](FFlow& F) { return F.WalkTo(AlcovePoint); });
+	Steps.Add([](FFlow& F) { return F.Wait(1.5); });
+	Steps.Add([](FFlow& F)
+	{
+		F.Test->TestTrue(TEXT("Alcove again"), F.Is(TEXT("Alcove")));
+		F.Test->TestTrue(FString::Printf(TEXT("Use Camera Setting: alcove yaw %.1f is not the plaza view yaw %.1f"), F.Yaw(), F.LastPlazaView.Yaw), FMath::Abs(FRotator::NormalizeAxis(F.Yaw() - F.LastPlazaView.Yaw)) > 20.0);
+		GEngine->Exec(F.World.Get(), TEXT("ACF.Sample.Zone KeepView On"));
+		// Teleport (ACF.Sample.Zone Go: NotifyTeleport) into the corridor: selected at once, a cut.
+		GEngine->Exec(F.World.Get(), TEXT("ACF.Sample.Zone Go Corridor"));
+		return true;
+	});
+	Steps.Add([](FFlow& F) { return F.Wait(0.1); });
+	Steps.Add([](FFlow& F)
+	{
+		F.Test->TestTrue(TEXT("Teleport: corridor at once (no Enter Delay)"), F.Is(TEXT("Corridor")) && F.Result().ActiveRequest == F.ZoneRequest());
+		F.Test->TestFalse(TEXT("Teleport: a cut (not the corridor's 0.8 s blend)"), F.Result().bIsBlending);
 		// Back to the start (a teleport out of the zones): the zone request goes.
 		F.Pawn()->TeleportTo(F.StartLocation, F.StartRotation);
 		return true;
