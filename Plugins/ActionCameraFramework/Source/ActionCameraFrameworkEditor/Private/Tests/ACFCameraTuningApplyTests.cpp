@@ -778,13 +778,23 @@ bool FACFTuningApplyPieTest::RunTest(const FString& Parameters)
 	{
 		TArray<FFlowStep> Steps;
 		Steps.Add([](FPieFlow& F) { return RequestOnPie(F); });
-		Steps.Add([](FPieFlow& F) { return GFrameCounter > F.MarkFrame + 5; });
+		Steps.Add([](FPieFlow& F)
+		{
+			// The camera is ACF's once the PCM has updated with the request (a few frames; more on a fresh editor, where
+			// the PIE viewport may not be updated yet in the first frames). Wait for it, up to 180 frames.
+			UWorld* World = nullptr;
+			ULocalPlayer* Player = nullptr;
+			APlayerCameraManager* PCM = FirstPiePcm(World, Player);
+			return GFrameCounter > F.MarkFrame + 180 || (GFrameCounter > F.MarkFrame + 5 && PCM && FMath::IsNearlyEqual(PCM->GetFOVAngle(), 55.f, 0.01f));
+		});
 		Steps.Add([](FPieFlow& F)
 		{
 			UWorld* World = nullptr;
 			ULocalPlayer* Player = nullptr;
 			APlayerCameraManager* PCM = FirstPiePcm(World, Player);
-			F.Test->TestTrue(FString::Printf(TEXT("PIE again: the applied asset FOV on the camera (%.2f)"), PCM ? PCM->GetFOVAngle() : -1.f), PCM && FMath::IsNearlyEqual(PCM->GetFOVAngle(), 55.f, 0.01f));
+			const UACFCameraSubsystem* Acf = Player ? Player->GetSubsystem<UACFCameraSubsystem>() : nullptr;
+			F.Test->TestTrue(FString::Printf(TEXT("PIE again: the applied asset FOV on the camera (%.2f; ACF %.2f, %llu frames)"), PCM ? PCM->GetFOVAngle() : -1.f,
+				Acf ? Acf->GetLastEvaluationResult().Pose.FieldOfView : -1.f, GFrameCounter - F.MarkFrame), PCM && FMath::IsNearlyEqual(PCM->GetFOVAngle(), 55.f, 0.01f));
 			F.Test->TestEqual(TEXT("PIE again: nothing is being tuned"), Player->GetSubsystem<UACFCameraSubsystem>()->GetDirector()->GetNumTunedRequests(), 0);
 			return true;
 		});
