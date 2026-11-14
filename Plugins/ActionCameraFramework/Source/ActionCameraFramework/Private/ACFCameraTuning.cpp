@@ -30,11 +30,61 @@ namespace ACFTuningImpl
 		return Actor ? Actor->GetActorNameOrLabel() : Component ? Component->GetName() : FString();
 	}
 
+	/**
+	 * Phase 7B-2: the Orbital Follow recenter / Movement Assistance scalars (one row each: member, property name, range).
+	 * bAssistanceOnly = held only while Enable Movement Assistance is on; else also with Recenter When Idle.
+	 */
+	struct FAssistScalar
+	{
+		EACFCameraTuningParameter Parameter;
+		float UACFCameraNode_OrbitalFollow::* Member;
+		const TCHAR* Property;
+		const TCHAR* DisplayName;
+		double Min;
+		double Max;
+		bool bAssistanceOnly;
+	};
+	static constexpr double Unbounded = std::numeric_limits<double>::infinity();
+	static const FAssistScalar AssistScalars[] = {
+		{ EACFCameraTuningParameter::RecenterDelay, &UACFCameraNode_OrbitalFollow::RecenterDelay, TEXT("RecenterDelay"), TEXT("Recenter Delay"), 0.0, Unbounded, false },
+		{ EACFCameraTuningParameter::RecenterTime, &UACFCameraNode_OrbitalFollow::RecenterTime, TEXT("RecenterTime"), TEXT("Recenter Time"), 0.01, Unbounded, false },
+		{ EACFCameraTuningParameter::AssistStartSpeed, &UACFCameraNode_OrbitalFollow::StartSpeedThreshold, TEXT("StartSpeedThreshold"), TEXT("Start Speed Threshold"), 0.0, Unbounded, true },
+		{ EACFCameraTuningParameter::AssistStopSpeed, &UACFCameraNode_OrbitalFollow::StopSpeedThreshold, TEXT("StopSpeedThreshold"), TEXT("Stop Speed Threshold"), 0.0, Unbounded, true },
+		{ EACFCameraTuningParameter::AssistMovementDuration, &UACFCameraNode_OrbitalFollow::RequiredMovementDuration, TEXT("RequiredMovementDuration"), TEXT("Required Movement Duration"), 0.0, Unbounded, true },
+		{ EACFCameraTuningParameter::AssistBackwardExclusion, &UACFCameraNode_OrbitalFollow::BackwardExclusionAngle, TEXT("BackwardExclusionAngle"), TEXT("Backward Exclusion Angle"), 0.0, 180.0, true },
+		{ EACFCameraTuningParameter::AssistDeadZone, &UACFCameraNode_OrbitalFollow::AngularDeadZone, TEXT("AngularDeadZone"), TEXT("Angular Dead Zone"), 0.0, 180.0, true },
+		{ EACFCameraTuningParameter::AssistMaxYawSpeed, &UACFCameraNode_OrbitalFollow::MaxAssistanceYawSpeed, TEXT("MaxAssistanceYawSpeed"), TEXT("Max Assistance Yaw Speed"), 0.01, Unbounded, true },
+		{ EACFCameraTuningParameter::AssistInputThreshold, &UACFCameraNode_OrbitalFollow::InputActivityThreshold, TEXT("InputActivityThreshold"), TEXT("Input Activity Threshold"), 0.0, Unbounded, true },
+	};
+
+	static const FAssistScalar* FindAssistScalar(EACFCameraTuningParameter Parameter)
+	{
+		for (const FAssistScalar& Row : AssistScalars)
+		{
+			if (Row.Parameter == Parameter)
+			{
+				return &Row;
+			}
+		}
+		return nullptr;
+	}
+
 	/** The member of Node that holds Parameter: a vector (OutVector) or a float (OutScalar). False if Node does not hold it. */
 	static bool Access(UACFCameraNode& Node, EACFCameraTuningParameter Parameter, FVector*& OutVector, float*& OutScalar, FName& OutProperty)
 	{
 		OutVector = nullptr;
 		OutScalar = nullptr;
+		if (const FAssistScalar* Row = FindAssistScalar(Parameter))
+		{
+			// Only where the node uses it (like Field Of View and its Override toggle).
+			UACFCameraNode_OrbitalFollow* Orbit = Cast<UACFCameraNode_OrbitalFollow>(&Node);
+			if (Orbit && (Orbit->bEnableMovementAssistance || (!Row->bAssistanceOnly && Orbit->bRecenterWhenIdle)))
+			{
+				OutScalar = &(Orbit->*(Row->Member));
+				OutProperty = Row->Property;
+			}
+			return OutScalar != nullptr;
+		}
 		switch (Parameter)
 		{
 		case EACFCameraTuningParameter::FollowDamping:
@@ -105,11 +155,25 @@ namespace ACFTuningImpl
 	static bool IsKnown(EACFCameraTuningParameter Parameter)
 	{
 		return Parameter == EACFCameraTuningParameter::FollowDamping || Parameter == EACFCameraTuningParameter::FieldOfView
-			|| Parameter == EACFCameraTuningParameter::CameraOffset || Parameter == EACFCameraTuningParameter::CollisionRadius;
+			|| Parameter == EACFCameraTuningParameter::CameraOffset || Parameter == EACFCameraTuningParameter::CollisionRadius
+			|| FindAssistScalar(Parameter) != nullptr;
 	}
 
 	static constexpr EACFCameraTuningParameter AllParameters[] = { EACFCameraTuningParameter::FollowDamping, EACFCameraTuningParameter::FieldOfView,
-		EACFCameraTuningParameter::CameraOffset, EACFCameraTuningParameter::CollisionRadius };
+		EACFCameraTuningParameter::CameraOffset, EACFCameraTuningParameter::CollisionRadius,
+		EACFCameraTuningParameter::RecenterDelay, EACFCameraTuningParameter::RecenterTime, EACFCameraTuningParameter::AssistStartSpeed,
+		EACFCameraTuningParameter::AssistStopSpeed, EACFCameraTuningParameter::AssistMovementDuration, EACFCameraTuningParameter::AssistBackwardExclusion,
+		EACFCameraTuningParameter::AssistDeadZone, EACFCameraTuningParameter::AssistMaxYawSpeed, EACFCameraTuningParameter::AssistInputThreshold };
+}
+
+TConstArrayView<EACFCameraTuningParameter> ACFCameraTuning::GetAllParameters()
+{
+	return ACFTuningImpl::AllParameters;
+}
+
+bool ACFCameraTuning::IsAlwaysListed(EACFCameraTuningParameter Parameter)
+{
+	return ACFTuningImpl::IsKnown(Parameter) && ACFTuningImpl::FindAssistScalar(Parameter) == nullptr;
 }
 
 const TCHAR* ACFCameraTuning::LexToString(EACFCameraTuningResult Result)
@@ -186,7 +250,12 @@ bool ACFCameraTuning::IsValidValue(EACFCameraTuningParameter Parameter, const FV
 	case EACFCameraTuningParameter::FieldOfView: return ACFCameraValidation::IsValidFov(static_cast<float>(Value.X));
 	case EACFCameraTuningParameter::CameraOffset: return true;
 	case EACFCameraTuningParameter::CollisionRadius: return Value.X >= 0.0; // a negative radius would be a line trace
-	default: return false;
+	default:
+		if (const ACFTuningImpl::FAssistScalar* Row = ACFTuningImpl::FindAssistScalar(Parameter))
+		{
+			return Value.X >= Row->Min && Value.X <= Row->Max; // the property's ClampMin / ClampMax
+		}
+		return false;
 	}
 }
 
@@ -494,13 +563,25 @@ void ACFCameraTuning::GetValueRange(EACFCameraTuningParameter Parameter, double&
 	case EACFCameraTuningParameter::FollowDamping: OutMin = 0.0; OutMax = Infinity; break;
 	case EACFCameraTuningParameter::FieldOfView: OutMin = 0.0; OutMax = 180.0; break; // open interval (IsValidFov)
 	case EACFCameraTuningParameter::CollisionRadius: OutMin = 0.0; OutMax = Infinity; break;
-	default: OutMin = -Infinity; OutMax = Infinity; break;
+	default:
+		if (const ACFTuningImpl::FAssistScalar* Row = ACFTuningImpl::FindAssistScalar(Parameter))
+		{
+			OutMin = Row->Min;
+			OutMax = Row->Max;
+		}
+		else
+		{
+			OutMin = -Infinity;
+			OutMax = Infinity;
+		}
+		break;
 	}
 }
 
 bool ACFCameraTuning::IsScalar(EACFCameraTuningParameter Parameter)
 {
-	return Parameter == EACFCameraTuningParameter::FieldOfView || Parameter == EACFCameraTuningParameter::CollisionRadius;
+	return Parameter == EACFCameraTuningParameter::FieldOfView || Parameter == EACFCameraTuningParameter::CollisionRadius
+		|| ACFTuningImpl::FindAssistScalar(Parameter) != nullptr;
 }
 
 FString ACFCameraTuning::GetParameterName(EACFCameraTuningParameter Parameter)
@@ -511,7 +592,12 @@ FString ACFCameraTuning::GetParameterName(EACFCameraTuningParameter Parameter)
 	case EACFCameraTuningParameter::FieldOfView: return TEXT("Field Of View");
 	case EACFCameraTuningParameter::CameraOffset: return TEXT("Camera Offset");
 	case EACFCameraTuningParameter::CollisionRadius: return TEXT("Collision Radius");
-	default: return TEXT("?");
+	default:
+		if (const ACFTuningImpl::FAssistScalar* Row = ACFTuningImpl::FindAssistScalar(Parameter))
+		{
+			return Row->DisplayName;
+		}
+		return TEXT("?");
 	}
 }
 
@@ -570,6 +656,11 @@ FString ACFCameraTuning::GetUnavailableReason(const UACFCameraPreset& Preset, EA
 	case EACFCameraTuningParameter::CollisionRadius:
 		return TEXT("No Collision node in the preset.");
 	default:
+		if (const ACFTuningImpl::FAssistScalar* Row = ACFTuningImpl::FindAssistScalar(Parameter))
+		{
+			return Row->bAssistanceOnly ? TEXT("No Orbital Follow with Enable Movement Assistance in the preset (README 29).")
+				: TEXT("No Orbital Follow with Recenter When Idle or Enable Movement Assistance in the preset.");
+		}
 		return FString();
 	}
 }

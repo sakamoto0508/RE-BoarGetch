@@ -403,6 +403,16 @@ namespace ACFPresetValidationPrivate
 				LOCTEXT("AssistControlRotation", "Input Source is Control Rotation: the PlayerController owns the camera rotation and ACF does not write it, so Movement Assistance does nothing."),
 				LOCTEXT("AssistControlRotationFix", "Use Input Source Camera Input (feed the look input with Add Camera Input), or turn the control rotation in game code."), TEXT("InputSource"));
 		}
+		// Phase 7B-2: the threshold is for noise (stick drift, mouse jitter). A deliberate slow turn below it is not manual input,
+		// so the assistance keeps turning against it.
+		constexpr float NoiseThresholdLimit = 30.f;
+		if (Orbit.InputSource == EACFCameraOrbitInputSource::CameraInput && FMath::IsFinite(Orbit.InputActivityThreshold) && Orbit.InputActivityThreshold > NoiseThresholdLimit)
+		{
+			C.Add(ESeverity::Warning, TEXT("ACF.Assist.InputThresholdHigh"), &Orbit, Index,
+				FText::Format(LOCTEXT("AssistInputThreshold", "Input Activity Threshold is {0} deg/s: a deliberate camera turn slower than that is not manual input, so the assistance keeps turning the camera against the player."),
+					FText::AsNumber(Orbit.InputActivityThreshold)),
+				LOCTEXT("AssistInputThresholdFix", "Keep it at noise level (a few deg/s, default 5) and remove stick drift with a dead zone in the game's input (Enhanced Input Dead Zone modifier)."), TEXT("InputActivityThreshold"));
+		}
 		if (Orbit.RecenterHeading == EACFCameraRecenterHeading::MovementDirection && Orbit.bFollowTargetYaw)
 		{
 			C.Add(ESeverity::Warning, TEXT("ACF.Assist.FollowTargetYaw"), &Orbit, Index,

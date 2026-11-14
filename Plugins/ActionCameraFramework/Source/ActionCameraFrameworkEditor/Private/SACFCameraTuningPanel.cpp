@@ -65,6 +65,16 @@ namespace ACFTuningPanelView
 		case EACFCameraTuningParameter::FollowDamping: OutMin = 0.0; OutMax = 2.0; OutDelta = 0.01; break;
 		case EACFCameraTuningParameter::FieldOfView: OutMin = 5.0; OutMax = 170.0; OutDelta = 0.5; break;
 		case EACFCameraTuningParameter::CollisionRadius: OutMin = 0.0; OutMax = 100.0; OutDelta = 0.5; break;
+		// Phase 7B-2: Orbital Follow recenter / Movement Assistance.
+		case EACFCameraTuningParameter::RecenterDelay: OutMin = 0.0; OutMax = 5.0; OutDelta = 0.05; break;
+		case EACFCameraTuningParameter::RecenterTime: OutMin = 0.01; OutMax = 3.0; OutDelta = 0.01; break;
+		case EACFCameraTuningParameter::AssistStartSpeed:
+		case EACFCameraTuningParameter::AssistStopSpeed: OutMin = 0.0; OutMax = 1000.0; OutDelta = 5.0; break;
+		case EACFCameraTuningParameter::AssistMovementDuration: OutMin = 0.0; OutMax = 2.0; OutDelta = 0.05; break;
+		case EACFCameraTuningParameter::AssistBackwardExclusion:
+		case EACFCameraTuningParameter::AssistDeadZone: OutMin = 0.0; OutMax = 180.0; OutDelta = 1.0; break;
+		case EACFCameraTuningParameter::AssistMaxYawSpeed: OutMin = 1.0; OutMax = 360.0; OutDelta = 1.0; break;
+		case EACFCameraTuningParameter::AssistInputThreshold: OutMin = 0.0; OutMax = 30.0; OutDelta = 0.5; break;
 		default: OutMin = -1000.0; OutMax = 1000.0; OutDelta = 1.0; break;
 		}
 	}

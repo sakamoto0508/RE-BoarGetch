@@ -364,12 +364,16 @@ const FACFCameraEvaluationResult& UACFCameraDirector::Evaluate(const FACFCameraE
 	if (Context.DeltaTime > 0.f)
 	{
 		Context.CameraInput = PendingInputDelta + InputRate * Context.DeltaTime;
+		Context.CameraInputDelta = PendingInputDelta; // 7B-2: per unit kind (mouse displacement / stick rate)
+		Context.CameraInputRate = InputRate;
 		PendingInputDelta = FVector2D::ZeroVector;
 		InputRate = FVector2D::ZeroVector;
 	}
 	else
 	{
 		Context.CameraInput = FVector2D::ZeroVector;
+		Context.CameraInputDelta = FVector2D::ZeroVector;
+		Context.CameraInputRate = FVector2D::ZeroVector;
 	}
 
 	// Stage 2a: camera sequences (finishers) advance once per frame and switch their shot requests now, so the
@@ -1016,6 +1020,10 @@ void UACFCameraDirector::SanitizeContext(FACFCameraEvaluationContext& Context)
 		// Time never runs backwards or by NaN: evaluate as a zero-time update (state is reported, not advanced).
 		Health.Report(EACFCameraHealthIssue::InvalidDeltaTime, NAME_None, TEXT("delta time"), TEXT("evaluated as zero time"));
 		Context.DeltaTime = 0.f;
+	}
+	if (!FMath::IsFinite(Context.TimeDilation) || Context.TimeDilation <= 0.f)
+	{
+		Context.TimeDilation = 1.f; // 7B-2: only used to convert game time into real time (never a division by 0)
 	}
 
 	// B-5: effects belong to the World they were played in. The director (and its effect stack) outlives map travel, so

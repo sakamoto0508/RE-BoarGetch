@@ -389,6 +389,12 @@ FACFCameraDiagnosticsModel::FDebugView FACFCameraDiagnosticsModel::ReadDebug() c
 			Add(TEXT("Assistance"), TEXT("Movement speed"), D.bAssistanceEnabled ? FString::Printf(TEXT("%.1f cm/s (moving %.2f / %.2f s)"), D.AssistanceMovementSpeed,
 				D.AssistanceMovementTime, D.AssistanceRequiredMovementTime) : FString(TEXT("- (not measured without Movement Assistance)")));
 			Add(TEXT("Assistance"), TEXT("Waiting time"), FString::Printf(TEXT("%.2f / %.2f s"), D.AssistanceWaitTime, D.AssistanceRecenterDelay));
+			// Phase 7B-2: how strong the camera input is against the threshold that makes it manual input.
+			Add(TEXT("Assistance"), TEXT("Input activity"), D.bHasAssistanceInput ? (D.AssistanceInputThreshold > 0.f
+				? FString::Printf(TEXT("%.1f / %.1f deg/s (%s)"), D.AssistanceInputActivity, D.AssistanceInputThreshold,
+					D.AssistanceInputActivity >= D.AssistanceInputThreshold ? TEXT("manual input") : TEXT("below threshold: ignored"))
+				: FString::Printf(TEXT("%.1f deg/s (threshold 0: any input is manual)"), D.AssistanceInputActivity))
+				: FString(TEXT("- (no Camera Input with Movement Assistance)")));
 			Add(TEXT("Assistance"), TEXT("Assistance suppression"), Suppression);
 			Add(TEXT("Assistance"), TEXT("Not assisting because"), D.AssistanceReason == EACFCameraAssistanceReason::None ? FString(TEXT("-"))
 				: EnumText(StaticEnum<EACFCameraAssistanceReason>(), static_cast<int64>(D.AssistanceReason)));

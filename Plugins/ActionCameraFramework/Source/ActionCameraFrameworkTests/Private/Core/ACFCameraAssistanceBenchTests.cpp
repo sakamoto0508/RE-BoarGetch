@@ -13,25 +13,27 @@
 #include "UObject/StrongObjectPtr.h"
 
 /**
- * Phase 7B-1 measurement (not a regression test): the cost of the Orbital Follow movement assistance in its states, on the
+ * Phase 7B-1 / 7B-2 measurement (not a regression test): the cost of the Orbital Follow movement assistance in its states, on the
  * same standalone director evaluation (Orbital Follow only, so the assistance is a visible share). Runs only with
  * -ACFProfile (e.g. in the profile context of RunTests.sh, filter ActionCameraFramework.Profile) and writes
- * Saved/ACFProfile/7B1_Assistance.md:
+ * Saved/ACFProfile/7B2_Assistance.md (7B-1 wrote 7B1_Assistance.md with variants 0 - 4):
  *   0 NoRecenter     recenter off (the evaluation without any recenter code)
  *   1 Disabled       Recenter When Idle (Phase 2 path), assistance off, target moving
  *   2 Waiting        assistance on, never starts (Recenter Delay 1e9), target moving
  *   3 Assisting      assistance on, target on a circle (the heading changes every frame: always turning)
  *   4 ManualInput    assistance on, camera input every frame (assistance suppressed by input)
+ *   5 NoiseInput     7B-2: assistance on, stick drift 2 deg/s + mouse jitter every frame (below the threshold: assisting)
+ *   6 MouseInput     7B-2: assistance on, a 0.5 deg mouse delta every frame (30 deg/s: manual input)
  * CPU: 9 interleaved rounds x 4000 evaluations, profiler off. Allocations: one extra run of 600 evaluations with the
  * profiler and the allocation counter on. Pose: yaw / location after the timing run (deterministic inputs).
  */
 namespace ACFAssistBench
 {
-	enum class EVariant : uint8 { NoRecenter, Disabled, Waiting, Assisting, ManualInput, Num };
+	enum class EVariant : uint8 { NoRecenter, Disabled, Waiting, Assisting, ManualInput, NoiseInput, MouseInput, Num };
 
 	static const TCHAR* Name(EVariant V)
 	{
-		static const TCHAR* Names[] = { TEXT("NoRecenter"), TEXT("Disabled (Phase 2 recenter)"), TEXT("Waiting"), TEXT("Assisting"), TEXT("ManualInput") };
+		static const TCHAR* Names[] = { TEXT("NoRecenter"), TEXT("Disabled (Phase 2 recenter)"), TEXT("Waiting"), TEXT("Assisting"), TEXT("ManualInput"), TEXT("NoiseInput (7B-2)"), TEXT("MouseInput (7B-2)") };
 		return Names[static_cast<int32>(V)];
 	}
 
@@ -70,6 +72,15 @@ namespace ACFAssistBench
 			if (Variant == EVariant::ManualInput)
 			{
 				Director->SetCameraInputRate(FVector2D(10.0, 0.0));
+			}
+			else if (Variant == EVariant::NoiseInput)
+			{
+				Director->SetCameraInputRate(FVector2D(2.0, 0.0));
+				Director->AddCameraInput(FVector2D((I & 1) ? 0.02 : -0.02, 0.0));
+			}
+			else if (Variant == EVariant::MouseInput)
+			{
+				Director->AddCameraInput(FVector2D((I / 60) & 1 ? -0.5 : 0.5, 0.0));
 			}
 			Context.FrameNumber = 80000000ull + I;
 			Director->Evaluate(Context);
@@ -113,7 +124,7 @@ bool FACFAssistBenchTest::RunTest(const FString& Parameters)
 	using namespace ACFAssistBench;
 	if (!FParse::Param(FCommandLine::Get(), TEXT("ACFProfile")))
 	{
-		AddInfo(TEXT("Skipped: Phase 7B-1 measurement, run with -ACFProfile."));
+		AddInfo(TEXT("Skipped: Phase 7B-1 / 7B-2 measurement, run with -ACFProfile."));
 		return true;
 	}
 	constexpr int32 NumVariants = static_cast<int32>(EVariant::Num);
@@ -145,14 +156,16 @@ bool FACFAssistBenchTest::RunTest(const FString& Parameters)
 			TestEqual(FString::Printf(TEXT("%s: no allocation in 600 evaluations"), Name(static_cast<EVariant>(V))), Allocations, 0u);
 		}
 	}
-	const FString Text = FString::Printf(TEXT("# Phase 7B-1: movement assistance cost\n\nStandalone director, Orbital Follow only (rotation damping 0.1), target on a 4 m circle at 60 deg/s, 1/60 s steps. ")
+	const FString Text = FString::Printf(TEXT("# Phase 7B-2: movement assistance and input activity cost\n\nStandalone director, Orbital Follow only (rotation damping 0.1), target on a 4 m circle at 60 deg/s, 1/60 s steps. ")
 		TEXT("CPU: 9 interleaved rounds x 4000 evaluations, us per evaluation (profiler off). Allocations: 600 evaluations with the allocation counter. Pose after the last timing run.\n\n")
 		TEXT("| Variant | median us | min | max | vs NoRecenter | allocations | state | yaw | location |\n|---|---|---|---|---|---|---|---|---|\n%s"), *Rows);
-	FFileHelper::SaveStringToFile(Text, *(FPaths::ProjectSavedDir() / TEXT("ACFProfile") / TEXT("7B1_Assistance.md")));
+	FFileHelper::SaveStringToFile(Text, *(FPaths::ProjectSavedDir() / TEXT("ACFProfile") / TEXT("7B2_Assistance.md")));
 	AddInfo(Text);
 	TestTrue(TEXT("Assisting variant really assists"), Last[static_cast<int32>(EVariant::Assisting)].State == EACFCameraAssistanceState::Assisting);
 	TestTrue(TEXT("Waiting variant waits"), Last[static_cast<int32>(EVariant::Waiting)].State == EACFCameraAssistanceState::Waiting);
 	TestTrue(TEXT("Manual input variant is suppressed"), Last[static_cast<int32>(EVariant::ManualInput)].State == EACFCameraAssistanceState::Suppressed);
+	TestTrue(TEXT("7B-2: noise variant still assists"), Last[static_cast<int32>(EVariant::NoiseInput)].State == EACFCameraAssistanceState::Assisting);
+	TestTrue(TEXT("7B-2: mouse variant is manual input"), Last[static_cast<int32>(EVariant::MouseInput)].State == EACFCameraAssistanceState::Suppressed);
 	return true;
 }
 

@@ -69,6 +69,13 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraOrbitState
 	float HeadingYaw = 0.f;
 	EACFCameraAssistanceState AssistanceState = EACFCameraAssistanceState::Disabled;
 	EACFCameraAssistanceReason AssistanceReason = EACFCameraAssistanceReason::NotEnabled;
+	/**
+	 * Phase 7B-2: manual input activity. Accumulated mouse turning (degrees, decays over InputActivityWindow) and the last
+	 * activity (degrees per second: max of the stick rate and the mouse accumulation / window). Input is not movement:
+	 * ResetAssistance keeps them (a teleport while the player turns is still manual input).
+	 */
+	float InputActivityAccum = 0.f;
+	float InputActivity = 0.f;
 
 	/** Forgets the movement history and restarts the waits (activation, teleport, interpolation reset). */
 	void ResetAssistance()
@@ -165,6 +172,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (EditCondition = "InputSource == EACFCameraOrbitInputSource::CameraInput"))
 	bool bInvertPitch = false;
 
+	/**
+	 * Phase 7B-2: the per-second input of Set Camera Input Rate (stick) turns the camera in real time, so a slow motion
+	 * (Set Global Time Dilation) does not slow the player's camera control. Off = game time (the camera turns slower in
+	 * slow motion, like every other camera motion). Add Camera Input deltas (mouse) are displacements: never scaled by time.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (EditCondition = "InputSource == EACFCameraOrbitInputSource::CameraInput"))
+	bool bInputRateIgnoresTimeDilation = false;
+
 	// --- Initial / idle ------------------------------------------------------------------------
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Initial")
 	EACFCameraOrbitInitialRotation InitialRotation = EACFCameraOrbitInitialRotation::BehindTarget;
@@ -230,6 +245,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bEnableMovementAssistance", ClampMin = "0.01", Units = DegreesPerSecond))
 	float MaxAssistanceYawSpeed = 90.f;
 
+	/**
+	 * Phase 7B-2: camera input counts as manual input (stops the assistance and restarts its wait) only from this turning
+	 * speed (degrees per second after Sensitivity). Smaller input (stick drift, mouse jitter) still turns the camera but
+	 * does not block the assistance. One unit for both devices: the stick rate is compared directly, mouse deltas over a
+	 * short window (0.1 s), so a single jitter count weighs the same at every frame rate. 0 = any input (Phase 7B-1).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle|Movement Assistance", meta = (EditCondition = "bEnableMovementAssistance && InputSource == EACFCameraOrbitInputSource::CameraInput", ClampMin = "0.0", Units = DegreesPerSecond))
+	float InputActivityThreshold = 5.f;
+
+	/** Window of the mouse (Add Camera Input) activity measure, seconds. */
+	static constexpr float InputActivityWindow = 0.1f;
+
 	/** Distance for a given absolute pitch (rings or constant). */
 	float GetDistanceForPitch(float Pitch) const;
 
@@ -248,5 +275,8 @@ private:
 	 * (exponential with Recenter Time towards the home yaw); the assistance decides when it runs, the heading, the dead zone
 	 * and the yaw speed limit.
 	 */
-	void UpdateMovementAssistance(const FACFCameraNodeContext& Context, FACFCameraOrbitState& State, float TargetYaw, bool bHadInput, bool bExplicitRotation) const;
+	void UpdateMovementAssistance(const FACFCameraNodeContext& Context, FACFCameraOrbitState& State, float TargetYaw, bool bManualInput, bool bExplicitRotation) const;
+
+	/** Phase 7B-2: measures this evaluation's camera input (DeltaTime > 0); true if it is manual input for the assistance. */
+	bool UpdateInputActivity(const FACFCameraNodeContext& Context, FACFCameraOrbitState& State, bool bAnyInput) const;
 };

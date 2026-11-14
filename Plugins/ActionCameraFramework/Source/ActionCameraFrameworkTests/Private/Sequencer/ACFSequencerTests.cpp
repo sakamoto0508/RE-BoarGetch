@@ -3935,6 +3935,105 @@ bool FACFAssistLockOnSequencerTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
 	return true;
 }
+// Phase 7B-2: camera input through the subsystem with the real PCM and World: stick drift never blocks the assistance,
+// clear input does (for that player only), and Set Global Time Dilation reaches the input rate (real time on player 1).
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistInputWorldTest, "ActionCameraFramework.Sequencer.Assistance.InputNoiseDilationAndPlayers", ACFSeqTest::Flags)
+bool FACFAssistInputWorldTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSeqTest;
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this);
+	auto SecondAcf = [](FScenario& S) { return S.SecondPlayer.IsValid() ? S.SecondPlayer->GetSubsystem<UACFCameraSubsystem>() : nullptr; };
+	const TSharedRef<double> YawB = MakeShared<double>(0.0);
+	TArray<FStep> Steps;
+	Steps.Add([](FScenario& S)
+	{
+		S.Mover = SpawnPoint(S, Base);
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.Mover.Get();
+		UACFCameraPreset* Preset = MakeAssistPreset(S);
+		CastChecked<UACFCameraNode_OrbitalFollow>(Preset->Nodes[0].Get())->bInputRateIgnoresTimeDilation = true;
+		S.AssistHandle = S.Acf->RequestCamera(Preset, Params);
+		FString Error;
+		S.SecondPlayer = S.World()->GetGameInstance()->CreateLocalPlayer(FPlatformUserId::CreateFromInternalId(1), Error, true);
+		return S.Test->TestTrue(FString::Printf(TEXT("Second local player (%s)"), *Error), S.SecondPlayer.IsValid());
+	});
+	WaitFrames(Steps, 5);
+	Steps.Add([SecondAcf](FScenario& S)
+	{
+		UACFCameraSubsystem* Acf2 = SecondAcf(S);
+		if (!S.Test->TestNotNull(TEXT("Player 2 ACF"), Acf2) || !S.SecondPlayer->GetPlayerController(S.World()))
+		{
+			return false;
+		}
+		FACFCameraRequestParams Params;
+		Params.FollowTarget.Actor = S.Mover.Get(); // both players follow the same moving target
+		S.HandleB = Acf2->RequestCamera(MakeAssistPreset(S), Params);
+		return true;
+	});
+	WaitFrames(Steps, 3);
+	MoveFor(Steps, 90, Along(90.f, 400.f));
+	// Stick drift (2 deg/s) on player 1 every frame for 1 s while moving: noise.
+	Steps.Add([](FScenario& S) { S.Counter = 0; S.Value = 0.0; return true; });
+	Steps.Add([](FScenario& S)
+	{
+		if (S.Counter > 0 && AssistDebug(S.Acf.Get()).AssistanceReason == EACFCameraAssistanceReason::ManualInput)
+		{
+			S.Value += 1.0;
+		}
+		S.Acf->SetCameraInputRate(FVector2D(2.0, 0.0));
+		if (AActor* Mover = S.Mover.Get())
+		{
+			Mover->SetActorLocation(Mover->GetActorLocation() + Along(90.f, 400.f) * FixedDt);
+		}
+		S.bRetry = ++S.Counter < 60;
+		return true;
+	});
+	WaitFrames(Steps, 1);
+	Steps.Add([](FScenario& S)
+	{
+		S.Test->TestEqual(TEXT("Drift through the subsystem: never manual input"), S.Value, 0.0);
+		S.Test->TestTrue(FString::Printf(TEXT("Player 1 still assisting under drift (%s)"), *DescribeAssist(S.Acf.Get())),
+			AssistDebug(S.Acf.Get()).AssistanceState == EACFCameraAssistanceState::Assisting);
+		S.Acf->SetCameraInputRate(FVector2D(20.0, 0.0)); // one clear stick frame, player 1 only
+		return true;
+	});
+	WaitFrames(Steps, 1);
+	Steps.Add([SecondAcf](FScenario& S)
+	{
+		// The check runs a frame or two after the input frame: the clear input restarted player 1's wait (drift never did).
+		S.Test->TestTrue(FString::Printf(TEXT("Player 1: clear input restarted the wait (%s)"), *DescribeAssist(S.Acf.Get())),
+			AssistDebug(S.Acf.Get()).AssistanceReason == EACFCameraAssistanceReason::RecenterDelay && AssistDebug(S.Acf.Get()).AssistanceWaitTime < 0.06f);
+		S.Test->TestTrue(FString::Printf(TEXT("Player 2: not affected, still assisting (%s)"), *DescribeAssist(SecondAcf(S))),
+			AssistDebug(SecondAcf(S)).AssistanceState == EACFCameraAssistanceState::Assisting);
+		UGameplayStatics::SetGlobalTimeDilation(S.World(), 0.25f); // slow motion
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	Steps.Add([SecondAcf, YawB](FScenario& S)
+	{
+		S.Value = AcfYaw(S.Acf.Get());
+		*YawB = AcfYaw(SecondAcf(S));
+		S.Acf->SetCameraInputRate(FVector2D(60.0, 0.0));
+		SecondAcf(S)->SetCameraInputRate(FVector2D(60.0, 0.0));
+		return true;
+	});
+	WaitFrames(Steps, 1);
+	Steps.Add([SecondAcf, YawB](FScenario& S)
+	{
+		const float Step1 = FRotator::NormalizeAxis(AcfYaw(S.Acf.Get()) - static_cast<float>(S.Value));
+		const float Step2 = FRotator::NormalizeAxis(AcfYaw(SecondAcf(S)) - static_cast<float>(*YawB));
+		UGameplayStatics::SetGlobalTimeDilation(S.World(), 1.f); // restore before anything can fail
+		S.Test->TestTrue(FString::Printf(TEXT("Slow motion 0.25, real-time input rate: 60 deg/s x real 1/60 s = 1 (%.4f)"), Step1), FMath::IsNearlyEqual(Step1, 1.f, 1e-3f));
+		S.Test->TestTrue(FString::Printf(TEXT("Slow motion 0.25, game-time input rate: 60 deg/s x game 1/240 s = 0.25 (%.4f)"), Step2), FMath::IsNearlyEqual(Step2, 0.25f, 1e-3f));
+		ACFTestEnvironment::RemoveLocalPlayer(S.SecondPlayer.Get());
+		return true;
+	});
+	WaitFrames(Steps, 2);
+	ADD_LATENT_AUTOMATION_COMMAND(FCommand(this, MoveTemp(Steps)));
+	return true;
+}
+
 #endif // !UE_BUILD_SHIPPING
 
 #endif // WITH_DEV_AUTOMATION_TESTS

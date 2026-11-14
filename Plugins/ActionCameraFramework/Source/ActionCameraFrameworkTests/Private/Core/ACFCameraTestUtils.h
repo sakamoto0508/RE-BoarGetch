@@ -44,9 +44,12 @@ namespace ACFTests
 		float AspectRatio = 16.f / 9.f;
 		/** Phase 5A: 出力バイパス（ViewTarget が Modifier を通さない間の裏評価）として評価する。 */
 		bool bOutputBypassed = false;
+		/** Phase 7B-2: the World's time dilation the subsystem would report (DeltaTime stays the game time given to Step). */
+		float TimeDilation = 1.f;
 
 		void Fill(FACFCameraEvaluationContext& Context) const
 		{
+			Context.TimeDilation = TimeDilation;
 			Context.UpstreamPose = Upstream;
 			Context.ControlRotation = ControlRotation;
 			Context.bHasControlRotation = bHasControlRotation;

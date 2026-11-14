@@ -31,6 +31,26 @@ enum class EACFCameraTuningParameter : uint8
 	CameraOffset,
 	/** Collision probe radius (cm, X only, >= 0): Collision Probe Radius. */
 	CollisionRadius,
+	// Phase 7B-2: Orbital Follow recenter / Movement Assistance (README 29 章). Scalars (X only). Recenter Delay / Time are
+	// held by an Orbital Follow with Recenter When Idle or Enable Movement Assistance, the others only with the assistance on.
+	/** Recenter Delay (s, >= 0). */
+	RecenterDelay,
+	/** Recenter Time (s, >= 0.01). */
+	RecenterTime,
+	/** Start Speed Threshold (cm/s, >= 0). */
+	AssistStartSpeed,
+	/** Stop Speed Threshold (cm/s, >= 0). */
+	AssistStopSpeed,
+	/** Required Movement Duration (s, >= 0). */
+	AssistMovementDuration,
+	/** Backward Exclusion Angle (deg, 0 - 180). */
+	AssistBackwardExclusion,
+	/** Angular Dead Zone (deg, 0 - 180). */
+	AssistDeadZone,
+	/** Max Assistance Yaw Speed (deg/s, >= 0.01). */
+	AssistMaxYawSpeed,
+	/** Input Activity Threshold (deg/s, >= 0). */
+	AssistInputThreshold,
 };
 
 /** Why a tuning call did (not) do anything. */
@@ -213,6 +233,15 @@ namespace ACFCameraTuning
 	/** Valid range of a parameter (per component). Max is +infinity when unbounded; FOV is open at both ends (0, 180). */
 	ACTIONCAMERAFRAMEWORK_API void GetValueRange(EACFCameraTuningParameter Parameter, double& OutMin, double& OutMax);
 	ACTIONCAMERAFRAMEWORK_API bool IsScalar(EACFCameraTuningParameter Parameter);
+
+	/** Every tunable parameter, in display order. */
+	ACTIONCAMERAFRAMEWORK_API TConstArrayView<EACFCameraTuningParameter> GetAllParameters();
+
+	/**
+	 * Parameters a tool lists as "not tunable here" with a reason when the preset lacks them (Follow Damping, Field Of View,
+	 * Camera Offset, Collision Radius). The recenter / assistance ones appear only on a node that holds them.
+	 */
+	ACTIONCAMERAFRAMEWORK_API bool IsAlwaysListed(EACFCameraTuningParameter Parameter);
 	ACTIONCAMERAFRAMEWORK_API FString GetParameterName(EACFCameraTuningParameter Parameter);
 
 	/** Nodes of Preset with their tunable parameters (in Nodes order; empty slots are skipped). */

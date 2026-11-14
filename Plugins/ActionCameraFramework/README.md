@@ -20,7 +20,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
 - Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A 完了（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映、7A-4 Profiler / Debugger / Composition が完了。24〜27 章）
-- Phase 7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance）完了（29 章）。7B-2（入力の加工）は未着手
+- Phase 7B 完了。7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance。29 章）、7B-2（カメラ入力の処理: 手動入力の判定、Time Dilation、補助の値の Runtime Tuning。30 章）
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -30,7 +30,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
 | 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Completed（B-1〜B-11） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Done（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 PIE の Camera Tuning パネル: 完了、25 章。7A-3 アセットへの反映（Apply / Undo / Redo / Save）: 完了、26 章。7A-4 Profiler / Debugger / Composition: 完了、27 章） |
-| 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | In Progress（7B-1 移動方向へのカメラ補助: 完了、29 章。7B-2 入力の加工: 未着手） |
+| 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Done（7B-1 移動方向へのカメラ補助: 完了、29 章。7B-2 カメラ入力の処理と補助との連携: 完了、30 章） |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
 | 7D | Advanced Occlusion Handling（複数点の遮蔽判定、可視率、一時透過。Trace 数を計測） | Not Started |
 | 7E | Camera Recorder / Replay（カメラ出力の再生。ゲームプレイの完全再現とは区別） | Not Started |
@@ -154,9 +154,10 @@ Look At と Rotation Composer の **Target Source** は、Look At Target / Follo
 | Orbit | Rotation Damping（Yaw / Pitch） | 回転の遅れ。軸ごとに設定できます |
 | Input | Input Source | Camera Input（ACF の入力 API）/ Control Rotation（SpringArm 相当）/ None |
 | Input | Sensitivity / Invert Yaw / Invert Pitch | 感度と反転 |
+| Input | Input Rate Ignores Time Dilation | ON でスティックの入力（Set Camera Input Rate）を実時間で掛けます。スローモーション中も操作が遅くなりません（Phase 7B-2、30 章）。既定は OFF |
 | Initial | Initial Rotation / Yaw / Pitch | 開始時の向き: 対象の背後 / ControlRotation / 直前のカメラ / 固定 |
 | Idle | Recenter When Idle / Delay / Time | 入力が一定時間無ければ、対象の背後へゆっくり戻ります |
-| Idle / Movement Assistance | Enable Movement Assistance / Recenter Heading / 速度の閾値 / 継続時間 / 後退の除外 / Dead Zone / 最大 Yaw 速度 | 移動中だけ、移動方向（または対象の背後）へカメラを寄せます（Phase 7B-1、29 章）。既定は OFF |
+| Idle / Movement Assistance | Enable Movement Assistance / Recenter Heading / 速度の閾値 / 継続時間 / 後退の除外 / Dead Zone / 最大 Yaw 速度 / Input Activity Threshold | 移動中だけ、移動方向（または対象の背後）へカメラを寄せます（Phase 7B-1、29 章）。既定は OFF。Input Activity Threshold（既定 5 deg/s）未満の入力は補助を止めません（Phase 7B-2、30 章） |
 
 `Orbital Follow`（Input Source = Control Rotation）+ `Collision` は、SpringArm の Socket と完全に一致します（実機の BP_PlayerCharacter で誤差 0.000cm / 0.000°）。
 
@@ -850,35 +851,35 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **223 件が登録**されています（テスト名の数。Phase 7B-1 の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **232 件が登録**されています（テスト名の数。Phase 7B-2 の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
   | `.Director` 8、`.Nodes` 5、`.ThirdPerson` 11、`.Effects` 9、`.Action` 10、`.Constraints` 7、`.Sequence` 6、`.Authority` 3 | 59 | 実行 | 実行 |
   | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 13、`.Profiler` 3 | 31 | 実行 | 実行 |
-  | `.Tuning`（Runtime Tuning、24 章。FOV の回避策 1 件を含む） | 10 | 実行 | 実行 |
-  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 7 件、26 章。診断 `.Editor.Diagnostics` 6 件、27 章・29 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 4 件を含む） | 23 | 実行 | — |
+  | `.Tuning`（Runtime Tuning、24 章。FOV の回避策 1 件、補助の値 1 件（30 章）を含む） | 11 | 実行 | 実行 |
+  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 8 件、26 章・30 章。診断 `.Editor.Diagnostics` 6 件、27 章・29 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 4 件を含む） | 24 | 実行 | — |
   | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 3 | 5 | — | 実行 |
   | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件、投影 1 件を含む） | 30 | — | 実行 |
   | `.Projection`（構図計算と描画の投影、28 章） | 2 | 実行 | 実行 |
-  | `.Assistance`（移動方向へのカメラ補助、29 章） | 13 | 実行 | 実行 |
-  | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1、`.Assistance` 2） | 42 | — | 実行 |
+  | `.Assistance`（移動方向へのカメラ補助 13 件、29 章。カメラ入力 `.Assistance.Input` 6 件、30 章） | 19 | 実行 | 実行 |
+  | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1、`.Assistance` 3） | 43 | — | 実行 |
   | `.Samples` | 6 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
-  | `.Profile.AssistanceVariants`（補助の状態ごとの性能、29 章） | 1 | `-ACFProfile` でだけ計測 | 同左 |
-  | 合計 | 223 | 139 | 200 |
+  | `.Profile.AssistanceVariants`（補助の状態ごとの性能、29 章・30 章） | 1 | `-ACFProfile` でだけ計測 | 同左 |
+  | 合計 | 232 | 147 | 208 |
 
-- **最新の結果（Phase 7B-1、2026-11-14。クリーンな unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
+- **最新の結果（Phase 7B-2、2026-11-14。クリーンな unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
-  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 200 | 192 / 0 / 8 | `.Samples` 6 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
-  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 200 | 192 / 0 / 8 | 同上 |
-  | Editor（`--context editor`、`-NullRHI`） | 139 | 138 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
-  | Editor（`--context editor-rendered`、描画あり。`.Editor` 23 件） | 23 | 23 / 0 / 0 | |
-  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 200 | 198 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
-  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 200 | 198 / 0 / 2 | 同上 |
-  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 200 | 200 / 0 / 0 | |
+  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 208 | 200 / 0 / 8 | `.Samples` 6 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
+  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 208 | 200 / 0 / 8 | 同上 |
+  | Editor（`--context editor`、`-NullRHI`） | 147 | 146 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | Editor（`--context editor-rendered`、描画あり。`.Editor` 24 件） | 24 | 24 / 0 / 0 | |
+  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 6 件を含む） | 208 | 206 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 208 | 206 / 0 / 2 | 同上 |
+  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 208 | 208 / 0 / 0 | |
   | 繰り返し（Editor、Phase 7A 最終安定化の時点）: `.Projection` + `.Tuning` + `.Editor.TuningApply` + `.Editor.Diagnostics` ×2 | 48 | 48 / 0 / 0 | |
 
   全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 で見つけ、7A-1 のコードでも同じ値で再現したもの）は、2 人目のローカルプレイヤーの Pawn が残っていたのが原因で、テスト環境側で修正済みです（22 章「ローカルプレイヤーと Pawn」）。
@@ -1362,6 +1363,7 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 | `ACF.Assist.ControlRotationInput` | Warning | Input Source = Control Rotation で Movement Assistance（ACF は Control Rotation を書かないので効かない） |
 | `ACF.Assist.FollowTargetYaw` | Warning | Recenter Heading = Movement Direction と Follow Target Yaw の併用（Follow Target Yaw が優先し、補助は無効） |
 | `ACF.Assist.HeadingNeedsAssistance` | Warning | Recenter When Idle で Heading = Movement Direction だが Movement Assistance が OFF（Target Facing として動く） |
+| `ACF.Assist.InputThresholdHigh` | Warning | Input Activity Threshold が 30 deg/s を超える（ゆっくり意図的に回す操作が手動入力にならず、補助に負ける。30 章） |
 
 補助の負の速度・負の待ち時間・0〜180 の外の角度・NaN / Inf は、上の `ACF.Param.OutOfRange` / `ACF.Param.NonFinite` で検出します（Movement Assistance が OFF のときは範囲を調べず、NaN / Inf だけ Warning）。
 
@@ -1549,6 +1551,7 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 | `FieldOfView` | X（度。0 より大きく 180 未満） | Fixed Pose / Shot Anchor `FieldOfView`（その Node の Override Field Of View が ON のときだけ） |
 | `CameraOffset` | X / Y / Z（cm） | Follow `Offset`、Orbital Follow / Lock-On `ShoulderOffset`、Shot Anchor `CameraOffset` |
 | `CollisionRadius` | X（cm、0 以上） | Collision `ProbeRadius` |
+| `RecenterDelay` / `RecenterTime` / `AssistStartSpeed` / `AssistStopSpeed` / `AssistMovementDuration` / `AssistBackwardExclusion` / `AssistDeadZone` / `AssistMaxYawSpeed` / `AssistInputThreshold` | X（各プロパティの範囲） | Orbital Follow の Recenter / Movement Assistance（Phase 7B-2。その値を使う Node だけ。30 章） |
 
 - 値は `FVector` で、1 つの値のパラメータは X だけを使います（`Get` の `bScalar` で分かります）。
 - **Node Index** が -1（既定）なら、そのパラメータを持つ最初の有効な Node を使います。同じ種類の Node が複数ある Preset では番号で指定します（Preset の Nodes の番号）。
@@ -1990,7 +1993,7 @@ Orbital Follow
 上ほど優先です。上の条件があるフレームは、下の条件を見ずにそこで止まります。
 
 1. **明示的な回転指定**（`Set ACF Orbit Rotation` / `SetAllOrbitRotations`）: そのフレームは補助しない（Suppressed / Explicit Rotation）
-2. **手動の Camera Input**（`Add Camera Input` / `Set Camera Input Rate`）: 入力のあったフレームは即座に補助を止め、入力分だけ動く（Suppressed / Manual Input）
+2. **手動の Camera Input**（`Add Camera Input` / `Set Camera Input Rate`）: 入力のあったフレームは即座に補助を止め、入力分だけ動く（Suppressed / Manual Input）。7B-2 から、`Input Activity Threshold`（既定 5 deg/s）以上の入力だけが手動入力です（30 章）
 3. **Suppress Camera Assistance**（下の API）
 4. **外部 ViewTarget と制御中の要求**: 出力バイパス（Sequencer の Camera Cut）・Suppress Output の間（View Not Shown）、その Rig が制御中の要求でない間（Not In Control）
 5. **Recenter Delay**
@@ -2007,7 +2010,7 @@ Orbital Follow
 - **最大 Yaw 速度は Recenter が作る Yaw の変化（目標 Yaw）に掛けます**。最終的なカメラの Yaw は、その後の Rotation Damping でさらに遅くなるだけなので、補助による回転は最終の Yaw でも上限を超えません（Damping 0 / 0.2 の両方で、毎フレームの変化が `Max × dt` 以下であることを 30 / 60 / 120 fps と 0.25 s のヒッチで確認）。手動入力・Follow Target Yaw による回転には掛けません。
 - 30 / 60 / 120 fps で同じ時刻の Yaw の差は 4° 以内（開始フレームの量子化 1 フレーム分）。
 - **Pause**: PCM のカメラ更新が止まる・DeltaTime 0 の評価では、待ち時間も Yaw も進みません。NaN / 負 / Inf の DeltaTime は Director が 0 として扱います。
-- **Time Dilation**: 待ち時間・速度・回転はすべてゲーム時間です（PCM が渡す、Dilation 後の DeltaTime）。スローモーション中は実時間あたりの回転も遅くなり、速度はゲーム時間で測るので閾値の判定は変わりません。
+- **Time Dilation**: 待ち時間・速度・回転はすべてゲーム時間です（PCM が渡す、Dilation 後の DeltaTime）。スローモーション中は実時間あたりの回転も遅くなり、速度はゲーム時間で測るので閾値の判定は変わりません。スティックの入力は `Input Rate Ignores Time Dilation` で実時間にできます（7B-2、30 章）。
 
 ### 速度の取得
 
@@ -2053,18 +2056,18 @@ Blueprint: `Suppress ACF Camera Assistance` / `Release ACF Camera Assistance Sup
 
 ### Dead Zone・入力・Control Rotation の制限
 
-- **スティックの Dead Zone はゲーム側で処理してください**。ACF は渡された Camera Input の値をそのまま「入力あり」と判定します。スティックの小さなノイズを渡すと、補助が毎フレーム止まります（入力の加工は Phase 7B-2）。上の `Angular Dead Zone` はカメラの角度の Dead Zone で、入力の Dead Zone ではありません。
+- **スティックの Dead Zone はゲーム側で処理してください**（Enhanced Input の Dead Zone Modifier）。7B-2 から、`Input Activity Threshold`（既定 5 deg/s）未満の入力は補助を止めません（カメラは回します）。0 にすると 7B-1 と同じく、どんな入力でも止まります（30 章）。上の `Angular Dead Zone` はカメラの角度の Dead Zone で、入力の Dead Zone ではありません。
 - **Input Source = Control Rotation** では補助は動きません（Disabled / Control Rotation Input）。PlayerController が回転を持ち、ACF は Control Rotation を書かないためです。Control Rotation で補助したい場合は、ゲーム側で Control Rotation を回してください（Preset の検証が警告します）。
 
 ### Debugger と Preset の検証
 
 - 7A-4 の Debugger（27 章）の「Assistance」に、制御中のカメラの補助を表示します: モード（Movement Assistance / Phase 2 の Idle recenter）、状態（Disabled / Waiting / Assisting / Suppressed）、向かう先の種類、目標 Yaw、移動速度と継続時間、待ち時間 / Recenter Delay、Suppress の有無（Source の数）、補助しない理由。
 - Node は数値と enum だけを書き、文字列は Debugger が UI の更新のときに作ります（評価で文字列は作りません。Shipping では Debug のデータごと無くなります）。
-- Preset の検証（21 章）: `ACF.Assist.*` の 7 項目と、補助の値の範囲・NaN / Inf。
+- Preset の検証（21 章）: `ACF.Assist.*` の 8 項目（7B-2 の `InputThresholdHigh` を含む）と、補助の値の範囲・NaN / Inf。
 
 ### Runtime Tuning（7A）について
 
-補助の設定は 7A の Runtime Tuning（24〜26 章）のパラメータには **追加していません**。Tuning のパラメータは enum・UI・Change Set・Apply のテストまで一式で増やす必要があり、補助の 8 項目を加えると 7A の 4 項目より大きくなります。補助の調整は Preset の編集と PIE で行えるので、7B-2（入力の加工）で入力の設定と一緒に Tuning の対象にするかを判断します。
+7B-1 では追加せず、7B-2 で数値の 9 項目（Recenter Delay / Time、速度の閾値、継続時間、角度、最大 Yaw 速度、入力の閾値）を Runtime Tuning に追加しました（30 章）。補助の ON / OFF と Recenter Heading は Preset で変更します。
 
 ### テスト
 
@@ -2110,6 +2113,154 @@ Blueprint: `Suppress ACF Camera Assistance` / `Release ACF Camera Assistance Sup
 - 速度は追従対象の位置の差分です。移動する床・乗り物の上では床の動きも「移動」に含まれます。Teleport Distance 未満のワープは速い移動として扱われます（`Notify ACF Teleport` を呼ぶ）。
 - 平滑化の時定数は Lookahead の Smoothing と共通です（補助だけ別の値にはできません）。
 - Combat 中も補助は動きます。戦闘中に止めたい場合はゲーム側で Suppress Camera Assistance を使ってください。
-- Input Source = Control Rotation では補助できません。入力の Dead Zone・感度・加速は 7B-2 の範囲です。
-- 補助の設定は Runtime Tuning（7A）では変更できません（7B-2 で判断）。
+- Input Source = Control Rotation では補助できません。入力の Dead Zone・感度・加速はゲーム側の責任です（7B-2 で整理、30 章）。
+- 補助の ON / OFF と Recenter Heading は Runtime Tuning では変更できません（数値の設定は 7B-2 で追加、30 章）。
 - Editor で人が操作して見る確認（操作感）は未実施です。自動テスト（実際の PCM・Level Sequence を含む）で確認しています。
+
+## 30. カメラ入力の処理と補助との連携（Phase 7B-2）
+
+7B-1 の自動追従（29 章）とプレイヤーの手動操作が自然に連携するように、ACF の入力処理を整理しました。**入力の取得と加工はゲーム側（Enhanced Input など）の責任**です。ACF が持つのは「渡された値をカメラの回転に変える」ことと「補助を止める手動入力かどうかを判定する」ことだけです。新しい Node・入力システムへの依存は追加していません。
+
+### ACF とゲーム側の責務
+
+| 項目 | 担当 | 理由 |
+|---|---|---|
+| スティックの Dead Zone | ゲーム | Enhanced Input の Dead Zone Modifier があります。ACF でも行うと二重に削られ、ゲームの設定と食い違います。ACF は渡された値をそのまま回転に使います |
+| 入力感度（デバイス別・ユーザー設定） | ゲーム | Scalar Modifier・ゲームのオプションで行います。ACF の `Sensitivity`（Preset ごとの「カメラの性格」）は従来どおり、両デバイスに共通で掛けます |
+| 入力の加速・応答カーブ | ゲーム | Response Curve などの Modifier で行います。デバイスとゲームのデザインに依存します |
+| 入力値のスムージング | ゲーム | Smooth Modifier があります。カメラの動きの平滑化は ACF の Rotation Damping が既に持っています |
+| 手動入力かどうかの判定 | **ACF**（7B-2 で追加） | 補助を止めるかは ACF の補助の判断です。Dead Zone を通った後の値でも、マウスのジッターや Dead Zone ぎりぎりのドリフトは残ります |
+| Time Dilation の扱い | **ACF**（7B-2 で選択肢を追加） | `Set Camera Input Rate` に DeltaTime を掛けるのは ACF なので、どの時間で掛けるかも ACF が決めます |
+| 入力デバイスの切り替え | ゲーム（ACF は状態を持たない） | どのデバイスかは入力システムが知っています。ACF はマウス（差分）とスティック（毎秒）を API で区別し、同じフレームの両方を足すだけです |
+
+### 入力 API の単位と処理の順序（変更なし）
+
+- `Add Camera Input`（マウスなど）: **差分**（入力単位）。次の評価までに溜まった分を 1 回だけ使います。
+- `Set Camera Input Rate`（スティックなど）: **毎秒**（入力単位 / 秒）。次の評価で DeltaTime を掛けます。評価のたびに 0 に戻るので、**毎フレーム設定**してください（スティックを離した・マウスに持ち替えたときに古いレートが残りません）。
+- 1 回の評価のカメラ入力 = 差分の合計 + レート × DeltaTime。Orbital Follow が `Sensitivity`・反転を掛けて Yaw / Pitch に足します。
+- DeltaTime 0 の評価（Pause・`InitializeFor`）は入力を使わず、次の評価に残します。
+- 7B-2 から、Director は 2 つの成分を分けて Node に渡します（`FACFCameraEvaluationContext::CameraInputDelta` / `CameraInputRate`。合計の `CameraInput` は従来どおり）。単位の違う 2 つを、Node が別々に判定するためです。
+
+### 手動入力の判定（Input Activity Threshold）
+
+`Orbital Follow > Idle > Movement Assistance > Input Activity Threshold`（deg/s、既定 5。0 で 7B-1 と同じ「どんな入力でも手動入力」）。
+
+- **単位は Sensitivity を掛けた後のカメラの回転速度（度 / 秒）**で、マウスとスティックで同じ値を使います。
+- **スティック**: レート × |Sensitivity| をそのまま比べます。そのフレームで即座に判定され、フレームレートに依存しません。
+- **マウス**: 1 フレームの差分を dt で割ると、同じジッター 1 カウントが 120 fps では 30 fps の 4 倍の速度に見えます。そこで差分を **0.1 秒の窓**で減衰させながら溜め、「溜まった量 ÷ 0.1 秒」を速度とします。1 カウントはどのフレームレートでも「カウント ÷ 0.1 秒」の重さです。一定の速さで動かした場合は、120〜30 fps で実際の速度の 1.0〜1.2 倍に読みます。減衰は実時間で進みます（スローモーションで伸びません）。
+- **手動入力になるのは、入力のあったフレームだけ**です。減衰の残りだけでは止めないので、最後の入力のフレームから Recenter Delay で再開します（7B-1 と同じタイミング）。マウスの報告が来ない間のフレーム（高フレームレート）は手動入力になりませんが、次の報告で待ちがやり直しになるので、回し続けている間は補助が再開しません。
+- **閾値未満の入力もカメラは回します**（ACF は Dead Zone を行いません）。補助を止めないだけです。
+- 補助が OFF の Orbital Follow と `Input Source = Control Rotation` では使いません。Phase 2 の `Recenter When Idle` は従来どおり、どんな入力でも止まります。
+
+| 入力 | 既定（5 deg/s） | 7B-1（0） |
+|---|---|---|
+| スティックのドリフト 2 deg/s | 補助は続く（カメラは 2 deg/s で回る） | 毎フレーム止まる |
+| マウスのジッター 0.3° を 1 回 | 3 deg/s: 補助は続く | 止まり、Recenter Delay から |
+| スティック 10 deg/s / マウス 1° のフリック | そのフレームで止まる | 同じ |
+| マウスで 20 deg/s のゆっくりした回転 | 0.05 秒以内に止まり、回している間は再開しない | すぐ止まる |
+
+### 手動入力と Movement Assistance の優先順位
+
+29 章の順序のまま、2 番目の「手動入力」が **閾値以上の入力** になりました。
+
+1. 明示的な回転指定
+2. **手動の Camera Input（Input Activity Threshold 以上）**: そのフレームで補助を止め、入力分だけ動く
+3. Suppress Camera Assistance
+4. 外部 ViewTarget・Suppress Output（View Not Shown）、制御中の要求でない Rig（Not In Control）
+5. Recenter Delay
+6. 移動の条件
+7. Rotation Damping
+
+閾値未満の入力はこの順序に入りません（補助と同じフレームに、両方がカメラに足されます）。他の機能との関係:
+
+| 状況 | 入力と補助 |
+|---|---|
+| 外部 ViewTarget（Sequencer の Camera Cut）・Suppress Output | 補助は止まっている。閾値以上の入力は Manual Input（2 番）、ノイズは View Not Shown（4 番）と表示 |
+| Lock-On・Finisher | Orbital Follow の要求は評価されず、補助も入力判定も進まない。戻ったら待ちから（29 章） |
+| Combat Camera | 補助も入力判定もそのまま |
+| 複数の LocalPlayer | 入力・判定・補助はプレイヤーごと。1 人目の入力は 2 人目の補助に影響しない |
+
+### Time Dilation
+
+- `Orbital Follow > Input > Input Rate Ignores Time Dilation`（既定 OFF）を ON にすると、スティックのレートに **実時間**（DeltaTime ÷ World の Time Dilation）を掛けます。スローモーション（`Set Global Time Dilation`）中も、プレイヤーのカメラ操作が遅くなりません。OFF（既定）は従来どおりゲーム時間で、スローモーション中はカメラ操作も遅くなります。
+- マウスの差分は時間に依存しないので、どちらでも変わりません。
+- 手動入力の判定: スティックは deg/s の比較なので Time Dilation によりません。マウスの窓は実時間です。
+- Time Dilation は Subsystem が World Settings の Effective Time Dilation（Global × Cinematic × Demo）から渡します。PlayerController / PCM の Custom Time Dilation は含みません。0・負・NaN は 1 として扱います。
+- 補助の待ち時間・速度・回転は 7B-1 と同じゲーム時間です。Time Dilation 1 では、ON / OFF の姿勢はビット単位で同じです（テストで確認）。
+
+### 実装しなかった機能
+
+| 機能 | 理由 |
+|---|---|
+| 入力の Dead Zone・感度カーブ・加速・入力値のスムージング・デバイス別の感度 | Enhanced Input の Modifier で行えます。ACF でも行うと二重の処理になり、どちらの設定が効いているか分からなくなります |
+| 入力デバイスの検出・切り替えの処理 | 入力システムの責任です。ACF はフレームごとに状態を持たないので、切り替えで古い値が残りません（テストで確認） |
+| Pause 中に送られた入力の破棄 | DeltaTime 0 の評価で入力を失わないこと（`InitializeFor` の後の本評価）が既存の保証です。メニュー中はゲームが入力を送らないでください |
+| 補助の ON / OFF・Recenter Heading の Runtime Tuning | bool / enum は Tuning の数値の表に合わず、カメラの設計の判断なので Preset で変更します |
+
+### Runtime Tuning（7A）への追加
+
+**評価**: 補助の値（速度の閾値・待ち時間・最大速度・入力の閾値）は、キャラクターを走らせながら調整するもので、PIE でその場で変えられる価値が高いと判断しました。7A の仕組み（Runtime Override = 要求の Preset の複製、Change Set、Preset Validation、Apply の Undo / Redo）をそのまま使えるので、追加しました。汎用の Reflection は作らず、Orbital Follow の float メンバーを並べた明示的な表（`ACFCameraTuning.cpp`）です。
+
+| Parameter | プロパティ | 範囲 | 出る条件 |
+|---|---|---|---|
+| `RecenterDelay` | Recenter Delay | 0 以上（秒） | Recenter When Idle または補助が ON |
+| `RecenterTime` | Recenter Time | 0.01 以上（秒） | 同上 |
+| `AssistStartSpeed` / `AssistStopSpeed` | Start / Stop Speed Threshold | 0 以上（cm/s） | 補助が ON |
+| `AssistMovementDuration` | Required Movement Duration | 0 以上（秒） | 補助が ON |
+| `AssistBackwardExclusion` | Backward Exclusion Angle | 0〜180（度） | 補助が ON |
+| `AssistDeadZone` | Angular Dead Zone | 0〜180（度） | 補助が ON |
+| `AssistMaxYawSpeed` | Max Assistance Yaw Speed | 0.01 以上（deg/s） | 補助が ON |
+| `AssistInputThreshold` | Input Activity Threshold | 0 以上（deg/s） | 補助が ON |
+
+- 範囲はプロパティの ClampMin / ClampMax と同じです。範囲外・NaN / Inf は `InvalidValue` で、何も変わりません。
+- Camera Tuning パネル（25 章）では、その値を使う Orbital Follow を選んだときだけ行が出ます。補助を使わない Preset に「調整できない」行は並べません（4 つの 7A のパラメータは従来どおり理由を表示）。
+- Apply（26 章）は 7A と同じです: 1 つの Transaction、Preset Validation（例: Input Activity Threshold 45 は `ACF.Assist.InputThresholdHigh` の Warning で、確認後に反映）、Undo / Redo、競合の検出。
+
+### Debugger と Preset の検証
+
+- Debugger（27 章）の「Assistance」に **Input activity** の行を追加しました: 入力の強さ / 閾値（deg/s）と、手動入力か「閾値未満: 無視」か。
+- Preset の検証: `ACF.Assist.InputThresholdHigh`（Warning。Input Activity Threshold が 30 deg/s を超える = ゆっくり意図的に回す操作が補助に負ける）。負の値・NaN / Inf は既存の範囲の検査で出ます。補助が OFF・Control Rotation の Orbital Follow では検査しません（使わない値）。
+
+### テスト
+
+| テスト | 内容 |
+|---|---|
+| `.Assistance.Input.NoiseDoesNotBlock` | スティックのドリフト + マウスのジッターを毎フレーム入れても補助が始まって回る（閾値 0 では一度も補助しない）、閾値未満の入力もカメラは回す、出力バイパス中はノイズ = View Not Shown・明確な入力 = Manual Input |
+| `.Assistance.Input.ClearInputStopsAndResumes` | 30 / 60 / 120 fps で、スティック 10 deg/s・マウス 1° がそのフレームで補助を止め入力分だけ動く、最後の入力から Recenter Delay（±1 フレーム）で再開、倒し続ける間は止まったまま |
+| `.Assistance.Input.FrameRateIndependentUnits` | 30〜240 fps でジッター 1 カウントが同じ 3 deg/s、3 deg/s のマウスはどのフレームレートでも手動入力にならず 20 deg/s は 0.05 秒以内に手動入力、125 Hz のマウス × 240 fps で回している間は再開せず、最後の報告から Recenter Delay で再開 |
+| `.Assistance.Input.DeviceSwitchingAndSensitivity` | スティックからマウスへの持ち替えで古いレートが残らない、同じフレームの両方は足される、閾値は Sensitivity の後（感度 2 でレート 3 は手動入力）、Pitch だけ・反転・負の感度 |
+| `.Assistance.Input.TimeDilation` | スローモーション 0.25 で実時間の設定は 60 deg/s × 実 1/60 s、ゲーム時間では × ゲーム 1/240 s、マウスの差分は不変、マウスの窓は実時間で減衰、0・NaN・負の Dilation は 1、Dilation 1 では ON / OFF がビット単位で同じ |
+| `.Assistance.Input.CompatibilityAndPlayers` | 補助 OFF では閾値が Phase 2 の Recenter を変えない（ビット単位）、2 人のプレイヤーの入力と補助が独立 |
+| `.Tuning.MovementAssistanceParameters` | 補助の値が出る条件、調整した閾値・最大速度が次の更新から効く、範囲外・NaN を拒否、アセットは変わらない、Reset で戻る |
+| `.PresetValidation.MovementAssistance`（追加分） | 負・NaN の閾値、30 を超える閾値の Warning、補助 OFF・Control Rotation では検査しない |
+| `.Sequencer.Assistance.InputNoiseDilationAndPlayers`（実際の PCM・World） | Subsystem 経由のドリフトで補助が止まらない、明確な入力は 1 人目だけを止める、`Set Global Time Dilation` 0.25 が実時間 / ゲーム時間の設定どおりに入力へ届く |
+| `.Editor.TuningApply.MovementAssistance` | パネルに補助の行、2 つの値を 1 つの Transaction で Apply・Undo（バイト単位で元どおり）・Redo、Warning の値は確認後に反映 |
+| `.Editor.Diagnostics.DebuggerShowsAssistance`（追加分） | Input activity の行（閾値未満: 無視 / 手動入力） |
+| `.Profile.AssistanceVariants`（追加分） | ノイズ入力中・マウス入力中の性能 |
+
+### 性能
+
+- **B-1 の 8 シナリオ**（サンプルの Preset は補助を使わない）を、7B-1 のコミット（`dffcd41`）と変更後で比較しました。ACF の出力姿勢は 8 シナリオ × 600 フレームすべてで **ビット単位で一致**（Sequencer の背景評価のシナリオで違うのは、描画されている Sequencer 自身のカメラの列だけ）。アロケーション数は全シナリオで一致。ACF の合計時間の平均は −4 〜 +3 %（両方向。計測の揺れの範囲）。
+- **補助の状態ごと**（29 章と同じ計測。単独の Director、Orbital Follow だけ、9 ラウンド × 4000 回の評価の中央値。`--context profile` で単独に実行）:
+
+  | 状態 | µs / 評価 | Recenter なしとの差 | アロケーション（600 回） |
+  |---|---|---|---|
+  | Recenter なし | 1.400 | — | 0 |
+  | 補助 OFF（Phase 2 の Recenter） | 1.423 | +0.023 | 0 |
+  | 補助 ON・待機中 | 1.469 | +0.069 | 0 |
+  | 補助 ON・追従中 | 1.522 | +0.122 | 0 |
+  | 補助 ON・手動入力で抑制中（スティック） | 1.495 | +0.095 | 0 |
+  | 補助 ON・ノイズ入力中（追従は続く。7B-2） | 1.529 | +0.129 | 0 |
+  | 補助 ON・マウス入力で抑制中（7B-2） | 1.459 | +0.059 | 0 |
+
+  入力の判定（`Exp` 1 回と 2 つのベクトルの長さ）を含めても、1 評価あたりの補助の分は 0.13 µs 以下（B-1 のシナリオの合計 80〜160 µs の 0.1 % 程度）で、アロケーションはありません。7B-1 の同じ計測（追従中 +0.055）との差は数十 ns で、ラウンド間の揺れ（max は中央値より 0.4〜1.0 µs 大きい）と同程度です。結果は `Saved/ACFProfile/7B2_Assistance.md`。全回帰の profile コンテキストの中で同じテストを流すと、他のテストの直後で全体が約 4 倍遅く出ます（差の傾向は同じ）。単独の実行の値を載せています。
+
+### 残る制限
+
+- 閾値はノイズのためのものです。閾値未満でゆっくり意図的に回す操作は、補助と同時にカメラに足され、補助の方が速ければ補助が勝ちます（既定の 5 deg/s では実用上ノイズだけ）。
+- マウスの判定の窓（0.1 秒）は固定です。
+- Time Dilation は World のものだけを見ます（PlayerController / PCM の Custom Time Dilation は含みません）。
+- Pause 中にゲームが送った入力は、再開時にまとめて回ります（メニュー中は送らない）。
+- Input Source = Control Rotation では、補助も入力の判定もありません（29 章）。
+- 補助の ON / OFF と Recenter Heading は Runtime Tuning では変えられません（Preset で変更）。
+- Editor で人が操作して見る確認（スティック・マウスでの操作感）は未実施です。自動テスト（実際の PCM・World を含む）で確認しています。

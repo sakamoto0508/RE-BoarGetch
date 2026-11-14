@@ -33,6 +33,12 @@ void UACFCameraNode_OrbitalFollow::OnActivated(const FACFCameraNodeContext& Cont
 {
 	// Keep the orbit angles across re-activation (the player's view is preserved), but snap damping.
 	ResetInterpolation(RuntimeState);
+	if (FACFCameraOrbitState* State = ACFNodes::GetState<FACFCameraOrbitState>(RuntimeState))
+	{
+		// 7B-2: input measured before the rig was hidden is not this frame's input.
+		State->InputActivityAccum = 0.f;
+		State->InputActivity = 0.f;
+	}
 }
 
 void UACFCameraNode_OrbitalFollow::ResetInterpolation(FInstancedStruct* RuntimeState) const
@@ -45,7 +51,37 @@ void UACFCameraNode_OrbitalFollow::ResetInterpolation(FInstancedStruct* RuntimeS
 	}
 }
 
-void UACFCameraNode_OrbitalFollow::UpdateMovementAssistance(const FACFCameraNodeContext& Context, FACFCameraOrbitState& State, float TargetYaw, bool bHadInput, bool bExplicitRotation) const
+bool UACFCameraNode_OrbitalFollow::UpdateInputActivity(const FACFCameraNodeContext& Context, FACFCameraOrbitState& State, bool bAnyInput) const
+{
+	const FACFCameraEvaluationContext& Eval = Context.Evaluation;
+	// Turning speed the input asks for, in degrees after Sensitivity (inversion does not matter for "how much").
+	const FVector2D Scale(FMath::Abs(Sensitivity.X), FMath::Abs(Sensitivity.Y));
+	const float MouseDegrees = static_cast<float>((Eval.CameraInputDelta * Scale).Size());
+	const float StickDegreesPerSecond = static_cast<float>((Eval.CameraInputRate * Scale).Size());
+	// Stick: a rate, compared as it is (at once, at every frame rate). Mouse: a displacement per frame, so a per-frame
+	// speed would make one jitter count 4x heavier at 120 fps than at 30 fps; the deltas accumulate instead and decay over
+	// InputActivityWindow, and accumulation / window is the speed (one count weighs count / window at every frame rate;
+	// steady movement reads 1.0x - 1.2x its real speed from 120 to 30 fps). Mouse deltas are real-time events: the decay runs
+	// in real time, so a slow motion does not stretch it. Only a frame that carries input is manual input: what is left of
+	// the decay never blocks on its own, so the wait restarts exactly at the last input frame (as in Phase 7B-1), and a
+	// frame without a delta between two mouse reports (high frame rates) is unblocked but restarts nothing.
+	const float RealDt = Context.GetDeltaTime() / Context.Evaluation.TimeDilation;
+	State.InputActivityAccum = State.InputActivityAccum * FMath::Exp(-RealDt / InputActivityWindow) + MouseDegrees;
+	if (!FMath::IsFinite(State.InputActivityAccum))
+	{
+		State.InputActivityAccum = 0.f; // B-4 policy: nothing invalid stays in the state
+	}
+	const float MouseDegreesPerSecond = State.InputActivityAccum / InputActivityWindow;
+	State.InputActivity = FMath::Max(MouseDegreesPerSecond, StickDegreesPerSecond);
+	const float Threshold = FMath::IsFinite(InputActivityThreshold) ? InputActivityThreshold : 0.f;
+	if (Threshold <= 0.f)
+	{
+		return bAnyInput; // 0 = any input (Phase 7B-1)
+	}
+	return StickDegreesPerSecond >= Threshold || (MouseDegrees > 0.f && MouseDegreesPerSecond >= Threshold);
+}
+
+void UACFCameraNode_OrbitalFollow::UpdateMovementAssistance(const FACFCameraNodeContext& Context, FACFCameraOrbitState& State, float TargetYaw, bool bManualInput, bool bExplicitRotation) const
 {
 	const FACFCameraEvaluationContext& Eval = Context.Evaluation;
 	const float Dt = Context.GetDeltaTime();
@@ -99,7 +135,7 @@ void UACFCameraNode_OrbitalFollow::UpdateMovementAssistance(const FACFCameraNode
 	{
 		Reason = EACFCameraAssistanceReason::ExplicitRotation;
 	}
-	else if (bHadInput)
+	else if (bManualInput) // 7B-2: above Input Activity Threshold (noise below it never blocks)
 	{
 		Reason = EACFCameraAssistanceReason::ManualInput;
 	}
@@ -232,16 +268,28 @@ void UACFCameraNode_OrbitalFollow::Evaluate(const FACFCameraNodeContext& Context
 	}
 
 	// 2. Input. CameraInput was consumed once by the director for this frame (never twice).
+	bool bManualInput = false; // 7B-2: input above Input Activity Threshold (what blocks Movement Assistance)
 	switch (InputSource)
 	{
 	case EACFCameraOrbitInputSource::CameraInput:
-		if (!Eval.CameraInput.IsNearlyZero())
+	{
+		// 7B-2: the stick rate in real time when asked (a slow motion does not slow the player's control). Off = the
+		// director's sum, unchanged.
+		const bool bRealTimeRate = bInputRateIgnoresTimeDilation && Eval.TimeDilation != 1.f && !Eval.CameraInputRate.IsZero();
+		const FVector2D Input = bRealTimeRate ? Eval.CameraInputDelta + Eval.CameraInputRate * (Dt / Eval.TimeDilation) : Eval.CameraInput;
+		const bool bAnyInput = !Input.IsNearlyZero();
+		if (bAnyInput)
 		{
-			State->GoalYaw += Eval.CameraInput.X * Sensitivity.X * (bInvertYaw ? -1.f : 1.f);
-			State->GoalPitch += Eval.CameraInput.Y * Sensitivity.Y * (bInvertPitch ? -1.f : 1.f);
+			State->GoalYaw += Input.X * Sensitivity.X * (bInvertYaw ? -1.f : 1.f);
+			State->GoalPitch += Input.Y * Sensitivity.Y * (bInvertPitch ? -1.f : 1.f);
 			bHadInput = true;
 		}
+		if (bEnableMovementAssistance && Dt > 0.f)
+		{
+			bManualInput = UpdateInputActivity(Context, *State, bAnyInput);
+		}
 		break;
+	}
 	case EACFCameraOrbitInputSource::ControlRotation:
 		if (Eval.bHasControlRotation)
 		{
@@ -267,7 +315,7 @@ void UACFCameraNode_OrbitalFollow::Evaluate(const FACFCameraNodeContext& Context
 	{
 		if (Dt > 0.f) // zero-time evaluations (pause, InitializeFor) never advance the waits
 		{
-			UpdateMovementAssistance(Context, *State, TargetYaw, bHadInput, bExplicitRotation);
+			UpdateMovementAssistance(Context, *State, TargetYaw, bManualInput, bExplicitRotation);
 		}
 	}
 	else if (bRecenterWhenIdle && InputSource != EACFCameraOrbitInputSource::ControlRotation && State->TimeSinceInput >= RecenterDelay && Dt > 0.f)
@@ -346,6 +394,9 @@ void UACFCameraNode_OrbitalFollow::Evaluate(const FACFCameraNodeContext& Context
 		Debug.AssistanceRecenterDelay = RecenterDelay;
 		Debug.AssistanceMovementTime = State->MovementTime;
 		Debug.AssistanceRequiredMovementTime = RequiredMovementDuration;
+		Debug.bHasAssistanceInput = bEnableMovementAssistance && InputSource == EACFCameraOrbitInputSource::CameraInput;
+		Debug.AssistanceInputActivity = State->InputActivity;
+		Debug.AssistanceInputThreshold = InputActivityThreshold;
 	}
 #endif
 }

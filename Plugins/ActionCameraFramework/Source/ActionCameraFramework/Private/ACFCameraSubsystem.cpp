@@ -13,6 +13,7 @@
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/WorldSettings.h"
 #include "Engine/GameViewportClient.h"
 #include "Debug/DebugDrawService.h"
 #include "ACFCameraDebugDraw.h"
@@ -687,6 +688,11 @@ const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateInternal(float De
 		Context.World = PlayerController->GetWorld();
 		Context.ControlRotation = PlayerController->GetControlRotation();
 		Context.bHasControlRotation = true;
+		// 7B-2: the World's time dilation (Set Global Time Dilation, Sequencer play rate), so input can run in real time.
+		if (const AWorldSettings* WorldSettings = Context.World ? Context.World->GetWorldSettings() : nullptr)
+		{
+			Context.TimeDilation = WorldSettings->GetEffectiveTimeDilation();
+		}
 	}
 	// Aspect ratio for screen-space composition: constrained camera aspect, else this player's view.
 	if (UpstreamPOV.bConstrainAspectRatio && UpstreamPOV.AspectRatio > 0.f)

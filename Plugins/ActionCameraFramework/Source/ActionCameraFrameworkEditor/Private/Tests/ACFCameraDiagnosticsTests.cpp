@@ -293,6 +293,19 @@ bool FACFDiagnosticsAssistanceTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Moving: target yaw row = the movement direction"), Row(View, TEXT("Target yaw")), FString(TEXT("90.00 deg")));
 	TestEqual(TEXT("Not suppressed"), Row(View, TEXT("Assistance suppression")), FString(TEXT("not suppressed")));
 
+	// Phase 7B-2: the input activity row (deg/s against Input Activity Threshold, default 5).
+	Director->SetCameraInputRate(FVector2D(2.0, 0.0));
+	Step(1);
+	View = Matches(TEXT("Drift"));
+	TestEqual(TEXT("Drift: below threshold, ignored"), Row(View, TEXT("Input activity")), FString(TEXT("2.0 / 5.0 deg/s (below threshold: ignored)")));
+	TestTrue(TEXT("Drift: still assisting"), Director->GetLastDebug().AssistanceState == EACFCameraAssistanceState::Assisting);
+	Director->SetCameraInputRate(FVector2D(12.0, 0.0));
+	Step(1);
+	View = Matches(TEXT("Stick"));
+	TestEqual(TEXT("Stick: manual input"), Row(View, TEXT("Input activity")), FString(TEXT("12.0 / 5.0 deg/s (manual input)")));
+	TestTrue(TEXT("Stick: Manual Input reason"), Director->GetLastDebug().AssistanceReason == EACFCameraAssistanceReason::ManualInput);
+	Step(30); // back to assisting after Recenter Delay (0.3 s)
+
 	TStrongObjectPtr<USceneComponent> Source(NewObject<USceneComponent>(GetTransientPackage(), NAME_None, RF_Transient));
 	Director->SuppressAssistance(Source.Get());
 	Step(3);

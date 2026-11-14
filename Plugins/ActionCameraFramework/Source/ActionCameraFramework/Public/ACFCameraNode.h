@@ -88,6 +88,10 @@ struct FACFCameraRigDebug
 	float AssistanceRecenterDelay = 0.f;
 	float AssistanceMovementTime = 0.f;
 	float AssistanceRequiredMovementTime = 0.f;
+	// Phase 7B-2: manual input activity (deg/s after Sensitivity) and the threshold above which it blocks the assistance.
+	bool bHasAssistanceInput = false;
+	float AssistanceInputActivity = 0.f;
+	float AssistanceInputThreshold = 0.f;
 };
 #endif
 

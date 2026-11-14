@@ -21,6 +21,7 @@
 #include "Nodes/ACFCameraNode_Collision.h"
 #include "Nodes/ACFCameraNode_FixedPose.h"
 #include "Nodes/ACFCameraNode_Follow.h"
+#include "Nodes/ACFCameraNode_OrbitalFollow.h"
 #include "PackageTools.h"
 #include "Framework/Application/SlateApplication.h"
 #include "SACFCameraTuningPanel.h"
@@ -862,6 +863,86 @@ bool FACFTuningApplyWidgetTest::RunTest(const FString& Parameters)
 	Rig.Director->StopAllTuning();
 	GEditor->ResetTransaction(FText::FromString(TEXT("ACF tuning apply test")));
 	DropAsset(Asset);
+	return true;
+}
+
+// Phase 7B-2: the Orbital Follow recenter / Movement Assistance values go through the same Change Set: the panel lists them
+// on the node that uses them, Apply writes the asset in one transaction (validated: a warning needs confirmation), Undo /
+// Redo restore it.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFTuningApplyAssistanceTest, "ActionCameraFramework.Editor.TuningApply.MovementAssistance", ACFTuningApplyTests::Flags)
+bool FACFTuningApplyAssistanceTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFTuningApplyTests;
+	if (!TestNotNull(TEXT("Editor transaction buffer"), GEditor ? GEditor->Trans.Get() : nullptr))
+	{
+		return false;
+	}
+	FTestRoot TestRoot;
+	TestRoot.Test = this;
+	auto MakeOrbitAsset = []()
+	{
+		const FString Short = FString::Printf(TEXT("DA_Assist_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Short));
+		UPackage* NewPackage = CreatePackage(*(FString(Root) + Short));
+		UACFCameraPreset* Preset = NewObject<UACFCameraPreset>(NewPackage, *Short, RF_Public | RF_Standalone | RF_Transactional);
+		Preset->DefaultBlendIn = FACFCameraBlendSettings::MakeCut();
+		Preset->DefaultBlendOut = FACFCameraBlendSettings::MakeCut();
+		UACFCameraNode_OrbitalFollow* Node = NewObject<UACFCameraNode_OrbitalFollow>(Preset);
+		Node->bEnableMovementAssistance = true;
+		Node->RecenterHeading = EACFCameraRecenterHeading::MovementDirection;
+		Preset->Nodes.Add(Node);
+		NewPackage->SetDirtyFlag(false);
+		return Preset;
+	};
+	TStrongObjectPtr<UACFCameraPreset> Asset(MakeOrbitAsset());
+	UPackage* Package = Asset->GetPackage();
+	UACFCameraNode_OrbitalFollow* Orbit = NodeAt<UACFCameraNode_OrbitalFollow>(Asset.Get(), 0);
+	const FName OrbitClass = UACFCameraNode_OrbitalFollow::StaticClass()->GetFName();
+
+	FTuned Tuned(Asset.Get());
+	FACFCameraTuningPanelModel& Model = *Tuned.Model;
+	Model.SelectNode(0, OrbitClass);
+	TArray<FACFCameraTuningPanelModel::FParameterRow> Rows;
+	Model.GetParameterRows(Rows);
+	auto HasRow = [&Rows](EParam Parameter) { return Rows.ContainsByPredicate([Parameter](const FACFCameraTuningPanelModel::FParameterRow& Row) { return Row.Parameter == Parameter && Row.bAvailable; }); };
+	TestTrue(TEXT("Panel rows: the assistance values of the selected Orbital Follow"), HasRow(EParam::AssistMaxYawSpeed) && HasRow(EParam::AssistInputThreshold) && HasRow(EParam::RecenterDelay));
+	TestFalse(TEXT("Panel rows: no 'not tunable' row for assistance values"), Rows.ContainsByPredicate([](const FACFCameraTuningPanelModel::FParameterRow& Row) { return !Row.bAvailable && Row.Parameter >= EParam::RecenterDelay; }));
+
+	// Two values, one Apply, one transaction; Undo / Redo.
+	const TArray<uint8> Before = Snapshot(Orbit);
+	TestEqual(TEXT("Tune max yaw speed"), Tuned.Set(0, OrbitClass, EParam::AssistMaxYawSpeed, FVector(45.0, 0.0, 0.0)), EResult::Ok);
+	TestEqual(TEXT("Tune input threshold"), Tuned.Set(0, OrbitClass, EParam::AssistInputThreshold, FVector(3.0, 0.0, 0.0)), EResult::Ok);
+	TestEqual(TEXT("Asset untouched while tuning"), Orbit->MaxAssistanceYawSpeed, 90.f);
+	Model.CaptureAll();
+	TestEqual(TEXT("Two pending changes"), Model.GetChangeSet().CountState(EState::Pending, true), 2);
+	FACFCameraTuningChangeSet::FReport Report = Model.ApplyChanges(false);
+	TestTrue(FString::Printf(TEXT("Applied (%s)"), *Report.Message), Report.bOk && Report.NumDone == 2);
+	TestTrue(TEXT("Asset values"), Orbit->MaxAssistanceYawSpeed == 45.f && Orbit->InputActivityThreshold == 3.f);
+	TestEqual(TEXT("One transaction"), UndoTitle(), FString(TEXT("Apply ACF Camera Tuning")));
+	TestTrue(TEXT("Package dirty"), Package->IsDirty());
+	TestTrue(TEXT("Undo"), GEditor->UndoTransaction());
+	TestTrue(TEXT("Undo: the node byte for byte as before"), Snapshot(Orbit) == Before);
+	TestTrue(TEXT("Redo"), GEditor->RedoTransaction());
+	TestTrue(TEXT("Redo: values again"), Orbit->MaxAssistanceYawSpeed == 45.f && Orbit->InputActivityThreshold == 3.f);
+
+	DropAsset(Asset.Get());
+
+	// A value that Preset Validation warns about (threshold above noise level): refused until confirmed (another asset: the
+	// first one's base values are the ones its tuning started from).
+	{
+		TStrongObjectPtr<UACFCameraPreset> Warned(MakeOrbitAsset());
+		FTuned WarnedTuned(Warned.Get());
+		UACFCameraNode_OrbitalFollow* WarnedOrbit = NodeAt<UACFCameraNode_OrbitalFollow>(Warned.Get(), 0);
+		TestEqual(TEXT("Tune input threshold 45"), WarnedTuned.Set(0, OrbitClass, EParam::AssistInputThreshold, FVector(45.0, 0.0, 0.0)), EResult::Ok);
+		WarnedTuned.Model->CaptureAll();
+		const FACFCameraTuningChangeSet::FReport Check = WarnedTuned.Model->CheckChanges();
+		TestTrue(FString::Printf(TEXT("Check names the warning (%s)"), *Check.Message), Check.NumErrors == 0
+			&& Check.Issues.ContainsByPredicate([](const FACFCameraPresetIssue& Issue) { return Issue.Id == FName(TEXT("ACF.Assist.InputThresholdHigh")); }));
+		TestFalse(TEXT("Not confirmed: refused"), WarnedTuned.Model->ApplyChanges(false).bOk);
+		TestEqual(TEXT("Not confirmed: asset unchanged"), WarnedOrbit->InputActivityThreshold, 5.f);
+		TestTrue(TEXT("Confirmed: applied"), WarnedTuned.Model->ApplyChanges(true).bOk);
+		TestEqual(TEXT("Confirmed: asset value"), WarnedOrbit->InputActivityThreshold, 45.f);
+		DropAsset(Warned.Get());
+	}
 	return true;
 }
 

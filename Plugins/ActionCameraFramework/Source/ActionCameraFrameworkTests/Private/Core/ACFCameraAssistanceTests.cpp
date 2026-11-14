@@ -15,7 +15,7 @@
 #endif
 
 /**
- * Phase 7B-1: Orbital Follow movement assistance (Recenter Heading Movement Direction) and Suppress Camera Assistance,
+ * Phase 7B-1 / 7B-2: Orbital Follow movement assistance (7B-2: input activity, real-time input rate, tuning) (Recenter Heading Movement Direction) and Suppress Camera Assistance,
  * director level and deterministic (fixed steps, the target is a scene component moved by the test). README 29 章.
  *
  * Default rig: camera yaw 0 (looking along +X, the camera behind at -X), Recenter Delay 0.5 s, Recenter Time 0.3 s,
@@ -891,6 +891,494 @@ bool FACFAssistValidationTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Control Rotation input"), Has(Issues(On([](UACFCameraNode_OrbitalFollow& O) { O.InputSource = EACFCameraOrbitInputSource::ControlRotation; })), TEXT("ACF.Assist.ControlRotationInput")));
 	TestTrue(TEXT("Movement Direction + Follow Target Yaw"), Has(Issues(On([](UACFCameraNode_OrbitalFollow& O) { O.RecenterHeading = EACFCameraRecenterHeading::MovementDirection; O.bFollowTargetYaw = true; })), TEXT("ACF.Assist.FollowTargetYaw")));
 	TestTrue(TEXT("Movement Direction without assistance"), Has(Issues([](UACFCameraNode_OrbitalFollow& O) { O.bRecenterWhenIdle = true; O.RecenterHeading = EACFCameraRecenterHeading::MovementDirection; }), TEXT("ACF.Assist.HeadingNeedsAssistance")));
+	// Phase 7B-2: Input Activity Threshold (deg/s, noise level).
+	TestTrue(TEXT("7B-2: negative input threshold"), Has(Issues(On([](UACFCameraNode_OrbitalFollow& O) { O.InputActivityThreshold = -1.f; })), TEXT("ACF.Param.OutOfRange"), TEXT("InputActivityThreshold")));
+	TestTrue(TEXT("7B-2: NaN input threshold: error"), Has(Issues(On([](UACFCameraNode_OrbitalFollow& O) { O.InputActivityThreshold = NAN; })), TEXT("ACF.Param.NonFinite"), TEXT("InputActivityThreshold"), ESeverity::Error));
+	TestTrue(TEXT("7B-2: threshold above noise level"), Has(Issues(On([](UACFCameraNode_OrbitalFollow& O) { O.InputActivityThreshold = 45.f; })), TEXT("ACF.Assist.InputThresholdHigh"), TEXT("InputActivityThreshold")));
+	TestFalse(TEXT("7B-2: threshold 30 is still accepted"), Has(Issues(On([](UACFCameraNode_OrbitalFollow& O) { O.InputActivityThreshold = 30.f; })), TEXT("ACF.Assist.InputThresholdHigh")));
+	TestFalse(TEXT("7B-2: high threshold without assistance: unused, not reported"), Has(Issues([](UACFCameraNode_OrbitalFollow& O) { O.InputActivityThreshold = 45.f; }), TEXT("ACF.Assist.InputThresholdHigh")));
+	TestFalse(TEXT("7B-2: negative threshold with Control Rotation input: unused, not reported"),
+		Has(Issues(On([](UACFCameraNode_OrbitalFollow& O) { O.InputSource = EACFCameraOrbitInputSource::ControlRotation; O.InputActivityThreshold = -1.f; })), TEXT("ACF.Param.OutOfRange"), TEXT("InputActivityThreshold")));
+	return true;
+}
+#endif
+
+// =================================================================================================
+// Phase 7B-2: camera input and the assistance (Input Activity Threshold, README 29 章). Noise never blocks the assistance,
+// clear input stops it in the same frame, the wait restarts at the last input frame. Mouse deltas (displacements per
+// frame) and stick rates (per second) are measured in one unit (deg/s after Sensitivity) at every frame rate.
+
+namespace ACFAssistTests
+{
+	/** Moves sideways (heading 90) until the assistance turns the camera. */
+	inline bool StartAssisting(FRig& R, float Dt)
+	{
+		R.Velocity = Heading(90.f, 400.f);
+		return R.StepUntil(Dt, FMath::CeilToInt(5.f / Dt), [&R] { return R.Assisting(); }) != INDEX_NONE;
+	}
+
+	inline bool IsManual(const FRig& R) { return R.Reason() == EACFCameraAssistanceReason::ManualInput; }
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistInputNoiseTest, "ActionCameraFramework.Assistance.Input.NoiseDoesNotBlock", ACFTests::Flags)
+bool FACFAssistInputNoiseTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFAssistTests;
+	// Stick drift (2 deg/s) every frame and mouse jitter (+-0.1 deg every third frame: at most 2.5 deg/s over the window)
+	// from the start. Threshold 5 (default): the assistance starts and turns anyway. Threshold 0 (7B-1): it never does.
+	for (const float Threshold : { 5.f, 0.f })
+	{
+		FRig R([Threshold](UACFCameraNode_OrbitalFollow& O) { O.InputActivityThreshold = Threshold; });
+		R.Velocity = Heading(90.f, 400.f);
+		int32 AssistFrames = 0;
+		int32 ManualFrames = 0;
+		float MaxActivity = 0.f;
+		for (int32 I = 0; I < 180; ++I)
+		{
+			R.Director->SetCameraInputRate(FVector2D(2.0, 0.0));
+			if (I % 3 == 0)
+			{
+				R.Director->AddCameraInput(FVector2D(I % 6 == 0 ? 0.1 : -0.1, 0.0));
+			}
+			R.Step(Dt60);
+			AssistFrames += R.Assisting() ? 1 : 0;
+			ManualFrames += IsManual(R) ? 1 : 0;
+			MaxActivity = FMath::Max(MaxActivity, R.Debug().AssistanceInputActivity);
+		}
+		if (Threshold > 0.f)
+		{
+			TestEqual(TEXT("Threshold 5: the noise is never manual input"), ManualFrames, 0);
+			TestTrue(FString::Printf(TEXT("Threshold 5: assisting despite the noise (%d frames, %s)"), AssistFrames, *Describe(R)), AssistFrames > 60 && R.Yaw() > 60.f);
+			TestTrue(FString::Printf(TEXT("Activity is measured and stays below the threshold (max %.3f deg/s)"), MaxActivity), MaxActivity >= 2.f && MaxActivity < 5.f);
+			TestTrue(TEXT("Debugger: input published with its threshold"), R.Debug().bHasAssistanceInput && R.Debug().AssistanceInputThreshold == 5.f);
+		}
+		else
+		{
+			TestEqual(TEXT("Threshold 0 (Phase 7B-1): every frame with input is manual input"), ManualFrames, 180);
+			TestEqual(TEXT("Threshold 0: never assists"), AssistFrames, 0);
+		}
+	}
+
+	// The noise still turns the camera (ACF has no dead zone: that is the game's input): standing, 1 s of 2 deg/s drift.
+	{
+		FRig R;
+		for (int32 I = 0; I < 60; ++I)
+		{
+			R.Director->SetCameraInputRate(FVector2D(2.0, 0.0));
+			R.Step(Dt60);
+		}
+		TestTrue(FString::Printf(TEXT("Drift below the threshold is still applied (yaw %.4f, expected 2)"), R.Yaw()), FMath::IsNearlyEqual(R.Yaw(), 2.f, 1e-3f));
+		TestTrue(TEXT("Standing: waiting for movement, not manual input"), R.Reason() == EACFCameraAssistanceReason::BelowSpeed);
+	}
+
+	// Priority: while ACF is not on screen (output bypassed) noise reports View Not Shown, clear input Manual Input (above it).
+	{
+		FRig R;
+		R.Driver.bOutputBypassed = true;
+		R.Velocity = Heading(90.f, 400.f);
+		R.Run(1.f, Dt60);
+		R.Director->SetCameraInputRate(FVector2D(2.0, 0.0));
+		R.Step(Dt60);
+		TestTrue(FString::Printf(TEXT("Bypassed + noise: View Not Shown (%s)"), *Describe(R)), R.Reason() == EACFCameraAssistanceReason::ViewNotShown);
+		R.Director->SetCameraInputRate(FVector2D(30.0, 0.0));
+		R.Step(Dt60);
+		TestTrue(FString::Printf(TEXT("Bypassed + clear input: Manual Input (%s)"), *Describe(R)), IsManual(R));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistInputStopResumeTest, "ActionCameraFramework.Assistance.Input.ClearInputStopsAndResumes", ACFTests::Flags)
+bool FACFAssistInputStopResumeTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFAssistTests;
+	for (const float Fps : { 30.f, 60.f, 120.f })
+	{
+		const float Dt = 1.f / Fps;
+		FRig R;
+		if (!TestTrue(FString::Printf(TEXT("%.0f fps: assisting"), Fps), StartAssisting(R, Dt)))
+		{
+			continue;
+		}
+		const int32 Expected = FMath::RoundToInt(0.5f / Dt); // Recenter Delay 0.5 s
+		auto CheckResume = [&](const TCHAR* What)
+		{
+			const float Held = R.Yaw();
+			bool bHeld = true;
+			const int32 Resume = R.StepUntil(Dt, 4 * FMath::RoundToInt(Fps), [&]
+			{
+				bHeld &= R.Assisting() || R.Yaw() == Held;
+				return R.Assisting();
+			});
+			TestTrue(FString::Printf(TEXT("%.0f fps, %s: yaw held while waiting"), Fps, What), bHeld);
+			TestTrue(FString::Printf(TEXT("%.0f fps, %s: resumes after Recenter Delay from the last input frame (%d frames, expected %d)"), Fps, What, Resume, Expected),
+				Resume != INDEX_NONE && FMath::Abs(Resume - Expected) <= 1);
+		};
+
+		// Stick at 10 deg/s (twice the threshold): manual input in the same frame, the camera moves by the input only.
+		float Before = R.Yaw();
+		R.Director->SetCameraInputRate(FVector2D(10.0, 0.0));
+		R.Step(Dt);
+		TestTrue(FString::Printf(TEXT("%.0f fps: stick stops the assistance at once (%s)"), Fps, *Describe(R)),
+			IsManual(R) && FMath::IsNearlyEqual(Delta(R.Yaw(), Before), 10.f * Dt, 1e-3f));
+		CheckResume(TEXT("stick"));
+
+		// One mouse delta of 1 deg (10 deg/s over the window at every frame rate): the same.
+		Before = R.Yaw();
+		R.Director->AddCameraInput(FVector2D(1.0, 0.0));
+		R.Step(Dt);
+		TestTrue(FString::Printf(TEXT("%.0f fps: mouse flick stops the assistance at once (%s)"), Fps, *Describe(R)),
+			IsManual(R) && FMath::IsNearlyEqual(Delta(R.Yaw(), Before), 1.f, 1e-3f));
+		CheckResume(TEXT("mouse"));
+
+		// Held stick for 1 s: never assists while it lasts, then the same wait.
+		bool bNeverAssisted = true;
+		for (int32 I = 0; I < FMath::RoundToInt(Fps); ++I)
+		{
+			R.Director->SetCameraInputRate(FVector2D(-20.0, 0.0));
+			R.Step(Dt);
+			bNeverAssisted &= IsManual(R);
+		}
+		TestTrue(FString::Printf(TEXT("%.0f fps: held stick blocks every frame"), Fps), bNeverAssisted);
+		CheckResume(TEXT("held stick"));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistInputFrameRateTest, "ActionCameraFramework.Assistance.Input.FrameRateIndependentUnits", ACFTests::Flags)
+bool FACFAssistInputFrameRateTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFAssistTests;
+	for (const float Fps : { 30.f, 60.f, 120.f, 240.f })
+	{
+		const float Dt = 1.f / Fps;
+		// One jitter count of 0.3 deg weighs 3 deg/s at every frame rate (not 0.3 / Dt): never manual input.
+		{
+			FRig R;
+			StartAssisting(R, Dt);
+			R.Director->AddCameraInput(FVector2D(0.3, 0.0));
+			R.Step(Dt);
+			TestTrue(FString::Printf(TEXT("%.0f fps: one jitter count is 3 deg/s (%.4f) and not manual (%s)"), Fps, R.Debug().AssistanceInputActivity, *Describe(R)),
+				FMath::IsNearlyEqual(R.Debug().AssistanceInputActivity, 3.f, 1e-3f) && R.Assisting());
+		}
+		// A slow steady mouse turn of 3 deg/s, delivered as per-frame deltas: below the threshold at every frame rate.
+		// A steady 20 deg/s turn: manual input within 0.05 s and on every frame after that.
+		for (const float Speed : { 3.f, 20.f })
+		{
+			FRig R;
+			StartAssisting(R, Dt);
+			int32 FirstManual = INDEX_NONE;
+			int32 ManualAfterFirst = 0;
+			const int32 N = FMath::RoundToInt(Fps);
+			for (int32 I = 0; I < N; ++I)
+			{
+				R.Director->AddCameraInput(FVector2D(Speed * Dt, 0.0));
+				R.Step(Dt);
+				if (IsManual(R))
+				{
+					FirstManual = FirstManual == INDEX_NONE ? I : FirstManual;
+					++ManualAfterFirst;
+				}
+			}
+			if (Speed < 5.f)
+			{
+				TestTrue(FString::Printf(TEXT("%.0f fps: 3 deg/s mouse is never manual (activity %.3f)"), Fps, R.Debug().AssistanceInputActivity),
+					FirstManual == INDEX_NONE && R.Debug().AssistanceInputActivity < 5.f);
+			}
+			else
+			{
+				TestTrue(FString::Printf(TEXT("%.0f fps: 20 deg/s mouse is manual within 0.05 s (frame %d)"), Fps, FirstManual),
+					FirstManual != INDEX_NONE && (FirstManual + 1) * Dt <= 0.05f + 1e-4f);
+				TestEqual(FString::Printf(TEXT("%.0f fps: and on every frame after that"), Fps), ManualAfterFirst, N - FirstManual);
+			}
+		}
+	}
+
+	// Mouse reports at 125 Hz while rendering at 240 fps (frames without a delta between reports): a continuous slow turn
+	// (20 deg/s) never lets the assistance resume while it lasts, and the wait restarts at the last report.
+	{
+		const float Dt = 1.f / 240.f;
+		FRig R;
+		StartAssisting(R, Dt);
+		int32 Reports = 0;
+		bool bAssistedWhileTurning = false;
+		int32 Blocked = 0;
+		for (int32 I = 1; I <= 480; ++I)
+		{
+			const int32 Due = FMath::FloorToInt(I * Dt * 125.f);
+			if (Due > Reports)
+			{
+				R.Director->AddCameraInput(FVector2D(20.0 / 125.0 * (Due - Reports), 0.0));
+				Reports = Due;
+			}
+			R.Step(Dt);
+			Blocked += IsManual(R) ? 1 : 0;
+			bAssistedWhileTurning |= I > 24 && R.Assisting();
+		}
+		TestFalse(TEXT("125 Hz mouse at 240 fps: no assistance while the player turns"), bAssistedWhileTurning);
+		TestTrue(FString::Printf(TEXT("125 Hz mouse at 240 fps: the report frames are manual input (%d of 480 frames)"), Blocked), Blocked >= 230 && Blocked <= 250);
+		const int32 Resume = R.StepUntil(Dt, 480, [&R] { return R.Assisting(); });
+		TestTrue(FString::Printf(TEXT("Resumes about Recenter Delay after the last report (%d frames)"), Resume), Resume >= 118 && Resume <= 121);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistInputDevicesTest, "ActionCameraFramework.Assistance.Input.DeviceSwitchingAndSensitivity", ACFTests::Flags)
+bool FACFAssistInputDevicesTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFAssistTests;
+	{
+		FRig R; // standing: nothing but the input turns the camera
+		// Stick held, then the player switches to the mouse: the rate is per frame (not kept), so no stale stick input.
+		for (int32 I = 0; I < 30; ++I)
+		{
+			R.Director->SetCameraInputRate(FVector2D(30.0, 0.0));
+			R.Step(Dt60);
+		}
+		float Before = R.Yaw();
+		R.Director->AddCameraInput(FVector2D(2.0, 0.0));
+		R.Step(Dt60);
+		TestTrue(FString::Printf(TEXT("Switch to mouse: exactly the delta (%.4f)"), Delta(R.Yaw(), Before)), FMath::IsNearlyEqual(Delta(R.Yaw(), Before), 2.f, 1e-4f));
+		// Both in one frame (a player touching both): delta + rate x dt, measured as the larger activity.
+		Before = R.Yaw();
+		R.Director->AddCameraInput(FVector2D(0.1, 0.0));
+		R.Director->SetCameraInputRate(FVector2D(30.0, 0.0));
+		R.Step(Dt60);
+		TestTrue(TEXT("Both devices in one frame: summed"), FMath::IsNearlyEqual(Delta(R.Yaw(), Before), 0.1f + 30.f * Dt60, 1e-4f));
+		TestTrue(FString::Printf(TEXT("Both devices: activity is the stick's 30 deg/s (%.3f)"), R.Debug().AssistanceInputActivity), FMath::IsNearlyEqual(R.Debug().AssistanceInputActivity, 30.f, 1e-3f));
+	}
+	// The threshold is in degrees after Sensitivity (per-device sensitivity belongs to the game's input; ACF's applies to
+	// both): rate 3 is 3 deg/s at Sensitivity 1 (noise) and 6 deg/s at Sensitivity 2 (manual). Pitch and inverted axes count.
+	struct FCase { FVector2D Sensitivity; FVector2D Rate; bool bInvert; bool bManual; const TCHAR* Name; };
+	const FCase Cases[] = {
+		{ FVector2D(1.0, 1.0), FVector2D(3.0, 0.0), false, false, TEXT("rate 3, sensitivity 1") },
+		{ FVector2D(2.0, 1.0), FVector2D(3.0, 0.0), false, true, TEXT("rate 3, sensitivity 2") },
+		{ FVector2D(1.0, 1.0), FVector2D(0.0, 8.0), false, true, TEXT("pitch only, 8 deg/s") },
+		{ FVector2D(1.0, 1.0), FVector2D(-8.0, 0.0), true, true, TEXT("inverted yaw, -8") },
+		{ FVector2D(-2.0, 1.0), FVector2D(3.0, 0.0), false, true, TEXT("negative sensitivity -2") },
+	};
+	for (const FCase& Case : Cases)
+	{
+		FRig R([&Case](UACFCameraNode_OrbitalFollow& O) { O.Sensitivity = Case.Sensitivity; O.bInvertYaw = Case.bInvert; });
+		StartAssisting(R, Dt60);
+		R.Director->SetCameraInputRate(Case.Rate);
+		R.Step(Dt60);
+		TestEqual(FString::Printf(TEXT("%s: manual input (%s)"), Case.Name, *Describe(R)), IsManual(R), Case.bManual);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistInputTimeDilationTest, "ActionCameraFramework.Assistance.Input.TimeDilation", ACFTests::Flags)
+bool FACFAssistInputTimeDilationTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFAssistTests;
+	// Slow motion 0.25: the camera's DeltaTime is game time (a quarter of the real 1/60 s).
+	const float Dilation = 0.25f;
+	const float GameDt = Dilation / 60.f;
+	for (const bool bRealTime : { false, true })
+	{
+		FRig R([bRealTime](UACFCameraNode_OrbitalFollow& O) { O.bInputRateIgnoresTimeDilation = bRealTime; });
+		R.Driver.TimeDilation = Dilation;
+		float Before = R.Yaw();
+		R.Director->SetCameraInputRate(FVector2D(60.0, 0.0));
+		R.Step(GameDt);
+		const float Expected = bRealTime ? 1.f : 0.25f; // 60 deg/s x real 1/60 s, or x game 1/240 s
+		TestTrue(FString::Printf(TEXT("Real time %d: stick step %.4f (expected %.2f)"), bRealTime, Delta(R.Yaw(), Before), Expected),
+			FMath::IsNearlyEqual(Delta(R.Yaw(), Before), Expected, 1e-4f));
+		Before = R.Yaw();
+		R.Director->AddCameraInput(FVector2D(2.0, 0.0));
+		R.Step(GameDt);
+		TestTrue(FString::Printf(TEXT("Real time %d: mouse delta never scaled by time"), bRealTime), FMath::IsNearlyEqual(Delta(R.Yaw(), Before), 2.f, 1e-4f));
+
+		// The mouse window runs in real time: 0.1 real s after a 0.3 deg count (6 game frames of 1/240 s = 6 real frames of
+		// 1/60 s at 0.25) it has decayed to 3 / e, whatever the dilation.
+		R.Step(GameDt * 10.f); // let the 2 deg delta fade
+		R.Run(1.f, GameDt);
+		R.Director->AddCameraInput(FVector2D(0.3, 0.0));
+		R.Step(GameDt);
+		for (int32 I = 0; I < 6; ++I)
+		{
+			R.Step(GameDt);
+		}
+		TestTrue(FString::Printf(TEXT("Real time %d: mouse activity decays in real time (%.4f, expected %.4f)"), bRealTime, R.Debug().AssistanceInputActivity, 3.f * FMath::Exp(-1.f)),
+			FMath::IsNearlyEqual(R.Debug().AssistanceInputActivity, 3.f * FMath::Exp(-1.f), 1e-3f));
+		// The stick rate is compared as it is (deg/s): 10 is manual input in slow motion too.
+		StartAssisting(R, GameDt);
+		R.Director->SetCameraInputRate(FVector2D(10.0, 0.0));
+		R.Step(GameDt);
+		TestTrue(FString::Printf(TEXT("Real time %d: stick 10 deg/s is manual input in slow motion"), bRealTime), IsManual(R));
+	}
+
+	// Invalid dilation from a caller (0, NaN, negative) is 1: no division by zero, nothing invalid in the pose.
+	for (const float Bad : { 0.f, NAN, -1.f })
+	{
+		FRig R([](UACFCameraNode_OrbitalFollow& O) { O.bInputRateIgnoresTimeDilation = true; });
+		R.Driver.TimeDilation = Bad;
+		const float Before = R.Yaw();
+		R.Director->SetCameraInputRate(FVector2D(60.0, 0.0));
+		R.Step(Dt60);
+		TestTrue(FString::Printf(TEXT("Dilation %f: treated as 1 (step %.4f)"), Bad, Delta(R.Yaw(), Before)), FMath::IsNearlyEqual(Delta(R.Yaw(), Before), 1.f, 1e-4f));
+	}
+
+	// Dilation 1 with Real Time on is bitwise the default path.
+	{
+		FRig A;
+		FRig B([](UACFCameraNode_OrbitalFollow& O) { O.bInputRateIgnoresTimeDilation = true; });
+		A.Velocity = B.Velocity = Heading(70.f, 300.f);
+		FRandomStream Random(7);
+		bool bSame = true;
+		for (int32 I = 0; I < 300; ++I)
+		{
+			const FVector2D Rate(Random.FRandRange(-40.f, 40.f), Random.FRandRange(-20.f, 20.f));
+			const FVector2D Mouse(Random.FRandRange(-1.f, 1.f), 0.0);
+			for (FRig* R : { &A, &B })
+			{
+				if (I % 50 < 20)
+				{
+					R->Director->SetCameraInputRate(Rate);
+					R->Director->AddCameraInput(Mouse);
+				}
+				R->Step(Dt60);
+			}
+			bSame &= A.Director->GetLastResult().Pose.Rotation == B.Director->GetLastResult().Pose.Rotation
+				&& A.Director->GetLastResult().Pose.Location == B.Director->GetLastResult().Pose.Location;
+		}
+		TestTrue(TEXT("Dilation 1: Real Time on == off, bitwise"), bSame);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistInputCompatTest, "ActionCameraFramework.Assistance.Input.CompatibilityAndPlayers", ACFTests::Flags)
+bool FACFAssistInputCompatTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFAssistTests;
+	// Without Movement Assistance the threshold changes nothing (the idle recenter of Phase 2 still stops on any input).
+	{
+		auto Configure = [](float Threshold)
+		{
+			return [Threshold](UACFCameraNode_OrbitalFollow& O)
+			{
+				O.bEnableMovementAssistance = false;
+				O.bRecenterWhenIdle = true;
+				O.RecenterHeading = EACFCameraRecenterHeading::TargetFacing;
+				O.InputActivityThreshold = Threshold;
+			};
+		};
+		FRig A(Configure(0.f));
+		FRig B(Configure(30.f));
+		A.Velocity = B.Velocity = Heading(30.f, 200.f);
+		FRandomStream Random(11);
+		bool bSame = true;
+		for (int32 I = 0; I < 400; ++I)
+		{
+			const FVector2D Rate(Random.FRandRange(-3.f, 3.f), 0.0); // drift-sized input: below either threshold
+			for (FRig* R : { &A, &B })
+			{
+				if (I % 100 < 30)
+				{
+					R->Director->SetCameraInputRate(Rate);
+				}
+				R->Step(Dt60);
+			}
+			bSame &= A.Director->GetLastResult().Pose.Rotation == B.Director->GetLastResult().Pose.Rotation;
+		}
+		TestTrue(TEXT("Assistance off: the threshold does not change the idle recenter (bitwise)"), bSame);
+		TestFalse(TEXT("Assistance off: no input row in the debugger"), A.Debug().bHasAssistanceInput);
+	}
+
+	// Two local players (two directors): one player's input never stops the other's assistance.
+	{
+		FRig P1;
+		FRig P2;
+		StartAssisting(P1, Dt60);
+		StartAssisting(P2, Dt60);
+		bool bP1Blocked = true;
+		bool bP2Assisting = true;
+		for (int32 I = 0; I < 120; ++I)
+		{
+			P1.Director->SetCameraInputRate(FVector2D(40.0, 0.0));
+			P1.Step(Dt60);
+			P2.Step(Dt60);
+			bP1Blocked &= IsManual(P1);
+			bP2Assisting &= P2.Assisting();
+		}
+		TestTrue(TEXT("Player 1 turns: blocked every frame"), bP1Blocked);
+		TestTrue(TEXT("Player 2 untouched: assisting every frame"), bP2Assisting);
+	}
+	return true;
+}
+
+// Runtime Tuning of the recenter / assistance values (Phase 7B-2): the rows exist where the node uses them, take effect on
+// the next update, are validated, reset, and never write the asset.
+#if ACF_WITH_RUNTIME_TUNING
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFAssistTuningTest, "ActionCameraFramework.Tuning.MovementAssistanceParameters", ACFTests::Flags)
+bool FACFAssistTuningTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFAssistTests;
+	using EParam = EACFCameraTuningParameter;
+	using EResult = EACFCameraTuningResult;
+	const EParam AssistOnly[] = { EParam::AssistStartSpeed, EParam::AssistStopSpeed, EParam::AssistMovementDuration, EParam::AssistBackwardExclusion,
+		EParam::AssistDeadZone, EParam::AssistMaxYawSpeed, EParam::AssistInputThreshold };
+	auto NodeParameters = [](FRig& R)
+	{
+		TArray<FACFCameraTuningNodeInfo> Nodes;
+		R.Director->GetRequestNodes(R.Handle, Nodes);
+		return Nodes.Num() == 1 ? Nodes[0].Parameters : TArray<EParam>();
+	};
+	{
+		FRig On;
+		const TArray<EParam> P = NodeParameters(On);
+		bool bAll = P.Contains(EParam::RecenterDelay) && P.Contains(EParam::RecenterTime);
+		for (const EParam Parameter : AssistOnly)
+		{
+			bAll &= P.Contains(Parameter);
+		}
+		TestTrue(TEXT("Assistance on: recenter and all assistance parameters"), bAll);
+		FRig Idle([](UACFCameraNode_OrbitalFollow& O) { O.bEnableMovementAssistance = false; O.bRecenterWhenIdle = true; });
+		const TArray<EParam> IdleParameters = NodeParameters(Idle);
+		TestTrue(TEXT("Idle recenter only: Recenter Delay / Time, no assistance parameter"), IdleParameters.Contains(EParam::RecenterDelay) && IdleParameters.Contains(EParam::RecenterTime) && !IdleParameters.Contains(EParam::AssistMaxYawSpeed));
+		FRig None([](UACFCameraNode_OrbitalFollow& O) { O.bEnableMovementAssistance = false; });
+		TestFalse(TEXT("No recenter: no recenter parameter"), NodeParameters(None).Contains(EParam::RecenterDelay));
+		TestFalse(TEXT("No recenter: a reason is given"), None.Director->GetTuningUnavailableReason(None.Handle, EParam::AssistMaxYawSpeed).IsEmpty());
+		TestFalse(TEXT("Assistance rows are listed only where they exist (not 'always listed')"), ACFCameraTuning::IsAlwaysListed(EParam::AssistMaxYawSpeed));
+		TestTrue(TEXT("The 7A rows are still always listed"), ACFCameraTuning::IsAlwaysListed(EParam::CollisionRadius));
+	}
+
+	FRig R;
+	TestEqual(TEXT("Start tuning"), R.Director->StartTuning(R.Handle), EResult::Ok);
+	StartAssisting(R, Dt60);
+	// Threshold 0 through tuning: the same drift now is manual input.
+	TestEqual(TEXT("Set Input Activity Threshold 0"), R.Director->SetTuningValue(R.Handle, EParam::AssistInputThreshold, FVector(0.0)), EResult::Ok);
+	R.Director->SetCameraInputRate(FVector2D(2.0, 0.0));
+	R.Step(Dt60);
+	TestTrue(TEXT("Tuned threshold takes effect on the next update"), IsManual(R));
+	// Max yaw speed 20 deg/s: the assistance turns at most 20 x dt per frame (heading 90 from a camera turned back to 0).
+	TestEqual(TEXT("Set Max Assistance Yaw Speed 20"), R.Director->SetTuningValue(R.Handle, EParam::AssistMaxYawSpeed, FVector(20.0)), EResult::Ok);
+	R.Director->SetOrbitRotation(R.Handle, FRotator(-15.f, 0.f, 0.f), true);
+	R.Step(Dt60);
+	float MaxStep = 0.f;
+	R.Run(2.f, Dt60, [&R, &MaxStep, Previous = R.Yaw()](int32) mutable
+	{
+		MaxStep = FMath::Max(MaxStep, FMath::Abs(Delta(R.Yaw(), Previous)));
+		Previous = R.Yaw();
+	});
+	TestTrue(FString::Printf(TEXT("Tuned max yaw speed: largest step %.4f <= 20 / 60"), MaxStep), MaxStep > 0.f && MaxStep <= 20.f * Dt60 + 1e-4f);
+	// Invalid values change nothing.
+	TestEqual(TEXT("Backward Exclusion 200 rejected"), R.Director->SetTuningValue(R.Handle, EParam::AssistBackwardExclusion, FVector(200.0)), EResult::InvalidValue);
+	TestEqual(TEXT("Max yaw speed 0 rejected"), R.Director->SetTuningValue(R.Handle, EParam::AssistMaxYawSpeed, FVector(0.0)), EResult::InvalidValue);
+	TestEqual(TEXT("Negative threshold rejected"), R.Director->SetTuningValue(R.Handle, EParam::AssistInputThreshold, FVector(-1.0)), EResult::InvalidValue);
+	TestEqual(TEXT("NaN rejected"), R.Director->SetTuningValue(R.Handle, EParam::RecenterDelay, FVector(NAN, 0.0, 0.0)), EResult::InvalidValue);
+	TestEqual(TEXT("Recenter Time below 0.01 rejected"), R.Director->SetTuningValue(R.Handle, EParam::RecenterTime, FVector(0.0)), EResult::InvalidValue);
+	TestEqual(TEXT("Two values changed"), R.Director->GetTuningStatus(R.Handle).NumChangedValues, 2);
+	TestTrue(TEXT("The asset is untouched"), R.Orbit->MaxAssistanceYawSpeed == 90.f && R.Orbit->InputActivityThreshold == 5.f);
+	FACFCameraTuningValue Value;
+	TestEqual(TEXT("Read back"), R.Director->GetTuningValue(R.Handle, EParam::AssistMaxYawSpeed, INDEX_NONE, Value), EResult::Ok);
+	TestTrue(TEXT("Read back: 20 (asset 90), scalar, property name"), Value.Value.X == 20.0 && Value.OriginalValue.X == 90.0 && Value.bScalar && Value.Property == FName(TEXT("MaxAssistanceYawSpeed")));
+	// Reset: the noise no longer blocks.
+	TestEqual(TEXT("Reset all"), R.Director->ResetAllTuningValues(R.Handle), EResult::Ok);
+	R.Director->SetCameraInputRate(FVector2D(2.0, 0.0));
+	R.Step(Dt60);
+	TestFalse(TEXT("After reset: drift is noise again"), IsManual(R));
+	TestEqual(TEXT("Stop tuning"), R.Director->StopTuning(R.Handle), EResult::Ok);
 	return true;
 }
 #endif

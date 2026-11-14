@@ -467,6 +467,20 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEvaluationContext
 	 */
 	FVector2D CameraInput = FVector2D::ZeroVector;
 
+	/**
+	 * Phase 7B-2: the two parts of CameraInput, kept apart because their units differ (filled by the director, zero on
+	 * zero-delta evaluations). Delta = the AddCameraInput deltas (input units, already a displacement: mouse); Rate = the
+	 * SetCameraInputRate value (input units per second: stick). CameraInput == Delta + Rate * DeltaTime.
+	 */
+	FVector2D CameraInputDelta = FVector2D::ZeroVector;
+	FVector2D CameraInputRate = FVector2D::ZeroVector;
+
+	/**
+	 * Phase 7B-2: the World's effective time dilation (game seconds per real second) this frame, filled by the subsystem.
+	 * DeltaTime is game time; DeltaTime / TimeDilation is the real time. 1 in unit tests or without a World.
+	 */
+	float TimeDilation = 1.f;
+
 	/** Combat state of this local player (filled by the director from SetCombatState). */
 	FACFCameraCombatState Combat;
 

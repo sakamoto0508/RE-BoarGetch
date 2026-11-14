@@ -253,9 +253,12 @@ void FACFCameraTuningPanelModel::GetParameterRows(TArray<FParameterRow>& Out) co
 			ACFCameraTuning::GetValueRange(Parameter, Row.Min, Row.Max);
 		}
 	}
-	for (const EACFCameraTuningParameter Parameter : { EACFCameraTuningParameter::FollowDamping, EACFCameraTuningParameter::FieldOfView,
-		EACFCameraTuningParameter::CameraOffset, EACFCameraTuningParameter::CollisionRadius })
+	for (const EACFCameraTuningParameter Parameter : ACFCameraTuning::GetAllParameters())
 	{
+		if (!ACFCameraTuning::IsAlwaysListed(Parameter))
+		{
+			continue; // 7B-2: recenter / assistance rows appear only on an Orbital Follow that uses them
+		}
 		const FString Reason = Director->GetTuningUnavailableReason(Request, Parameter);
 		if (!Reason.IsEmpty())
 		{
