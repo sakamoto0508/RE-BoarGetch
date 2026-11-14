@@ -232,7 +232,11 @@ bool FACFZoneDwellCandidateTest::RunTest(const FString& Parameters)
 	Run(InA, 0.25f);
 	TestTrue(TEXT("Player 1: A after its 0.5 s"), S.Selected() == A->GetZone());
 	TestTrue(TEXT("Player 2: nothing (no time passed for it)"), S.Selected(Second.Get()) == nullptr);
-	S.Zones->UpdatePlayer(Second.Get(), static_cast<const FVector*>(nullptr));
+	// The bare local player is removed explicitly (7C-2B): its state does not wait for garbage collection.
+	const int32 StatesBefore = S.Zones->GetNumPlayerStates();
+	TestTrue(TEXT("Remove Player"), S.Zones->RemovePlayer(Second.Get()));
+	TestEqual(TEXT("The second player's state is gone at once"), S.Zones->GetNumPlayerStates(), StatesBefore - 1);
+	TestFalse(TEXT("Removing twice does nothing"), S.Zones->RemovePlayer(Second.Get()));
 	S.Cleanup(*this);
 	return true;
 }

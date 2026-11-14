@@ -100,6 +100,12 @@ public:
 	int32 GetNumPlayerStates() const;
 
 	/**
+	 * 7C-2B: releases the player's zone request and drops its state now (a local player that is being removed, the bare local
+	 * players of tests). Players of the GameInstance are dropped by the frame driver without it. True if it had a state.
+	 */
+	bool RemovePlayer(const ULocalPlayer* Player);
+
+	/**
 	 * 7C-1B: releases every player's zone camera request (plain release) and clears the selections (what the end of the
 	 * World does). The next frame selects and requests again for the players still inside a zone.
 	 */

@@ -93,6 +93,7 @@ EACFCameraZoneRequestEvent FACFCameraZoneRequestState::Update(const FACFCameraZo
 				FollowTarget = Context.FollowTarget;
 				Director->SetRequestTargets(Handle, Context.FollowTarget, ACFCameraZoneRequestImpl::MakeTarget(Selected->LookAtTarget));
 			}
+			TrackViewWhileHidden(Context);
 		}
 		else if (bWaitingForRetry && Context.Time >= NextRetryTime)
 		{
@@ -118,6 +119,7 @@ EACFCameraZoneRequestEvent FACFCameraZoneRequestState::Update(const FACFCameraZo
 	NumLost = 0;
 	bWaitingForRetry = false;
 	bFailed = false;
+	bTrackViewUntilShown = false;
 	const bool bRequested = Selected && Request(Context, *Selected);
 	if (Old.IsValid() && Director->HasRequest(Old))
 	{
@@ -182,12 +184,48 @@ bool FACFCameraZoneRequestState::Request(const FACFCameraZoneRequestContext& Con
 	FollowTarget = Context.FollowTarget;
 	RequestTime = Context.Time;
 
-	// Rotation handoff to the zone's own request only, and only when it takes the screen (a Lock-On above it stays as is).
-	if (Zone.EnterRotation == EACFCameraZoneRotationHandoff::KeepView && Director->GetBestRequest() == Handle)
+	// Rotation handoff to the zone's own request only. When it takes the screen now: from the view on screen. When it is
+	// hidden (a Lock-On / Finisher above it, or a Sequencer camera owns the screen): it follows the view on screen until it is
+	// first shown (7C-2B), so it appears where the screen was looking whenever the camera above it ends.
+	bTrackViewUntilShown = false;
+	if (Zone.EnterRotation == EACFCameraZoneRotationHandoff::KeepView)
 	{
-		HandOffRotation(Context, Handle);
+		if (Director->GetBestRequest() == Handle && !Director->IsViewOwnedExternally())
+		{
+			HandOffRotation(Context, Handle);
+		}
+		else
+		{
+			bTrackViewUntilShown = true;
+			TrackViewWhileHidden(Context);
+		}
 	}
 	return true;
+}
+
+void FACFCameraZoneRequestState::TrackViewWhileHidden(const FACFCameraZoneRequestContext& Context)
+{
+	if (!bTrackViewUntilShown || !Handle.IsValid())
+	{
+		return;
+	}
+	UACFCameraDirector* Director = Context.Director;
+	if (Director->GetActiveRequest() == Handle && !Director->IsViewOwnedExternally())
+	{
+		bTrackViewUntilShown = false; // it was on screen in the last camera update: from now on it keeps its own orbit
+		return;
+	}
+	if (!Context.bHasViewRotation || Context.ViewRotation.ContainsNaN())
+	{
+		return;
+	}
+	if (ACFCameraZoneRequestImpl::UsesControlRotation(Director->GetRequestPreset(Handle)))
+	{
+		// Never the control rotation while another camera has the screen: that would change the gameplay under a Lock-On.
+		return;
+	}
+	// Only this request's orbit; a hidden rig is not evaluated, the last value is applied when it is first shown.
+	Director->SetOrbitRotation(Handle, FRotator(Context.ViewRotation.Pitch, Context.ViewRotation.Yaw, 0.0), /*bInstant*/ true);
 }
 
 void FACFCameraZoneRequestState::WarnSamePriority(const FACFCameraZoneRequestContext& Context)
@@ -241,7 +279,8 @@ void FACFCameraZoneRequestState::Leave(const FACFCameraZoneRequestContext& Conte
 		{
 			Director->RemoveRequest(Old, &BlendOut, /*bOverrideAnyReturn*/ true);
 		}
-		if (!OldZone || OldZone->ExitRotation == EACFCameraZoneRotationHandoff::KeepView)
+		// 7C-2B: not while a Sequencer camera owns the screen (its view is not the zone camera's).
+	if ((!OldZone || OldZone->ExitRotation == EACFCameraZoneRotationHandoff::KeepView) && !Director->IsViewOwnedExternally())
 		{
 			HandOffRotation(Context, Director->GetBestRequest());
 		}
@@ -288,6 +327,7 @@ void FACFCameraZoneRequestState::Release(UACFCameraDirector* Director)
 	Handle.Invalidate();
 	ActiveZone.Reset();
 	bHasActiveZone = false;
+	bTrackViewUntilShown = false;
 	NumLost = 0;
 	bWaitingForRetry = false;
 	bFailed = false;

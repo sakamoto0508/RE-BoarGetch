@@ -93,11 +93,14 @@ public:
 	double GetNextRetryTime() const { return NextRetryTime; }
 	/** The zone's camera could not be requested (no preset). */
 	bool HasFailed() const { return bFailed; }
+	/** 7C-2B: a Keep View zone camera requested while hidden follows the view on screen until it is first shown. */
+	bool IsTrackingView() const { return bTrackViewUntilShown; }
 
 private:
 	bool Request(const FACFCameraZoneRequestContext& Context, UACFCameraZoneComponent& Zone);
 	void Leave(const FACFCameraZoneRequestContext& Context, FACFCameraRequestHandle Old, const UACFCameraZoneComponent* OldZone);
 	void WarnSamePriority(const FACFCameraZoneRequestContext& Context);
+	void TrackViewWhileHidden(const FACFCameraZoneRequestContext& Context);
 	static void HandOffRotation(const FACFCameraZoneRequestContext& Context, FACFCameraRequestHandle Target);
 
 	TWeakObjectPtr<UACFCameraZoneComponent> ActiveZone;
@@ -110,4 +113,5 @@ private:
 	bool bWaitingForRetry = false;
 	bool bFailed = false;
 	bool bWarnedSamePriority = false;
+	bool bTrackViewUntilShown = false;
 };

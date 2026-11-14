@@ -389,6 +389,18 @@ UACFCameraZoneComponent* UACFCameraZoneSubsystem::GetSelectedZone(const ULocalPl
 	return Found ? Found->Selected.Get() : nullptr;
 }
 
+bool UACFCameraZoneSubsystem::RemovePlayer(const ULocalPlayer* Player)
+{
+	const int32 Index = Players.IndexOfByPredicate([Player](const FPlayerState& State) { return State.Player.Get() == Player; });
+	if (!Player || Index == INDEX_NONE)
+	{
+		return false;
+	}
+	ReleasePlayer(Players[Index]);
+	Players.RemoveAt(Index);
+	return true;
+}
+
 int32 UACFCameraZoneSubsystem::GetNumPlayerStates() const
 {
 	int32 Num = 0;
