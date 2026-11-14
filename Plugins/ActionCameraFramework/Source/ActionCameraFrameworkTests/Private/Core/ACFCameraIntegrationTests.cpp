@@ -3087,9 +3087,9 @@ bool FACFIntegrationProjectionLensTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-// Phase 7B feel check preparation (README 31 章): ACF.Sample.Assist on the sample map. The command switches a copy of the
-// ThirdPerson preset to Camera Input with Movement Assistance and forwards the player's stick / mouse; this checks the
-// command itself (the request, the forwarded drift, the control rotation, the toggles), not the feel.
+// Phase 7B feel check (README 31 章): ACF.Sample.Assist on the sample map. The command requests DA_ACFSample_Assist itself
+// (so tuned values can be saved to it) and forwards the player's stick / mouse; the toggles go to the tuning copy and never
+// to the asset. This checks the command (the request, the forwarded drift, the control rotation, the toggles), not the feel.
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSampleAssistTest, "ActionCameraFramework.Samples.AssistCommandOnTestMap",
 	EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
 bool FACFSampleAssistTest::RunTest(const FString& Parameters)
@@ -3097,9 +3097,8 @@ bool FACFSampleAssistTest::RunTest(const FString& Parameters)
 	using namespace ACFIntegration;
 	TArray<FStep> Steps;
 	auto Exec = [&Steps](const TCHAR* Command) { Steps.Add([Command](FScenario& S) { GEngine->Exec(S.World(), Command); return true; }); };
-	auto Orbit = [](FScenario& S) -> const UACFCameraNode_OrbitalFollow*
+	auto OrbitOf = [](const UACFCameraPreset* Preset) -> const UACFCameraNode_OrbitalFollow*
 	{
-		const UACFCameraPreset* Preset = S.Subsystem->GetDirector()->GetRequestPreset(S.Subsystem->GetLastEvaluationResult().ActiveRequest);
 		for (const UACFCameraNode* Node : Preset ? Preset->Nodes : TArray<TObjectPtr<UACFCameraNode>>())
 		{
 			if (const UACFCameraNode_OrbitalFollow* Found = Cast<UACFCameraNode_OrbitalFollow>(Node))
@@ -3109,32 +3108,36 @@ bool FACFSampleAssistTest::RunTest(const FString& Parameters)
 		}
 		return nullptr;
 	};
-	Steps.Add([](FScenario& S)
+	auto Used = [](FScenario& S) { return S.Subsystem->GetDirector()->GetRequestPreset(S.Subsystem->GetLastEvaluationResult().ActiveRequest); };
+	auto Asset = []() { return LoadObject<UACFCameraPreset>(nullptr, TEXT("/ActionCameraFramework/Samples/DA_ACFSample_Assist.DA_ACFSample_Assist")); };
+	Steps.Add([Asset](FScenario& S)
 	{
 		if (!S.World()->GetMapName().Contains(TEXT("L_ACFCameraTest")))
 		{
 			S.Test->AddWarning(TEXT("Skipped: run on /ActionCameraFramework/Samples/L_ACFCameraTest."));
 			return false;
 		}
-		return true;
+		return S.Test->TestNotNull(TEXT("DA_ACFSample_Assist exists (Scripts/CreateManualTestAssets.py)"), Asset());
 	});
 	Exec(TEXT("ACF.Sample.Goto Start"));
-	Exec(TEXT("ACF.Sample.Assist On Movement"));
+	Exec(TEXT("ACF.Sample.Assist On"));
 	Wait(Steps, 0.5);
-	Steps.Add([Orbit](FScenario& S)
+	Steps.Add([OrbitOf, Used, Asset](FScenario& S)
 	{
-		const UACFCameraNode_OrbitalFollow* Node = Orbit(S);
+		const UACFCameraNode_OrbitalFollow* Node = OrbitOf(Used(S));
 		if (!S.Test->TestNotNull(TEXT("The assist camera is active with an Orbital Follow"), Node))
 		{
 			return false;
 		}
-		S.Test->TestTrue(TEXT("Copy switched to Camera Input, assistance on, Movement Direction"), Node->InputSource == EACFCameraOrbitInputSource::CameraInput
-			&& Node->bEnableMovementAssistance && Node->RecenterHeading == EACFCameraRecenterHeading::MovementDirection);
-		const UACFCameraPreset* Asset = LoadObject<UACFCameraPreset>(nullptr, TEXT("/ActionCameraFramework/Samples/DA_ACFSample_ThirdPerson.DA_ACFSample_ThirdPerson"));
-		const UACFCameraNode_OrbitalFollow* AssetOrbit = Asset && Asset->Nodes.Num() > 0 ? Cast<UACFCameraNode_OrbitalFollow>(Asset->Nodes[0]) : nullptr;
-		S.Test->TestTrue(TEXT("The sample asset is untouched (Control Rotation, no assistance)"), AssetOrbit && AssetOrbit->InputSource == EACFCameraOrbitInputSource::ControlRotation && !AssetOrbit->bEnableMovementAssistance);
+		S.Test->TestTrue(TEXT("The request runs on DA_ACFSample_Assist itself (the save target), not a runtime copy"), Used(S) == Asset());
+		S.Test->TestTrue(TEXT("Camera Input, assistance on, Target Facing"), Node->InputSource == EACFCameraOrbitInputSource::CameraInput
+			&& Node->bEnableMovementAssistance && Node->RecenterHeading == EACFCameraRecenterHeading::TargetFacing);
+		const UACFCameraPreset* ThirdPerson = LoadObject<UACFCameraPreset>(nullptr, TEXT("/ActionCameraFramework/Samples/DA_ACFSample_ThirdPerson.DA_ACFSample_ThirdPerson"));
+		const UACFCameraNode_OrbitalFollow* ThirdOrbit = OrbitOf(ThirdPerson);
+		S.Test->TestTrue(TEXT("DA_ACFSample_ThirdPerson is untouched (Control Rotation, no assistance)"), ThirdOrbit && ThirdOrbit->InputSource == EACFCameraOrbitInputSource::ControlRotation && !ThirdOrbit->bEnableMovementAssistance);
 		S.Test->TestTrue(TEXT("Debugger shows Movement Assistance"), S.Subsystem->GetDirector()->GetLastDebug().bHasAssistance && S.Subsystem->GetDirector()->GetLastDebug().bAssistanceEnabled);
 		S.SavedRotation = S.PCM()->GetCameraRotation();
+		S.Handle = S.Subsystem->GetLastEvaluationResult().ActiveRequest;
 		return true;
 	});
 	// Drift 0.02 x 180 deg/s = 3.6 deg/s: forwarded as a stick rate, turns the camera, below the threshold (noise).
@@ -3160,22 +3163,36 @@ bool FACFSampleAssistTest::RunTest(const FString& Parameters)
 		return true;
 	});
 	Exec(TEXT("ACF.Sample.Assist Drift 0"));
-	Exec(TEXT("ACF.Sample.Assist Heading Facing"));
+	Exec(TEXT("ACF.Sample.Assist Heading Movement"));
 	Exec(TEXT("ACF.Sample.Assist RealTime 1"));
 	Wait(Steps, 0.1);
-	Steps.Add([Orbit](FScenario& S)
+	Steps.Add([OrbitOf, Used, Asset](FScenario& S)
 	{
-		const UACFCameraNode_OrbitalFollow* Node = Orbit(S);
-		S.Test->TestTrue(TEXT("Heading / RealTime toggles reach the running copy"), Node && Node->RecenterHeading == EACFCameraRecenterHeading::TargetFacing && Node->bInputRateIgnoresTimeDilation);
+		const UACFCameraNode_OrbitalFollow* Node = OrbitOf(Used(S));
+		const UACFCameraNode_OrbitalFollow* AssetOrbit = OrbitOf(Asset());
+		S.Test->TestTrue(TEXT("Toggles: the request runs on its tuning copy"), Used(S) != Asset() && S.Subsystem->GetDirector()->GetNumTunedRequests() == 1);
+		S.Test->TestTrue(TEXT("Toggles reach the copy"), Node && Node->RecenterHeading == EACFCameraRecenterHeading::MovementDirection && Node->bInputRateIgnoresTimeDilation);
+		S.Test->TestTrue(TEXT("Toggles never write the asset"), AssetOrbit && AssetOrbit->RecenterHeading == EACFCameraRecenterHeading::TargetFacing && !AssetOrbit->bInputRateIgnoresTimeDilation
+			&& !Asset()->GetPackage()->IsDirty());
 		return true;
 	});
 	Exec(TEXT("ACF.Sample.Assist Off"));
 	Wait(Steps, 0.1);
-	Steps.Add([Orbit](FScenario& S)
+	Steps.Add([OrbitOf, Used, Asset](FScenario& S)
 	{
-		const UACFCameraNode_OrbitalFollow* Node = Orbit(S);
-		S.Test->TestTrue(TEXT("Off: same input path, assistance off"), Node && Node->InputSource == EACFCameraOrbitInputSource::CameraInput && !Node->bEnableMovementAssistance);
-		S.Handle = S.Subsystem->GetLastEvaluationResult().ActiveRequest;
+		const UACFCameraNode_OrbitalFollow* Node = OrbitOf(Used(S));
+		S.Test->TestTrue(TEXT("Off: same request, same input path, assistance off on the copy"), S.Subsystem->GetLastEvaluationResult().ActiveRequest == S.Handle
+			&& Node && Node->InputSource == EACFCameraOrbitInputSource::CameraInput && !Node->bEnableMovementAssistance);
+		S.Test->TestTrue(TEXT("Off: the asset keeps assistance on"), OrbitOf(Asset()) && OrbitOf(Asset())->bEnableMovementAssistance);
+		return true;
+	});
+	Exec(TEXT("ACF.Sample.Assist On"));
+	Wait(Steps, 0.1);
+	Steps.Add([OrbitOf, Used](FScenario& S)
+	{
+		const UACFCameraNode_OrbitalFollow* Node = OrbitOf(Used(S));
+		S.Test->TestTrue(TEXT("On again: the same request (its tuning is kept), assistance on, the Heading toggle kept"), S.Subsystem->GetLastEvaluationResult().ActiveRequest == S.Handle
+			&& Node && Node->bEnableMovementAssistance && Node->RecenterHeading == EACFCameraRecenterHeading::MovementDirection);
 		return true;
 	});
 	Exec(TEXT("ACF.Sample.Assist Release"));
@@ -3183,6 +3200,7 @@ bool FACFSampleAssistTest::RunTest(const FString& Parameters)
 	Steps.Add([](FScenario& S)
 	{
 		S.Test->TestFalse(TEXT("Release: the assist camera is gone"), S.Subsystem->IsCameraRequestAlive(S.Handle));
+		S.Test->TestEqual(TEXT("Release: its tuning ended with it"), S.Subsystem->GetDirector()->GetNumTunedRequests(), 0);
 		return true;
 	});
 	ADD_LATENT_AUTOMATION_COMMAND(FScenarioCommand(this, MoveTemp(Steps)));

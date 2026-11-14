@@ -3,6 +3,7 @@
 Presets in /ActionCameraFramework/Samples (used by the console command ACF.Sample.Use <Name>):
   DA_ACFSample_Follow      Follow (axis damping, lookahead) + Look At + Collision
   DA_ACFSample_ThirdPerson Orbital Follow (Control Rotation = the project's mouse / gamepad look) + Combat Camera + Collision (solver)
+  DA_ACFSample_Assist      ThirdPerson with the Orbital Follow on Camera Input + Movement Assistance (ACF.Sample.Assist, README 31)
   DA_ACFSample_FreeLook    Orbital Follow with FreeLook rings + Collision
   DA_ACFSample_Composer    Orbital Follow + Rotation Composer (dead / soft zone on the ACFLookTarget pillar) + Collision
   DA_ACFSample_LockOn      Lock-On + Combat Camera + Group Framing (player + locked enemy) + Collision (solver)  (ACF.Sample.LockOn)
@@ -101,6 +102,20 @@ def save_preset(preset, nodes, blend_in=0.6):
     return E.save_loaded_asset(preset, False)
 
 
+def assist_preset():
+    """Phase 7B: DA_ACFSample_Assist, the preset of ACF.Sample.Assist (README 31). ThirdPerson's nodes with the Orbital Follow
+    on Camera Input and Movement Assistance (default values). The command requests this asset itself, so values tuned in PIE
+    are applied / saved to it with the Camera Tuning panel (Changes > Apply to Asset > Save Asset)."""
+    p = ensure_preset('DA_ACFSample_Assist')
+    o = orbit(p)
+    o.set_editor_property('input_source', unreal.ACFCameraOrbitInputSource.CAMERA_INPUT)
+    o.set_editor_property('initial_rotation', unreal.ACFCameraOrbitInitialRotation.UPSTREAM_CAMERA)
+    o.set_editor_property('sensitivity', unreal.Vector2D(1.0, 1.0))
+    o.set_editor_property('enable_movement_assistance', True)
+    o.set_editor_property('recenter_heading', unreal.ACFCameraRecenterHeading.TARGET_FACING)
+    OUT['Assist'] = save_preset(p, [o, combat(p), collision(p, solver=True, check_look_at=False)])
+
+
 def presets():
     p = ensure_preset('DA_ACFSample_Follow')
     follow = unreal.new_object(unreal.ACFCameraNode_Follow, outer=p)
@@ -116,6 +131,8 @@ def presets():
 
     p = ensure_preset('DA_ACFSample_ThirdPerson')
     OUT['ThirdPerson'] = save_preset(p, [orbit(p), combat(p), collision(p, solver=True, check_look_at=False)])
+
+    assist_preset()
 
     p = ensure_preset('DA_ACFSample_FreeLook')
     OUT['FreeLook'] = save_preset(p, [orbit(p, 420.0, rings=True), collision(p)])

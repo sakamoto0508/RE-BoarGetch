@@ -22,6 +22,9 @@
 #include "Nodes/ACFCameraNode_FixedPose.h"
 #include "Nodes/ACFCameraNode_Follow.h"
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
+#include "Algo/Count.h"
+#include "Engine/Engine.h"
+#include "HAL/IConsoleManager.h"
 #include "PackageTools.h"
 #include "Framework/Application/SlateApplication.h"
 #include "SACFCameraTuningPanel.h"
@@ -952,6 +955,327 @@ bool FACFTuningApplyAssistanceTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Confirmed: applied"), WarnedTuned.Model->ApplyChanges(true).bOk);
 		TestEqual(TEXT("Confirmed: asset value"), WarnedOrbit->InputActivityThreshold, 45.f);
 		DropAsset(Warned.Get());
+	}
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------------------------
+// Phase 7B: values tuned on the ACF.Sample.Assist camera are saved to its preset asset and come back in the next PIE. The
+// command requests the asset itself (not a runtime copy); the toggles (Off / On) go to the tuning copy only. A copy of
+// DA_ACFSample_Assist in the temporary test root stands in for it (CVar ACF.Sample.AssistPreset), so no sample asset is
+// written. Also: a runtime copy is reported as not savable, Reset values are not offered, Stop Tuning (discard) saves
+// nothing, Undo / Redo of the Apply, the reloaded file has the value, the sample presets stay untouched.
+
+namespace ACFTuningApplyTests
+{
+	const TCHAR* const AssistSamplePath = TEXT("/ActionCameraFramework/Samples/DA_ACFSample_Assist.DA_ACFSample_Assist");
+	const TCHAR* const ThirdPersonSamplePath = TEXT("/ActionCameraFramework/Samples/DA_ACFSample_ThirdPerson.DA_ACFSample_ThirdPerson");
+
+	struct FAssistFlow
+	{
+		FAutomationTestBase* Test = nullptr;
+		TUniquePtr<FTestRoot> TestRoot;
+		TUniquePtr<FACFCameraTuningPanelModel> Model;
+		TStrongObjectPtr<UACFCameraPreset> Asset; // the stand-in save target (on disk, in the test root)
+		FSoftObjectPath AssetPath;
+		TArray<TArray<uint8>> SamplesBefore;      // DA_ACFSample_Assist / ThirdPerson (preset + nodes)
+		FString SavedCVar;
+		uint64 MarkFrame = 0;
+	};
+	using FAssistStep = TFunction<bool(FAssistFlow&)>;
+
+	class FAssistCommand : public IAutomationLatentCommand
+	{
+	public:
+		FAssistCommand(TSharedRef<FAssistFlow> InFlow, TArray<FAssistStep> InSteps) : Flow(InFlow), Steps(MoveTemp(InSteps)) {}
+		virtual bool Update() override
+		{
+			const double Now = FPlatformTime::Seconds();
+			StepStart = StepStart == 0.0 ? Now : StepStart;
+			if (Now - StepStart > 90.0)
+			{
+				Flow->Test->AddError(FString::Printf(TEXT("Assist save flow: step %d timed out."), Index));
+				return true;
+			}
+			if (Index < Steps.Num() && Steps[Index](*Flow))
+			{
+				++Index;
+				StepStart = 0.0;
+			}
+			return Index >= Steps.Num();
+		}
+	private:
+		TSharedRef<FAssistFlow> Flow;
+		TArray<FAssistStep> Steps;
+		int32 Index = 0;
+		double StepStart = 0.0;
+	};
+
+	inline TArray<TArray<uint8>> SnapshotSamples()
+	{
+		TArray<TArray<uint8>> Out;
+		for (const TCHAR* Path : { AssistSamplePath, ThirdPersonSamplePath })
+		{
+			const UACFCameraPreset* Preset = LoadObject<UACFCameraPreset>(nullptr, Path);
+			Out.Add(Preset ? Snapshot(Preset) : TArray<uint8>());
+			for (const UACFCameraNode* Node : Preset ? Preset->Nodes : TArray<TObjectPtr<UACFCameraNode>>())
+			{
+				Out.Add(Snapshot(Node));
+			}
+			Out.Add({ static_cast<uint8>(Preset && Preset->GetPackage()->IsDirty()) });
+		}
+		return Out;
+	}
+
+	inline UACFCameraSubsystem* PieAcf(UWorld*& OutWorld, ULocalPlayer*& OutPlayer)
+	{
+		return FirstPiePcm(OutWorld, OutPlayer) && OutPlayer ? OutPlayer->GetSubsystem<UACFCameraSubsystem>() : nullptr;
+	}
+
+	/** Runs ACF.Sample.Assist <Args> in the PIE world; false while PIE is still starting. */
+	inline bool AssistExec(FAssistFlow& F, const TCHAR* Args)
+	{
+		UWorld* World = nullptr;
+		ULocalPlayer* Player = nullptr;
+		if (!PieAcf(World, Player) || !Player->GetPlayerController(World) || !Player->GetPlayerController(World)->GetPawn())
+		{
+			return false;
+		}
+		GEngine->Exec(World, *FString::Printf(TEXT("ACF.Sample.Assist %s"), Args));
+		F.MarkFrame = GFrameCounter;
+		return true;
+	}
+
+	/** The ACF.Sample.Assist request (by its debug name: the last evaluation result may predate it). */
+	inline FACFCameraRequestHandle AssistHandle(UACFCameraSubsystem* Acf)
+	{
+		TArray<FACFCameraRequestInfo> Infos;
+		Acf->GetDirector()->GetRequestInfos(Infos);
+		const FACFCameraRequestInfo* Info = Infos.FindByPredicate([](const FACFCameraRequestInfo& I) { return I.DebugName == FName(TEXT("Sample_Assist")); });
+		return Info ? Info->Handle : FACFCameraRequestHandle();
+	}
+
+	inline bool NoPie(FAssistFlow&)
+	{
+		FPieFlow Unused;
+		return NoPie(Unused);
+	}
+
+	inline const UACFCameraNode_OrbitalFollow* FirstOrbit(const UACFCameraPreset* Preset)
+	{
+		for (const UACFCameraNode* Node : Preset ? Preset->Nodes : TArray<TObjectPtr<UACFCameraNode>>())
+		{
+			if (const UACFCameraNode_OrbitalFollow* Orbit = Cast<UACFCameraNode_OrbitalFollow>(Node))
+			{
+				return Orbit;
+			}
+		}
+		return nullptr;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFTuningApplyAssistSampleTest, "ActionCameraFramework.Editor.TuningApply.AssistSampleSaveAcrossPIE", ACFTuningApplyTests::Flags)
+bool FACFTuningApplyAssistSampleTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFTuningApplyTests;
+	IConsoleVariable* PresetVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ACF.Sample.AssistPreset"));
+	const UACFCameraPreset* Sample = LoadObject<UACFCameraPreset>(nullptr, AssistSamplePath);
+	if (!TestNotNull(TEXT("ACF.Sample.AssistPreset exists (sample commands are compiled)"), PresetVar)
+		|| !TestNotNull(TEXT("DA_ACFSample_Assist exists (Scripts/CreateManualTestAssets.py)"), Sample))
+	{
+		return false;
+	}
+	TSharedRef<FAssistFlow> Flow = MakeShared<FAssistFlow>();
+	Flow->Test = this;
+	Flow->TestRoot = MakeUnique<FTestRoot>();
+	Flow->TestRoot->Test = this;
+	Flow->Model = MakeUnique<FACFCameraTuningPanelModel>();
+	Flow->SamplesBefore = SnapshotSamples();
+
+	// A runtime copy (what the 7B command used to request): its changes are shown as not savable instead of silently
+	// going to a transient object.
+	{
+		TStrongObjectPtr<UACFCameraPreset> RuntimeCopy(DuplicateObject<UACFCameraPreset>(Sample, GetTransientPackage()));
+		FTuned Tuned(RuntimeCopy.Get());
+		TestEqual(TEXT("Runtime copy: tune Stop Speed"), Tuned.Set(0, UACFCameraNode_OrbitalFollow::StaticClass()->GetFName(), EParam::AssistStopSpeed, FVector(40.0, 0.0, 0.0)), EResult::Ok);
+		Tuned.Model->CaptureAll();
+		const FACFCameraTuningChangeSet::FReport Check = Tuned.Model->CheckChanges();
+		TestEqual(TEXT("Runtime copy: the change is a conflict"), Tuned.Model->GetChangeSet().CountState(EState::Conflict, true), 1);
+		const FACFCameraTuningChangeSet::FChange* Change = Tuned.Model->GetChangeSet().GetChanges().FindByPredicate([](const FACFCameraTuningChangeSet::FChange& C) { return C.IsChanged(); });
+		const FString Reason = Change ? Tuned.Model->GetChangeSet().GetStatus(static_cast<int32>(Change - Tuned.Model->GetChangeSet().GetChanges().GetData())).Reason : FString();
+		TestTrue(FString::Printf(TEXT("Runtime copy: the reason says it cannot be saved (%s)"), *Reason), Reason.Contains(TEXT("not a preset asset on disk")));
+		TestFalse(TEXT("Runtime copy: Apply refused"), Tuned.Model->ApplyChanges(true).bOk);
+	}
+
+	// The stand-in save target: a copy of DA_ACFSample_Assist in the test root, saved to disk.
+	{
+		const FString Short = FString::Printf(TEXT("DA_AssistSave_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Short));
+		UPackage* Package = CreatePackage(*(FString(Root) + Short));
+		UACFCameraPreset* Asset = DuplicateObject<UACFCameraPreset>(Sample, Package, *Short);
+		Asset->SetFlags(RF_Public | RF_Standalone | RF_Transactional);
+		FString Error;
+		if (!TestTrue(TEXT("Stand-in asset saved"), FACFCameraTuningChangeSet::SavePackage(*Package, Error)))
+		{
+			AddError(Error);
+			return false;
+		}
+		Flow->Asset.Reset(Asset);
+		Flow->AssetPath = FSoftObjectPath(Asset);
+		Flow->SavedCVar = PresetVar->GetString();
+		PresetVar->Set(*Flow->AssetPath.ToString(), ECVF_SetByCode);
+		TestEqual(TEXT("Stand-in: Stop Speed 75"), FirstOrbit(Asset)->StopSpeedThreshold, 75.f);
+	}
+
+	ADD_LATENT_AUTOMATION_COMMAND(FEditorLoadMap(TEXT("/ActionCameraFramework/Samples/L_ACFCameraTest")));
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	{
+		// 1-4: PIE, ACF.Sample.Assist On, Start Tuning, tune Stop Speed (and a value that is reset again).
+		TArray<FAssistStep> Steps;
+		Steps.Add([](FAssistFlow& F) { return AssistExec(F, TEXT("On")); });
+		Steps.Add([](FAssistFlow& F) { return GFrameCounter > F.MarkFrame + 5; });
+		Steps.Add([](FAssistFlow& F)
+		{
+			UWorld* World = nullptr;
+			ULocalPlayer* Player = nullptr;
+			UACFCameraSubsystem* Acf = PieAcf(World, Player);
+			const FACFCameraRequestHandle Handle = AssistHandle(Acf);
+			F.Test->TestTrue(TEXT("PIE: the command requests the asset itself (no runtime copy)"), Acf->GetDirector()->GetRequestPreset(Handle) == F.Asset.Get());
+			F.Model->SelectWorld(World);
+			F.Model->SelectPlayer(Player);
+			F.Model->SelectRequest(Handle);
+			F.Test->TestEqual(TEXT("PIE: Start Tuning"), F.Model->Start(), EACFCameraTuningResult::Ok);
+			F.Model->SelectNode(0, UACFCameraNode_OrbitalFollow::StaticClass()->GetFName());
+			F.Test->TestEqual(TEXT("PIE: Stop Speed 40"), F.Model->SetValue(EParam::AssistStopSpeed, FVector(40.0, 0.0, 0.0)), EResult::Ok);
+			F.Test->TestEqual(TEXT("PIE: Max Yaw Speed 45"), F.Model->SetValue(EParam::AssistMaxYawSpeed, FVector(45.0, 0.0, 0.0)), EResult::Ok);
+			F.Test->TestEqual(TEXT("PIE: Reset Max Yaw Speed"), F.Model->ResetParameter(EParam::AssistMaxYawSpeed), EResult::Ok);
+			F.Test->TestEqual(TEXT("PIE: the asset is not written while PIE runs"), FirstOrbit(F.Asset.Get())->StopSpeedThreshold, 75.f);
+			// The panel captures with its refresh; do it here as the panel would.
+			F.Model->CaptureAll();
+			return AssistExec(F, TEXT("Off"));
+		});
+		Steps.Add([](FAssistFlow& F) { return GFrameCounter > F.MarkFrame + 3; });
+		Steps.Add([](FAssistFlow& F)
+		{
+			UWorld* World = nullptr;
+			ULocalPlayer* Player = nullptr;
+			UACFCameraSubsystem* Acf = PieAcf(World, Player);
+			const UACFCameraPreset* Used = Acf->GetDirector()->GetRequestPreset(AssistHandle(Acf));
+			F.Test->TestTrue(TEXT("Off: on the tuning copy, assistance off"), Used != F.Asset.Get() && FirstOrbit(Used) && !FirstOrbit(Used)->bEnableMovementAssistance);
+			F.Test->TestTrue(TEXT("Off: the asset keeps assistance on"), FirstOrbit(F.Asset.Get())->bEnableMovementAssistance);
+			return AssistExec(F, TEXT("On Movement"));
+		});
+		Steps.Add([](FAssistFlow& F) { return GFrameCounter > F.MarkFrame + 3; });
+		Steps.Add([](FAssistFlow& F)
+		{
+			UWorld* World = nullptr;
+			ULocalPlayer* Player = nullptr;
+			UACFCameraSubsystem* Acf = PieAcf(World, Player);
+			const FACFCameraRequestHandle Handle = AssistHandle(Acf);
+			FACFCameraTuningValue Value;
+			F.Test->TestTrue(TEXT("Off / On: the same request"), Handle == F.Model->GetRequest());
+			F.Test->TestEqual(TEXT("Off / On: Stop Speed readable"), Acf->GetDirector()->GetTuningValue(Handle, EParam::AssistStopSpeed, INDEX_NONE, Value), EResult::Ok);
+			F.Test->TestEqual(TEXT("Off / On: the tuned Stop Speed is kept"), Value.Value.X, 40.0);
+			const UACFCameraNode_OrbitalFollow* Used = FirstOrbit(Acf->GetDirector()->GetRequestPreset(Handle));
+			F.Test->TestTrue(TEXT("On Movement: copy on, Movement Direction; the asset stays Target Facing"), Used && Used->bEnableMovementAssistance
+				&& Used->RecenterHeading == EACFCameraRecenterHeading::MovementDirection && FirstOrbit(F.Asset.Get())->RecenterHeading == EACFCameraRecenterHeading::TargetFacing);
+			return AssistExec(F, TEXT("Release"));
+		});
+		ADD_LATENT_AUTOMATION_COMMAND(FAssistCommand(Flow, MoveTemp(Steps)));
+	}
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	{
+		// 5-6: PIE ended; Changes > Check > Apply to Asset (Undo / Redo) > Save Asset; reload from disk.
+		TArray<FAssistStep> Steps;
+		Steps.Add([](FAssistFlow& F) { return NoPie(F); });
+		Steps.Add([](FAssistFlow& F)
+		{
+			FACFCameraTuningPanelModel& Model = *F.Model;
+			Model.Validate();
+			const TArray<FACFCameraTuningChangeSet::FChange>& Changes = Model.GetChangeSet().GetChanges();
+			const int32 NumChanged = static_cast<int32>(Algo::CountIf(Changes, [](const FACFCameraTuningChangeSet::FChange& C) { return C.IsChanged(); }));
+			const FACFCameraTuningChangeSet::FChange* Change = Changes.FindByPredicate([](const FACFCameraTuningChangeSet::FChange& C) { return C.IsChanged(); });
+			F.Test->TestEqual(TEXT("After PIE: one change (the reset value and the toggles are not offered)"), NumChanged, 1);
+			F.Test->TestTrue(TEXT("After PIE: Stop Speed 75 -> 40 for the asset (by path), shown with the target"), Change && Change->Parameter == EParam::AssistStopSpeed
+				&& Change->Preset == F.AssetPath && Change->BaseValue.X == 75.0 && Change->Value.X == 40.0 && Change->Property == FName(TEXT("StopSpeedThreshold")));
+			const FACFCameraTuningChangeSet::FReport Check = Model.CheckChanges();
+			F.Test->TestTrue(FString::Printf(TEXT("Check (%s)"), *Check.Message), Check.NumErrors == 0 && Model.GetChangeSet().CountState(EState::Pending, true) == 1);
+			const FACFCameraTuningChangeSet::FReport Applied = Model.ApplyChanges(false);
+			F.Test->TestTrue(FString::Printf(TEXT("Apply to Asset (%s)"), *Applied.Message), Applied.bOk && Applied.NumDone == 1);
+			F.Test->TestEqual(TEXT("Applied: 40"), FirstOrbit(F.Asset.Get())->StopSpeedThreshold, 40.f);
+			F.Test->TestTrue(TEXT("Applied: only the number, the toggles of the copy are not applied"), FirstOrbit(F.Asset.Get())->bEnableMovementAssistance
+				&& FirstOrbit(F.Asset.Get())->RecenterHeading == EACFCameraRecenterHeading::TargetFacing && FirstOrbit(F.Asset.Get())->MaxAssistanceYawSpeed == 90.f);
+			F.Test->TestTrue(TEXT("Undo"), GEditor->UndoTransaction());
+			F.Test->TestEqual(TEXT("Undo: 75"), FirstOrbit(F.Asset.Get())->StopSpeedThreshold, 75.f);
+			F.Test->TestTrue(TEXT("Redo"), GEditor->RedoTransaction());
+			F.Test->TestEqual(TEXT("Redo: 40"), FirstOrbit(F.Asset.Get())->StopSpeedThreshold, 40.f);
+			const FACFCameraTuningChangeSet::FReport Saved = Model.SaveChanges();
+			F.Test->TestTrue(FString::Printf(TEXT("Save Asset (%s)"), *Saved.Message), Saved.bOk && !F.Asset->GetPackage()->IsDirty());
+
+			// The file: reload the package from disk.
+			GEditor->ResetTransaction(FText::FromString(TEXT("ACF tuning apply test")));
+			UPackage* Package = F.Asset->GetPackage();
+			F.Asset.Reset();
+			FText ReloadError;
+			F.Test->TestTrue(TEXT("Reload from disk"), UPackageTools::ReloadPackages({ Package }, ReloadError, EReloadPackagesInteractionMode::AssumePositive));
+			UACFCameraPreset* Reloaded = Cast<UACFCameraPreset>(F.AssetPath.TryLoad());
+			F.Test->TestTrue(TEXT("Reloaded: Stop Speed 40 on disk"), Reloaded && FirstOrbit(Reloaded) && FirstOrbit(Reloaded)->StopSpeedThreshold == 40.f);
+			F.Asset.Reset(Reloaded);
+			return true;
+		});
+		ADD_LATENT_AUTOMATION_COMMAND(FAssistCommand(Flow, MoveTemp(Steps)));
+	}
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	{
+		// 7: PIE again, ACF.Sample.Assist On: the saved value. Then Stop Tuning (discard) saves nothing.
+		TArray<FAssistStep> Steps;
+		Steps.Add([](FAssistFlow& F) { return AssistExec(F, TEXT("On")); });
+		Steps.Add([](FAssistFlow& F) { return GFrameCounter > F.MarkFrame + 5; });
+		Steps.Add([](FAssistFlow& F)
+		{
+			UWorld* World = nullptr;
+			ULocalPlayer* Player = nullptr;
+			UACFCameraSubsystem* Acf = PieAcf(World, Player);
+			const FACFCameraRequestHandle Handle = AssistHandle(Acf);
+			const UACFCameraPreset* Used = Acf->GetDirector()->GetRequestPreset(Handle);
+			F.Test->TestTrue(TEXT("PIE again: the saved Stop Speed 40 is used"), Used == F.Asset.Get() && FirstOrbit(Used) && FirstOrbit(Used)->StopSpeedThreshold == 40.f);
+			F.Test->TestEqual(TEXT("PIE again: nothing is being tuned"), Acf->GetDirector()->GetNumTunedRequests(), 0);
+			F.Model->Validate();
+			F.Model->SelectWorld(World);
+			F.Model->SelectPlayer(Player);
+			F.Model->SelectRequest(Handle);
+			F.Test->TestEqual(TEXT("Discard: Start"), F.Model->Start(), EResult::Ok);
+			F.Model->SelectNode(0, UACFCameraNode_OrbitalFollow::StaticClass()->GetFName());
+			F.Test->TestEqual(TEXT("Discard: Stop Speed 10"), F.Model->SetValue(EParam::AssistStopSpeed, FVector(10.0, 0.0, 0.0)), EResult::Ok);
+			F.Model->CaptureAll();
+			F.Test->TestEqual(TEXT("Discard: Stop Tuning (discard)"), F.Model->Stop(), EResult::Ok);
+			return AssistExec(F, TEXT("Release"));
+		});
+		ADD_LATENT_AUTOMATION_COMMAND(FAssistCommand(Flow, MoveTemp(Steps)));
+	}
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	{
+		TArray<FAssistStep> Steps;
+		Steps.Add([](FAssistFlow& F) { return NoPie(F); });
+		Steps.Add([](FAssistFlow& F)
+		{
+			FACFCameraTuningPanelModel& Model = *F.Model;
+			Model.Validate();
+			Model.CaptureAll();
+			F.Test->TestEqual(TEXT("Discard: nothing pending"), Model.GetChangeSet().CountState(EState::Pending, true), 0);
+			F.Test->TestFalse(TEXT("Discard: no change with 10"), Model.GetChangeSet().GetChanges().ContainsByPredicate([](const FACFCameraTuningChangeSet::FChange& C) { return C.IsChanged() && C.Value.X == 10.0; }));
+			F.Test->TestEqual(TEXT("Discard: the asset keeps the saved 40"), FirstOrbit(F.Asset.Get())->StopSpeedThreshold, 40.f);
+			F.Test->TestFalse(TEXT("Discard: the asset is clean"), F.Asset->GetPackage()->IsDirty());
+			F.Test->TestTrue(TEXT("The sample presets (DA_ACFSample_Assist / ThirdPerson) are untouched and clean"), SnapshotSamples() == F.SamplesBefore);
+
+			IConsoleManager::Get().FindConsoleVariable(TEXT("ACF.Sample.AssistPreset"))->Set(*F.SavedCVar, ECVF_SetByCode);
+			GEditor->ResetTransaction(FText::FromString(TEXT("ACF tuning apply test")));
+			DropAsset(F.Asset.Get());
+			F.Asset.Reset();
+			F.Model.Reset();
+			F.TestRoot.Reset();
+			return true;
+		});
+		ADD_LATENT_AUTOMATION_COMMAND(FAssistCommand(Flow, MoveTemp(Steps)));
 	}
 	return true;
 }

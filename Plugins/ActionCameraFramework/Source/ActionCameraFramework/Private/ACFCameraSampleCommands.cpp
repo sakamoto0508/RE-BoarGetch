@@ -6,6 +6,7 @@
 #include "ACFCameraDirector.h"
 #include "ACFCameraPreset.h"
 #include "ACFCameraSubsystem.h"
+#include "ACFCameraTuning.h"
 #include "Nodes/ACFCameraNode_FixedPose.h"
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
 #include "InputCoreTypes.h"
@@ -157,20 +158,26 @@ namespace ACFSamples
 		TEXT("Enable / disable the output collision guard: <0|1>"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleGuard));
 
 	// ---------------------------------------------------------------------------------------------
-	// Phase 7B feel check (README 31 章): Movement Assistance needs Input Source = Camera Input, and nothing in the sample
-	// map feeds Add Camera Input / Set Camera Input Rate. This command requests a transient copy of a sample preset with the
-	// Orbital Follow switched to Camera Input, and forwards the player's raw right stick (rate) and mouse (delta) to ACF
-	// every frame, keeping the control rotation on the ACF camera so movement stays camera-relative. Sample code only:
-	// it is not an input feature of ACF (a game feeds its own input, README 30 章).
-	//   ACF.Sample.Assist On [Facing|Movement] [Preset=ThirdPerson] | Off [Preset] | Heading <Facing|Movement>
-	//   ACF.Sample.Assist RealTime <0|1> | Drift <stick units> | Stick <deg/s> | Mouse <deg/count> | Nudge <yaw deg>
-	//   ACF.Sample.Assist Release
+	// Phase 7B feel check (README 31 章). Movement Assistance needs Input Source = Camera Input, and nothing in the sample
+	// map feeds Add Camera Input / Set Camera Input Rate. This command requests the persistent preset DA_ACFSample_Assist
+	// itself (ThirdPerson's nodes with the Orbital Follow on Camera Input + Movement Assistance; the CVar
+	// ACF.Sample.AssistPreset overrides the path) and forwards the player's raw right stick (rate) and mouse (delta) to ACF
+	// every frame, keeping the control rotation on the ACF camera so movement stays camera-relative. Because the request
+	// runs on the asset, values tuned in the Camera Tuning panel go to that asset with the usual 7A-3 flow (Changes > Check >
+	// Apply to Asset > Save Asset). The toggles (Off, Heading, RealTime) never write the asset: they change the request's
+	// tuning copy (tuning starts for it), so they are never saved and Stop Tuning (discard) drops them with the rest.
+	// Sample code only: it is not an input feature of ACF (a game feeds its own input, README 30 章).
+	//   ACF.Sample.Assist On [Facing|Movement] | Off | Heading <Facing|Movement> | RealTime <0|1>
+	//   ACF.Sample.Assist Drift <stick units> | Stick <deg/s> | Mouse <deg/count> | Nudge <yaw deg> | Release
+
+	static TAutoConsoleVariable<FString> CVarAssistPreset(TEXT("ACF.Sample.AssistPreset"),
+		TEXT("/ActionCameraFramework/Samples/DA_ACFSample_Assist.DA_ACFSample_Assist"),
+		TEXT("Preset asset requested by ACF.Sample.Assist (values tuned on it are applied / saved to this asset)."));
 
 	struct FAssistBridge
 	{
 		TWeakObjectPtr<UACFCameraSubsystem> Subsystem;
-		TWeakObjectPtr<UACFCameraNode_OrbitalFollow> Orbit; // the transient copy's node (not the asset)
-		TStrongObjectPtr<UACFCameraPreset> Preset;
+		TWeakObjectPtr<const UACFCameraPreset> Asset;
 		FDelegateHandle Hook;
 		uint64 LastFrame = 0;
 		float Drift = 0.f;
@@ -179,26 +186,62 @@ namespace ACFSamples
 	};
 	static FAssistBridge GAssist;
 
-	/** The orbit node(s) the request really uses: the transient copy, and the tuning copy while Camera Tuning runs. */
-	template <typename TFunc>
-	static void ForEachAssistOrbit(TFunc&& Func)
+	static bool AssistAlive()
 	{
-		if (UACFCameraNode_OrbitalFollow* Orbit = GAssist.Orbit.Get())
-		{
-			Func(*Orbit);
-		}
+		const UACFCameraSubsystem* Subsystem = GAssist.Subsystem.Get();
+		return GAssist.Hook.IsValid() && Subsystem && Subsystem->IsCameraRequestAlive(GSampleHandle);
+	}
+
+	/** The Orbital Follow of the preset the assist request runs on now (the asset, or its tuning copy). */
+	static const UACFCameraNode_OrbitalFollow* AssistCurrentOrbit()
+	{
 		UACFCameraSubsystem* Subsystem = GAssist.Subsystem.Get();
 		const UACFCameraPreset* Used = Subsystem && Subsystem->GetDirector() ? Subsystem->GetDirector()->GetRequestPreset(GSampleHandle) : nullptr;
-		if (Used && Used != GAssist.Preset.Get())
+		for (const UACFCameraNode* Node : Used ? Used->Nodes : TArray<TObjectPtr<UACFCameraNode>>())
 		{
-			for (UACFCameraNode* Node : const_cast<UACFCameraPreset*>(Used)->Nodes)
+			if (const UACFCameraNode_OrbitalFollow* Orbit = Cast<UACFCameraNode_OrbitalFollow>(Node))
 			{
-				if (UACFCameraNode_OrbitalFollow* Orbit = Cast<UACFCameraNode_OrbitalFollow>(Node))
-				{
-					Func(*Orbit);
-				}
+				return Orbit;
 			}
 		}
+		return nullptr;
+	}
+
+	/**
+	 * Applies a toggle to the assist request's tuning copy, never to the asset: tuning starts for the request if it is not
+	 * tuned yet (the 7A runtime override), and the copy is changed. Only numbers go through the change set, so a toggle is
+	 * never applied to the asset; Stop Tuning (discard) drops it.
+	 */
+	template <typename TFunc>
+	static bool AssistOverride(const TCHAR* What, TFunc&& Func)
+	{
+#if ACF_WITH_RUNTIME_TUNING
+		UACFCameraSubsystem* Subsystem = GAssist.Subsystem.Get();
+		UACFCameraDirector* Director = Subsystem ? Subsystem->GetDirector() : nullptr;
+		if (!Director || !AssistAlive())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist %s: no assist camera (run ACF.Sample.Assist On)."), What);
+			return false;
+		}
+		const EACFCameraTuningResult Result = Director->StartTuning(GSampleHandle);
+		const UACFCameraPreset* Copy = Director->GetRequestPreset(GSampleHandle);
+		if (Result != EACFCameraTuningResult::Ok || !Copy || Copy == GAssist.Asset.Get())
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist %s: no tuning copy (%s); the asset is not changed."), What, ACFCameraTuning::LexToString(Result));
+			return false;
+		}
+		for (UACFCameraNode* Node : const_cast<UACFCameraPreset*>(Copy)->Nodes)
+		{
+			if (UACFCameraNode_OrbitalFollow* Orbit = Cast<UACFCameraNode_OrbitalFollow>(Node))
+			{
+				Func(*Orbit);
+			}
+		}
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist %s (on the tuning copy: not saved, Stop Tuning discards it)"), What);
+		return true;
+#else
+		return false;
+#endif
 	}
 
 	static void AssistForwardInput(UACFCameraSubsystem& Subsystem, float DeltaTime)
@@ -244,44 +287,24 @@ namespace ACFSamples
 			GAssist.Hook.Reset();
 		}
 		GAssist.Subsystem.Reset();
-		GAssist.Orbit.Reset();
-		GAssist.Preset.Reset();
+		GAssist.Asset.Reset();
 	}
 
-	static void AssistRequest(UWorld* World, bool bEnable, const FString& Heading, const FString& PresetName)
+	/** Requests the assist preset asset itself (no copy) and starts forwarding the input. */
+	static bool AssistRequest(UWorld* World)
 	{
 		UACFCameraSubsystem* Subsystem = FindSubsystem(World);
 		APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
-		const FString Path = FString::Printf(TEXT("/ActionCameraFramework/Samples/DA_ACFSample_%s.DA_ACFSample_%s"), *PresetName, *PresetName);
-		const UACFCameraPreset* Asset = LoadObject<UACFCameraPreset>(nullptr, *Path);
+		const FString Path = CVarAssistPreset.GetValueOnGameThread();
+		UACFCameraPreset* Asset = LoadObject<UACFCameraPreset>(nullptr, *Path);
 		if (!Subsystem || !PC || !Asset)
 		{
-			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist: needs a player and %s."), *Path);
-			return;
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist: needs a player and %s (run Scripts/CreateManualTestAssets.py)."), *Path);
+			return false;
 		}
-		// A transient copy (the shared asset is never changed). Values edited on the asset in the editor carry over.
-		UACFCameraPreset* Copy = DuplicateObject<UACFCameraPreset>(Asset, GetTransientPackage());
-		Copy->SetFlags(RF_Transient);
-		UACFCameraNode_OrbitalFollow* Orbit = nullptr;
-		for (UACFCameraNode* Node : Copy->Nodes)
-		{
-			Orbit = Orbit ? Orbit : Cast<UACFCameraNode_OrbitalFollow>(Node);
-		}
-		if (!Orbit)
-		{
-			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist: %s has no Orbital Follow."), *PresetName);
-			return;
-		}
-		Orbit->InputSource = EACFCameraOrbitInputSource::CameraInput;
-		Orbit->Sensitivity = FVector2D(1.f, 1.f); // input already in degrees (Stick / Mouse settings above)
-		Orbit->InitialRotation = EACFCameraOrbitInitialRotation::UpstreamCamera; // no jump when switching ON / OFF
-		Orbit->bEnableMovementAssistance = bEnable;
-		Orbit->RecenterHeading = Heading.Equals(TEXT("Movement"), ESearchCase::IgnoreCase) ? EACFCameraRecenterHeading::MovementDirection : EACFCameraRecenterHeading::TargetFacing;
-
 		AssistStop();
 		GAssist.Subsystem = Subsystem;
-		GAssist.Preset.Reset(Copy);
-		GAssist.Orbit = Orbit;
+		GAssist.Asset = Asset;
 		GAssist.LastFrame = 0;
 		GAssist.Hook = UACFCameraSubsystem::OnPreEvaluate.AddStatic(&AssistForwardInput);
 
@@ -289,29 +312,62 @@ namespace ACFSamples
 		Params.FollowTarget.Actor = PC->GetPawn();
 		Params.bOverrideBlendIn = true;
 		Params.BlendIn = SampleBlend(0.f, true);
-		Params.DebugName = *FString::Printf(TEXT("Sample_Assist_%s"), bEnable ? TEXT("On") : TEXT("Off"));
+		Params.DebugName = TEXT("Sample_Assist");
 		const FACFCameraRequestHandle Previous = GSampleHandle;
-		GSampleHandle = Subsystem->RequestCamera(Copy, Params);
+		GSampleHandle = Subsystem->RequestCamera(Asset, Params);
 		FACFCameraRequestHandle ToRelease = Previous;
 		Subsystem->ReleaseCamera(ToRelease);
-		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist %s: %s, heading %s, stick %.0f deg/s, mouse %.3f deg/count, drift %.3f -> %s"),
-			bEnable ? TEXT("ON") : TEXT("OFF"), *PresetName, *UEnum::GetValueAsString(Orbit->RecenterHeading), GAssist.StickDegreesPerSecond,
-			GAssist.MouseDegreesPerCount, GAssist.Drift, *GSampleHandle.ToString());
+		const UACFCameraNode_OrbitalFollow* Orbit = AssistCurrentOrbit();
+		UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist: %s (save target of the tuned values) -> %s; assistance %d, heading %s, input %s, stick %.0f deg/s, mouse %.3f deg/count, drift %.3f"),
+			*Asset->GetPathName(), *GSampleHandle.ToString(), Orbit && Orbit->bEnableMovementAssistance ? 1 : 0,
+			Orbit ? *UEnum::GetValueAsString(Orbit->RecenterHeading) : TEXT("-"), Orbit ? *UEnum::GetValueAsString(Orbit->InputSource) : TEXT("no Orbital Follow"),
+			GAssist.StickDegreesPerSecond, GAssist.MouseDegreesPerCount, GAssist.Drift);
+		if (Orbit && (Orbit->InputSource != EACFCameraOrbitInputSource::CameraInput || !Orbit->bEnableMovementAssistance))
+		{
+			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist: %s's Orbital Follow should use Camera Input with Movement Assistance."), *Asset->GetName());
+		}
+		return true;
+	}
+
+	static void AssistSetHeading(const FString& Heading)
+	{
+		const EACFCameraRecenterHeading Value = Heading.Equals(TEXT("Movement"), ESearchCase::IgnoreCase) ? EACFCameraRecenterHeading::MovementDirection : EACFCameraRecenterHeading::TargetFacing;
+		const UACFCameraNode_OrbitalFollow* Current = AssistCurrentOrbit();
+		if (Current && Current->RecenterHeading == Value)
+		{
+			return; // already so: nothing to override
+		}
+		AssistOverride(*FString::Printf(TEXT("Heading %s"), *UEnum::GetValueAsString(Value)), [Value](UACFCameraNode_OrbitalFollow& Orbit) { Orbit.RecenterHeading = Value; });
+	}
+
+	static void AssistSetEnabled(bool bEnable)
+	{
+		const UACFCameraNode_OrbitalFollow* Current = AssistCurrentOrbit();
+		if (Current && Current->bEnableMovementAssistance == bEnable)
+		{
+			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist: assistance already %s"), bEnable ? TEXT("ON") : TEXT("OFF"));
+			return;
+		}
+		AssistOverride(bEnable ? TEXT("ON") : TEXT("OFF"), [bEnable](UACFCameraNode_OrbitalFollow& Orbit) { Orbit.bEnableMovementAssistance = bEnable; });
 	}
 
 	static void SampleAssist(const TArray<FString>& Args, UWorld* World)
 	{
 		const FString Kind = Args.IsValidIndex(0) ? Args[0] : FString(TEXT("On"));
 		auto Arg = [&Args](int32 Index, const TCHAR* Default) { return Args.IsValidIndex(Index) ? Args[Index] : FString(Default); };
-		auto IsHeading = [](const FString& Value) { return Value.Equals(TEXT("Facing"), ESearchCase::IgnoreCase) || Value.Equals(TEXT("Movement"), ESearchCase::IgnoreCase); };
-		if (Kind.Equals(TEXT("On"), ESearchCase::IgnoreCase))
+		if (Kind.Equals(TEXT("On"), ESearchCase::IgnoreCase) || Kind.Equals(TEXT("Off"), ESearchCase::IgnoreCase))
 		{
-			const bool bHeadingGiven = IsHeading(Arg(1, TEXT("Facing")));
-			AssistRequest(World, true, bHeadingGiven ? Arg(1, TEXT("Facing")) : FString(TEXT("Facing")), Arg(bHeadingGiven ? 2 : 1, TEXT("ThirdPerson")));
-		}
-		else if (Kind.Equals(TEXT("Off"), ESearchCase::IgnoreCase))
-		{
-			AssistRequest(World, false, TEXT("Facing"), Arg(1, TEXT("ThirdPerson")));
+			// The same request across Off / On (its tuned values stay); the first On / Off requests the asset.
+			if (!AssistAlive() && !AssistRequest(World))
+			{
+				return;
+			}
+			const bool bOn = Kind.Equals(TEXT("On"), ESearchCase::IgnoreCase);
+			AssistSetEnabled(bOn);
+			if (bOn && Args.IsValidIndex(1))
+			{
+				AssistSetHeading(Args[1]);
+			}
 		}
 		else if (Kind.Equals(TEXT("Release"), ESearchCase::IgnoreCase))
 		{
@@ -322,21 +378,18 @@ namespace ACFSamples
 			}
 			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist released"));
 		}
-		else if (!GAssist.Hook.IsValid())
+		else if (!AssistAlive())
 		{
 			UE_LOG(LogActionCamera, Warning, TEXT("ACF.Sample.Assist %s: run ACF.Sample.Assist On first."), *Kind);
 		}
 		else if (Kind.Equals(TEXT("Heading"), ESearchCase::IgnoreCase))
 		{
-			const bool bMovement = Arg(1, TEXT("Facing")).Equals(TEXT("Movement"), ESearchCase::IgnoreCase);
-			ForEachAssistOrbit([bMovement](UACFCameraNode_OrbitalFollow& Orbit) { Orbit.RecenterHeading = bMovement ? EACFCameraRecenterHeading::MovementDirection : EACFCameraRecenterHeading::TargetFacing; });
-			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist Heading %s"), bMovement ? TEXT("Movement Direction") : TEXT("Target Facing"));
+			AssistSetHeading(Arg(1, TEXT("Facing")));
 		}
 		else if (Kind.Equals(TEXT("RealTime"), ESearchCase::IgnoreCase))
 		{
 			const bool bReal = ArgOr(Args, 1, 1.f) != 0.f;
-			ForEachAssistOrbit([bReal](UACFCameraNode_OrbitalFollow& Orbit) { Orbit.bInputRateIgnoresTimeDilation = bReal; });
-			UE_LOG(LogActionCamera, Display, TEXT("ACF.Sample.Assist RealTime %d (Input Rate Ignores Time Dilation)"), bReal ? 1 : 0);
+			AssistOverride(bReal ? TEXT("RealTime 1") : TEXT("RealTime 0"), [bReal](UACFCameraNode_OrbitalFollow& Orbit) { Orbit.bInputRateIgnoresTimeDilation = bReal; });
 		}
 		else if (Kind.Equals(TEXT("Drift"), ESearchCase::IgnoreCase))
 		{
@@ -368,7 +421,7 @@ namespace ACFSamples
 	}
 
 	static FAutoConsoleCommandWithWorldAndArgs GSampleAssistCmd(TEXT("ACF.Sample.Assist"),
-		TEXT("Movement Assistance feel check (README 31): <On [Facing|Movement] [Preset=ThirdPerson]|Off [Preset]|Heading <Facing|Movement>|RealTime <0|1>|Drift <x>|Stick <deg/s>|Mouse <deg/count>|Nudge <deg>|Release>"),
+		TEXT("Movement Assistance feel check on DA_ACFSample_Assist (README 31): <On [Facing|Movement]|Off|Heading <Facing|Movement>|RealTime <0|1>|Drift <x>|Stick <deg/s>|Mouse <deg/count>|Nudge <deg>|Release>"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SampleAssist));
 
 	// ACF.Sample.Effect <Recoil|Impulse|Shake|Punch|Motion|Stop>

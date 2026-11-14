@@ -20,7 +20,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 5A（Level Sequencer との連携: Camera Cut 中の出力制御、復帰ブレンド、外部 ViewTarget）完了。自動テストと描画ありのテストマップで確認済み（14 章）。Editor での人による操作感の確認は未実施
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
 - Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A 完了（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映、7A-4 Profiler / Debugger / Composition が完了。24〜27 章）
-- Phase 7B 完了。7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance。29 章）、7B-2（カメラ入力の処理: 手動入力の判定、Time Dilation、補助の値の Runtime Tuning。30 章）。操作感の確認の手順と `ACF.Sample.Assist` を用意（31 章）。人による操作感の評価は未実施
+- Phase 7B 完了。7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance。29 章）、7B-2（カメラ入力の処理: 手動入力の判定、Time Dilation、補助の値の Runtime Tuning。30 章）。操作感の確認の手順と `ACF.Sample.Assist`（専用 Preset `DA_ACFSample_Assist`、調整値の保存に対応）を用意（31 章）。人による確認は Stop Speed Threshold の 1 項目だけ実施。7B-3（新しい入力機能）は追加せずに 7B を終える
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -30,7 +30,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 | 6A | 品質・アーキテクチャ監査（問題一覧・根拠・優先度・修正計画） | Completed（`Docs/Audit_Phase6A.md`） |
 | 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Completed（B-1〜B-11） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Done（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 PIE の Camera Tuning パネル: 完了、25 章。7A-3 アセットへの反映（Apply / Undo / Redo / Save）: 完了、26 章。7A-4 Profiler / Debugger / Composition: 完了、27 章） |
-| 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Done（7B-1 移動方向へのカメラ補助: 完了、29 章。7B-2 カメラ入力の処理と補助との連携: 完了、30 章） |
+| 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Done（7B-1 移動方向へのカメラ補助: 完了、29 章。7B-2 カメラ入力の処理と補助との連携: 完了、30 章。操作感の確認の準備と調整値の保存: 31 章。7B-3 の新しい入力機能は追加しない） |
 | 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | Not Started |
 | 7D | Advanced Occlusion Handling（複数点の遮蔽判定、可視率、一時透過。Trace 数を計測） | Not Started |
 | 7E | Camera Recorder / Replay（カメラ出力の再生。ゲームプレイの完全再現とは区別） | Not Started |
@@ -851,14 +851,14 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **233 件が登録**されています（テスト名の数。Phase 7B の操作感の確認の準備の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **234 件が登録**されています（テスト名の数。Phase 7B の最終整理の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
   | `.Director` 8、`.Nodes` 5、`.ThirdPerson` 11、`.Effects` 9、`.Action` 10、`.Constraints` 7、`.Sequence` 6、`.Authority` 3 | 59 | 実行 | 実行 |
   | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 13、`.Profiler` 3 | 31 | 実行 | 実行 |
   | `.Tuning`（Runtime Tuning、24 章。FOV の回避策 1 件、補助の値 1 件（30 章）を含む） | 11 | 実行 | 実行 |
-  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 8 件、26 章・30 章。診断 `.Editor.Diagnostics` 6 件、27 章・29 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 4 件を含む） | 24 | 実行 | — |
+  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 9 件、26 章・30 章・31 章。診断 `.Editor.Diagnostics` 6 件、27 章・29 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 5 件を含む） | 25 | 実行 | — |
   | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 3 | 5 | — | 実行 |
   | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件、投影 1 件を含む） | 30 | — | 実行 |
   | `.Projection`（構図計算と描画の投影、28 章） | 2 | 実行 | 実行 |
@@ -867,22 +867,24 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
   | `.Samples`（`ACF.Sample.Assist` の 1 件、31 章を含む） | 7 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
   | `.Profile.AssistanceVariants`（補助の状態ごとの性能、29 章・30 章） | 1 | `-ACFProfile` でだけ計測 | 同左 |
-  | 合計 | 233 | 147 | 209 |
+  | 合計 | 234 | 148 | 209 |
 
-- **最新の結果（Phase 7B の操作感の確認の準備、2026-11-14。クリーンな unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
+- **最新の結果（Phase 7B の最終整理、2026-11-14。クリーンな unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
   | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 209 | 200 / 0 / 9 | `.Samples` 7 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
   | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 209 | 200 / 0 / 9 | 同上 |
-  | Editor（`--context editor`、`-NullRHI`） | 147 | 146 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
-  | Editor（`--context editor-rendered`、描画あり。`.Editor` 24 件） | 24 | 24 / 0 / 0 | |
+  | Editor（`--context editor`、`-NullRHI`） | 148 | 147 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | Editor（`--context editor-rendered`、描画あり。`.Editor` 25 件） | 25 | 25 / 0 / 0 | |
   | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 7 件を含む） | 209 | 207 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
   | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 209 | 207 / 0 / 2 | 同上 |
   | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 209 | 209 / 0 / 0 | |
   | 繰り返し（Editor、Phase 7A 最終安定化の時点）: `.Projection` + `.Tuning` + `.Editor.TuningApply` + `.Editor.Diagnostics` ×2 | 48 | 48 / 0 / 0 | |
 
   全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 で見つけ、7A-1 のコードでも同じ値で再現したもの）は、2 人目のローカルプレイヤーの Pawn が残っていたのが原因で、テスト環境側で修正済みです（22 章「ローカルプレイヤーと Pawn」）。
+
+  `.Editor.TuningApply.RealPIEApplyUndoSaveRestart` は、単独で実行すると 2 回目の PIE の FOV の判定（要求から 5 フレーム後）が早すぎて失敗していました（Phase 7B の最終整理で見つけ、変更前のコードでも 3 回中 3 回再現）。カメラが更新されるまで最大 180 フレーム待つようにテストを直しました（製品のコードの不具合ではありません）。
 
   「Skip」は UE の集計では Success になります。`RunTests.sh` はテストが出す `Skipped:` のメッセージで区別します（22 章）。
 - 各カテゴリの内容: `.Health` は不正値の対策（16 章）、`.Lifetime` は Actor の参照と寿命（17 章。実際の World・Actor・GC、`-DisableGarbageElimination` でも合格）、`.PresetValidation` / `.Editor` は Preset の検証（21 章）、`.Profiler` は計測が出力を変えないこと（8 章）、`.Sequencer.PcmCompat` は PCM の互換性（15 章）、`.Sequencer.Events` は通知のタイミング（19 章）、`.Sequencer.ReturnBlend` は戻りのブレンド（20 章）、`.TestEnvironment` と `.Effects.SpeedFovAndRollFixedStep` / `.Integration.SpeedFovAndRollRepeated.*` はテストの土台（22 章）。
@@ -1730,6 +1732,7 @@ Runtime の調整用の複製をアセットへコピーすることはしませ
 Check と Apply の直前に、変更ごとに次を確かめます。1 つでも競合があれば、Apply は何も書きません（自動のマージや強制上書きはありません）。
 
 - アセットがある（削除・名前変更・読み込めない場合は競合）
+- ディスク上のアセットである（実行中に作られた一時的な複製の Preset は「not a preset asset on disk」の競合。保存先が無いため。Phase 7B、31 章）
 - Node の並び（数・順番・クラス）が記録したときと同じ（追加・削除・並べ替えは競合）
 - その番号の Node が、同じクラス・同じオブジェクト名（同じクラスの別の Node に置き換わっていたら競合）
 - その Node がまだパラメータを持っている（例: Fixed Pose の Override Field Of View が OFF になった）
@@ -2267,14 +2270,16 @@ Blueprint: `Suppress ACF Camera Assistance` / `Release ACF Camera Assistance Sup
 
 ## 31. Camera Assistance の操作感の確認（Phase 7B）
 
-7B-1（29 章）・7B-2（30 章）の補助を、人がスティックとマウスで操作して確かめるための手順です。**操作感の評価はまだ実施していません**（下の記録表はすべて「未実施」）。自動テストで判定できることと、人が判断することを分けています。
+7B-1（29 章）・7B-2（30 章）の補助を、人がスティックとマウスで操作して確かめるための手順です。自動テストで判定できることと、人が判断することを分けています。**人による確認は 1 項目だけ実施済み**（下の「手動確認の記録」）で、それ以外の操作感の評価は未実施です。
 
 ### なぜコマンドが必要か
 
 Movement Assistance は `Input Source = Camera Input` のときだけ動きます。一方、サンプルの Preset はすべて `Control Rotation` で、サンプルマップにも本プロジェクトにも、`Add Camera Input` / `Set Camera Input Rate` を呼ぶ入力がありません（`BP_ACFOrbitInputTest` は BeginPlay で 1 回入力するだけ）。そこで、確認用のコンソールコマンド `ACF.Sample.Assist` を追加しました（サンプル用。Shipping では無効。ACF の入力機能ではありません）。
 
-- `DA_ACFSample_ThirdPerson`（Orbital Follow + Combat + Collision）の **一時的な複製** を要求します。アセットは変更しません。
-- 複製の Orbital Follow だけを `Input Source = Camera Input`、`Sensitivity = 1`、`Initial Rotation = Upstream Camera`（切り替えで向きが飛ばない）にし、補助の ON / OFF と Heading をコマンドで決めます。
+- 専用の Preset アセット **`DA_ACFSample_Assist`** をそのまま要求します（複製しません）。中身は `DA_ACFSample_ThirdPerson` と同じ Node（Orbital Follow + Combat + Collision）で、Orbital Follow だけが `Input Source = Camera Input`、`Sensitivity = 1`、`Initial Rotation = Upstream Camera`（切り替えで向きが飛ばない）、`Enable Movement Assistance = ON`、`Recenter Heading = Target Facing` です。`DA_ACFSample_ThirdPerson` は使わず、変更もしません。
+- 要求がアセットそのものなので、Tuning パネルで調整した数値は、26 章の手順（Changes > Check > Apply to Asset > Save Asset）で `DA_ACFSample_Assist` に保存できます（下の「調整した値を保存する」）。
+- 補助の OFF / ON・Heading・RealTime の切り替えはアセットに書きません。その要求の **Tuning の複製**（7A の Runtime Override。まだ調整中でなければ、コマンドが Start Tuning します）だけを変えます。そのため保存されず、Stop Tuning（discard）で調整した数値と一緒に元に戻ります。
+- 要求する Preset はコンソール変数 `ACF.Sample.AssistPreset`（既定 `/ActionCameraFramework/Samples/DA_ACFSample_Assist.DA_ACFSample_Assist`）で変えられます（自動テストはテスト用のコピーを使い、サンプルのアセットを書き換えません）。
 - 毎フレーム、プレイヤーの **右スティックを毎秒のレート**（`Set Camera Input Rate`）、**マウスを差分**（`Add Camera Input`）として ACF に渡します。スティックの値はエンジンの軸の Dead Zone の後の値です。
 - Pawn の移動はコントロール回転が基準なので、コントロール回転を ACF のカメラに合わせ続けます（カメラの向きに歩けます）。
 
@@ -2283,16 +2288,16 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 1. `/ActionCameraFramework/Samples/L_ACFCameraTest` を開いて PIE（9 章の準備と同じ。RetroRender のルックを外すなら `Retro.Preset OFF`）。
 2. Window > Developer Tools > Debug > ACF Camera Tuning（25 章）を開き、PIE のプレイヤーを選びます。Debugger（27 章）の「Assistance」で状態・理由・Input activity が見えます。
 3. コンソールで `ACF.Sample.Assist On`（Target Facing）または `ACF.Sample.Assist On Movement`。
-4. パネルで要求 `Sample_Assist_On` を選び、Start Tuning すると数値を変えられます。
+4. パネルで要求 `Sample_Assist` を選び、Start Tuning すると数値を変えられます（コマンドの切り替えで既に調整中なら、Start Tuning はそのまま Ok になります）。
 
 ### コマンド
 
 | コマンド | 内容 |
 |---|---|
-| `ACF.Sample.Assist On [Facing\|Movement] [Preset=ThirdPerson]` | 補助 ON の複製を要求し、入力の転送を始める |
-| `ACF.Sample.Assist Off [Preset]` | 同じ入力の経路で補助 OFF（OFF / ON の比較用） |
-| `ACF.Sample.Assist Heading <Facing\|Movement>` | Recenter Heading をその場で切り替える（調整中のコピーにも反映） |
-| `ACF.Sample.Assist RealTime <0\|1>` | `Input Rate Ignores Time Dilation` |
+| `ACF.Sample.Assist On [Facing\|Movement]` | 初回は `DA_ACFSample_Assist` を要求し、入力の転送を始める。要求があれば同じ要求のまま補助を ON に戻す（調整中の値は消えない） |
+| `ACF.Sample.Assist Off` | 同じ要求・同じ入力の経路で補助 OFF（OFF / ON の比較用。Tuning の複製だけを変える） |
+| `ACF.Sample.Assist Heading <Facing\|Movement>` | Recenter Heading を切り替える（Tuning の複製だけ。保存されない） |
+| `ACF.Sample.Assist RealTime <0\|1>` | `Input Rate Ignores Time Dilation`（Tuning の複製だけ。保存されない） |
 | `ACF.Sample.Assist Drift <x>` | スティックに一定の値を足す（ドリフトの再現。0.02 × 180 = 3.6 deg/s） |
 | `ACF.Sample.Assist Stick <deg/s>` / `Mouse <deg/count>` | スティックを倒し切ったときの速さ（既定 180）/ マウス 1 カウントの角度（既定 0.1） |
 | `ACF.Sample.Assist Nudge <deg>` | `Add Camera Input` を 1 回だけ呼ぶ（Pause 中の入力の確認用） |
@@ -2312,10 +2317,33 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 | Max Assistance Yaw Speed | パネルの `Max Assistance Yaw Speed`（45 / 90 / 180） |
 | 後退の除外・角度の Dead Zone | パネルの `Backward Exclusion Angle` / `Angular Dead Zone` |
 | スティックの時間の基準 | `ACF.Sample.Assist RealTime 0` / `1` |
-| **Tuning で変えられない値**（Rotation Damping、Recenter Pitch、Lookahead の Smoothing = 速度の平滑化、Pivot Damping など） | PIE を止め、Editor で `DA_ACFSample_ThirdPerson` の Orbital Follow を変え、PIE して `ACF.Sample.Assist On` をやり直す（コマンドはアセットの値を複製するので、入力・補助の ON / OFF・Heading 以外の変更はそのまま使われる）。**保存しない**で比較し、終わったら Revert する |
+| **Tuning で変えられない値**（Rotation Damping、Recenter Pitch、Lookahead の Smoothing = 速度の平滑化、Pivot Damping、補助の ON / OFF・Heading を既定として残したい場合など） | PIE を止め、Editor で `DA_ACFSample_Assist` の Orbital Follow を直接変え、PIE して `ACF.Sample.Assist On` をやり直す。残したい値なら保存し、比較だけなら保存せずに Revert する（`DA_ACFSample_ThirdPerson` は触らない） |
 
-- パネルの Apply（26 章）は、この要求では一時的な複製に書くだけで、アセットには反映されません。良い値はメモして、ゲームの Preset に設定してください。
+- パネルの Apply / Save は `DA_ACFSample_Assist` に書きます（Changes の行に保存先のパスが出ます）。ゲームの Preset に使う値は、そちらにも設定してください。
 - サンプルの Orbital Follow は Rotation Damping 0 で、`Recenter Pitch` が ON（補助中は Pitch も Initial Pitch -15° へ戻る）です。補助の開始・終了の速度の変化を見るときは、この 2 つを Preset で変えた場合とも比べてください。
+
+### 調整した値を保存する
+
+1. `L_ACFCameraTest` で PIE を始める。
+2. `ACF.Sample.Assist On` を実行する。
+3. Camera Tuning パネルで PIE のプレイヤーと要求 `Sample_Assist` を選び、**Start Tuning** を押す。
+4. Node `OrbitalFollow`（番号 0）を選び、`Stop Speed Threshold` などの数値を変える（PIE 中はアセットに書きません）。
+5. PIE を終了する（終了の直前に、調整した値が Changes に記録されます）。
+6. パネルの **Changes** で、行が `/ActionCameraFramework/Samples/DA_ACFSample_Assist : node 0 ACFCameraNode_OrbitalFollow : Stop Speed Threshold  75.000 -> …` になっていることを確認し、**Check → Apply to Asset → Save Asset**。Apply は 1 回の Undo / Redo で戻せます。
+7. PIE を再び始めて `ACF.Sample.Assist On` を実行すると、保存した値で動きます。
+
+- Changes に出るのは数値（Runtime Tuning のパラメータ）だけです。Reset した値・コマンドの切り替え（OFF / Heading / RealTime）は出ません。
+- **Stop Tuning（discard）** は、その要求の調整を捨てます（Changes からも消え、保存されません）。
+- 実行中のコピー（ゲームのコードが複製した Preset など）を調整した場合、Changes の行は「not a preset asset on disk」の Conflict になり、Apply / Save できません（7B-1 / 7B-2 の時点のこのコマンドは `DA_ACFSample_ThirdPerson` の複製を使っていたため、Apply が複製に書かれ、Save もされずに PIE の後に値が戻っていました）。
+
+### 手動確認の記録（2026-11-14）
+
+| 確認 | 結果 |
+|---|---|
+| `L_ACFCameraTest` で `ACF.Sample.Assist On`、横移動して止まる | 既定の `Stop Speed Threshold`（75 cm/s）では、止まった後もカメラが回り続けて回り過ぎた。Tuning パネルで `Stop Speed Threshold` を上げると改善した（ユーザーによる操作で確認。調整後の値はこの記録には無い）。その時点では保存の経路が無く、PIE をやり直すと値が戻った（上の保存手順で解消） |
+| それ以外（下の表の #1〜#12） | 未実施 |
+
+止まった後に回り続けるのは、補助が使う速度が追従対象の位置の差分を平滑化したもの（Lookahead の Smoothing、既定 0.25 s）で、止まってから Stop Speed Threshold を下回るまでに時間がかかるためです（29 章「速度の取得」）。既定値（75 cm/s）の見直しは、値を記録した確認の後で判断します。
 
 ### 確認する操作と期待する挙動
 
@@ -2347,7 +2375,8 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 | 最大 Yaw 速度・最短角度・後退の除外 | `.Assistance.MaxYawSpeed` / `ShortestAngleAcrossWrap` / `BackwardExclusionAndTurns` | 回る速さ・始まりと終わりの速度の変化が急でないか（#3・#6・#7） |
 | Lock-On・Finisher・Combat・Sequencer | `.Sequencer.Assistance.LockOnFinisherCombatAndSequencer` | 解除後の待ちの長さが自然か（#8・#9） |
 | Pause・Time Dilation | `.Assistance.PauseAndTimeDilation`、`.Assistance.Input.TimeDilation`、`.Sequencer.Assistance.InputNoiseDilationAndPlayers` | 再開の飛び・スローモーションの操作感（#10・#11） |
-| このコマンド自体 | `.Samples.AssistCommandOnTestMap`（複製の設定、ドリフトの転送と判定、コントロール回転、切り替え、Release） | — |
+| このコマンド自体 | `.Samples.AssistCommandOnTestMap`（専用 Preset をそのまま要求、ドリフトの転送と判定、コントロール回転、切り替えは Tuning の複製だけ、Off / On で同じ要求、Release） | — |
+| 調整値の保存 | `.Editor.TuningApply.AssistSampleSaveAcrossPIE`（実 PIE: Stop Speed を調整 → PIE 終了 → Check / Apply / Undo / Redo / Save → ディスクから再読み込み → 次の PIE で再現。Reset した値・切り替えは保存されない、Stop Tuning（discard）は保存しない、Off / On で値が残る、実行中のコピーは Conflict、サンプルの Preset は不変） | 保存した値の操作感 |
 
 ### 記録表
 
@@ -2355,4 +2384,15 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 
 | # | 操作 | 設定 | A | B | C | D | E | メモ |
 |---|---|---|---|---|---|---|---|---|
+| 横移動の後に止まる | ユーザーの確認（上の「手動確認の記録」） | Stop Speed Threshold 75 → 上げた値 | — | — | △ → 改善 | △ → 改善 | — | 75 では止まった後に回り過ぎた。値は未記録 |
 | 1〜12 | （上の表） | 既定 | 未実施 | 未実施 | 未実施 | 未実施 | 未実施 | 人による操作は未実施 |
+
+### Phase 7B の既知の制限
+
+- Movement Assistance は `Input Source = Camera Input` だけで動きます。`Control Rotation` の Preset（本プロジェクト・サンプルの既定）で使うには、ゲームが Look 入力を `Add Camera Input` / `Set Camera Input Rate` に渡す必要があります（`ACF.Sample.Assist` はサンプル用の橋渡し）。
+- 補助の回転は 0 から最大 Yaw 速度へ 1 フレームで変わります（角加速度の上限は無い）。Rotation Damping 0 では開始・終了がはっきり見えます。
+- 補助の速度は平滑化された位置の差分なので、止まった後もしばらく「移動中」が続きます（`Stop Speed Threshold` と Lookahead の Smoothing で調整）。
+- Input Activity Threshold は固定のしきい値です。閾値未満のゆっくりした意図的な操作は補助に負けます（30 章）。
+- Pause 中に `Add Camera Input` へ送られた入力は、再開時に 1 回でまとめて回ります（30 章）。
+- 補助の ON / OFF・Recenter Heading・`Input Rate Ignores Time Dilation` は Runtime Tuning のパラメータではありません（Preset で変更。`ACF.Sample.Assist` の切り替えは保存されない）。
+- 人による操作感の確認は、上の 1 項目以外は未実施です。

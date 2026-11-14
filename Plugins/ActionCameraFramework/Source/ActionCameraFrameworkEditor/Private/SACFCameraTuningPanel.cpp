@@ -562,7 +562,7 @@ void SACFCameraTuningPanel::RebuildChangesBox()
 		{
 			return Change.bScalar ? FString::Printf(TEXT("%.3f"), V.X) : FString::Printf(TEXT("(%.3f, %.3f, %.3f)"), V.X, V.Y, V.Z);
 		};
-		const FText What = FText::FromString(FString::Printf(TEXT("%s  ->  %s : node %d %s : %s  %s -> %s"), *Change.SourceLabel, *Change.Preset.GetAssetName(),
+		const FText What = FText::FromString(FString::Printf(TEXT("%s  ->  %s : node %d %s : %s  %s -> %s"), *Change.SourceLabel, *Change.Preset.GetLongPackageName(), // Phase 7B: the full path of the save target
 			Change.NodeIndex, *Change.NodeClass.ToString(), *ACFCameraTuning::GetParameterName(Change.Parameter), *Format(Change.BaseValue), *Format(Change.Value)));
 		ChangesBox->AddSlot().AutoHeight().Padding(1.f)
 		[

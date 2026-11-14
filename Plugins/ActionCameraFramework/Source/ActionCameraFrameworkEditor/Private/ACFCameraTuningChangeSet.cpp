@@ -146,6 +146,12 @@ FACFCameraTuningChangeSet::FStatus FACFCameraTuningChangeSet::Evaluate(const FCh
 	{
 		return Conflict(FString::Printf(TEXT("the preset asset %s is missing (deleted, renamed or not loadable)"), *Change.Preset.ToString()));
 	}
+	if (const UPackage* Package = Asset->GetPackage(); Package == GetTransientPackage() || Package->HasAnyFlags(RF_Transient) || Package->HasAnyPackageFlags(PKG_InMemoryOnly))
+	{
+		// Phase 7B: a request on a runtime copy (e.g. a preset duplicated by game code) has no asset to apply to or save.
+		return Conflict(FString::Printf(TEXT("%s is not a preset asset on disk (a transient / runtime copy): it cannot be applied or saved. Request the preset asset itself to tune it"),
+			*Change.Preset.ToString()));
+	}
 	if (GetLayout(*Asset) != Change.Layout)
 	{
 		return Conflict(TEXT("the preset's nodes changed since tuning (added, removed, reordered or replaced)"));
