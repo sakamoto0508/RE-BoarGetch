@@ -21,7 +21,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
 - Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A 完了（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映、7A-4 Profiler / Debugger / Composition が完了。24〜27 章）
 - Phase 7B 完了。7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance。29 章）、7B-2（カメラ入力の処理: 手動入力の判定、Time Dilation、補助の値の Runtime Tuning。30 章）。操作感の確認の手順と `ACF.Sample.Assist`（専用 Preset `DA_ACFSample_Assist`、調整値の保存に対応）を用意（31 章）。人による確認は Stop Speed Threshold の 1 項目だけ実施。7B-3（新しい入力機能）は追加せずに 7B を終える
-- Phase 7C の実装は完了（7C-1・7C-2・7C-3A・7C-3B、32 章）。人による操作感の確認は未実施（32 章のチェックリスト）。7C-1A（Camera Zone の選択: 新モジュール `ActionCameraFrameworkLevel`、Zone Actor / Component、Priority とヒステリシスの決定的な解決、ローカルプレイヤーごとの状態）、7C-1B（Zone のカメラの要求: プレイヤーごとに最大 1 つ、Priority 5、Zone の Blend In / Out、対象の要求だけの向きの引き継ぎ、外部で消えた要求の遅延再要求）。7C-2A（Enter / Exit Delay と Pending Candidate、Teleport の Cut、Pawn の差し替え、Keep View を Opt-in に。Core は読み取り専用の `GetNumTeleportNotifications` だけ）。7C-2B（Lock-On / Finisher / Sequencer からの復帰: 既存の Blend で足りる部分はそのまま、まだ画面に出ていない Keep View の Zone のカメラだけ画面の向きに合わせる）。7C-3A（Data Validation / Map Check、Debugger の [Zone]、`L_ACFCameraTest` のサンプルと `ACF.Sample.Zone`）。7C-3B（性能計測: 500 個・2 人で約 40 µs、線形のまま。毎フレームの確保を除去、Blueprint の API、Zone の要求の一時停止、`ACF.Zone.Profile`）
+- Phase 7C の実装は完了（7C-1・7C-2・7C-3A・7C-3B、32 章。最終整理 2026-11-15）。人による操作感の確認は未実施で、Phase 7C の完了判定はそれを待っています（32 章のチェックリスト）。7C-1A（Camera Zone の選択: 新モジュール `ActionCameraFrameworkLevel`、Zone Actor / Component、Priority とヒステリシスの決定的な解決、ローカルプレイヤーごとの状態）、7C-1B（Zone のカメラの要求: プレイヤーごとに最大 1 つ、Priority 5、Zone の Blend In / Out、対象の要求だけの向きの引き継ぎ、外部で消えた要求の遅延再要求）。7C-2A（Enter / Exit Delay と Pending Candidate、Teleport の Cut、Pawn の差し替え、Keep View を Opt-in に。Core は読み取り専用の `GetNumTeleportNotifications` だけ）。7C-2B（Lock-On / Finisher / Sequencer からの復帰: 既存の Blend で足りる部分はそのまま、まだ画面に出ていない Keep View の Zone のカメラだけ画面の向きに合わせる）。7C-3A（Data Validation / Map Check、Debugger の [Zone]、`L_ACFCameraTest` のサンプルと `ACF.Sample.Zone`）。7C-3B（性能計測: 500 個・2 人で約 40 µs、線形のまま。毎フレームの確保を除去、Blueprint の API、Zone の要求の一時停止、`ACF.Zone.Profile`）
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -2548,7 +2548,7 @@ Tick 1 回の時間（µs、p50 / p95。(a) テストマップ・描画あり）
 
 ### 操作確認のチェックリスト（7C-3B）
 
-人による確認はすべて **未実施** です（自動テストで確かめた内容は下の「テスト」）。`L_ACFCameraTest` を PIE で開き、`ACF.Sample.Zone Go` の後、Tools > Debug > ACF Camera Tuning の Debugger [Zone] を見ながら:
+人による確認はすべて **未実施** です（2026-11-15 の Phase 7C 最終整理の時点で、ユーザーからの確認結果の報告はありません。報告された項目だけを確認済みにします。自動テストで確かめた内容は下の「テスト」）。`L_ACFCameraTest` を PIE で開き、`ACF.Sample.Zone Go` の後、Tools > Debug > ACF Camera Tuning の Debugger [Zone] を見ながら:
 
 - [ ] Plaza → Corridor → Alcove と歩いて、カメラが切り替わる（Corridor は壁の東の端から入る）
 - [ ] Corridor の入口で Pending candidate に残り時間が出てから切り替わる（Enter Delay）。出口付近を行き来しても切り替わらない（Exit Margin 50 cm・Exit Delay）。`ACF.Sample.Zone Delay 2 2` で違いが分かりやすい
@@ -2567,6 +2567,12 @@ Tick 1 回の時間（µs、p50 / p95。(a) テストマップ・描画あり）
 | 同じ Priority の重なりの注意 | **文書と検証の文言** | 「中にいる Zone が続き、同時に入ると小さい方」（Map Check の Info）。入れ子にしたい Zone には高い Priority を（サンプルの Alcove は Priority 2） |
 | Editor のビューポートでの Zone の表示（Priority・Delay の文字、選択中の色） | **保留**（次の候補） | Component Visualizer か Debug Draw が必要で中規模。現状でも Box の線・Details・Map Check・Debugger で確認できる |
 | 空間の索引 | **保留** | 計測で不要（上の「性能」） |
+
+### Phase 7C の状況（最終整理、2026-11-15）
+
+- **完了**: 実装（7C-1A〜7C-3B）、自動テスト（Zone 関連 `.Zone` 27 件・`.Editor.Zone` 2 件・`.Samples.ZonesOnTestMap`・`.Profile.Zones`）、Editor / Shipping のビルド、7 つのコンテキストの回帰テスト（Fail 0）、`FStringView` にした Resolver の候補の参照先の寿命の確認（Zone Component のメンバで、候補は `FindCandidate` の中だけで使う: 問題なし）。Core への変更は 7C-2A の読み取り専用 `GetNumTeleportNotifications` だけ。
+- **残っている作業（Phase 7C の完了判定）**: 上の「操作確認のチェックリスト」7 項目の、人による確認。
+- **任意の改善候補（Phase 7C の完了には不要）**: Editor のビューポートでの Zone の表示（Priority・Delay・選択中の色）、Capsule / Brush の形、Pending の状態と Zone の要求の Blueprint 公開、Sequence の途中で Zone が変わる組み合わせの実際の Level Sequence でのテスト、Zone の数 × ローカルプレイヤーの数が 2000 を超える場合の空間の索引。
 
 ### Editor での検証（7C-3A）
 
