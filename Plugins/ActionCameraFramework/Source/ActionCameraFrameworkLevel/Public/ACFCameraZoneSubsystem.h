@@ -2,10 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "ACFCameraZoneRequests.h"
 #include "ACFCameraZoneSubsystem.generated.h"
 
 class UACFCameraZoneComponent;
 class ULocalPlayer;
+class UACFCameraSubsystem;
 
 /**
  * Phase 7C-1A: the Camera Zones of a World and the zone each local player has selected (README 32 章).
@@ -18,7 +20,10 @@ class ULocalPlayer;
  *   pawn selects nothing.
  * - A zone that unregisters or is disabled is left at once: the players that had selected it are resolved again from
  *   their last location (the next zone, or none), without waiting for the next frame.
- * 7C-1A selects only. 7C-1B requests the selected zone's camera from this state.
+ * - 7C-1B: after every resolve the player's zone camera request is brought in line with the selection
+ *   (FACFCameraZoneRequestState: at most one request per player, Priority UACFCameraZoneSettings::ZoneRequestPriority).
+ *   The request is released when the zone is left, disabled, destroyed or streamed out, when the player leaves this World
+ *   or is removed, and when the World ends.
  */
 UCLASS()
 class ACTIONCAMERAFRAMEWORKLEVEL_API UACFCameraZoneSubsystem : public UTickableWorldSubsystem
@@ -58,6 +63,18 @@ public:
 	/** Number of local players with a state (players that are gone are dropped at the next update). */
 	int32 GetNumPlayerStates() const;
 
+	/**
+	 * 7C-1B: releases every player's zone camera request (plain release) and clears the selections (what the end of the
+	 * World does). The next frame selects and requests again for the players still inside a zone.
+	 */
+	void ReleaseAllZoneRequests();
+
+	/** 7C-1B: the player's zone camera request (invalid if none: no zone, no preset, or lost and waiting for a retry). */
+	FACFCameraRequestHandle GetZoneRequest(const ULocalPlayer* Player) const;
+
+	/** 7C-1B: the player's request state (null if the player is unknown). Tests / debugging. */
+	const FACFCameraZoneRequestState* GetRequestState(const ULocalPlayer* Player) const;
+
 private:
 	struct FPlayerState
 	{
@@ -65,11 +82,18 @@ private:
 		TWeakObjectPtr<UACFCameraZoneComponent> Selected;
 		FVector Location = FVector::ZeroVector;
 		bool bHasLocation = false;
+		/** Updated by the frame driver (a player of the GameInstance), not only by direct UpdatePlayer calls. */
+		bool bDrivenByTick = false;
+		FACFCameraZoneRequestState Request;
 	};
 
 	FPlayerState& FindOrAddState(ULocalPlayer* Player);
 	void Resolve(FPlayerState& State);
 	void ResolvePlayersOf(const UACFCameraZoneComponent* Zone);
+	/** 7C-1B: brings the player's zone camera request in line with its selection. */
+	void SyncRequest(FPlayerState& State);
+	/** Releases the player's zone request (no blend override) and forgets its selection. */
+	void ReleasePlayer(FPlayerState& State);
 
 	TArray<TWeakObjectPtr<UACFCameraZoneComponent>> Zones;
 	TArray<FPlayerState> Players;

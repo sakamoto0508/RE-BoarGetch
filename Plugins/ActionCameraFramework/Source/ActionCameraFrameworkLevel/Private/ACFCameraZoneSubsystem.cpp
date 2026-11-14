@@ -1,6 +1,10 @@
 #include "ACFCameraZoneSubsystem.h"
 #include "ACFCameraZoneComponent.h"
 #include "ACFCameraZoneResolver.h"
+#include "ACFCameraZoneSettings.h"
+#include "ACFCameraDirector.h"
+#include "ACFCameraSubsystem.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
@@ -10,6 +14,18 @@
 #include "Modules/ModuleManager.h"
 
 IMPLEMENT_MODULE(FDefaultModuleImpl, ActionCameraFrameworkLevel)
+
+UACFCameraZoneSettings::UACFCameraZoneSettings()
+{
+}
+
+namespace ACFCameraZoneSubsystemImpl
+{
+	static UACFCameraSubsystem* GetCamera(const ULocalPlayer* Player)
+	{
+		return Player ? Player->GetSubsystem<UACFCameraSubsystem>() : nullptr;
+	}
+}
 
 bool UACFCameraZoneSubsystem::DoesSupportWorldType(const EWorldType::Type WorldType) const
 {
@@ -24,8 +40,10 @@ void UACFCameraZoneSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UACFCameraZoneSubsystem::Deinitialize()
 {
+	// The World ends: the zone requests go (the local players and their cameras outlive the World).
+	ReleaseAllZoneRequests();
 	Zones.Reset();
-	Players.Reset(); // the World ends: nothing to leave (7C-1B releases the zone requests here)
+	Players.Reset();
 	Super::Deinitialize();
 }
 
@@ -141,6 +159,69 @@ void UACFCameraZoneSubsystem::Resolve(FPlayerState& State)
 	{
 		OnZoneSelectionChanged.Broadcast(State.Player.Get(), Previous, Next);
 	}
+	SyncRequest(State);
+}
+
+void UACFCameraZoneSubsystem::SyncRequest(FPlayerState& State)
+{
+	ULocalPlayer* Player = State.Player.Get();
+	UACFCameraSubsystem* Camera = ACFCameraZoneSubsystemImpl::GetCamera(Player);
+	UACFCameraDirector* Director = Camera ? Camera->GetDirector() : nullptr;
+	UWorld* World = GetWorld();
+	if (!Director || !World)
+	{
+		return; // a player without ACF camera (tests' bare local players): selection only
+	}
+	if (World->bIsTearingDown)
+	{
+		ReleasePlayer(State);
+		return;
+	}
+	const UACFCameraZoneSettings* Settings = GetDefault<UACFCameraZoneSettings>();
+	FACFCameraZoneRequestContext Context;
+	Context.Director = Director;
+	Context.Camera = Camera;
+	APlayerController* Controller = Player->GetPlayerController(World);
+	if (Controller && Controller->GetWorld() == World)
+	{
+		if (APawn* Pawn = Controller->GetPawn())
+		{
+			Context.FollowTarget.Actor = Pawn;
+		}
+		if (const APlayerCameraManager* CameraManager = Controller->PlayerCameraManager)
+		{
+			Context.bHasViewRotation = true;
+			Context.ViewRotation = CameraManager->GetCameraCacheView().Rotation; // the last rendered view
+		}
+		TWeakObjectPtr<APlayerController> WeakController(Controller);
+		Context.SetControlRotation = [WeakController](const FRotator& Rotation)
+		{
+			if (APlayerController* PC = WeakController.Get())
+			{
+				PC->SetControlRotation(Rotation);
+			}
+		};
+	}
+	Context.Time = World->GetRealTimeSeconds();
+	Context.Priority = Settings->ZoneRequestPriority;
+	Context.RetryDelay = Settings->RequestRetryDelay;
+	Context.RetryMaxDelay = Settings->RequestRetryMaxDelay;
+	State.Request.Update(Context, State.Selected.Get());
+}
+
+void UACFCameraZoneSubsystem::ReleaseAllZoneRequests()
+{
+	for (FPlayerState& State : Players)
+	{
+		ReleasePlayer(State);
+	}
+}
+
+void UACFCameraZoneSubsystem::ReleasePlayer(FPlayerState& State)
+{
+	const UACFCameraSubsystem* Camera = ACFCameraZoneSubsystemImpl::GetCamera(State.Player.Get());
+	State.Request.Release(Camera ? Camera->GetDirector() : nullptr);
+	State.Selected.Reset();
 }
 
 void UACFCameraZoneSubsystem::ResolvePlayersOf(const UACFCameraZoneComponent* Zone)
@@ -153,6 +234,18 @@ void UACFCameraZoneSubsystem::ResolvePlayersOf(const UACFCameraZoneComponent* Zo
 			Resolve(State);
 		}
 	}
+}
+
+FACFCameraRequestHandle UACFCameraZoneSubsystem::GetZoneRequest(const ULocalPlayer* Player) const
+{
+	const FACFCameraZoneRequestState* State = GetRequestState(Player);
+	return State ? State->GetHandle() : FACFCameraRequestHandle();
+}
+
+const FACFCameraZoneRequestState* UACFCameraZoneSubsystem::GetRequestState(const ULocalPlayer* Player) const
+{
+	const FPlayerState* Found = Players.FindByPredicate([Player](const FPlayerState& State) { return State.Player.Get() == Player; });
+	return Found ? &Found->Request : nullptr;
 }
 
 UACFCameraZoneComponent* UACFCameraZoneSubsystem::GetSelectedZone(const ULocalPlayer* Player) const
@@ -186,7 +279,8 @@ void UACFCameraZoneSubsystem::Tick(float DeltaTime)
 	{
 		return;
 	}
-	for (ULocalPlayer* Player : GameInstance->GetLocalPlayers())
+	const TArray<ULocalPlayer*>& LocalPlayers = GameInstance->GetLocalPlayers();
+	for (ULocalPlayer* Player : LocalPlayers)
 	{
 		const APlayerController* Controller = Player ? Player->GetPlayerController(World) : nullptr;
 		if (!Controller || Controller->GetWorld() != World)
@@ -196,7 +290,29 @@ void UACFCameraZoneSubsystem::Tick(float DeltaTime)
 		const APawn* Pawn = Controller->GetPawn();
 		const FVector Location = Pawn ? Pawn->GetActorLocation() : FVector::ZeroVector;
 		UpdatePlayer(Player, Pawn ? &Location : nullptr);
+		if (FPlayerState* State = Players.FindByPredicate([Player](const FPlayerState& Entry) { return Entry.Player.Get() == Player; }))
+		{
+			State->bDrivenByTick = true;
+		}
 	}
+	// A player this driver updated that is no longer one of this World's players (removed from the GameInstance, or its
+	// controller is elsewhere): its zone request goes now and its state is dropped, not when the player object is garbage
+	// collected.
+	Players.RemoveAll([this, World, &LocalPlayers](FPlayerState& State)
+	{
+		ULocalPlayer* Player = State.Player.Get();
+		if (!State.bDrivenByTick || !Player)
+		{
+			return false;
+		}
+		const APlayerController* Controller = Player->GetPlayerController(World);
+		if (LocalPlayers.Contains(Player) && Controller && Controller->GetWorld() == World)
+		{
+			return false;
+		}
+		ReleasePlayer(State);
+		return true;
+	});
 }
 
 #if !UE_BUILD_SHIPPING
@@ -224,7 +340,16 @@ namespace ACFCameraZoneDebug
 			for (ULocalPlayer* Player : GameInstance->GetLocalPlayers())
 			{
 				const UACFCameraZoneComponent* Selected = Subsystem->GetSelectedZone(Player);
-				UE_LOG(LogTemp, Display, TEXT("  player %s: %s"), *GetNameSafe(Player), Selected ? *GetNameSafe(Selected->GetOwner()) : TEXT("no zone"));
+				const FACFCameraZoneRequestState* Request = Subsystem->GetRequestState(Player);
+				FString RequestText = TEXT("no state");
+				if (Request)
+				{
+					RequestText = Request->GetHandle().IsValid() ? Request->GetHandle().ToString()
+						: Request->HasFailed() ? FString(TEXT("no request (no preset)"))
+						: Request->IsWaitingForRetry() ? FString::Printf(TEXT("lost %d time(s), retry at %.2f"), Request->GetNumLost(), Request->GetNextRetryTime())
+						: FString(TEXT("no request"));
+				}
+				UE_LOG(LogTemp, Display, TEXT("  player %s: %s, zone request %s"), *GetNameSafe(Player), Selected ? *GetNameSafe(Selected->GetOwner()) : TEXT("no zone"), *RequestText);
 			}
 		}
 	}

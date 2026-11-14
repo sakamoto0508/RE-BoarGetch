@@ -285,6 +285,7 @@ bool FACFZoneWorldTest::RunTest(const FString& Parameters)
 	{
 		return true;
 	}
+	AddExpectedMessagePlain(TEXT("has no Camera Preset"), EAutomationExpectedMessageFlags::Contains, -1); // 7C-1B: selection-only zones
 	ULocalPlayer* Player1 = W.World->GetGameInstance() ? W.World->GetGameInstance()->GetFirstGamePlayer() : nullptr;
 	if (!TestNotNull(TEXT("First local player"), Player1))
 	{
@@ -415,6 +416,7 @@ bool FACFZoneDriverTest::RunTest(const FString& Parameters)
 	using namespace ACFZoneTests;
 	TSharedRef<FDriverFlow> Flow = MakeShared<FDriverFlow>();
 	Flow->Test = this;
+	AddExpectedMessagePlain(TEXT("has no Camera Preset"), EAutomationExpectedMessageFlags::Contains, -1); // 7C-1B: selection-only zones
 	if (!Flow->W.Init(*this))
 	{
 		return true;

@@ -1,4 +1,5 @@
 #include "ACFCameraZoneComponent.h"
+#include "ACFCameraPreset.h"
 #include "ACFCameraZoneResolver.h"
 #include "ACFCameraZoneSubsystem.h"
 #include "Components/BoxComponent.h"
@@ -54,6 +55,25 @@ void UACFCameraZoneComponent::SetZoneEnabled(bool bEnabled)
 			Subsystem->NotifyZoneChanged(this);
 		}
 	}
+}
+
+FACFCameraBlendSettings UACFCameraZoneComponent::GetExitBlend() const
+{
+	if (bOverrideBlendOut)
+	{
+		return BlendOut;
+	}
+	return Preset ? Preset->DefaultBlendOut : FACFCameraBlendSettings();
+}
+
+UACFCameraPreset* UACFCameraZoneComponent::GetPresetOrWarn() const
+{
+	if (!Preset && !bWarnedMissingPreset)
+	{
+		bWarnedMissingPreset = true;
+		UE_LOG(LogActionCamera, Warning, TEXT("ACF Camera Zone %s on %s has no Camera Preset: the zone is selected but requests no camera."), *GetName(), *GetNameSafe(GetOwner()));
+	}
+	return Preset;
 }
 
 UShapeComponent* UACFCameraZoneComponent::ResolveShape() const

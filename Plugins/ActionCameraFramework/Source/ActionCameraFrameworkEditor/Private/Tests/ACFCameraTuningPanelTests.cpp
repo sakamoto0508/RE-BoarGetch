@@ -487,11 +487,17 @@ namespace ACFTuningPanelTests
 			S.MarkFrame = GFrameCounter;
 			return true;
 		});
-		Steps.Add([](FPieState& S) { return GFrameCounter > S.MarkFrame + 5; });
+		Steps.Add([](FPieState& S)
+		{
+			// The camera is ACF's once the PCM has updated with the request (a few frames; more after other PIE sessions, where
+			// the PIE viewport may not be updated yet in the first frames). Wait for it, up to 180 frames.
+			const APlayerCameraManager* PCM = PiePcm(S);
+			return GFrameCounter > S.MarkFrame + 180 || (GFrameCounter > S.MarkFrame + 5 && PCM && FMath::IsNearlyEqual(PCM->GetFOVAngle(), 70.f, 0.01f));
+		});
 		Steps.Add([](FPieState& S)
 		{
 			APlayerCameraManager* PCM = PiePcm(S);
-			S.Test->TestTrue(TEXT("Asset FOV on the PIE camera"), PCM && FMath::IsNearlyEqual(PCM->GetFOVAngle(), 70.f, 0.01f));
+			S.Test->TestTrue(FString::Printf(TEXT("Asset FOV on the PIE camera (%.2f, %llu frames)"), PCM ? PCM->GetFOVAngle() : -1.f, GFrameCounter - S.MarkFrame), PCM && FMath::IsNearlyEqual(PCM->GetFOVAngle(), 70.f, 0.01f));
 			S.Model.SelectRequest(S.Handle);
 			S.Model.SelectNode(0, UACFCameraNode_FixedPose::StaticClass()->GetFName());
 			S.Test->TestEqual(TEXT("Start"), S.Model.Start(), EACFCameraTuningResult::Ok);
