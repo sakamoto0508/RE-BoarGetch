@@ -20,6 +20,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "ActionCameraFrameworkLevel",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "ActionCameraFrameworkTests",
 			"Type": "DeveloperTool",
 			"LoadingPhase": "Default"
