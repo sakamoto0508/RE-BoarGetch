@@ -10,6 +10,29 @@ class ULocalPlayer;
 class UACFCameraSubsystem;
 class AActor;
 
+/** Phase 7C-3A: what the zone subsystem knows about one player, for the Debugger (read only, copied). */
+struct FACFCameraZonePlayerDebug
+{
+	/** The selected zone (Resolver + delays), null if none. */
+	TWeakObjectPtr<UACFCameraZoneComponent> Selected;
+	/** The Pending Candidate waiting for its delay (bHasPending with a null zone: leaving to no zone). */
+	bool bHasPending = false;
+	TWeakObjectPtr<UACFCameraZoneComponent> Pending;
+	float PendingElapsed = 0.f;
+	/** The delay the pending change needs: max(selected's Exit Delay, pending's Enter Delay). */
+	float PendingRequired = 0.f;
+	int32 NumTeleports = 0;
+	/** The zone camera request this subsystem owns for the player (FACFCameraZoneRequestState). */
+	TWeakObjectPtr<UACFCameraZoneComponent> RequestZone;
+	FACFCameraRequestHandle ZoneRequest;
+	bool bRequestFailed = false;
+	bool bWaitingForRetry = false;
+	int32 NumLost = 0;
+	/** Seconds until the retry (real time), when waiting. */
+	double RetryIn = 0.0;
+	bool bTrackingView = false;
+};
+
 /** Phase 7C-2A: one update of a player's zone (the frame driver fills everything; direct calls may set only Location). */
 struct FACFCameraZonePlayerUpdate
 {
@@ -92,6 +115,9 @@ public:
 
 	/** 7C-2A: teleports (distance, NotifyTeleport, hint) and pawn changes seen for the player. Tests / debugging. */
 	int32 GetNumTeleports(const ULocalPlayer* Player) const;
+
+	/** 7C-3A: the player's selection, pending change and zone request in one copy. False if the player is unknown. */
+	bool GetPlayerDebug(const ULocalPlayer* Player, FACFCameraZonePlayerDebug& Out) const;
 
 	/** The player's selected zone, null if none (or the player is unknown). */
 	UACFCameraZoneComponent* GetSelectedZone(const ULocalPlayer* Player) const;

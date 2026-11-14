@@ -132,6 +132,12 @@ public:
 	/** The final tie-break of the resolver: the path name, fixed at BeginPlay (unique, the same in every run of the map). */
 	const FString& GetStableKey() const { return StableKey; }
 
+#if WITH_EDITOR
+	/** Phase 7C-3A: Data Validation and Map Check (ACFCameraZoneValidation.h). */
+	virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
+	virtual void CheckForErrors() override;
+#endif
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

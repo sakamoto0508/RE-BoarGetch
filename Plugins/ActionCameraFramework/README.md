@@ -21,7 +21,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 - Phase 6A（品質・アーキテクチャ監査）完了。確認済みの不具合は 0 件、設計リスク 9 件・改善候補 25 件を記録（`Docs/Audit_Phase6A.md`）。性能は Phase 6B / B-1 で計測（8 章）
 - Phase 6B（監査結果の修正）完了。B-1〜B-11（計測、PCM の互換性、寿命、不正値、演出の寿命、Sequencer の通知、戻りのブレンド、Preset の検証、テストの土台、モジュールの分離、文書の整理。15〜23 章）。残る制限は 11 章。Phase 7A 完了（7A-1 Runtime Tuning の基盤、7A-2 PIE 用の Camera Tuning パネル、7A-3 アセットへの反映、7A-4 Profiler / Debugger / Composition が完了。24〜27 章）
 - Phase 7B 完了。7B-1（Orbital Follow の Recenter を拡張した移動方向へのカメラ補助、Suppress Camera Assistance。29 章）、7B-2（カメラ入力の処理: 手動入力の判定、Time Dilation、補助の値の Runtime Tuning。30 章）。操作感の確認の手順と `ACF.Sample.Assist`（専用 Preset `DA_ACFSample_Assist`、調整値の保存に対応）を用意（31 章）。人による確認は Stop Speed Threshold の 1 項目だけ実施。7B-3（新しい入力機能）は追加せずに 7B を終える
-- Phase 7C-1・7C-2 完了（32 章）。7C-1A（Camera Zone の選択: 新モジュール `ActionCameraFrameworkLevel`、Zone Actor / Component、Priority とヒステリシスの決定的な解決、ローカルプレイヤーごとの状態）、7C-1B（Zone のカメラの要求: プレイヤーごとに最大 1 つ、Priority 5、Zone の Blend In / Out、対象の要求だけの向きの引き継ぎ、外部で消えた要求の遅延再要求）。7C-2A（Enter / Exit Delay と Pending Candidate、Teleport の Cut、Pawn の差し替え、Keep View を Opt-in に。Core は読み取り専用の `GetNumTeleportNotifications` だけ）。7C-2B（Lock-On / Finisher / Sequencer からの復帰: 既存の Blend で足りる部分はそのまま、まだ画面に出ていない Keep View の Zone のカメラだけ画面の向きに合わせる）
+- Phase 7C-1・7C-2・7C-3A 完了（32 章）。7C-1A（Camera Zone の選択: 新モジュール `ActionCameraFrameworkLevel`、Zone Actor / Component、Priority とヒステリシスの決定的な解決、ローカルプレイヤーごとの状態）、7C-1B（Zone のカメラの要求: プレイヤーごとに最大 1 つ、Priority 5、Zone の Blend In / Out、対象の要求だけの向きの引き継ぎ、外部で消えた要求の遅延再要求）。7C-2A（Enter / Exit Delay と Pending Candidate、Teleport の Cut、Pawn の差し替え、Keep View を Opt-in に。Core は読み取り専用の `GetNumTeleportNotifications` だけ）。7C-2B（Lock-On / Finisher / Sequencer からの復帰: 既存の Blend で足りる部分はそのまま、まだ画面に出ていない Keep View の Zone のカメラだけ画面の向きに合わせる）。7C-3A（Data Validation / Map Check、Debugger の [Zone]、`L_ACFCameraTest` のサンプルと `ACF.Sample.Zone`。人による操作感の確認は未実施）
 
 **開発ロードマップ**（詳細は `Docs/Roadmap.md`: 各 Phase の目的・予定機能・設計上の注意点・依存・完了条件。`Docs/` は Git 管理外です）
 
@@ -32,7 +32,7 @@ ACF はその上に乗る 1 枚のレイヤーで、PlayerCameraManager（PCM）
 | 6B | 監査結果の修正（11 タスク。計測の土台と PCM の互換性を最優先、再現テストと回帰テスト） | Completed（B-1〜B-11） |
 | 7A | Runtime Camera Tuning + Camera Profiler / Debugger（共有 Preset は Runtime から直接変更しない。構図ガイドを含む） | Done（7A-1 Runtime Tuning の基盤: 完了、24 章。7A-2 PIE の Camera Tuning パネル: 完了、25 章。7A-3 アセットへの反映（Apply / Undo / Redo / Save）: 完了、26 章。7A-4 Profiler / Debugger / Composition: 完了、27 章） |
 | 7B | Camera Input Assistance（入力の取得はゲーム側、ACF は入力値の処理とカメラ制御） | Done（7B-1 移動方向へのカメラ補助: 完了、29 章。7B-2 カメラ入力の処理と補助との連携: 完了、30 章。操作感の確認の準備と調整値の保存: 31 章。7B-3 の新しい入力機能は追加しない） |
-| 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | In Progress（7C-1A Zone の選択・7C-1B Zone のカメラの要求・7C-2A 滞留時間 / Teleport / Pawn・7C-2B 高優先度カメラからの復帰: 完了、32 章。7C-3 Editor・サンプル・性能: 未着手） |
+| 7C | Camera Volume / Zone（レベル用 Actor と Core の依存を分ける。候補: レベル配置用 Camera Actor、Confiner） | In Progress（7C-1A Zone の選択・7C-1B Zone のカメラの要求・7C-2A 滞留時間 / Teleport / Pawn・7C-2B 高優先度カメラからの復帰・7C-3A Editor / Debugger / サンプル: 完了、32 章。7C-3B 性能: 未着手） |
 | 7D | Advanced Occlusion Handling（複数点の遮蔽判定、可視率、一時透過。Trace 数を計測） | Not Started |
 | 7E | Camera Recorder / Replay（カメラ出力の再生。ゲームプレイの完全再現とは区別） | Not Started |
 | 7F | Spline / Rail Camera（Sequencer と重複する機能は実装しない） | Not Started |
@@ -852,36 +852,36 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
 - 検証用アセットは、どちらも作り直せます（既存のアセットは再利用し、グラフだけ書き直します）。プラグインのフォルダーで `Scripts/RunEditorPython.sh Scripts/<スクリプト>.py`（22 章）。
   - `Content/Verification/`（DA ×3、BP ×3）: `Scripts/CreateVerificationAssets.py`
   - `Content/Samples/`（カメラ Preset ×10、Effect Preset ×2、Camera Sequence ×1、Level Sequence ×2、テストマップ）: `Scripts/CreateManualTestAssets.py`
-- 自動テストは **260 件が登録**されています（テスト名の数。Phase 7C-2B の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
+- 自動テストは **263 件が登録**されています（テスト名の数。Phase 7C-3A の時点）。どれが実行されるかは実行のコンテキストで変わります（実行方法は 22 章、モジュールは 23 章）。
 
   | カテゴリ | 件数 | Editor | ゲーム（`-game`） |
   |---|---|---|---|
   | `.Director` 8、`.Nodes` 5、`.ThirdPerson` 11、`.Effects` 9、`.Action` 10、`.Constraints` 7、`.Sequence` 6、`.Authority` 3 | 59 | 実行 | 実行 |
   | `.Health` 10、`.Lifetime` 5、`.PresetValidation` 13、`.Profiler` 3 | 31 | 実行 | 実行 |
   | `.Tuning`（Runtime Tuning、24 章。FOV の回避策 1 件、補助の値 1 件（30 章）を含む） | 11 | 実行 | 実行 |
-  | `.Editor`（Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 9 件、26 章・30 章・31 章。診断 `.Editor.Diagnostics` 6 件、27 章・29 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 5 件を含む） | 25 | 実行 | — |
+  | `.Editor`（Camera Zone `.Editor.Zone` 2 件（実 PIE 1 件）、32 章。Data Validation 2 件、21 章。Camera Tuning パネル `.Editor.TuningPanel` 7 件、25 章。アセットへの反映 `.Editor.TuningApply` 9 件、26 章・30 章・31 章。診断 `.Editor.Diagnostics` 6 件、27 章・29 章。投影 `.Editor.Projection` 1 件、28 章。実 PIE 6 件を含む） | 27 | 実行 | — |
   | `.Profiler`（一時停止・複数 LocalPlayer）2、`.TestEnvironment` 3 | 5 | — | 実行 |
   | `.Integration`（実際の PCM。Runtime Tuning 1 件、FOV の回避策 1 件、投影 1 件を含む） | 30 | — | 実行 |
   | `.Projection`（構図計算と描画の投影、28 章） | 2 | 実行 | 実行 |
   | `.Zone`（Camera Zone、32 章。`.Zone.Resolver` 2、`.Zone.Geometry` 1、`.Zone.Requests` 7、`.Zone.Return` 6、実 World の `.Zone.Dwell` 4・`.Zone.World` 6） | 26 | 16（`.Zone.World` / `.Zone.Dwell` 以外） | 実行 |
   | `.Assistance`（移動方向へのカメラ補助 13 件、29 章。カメラ入力 `.Assistance.Input` 6 件、30 章） | 19 | 実行 | 実行 |
   | `.Sequencer`（実際の Level Sequence・PCM。うち `.PcmCompat` 7、`.Health` 2、`.Events` 6、`.ReturnBlend` 5、調整中の Sequencer 1、`.Assistance` 3） | 43 | — | 実行 |
-  | `.Samples`（`ACF.Sample.Assist` の 1 件、31 章を含む） | 7 | — | テストマップでだけ検証（他のマップではスキップ） |
+  | `.Samples`（`ACF.Sample.Assist` の 1 件、31 章、Camera Zone の `.Samples.ZonesOnTestMap`、32 章を含む） | 8 | — | テストマップでだけ検証（他のマップではスキップ） |
   | `.Profile.Scenarios`（性能の基準値） | 1 | — | テストマップ + `-ACFProfile` でだけ計測（他ではスキップ） |
   | `.Profile.AssistanceVariants`（補助の状態ごとの性能、29 章・30 章） | 1 | `-ACFProfile` でだけ計測 | 同左 |
-  | 合計 | 260 | 164 | 235 |
+  | 合計 | 263 | 166 | 236 |
 
-- **最新の結果（Phase 7C-2B、2026-11-14。unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
+- **最新の結果（Phase 7C-3A、2026-11-14。unity の Editor ビルド・Shipping ビルドも警告 0 で成功）**
 
   | 実行 | 実行数 | Pass / Fail / Skip | Skip の理由 |
   |---|---|---|---|
-  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 235 | 226 / 0 / 9 | `.Samples` 7 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
-  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 235 | 226 / 0 / 9 | 同上 |
-  | Editor（`--context editor`、`-NullRHI`） | 164 | 163 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
-  | Editor（`--context editor-rendered`、描画あり。`.Editor` 25 件） | 25 | 25 / 0 / 0 | |
-  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 7 件を含む） | 235 | 233 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
-  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 235 | 233 / 0 / 2 | 同上 |
-  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 235 | 235 / 0 / 0 | |
+  | ゲーム（`Scripts/RunTests.sh`、エンジン標準の環境） | 236 | 226 / 0 / 10 | `.Samples` 8 件と `.Profile.Scenarios`・`.Profile.AssistanceVariants`（空のマップ・`-ACFProfile` なし） |
+  | ゲーム（`--context host`、ホストの既定のマップ・GameMode） | 236 | 226 / 0 / 10 | 同上 |
+  | Editor（`--context editor`、`-NullRHI`） | 166 | 165 / 0 / 1 | `.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | Editor（`--context editor-rendered`、描画あり。`.Editor` 27 件） | 27 | 27 / 0 / 0 | |
+  | 全テストをテストマップで（`--context samples`、エンジン標準の GameMode・描画あり。`.Samples` 8 件を含む） | 236 | 234 / 0 / 2 | `.Profile.Scenarios`・`.Profile.AssistanceVariants`（`-ACFProfile` なし） |
+  | 全テストをテストマップで（`--context samples-host`、ホストの GameMode） | 236 | 234 / 0 / 2 | 同上 |
+  | 全テストをテストマップで（`--context profile`、ホストの GameMode・`-ACFProfile`） | 236 | 236 / 0 / 0 | |
   | 繰り返し（Editor、Phase 7A 最終安定化の時点）: `.Projection` + `.Tuning` + `.Editor.TuningApply` + `.Editor.Diagnostics` ×2 | 48 | 48 / 0 / 0 | |
 
   全テストをテストマップとホストの GameMode で流したときの `.Samples.LockOnAndGroupOnTestMap` の失敗（Phase 7A-2 で見つけ、7A-1 のコードでも同じ値で再現したもの）は、2 人目のローカルプレイヤーの Pawn が残っていたのが原因で、テスト環境側で修正済みです（22 章「ローカルプレイヤーと Pawn」）。
@@ -1492,11 +1492,11 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 |---|---|---|---|
 | `ActionCameraFramework` | Runtime | カメラ本体（Director・Node・Preset・Subsystem・Effects・Sequence）、診断（16 章の健全性、`ACF.Debug.*`、`ACF.Profile.*`）、サンプル用コマンド `ACF.Sample.*`（`ACFCameraSampleCommands.cpp`） | 本体だけ。`ACF.Debug.*` / `ACF.Profile.*` / `ACF.Sample.*` は入らない |
 | `ActionCameraFrameworkSequencer` | Runtime | Level Sequencer 連携、`ACF.Sample.Sequencer`（`ACFSequencerSampleCommands.cpp`） | 連携だけ |
-| `ActionCameraFrameworkLevel` | Runtime | Phase 7C: レベル用の Camera Zone（Zone Actor / Component、Zone Subsystem、Resolver、Zone のカメラの要求、Zone の設定）、`ACF.Zone.Status`（32 章） | Zone だけ。`ACF.Zone.Status` は入らない |
+| `ActionCameraFrameworkLevel` | Runtime | Phase 7C: レベル用の Camera Zone（Zone Actor / Component、Zone Subsystem、Resolver、Zone のカメラの要求、Zone の設定、Editor のときだけの Zone の検証）、`ACF.Zone.Status`・`ACF.Sample.Zone`（32 章） | Zone だけ。`ACF.Zone.Status` / `ACF.Sample.Zone` と検証は入らない |
 | `ActionCameraFrameworkTests` | DeveloperTool | Core と Sequencer の自動テスト、テスト専用のクラス、テスト環境（22 章） | 入らない（Test / Shipping ではビルドされない） |
 | `ActionCameraFrameworkEditor` | Editor | Camera Tuning パネル（25 章）、アセットへの反映（26 章）、Profiler / Debugger / Composition（27 章）、Data Validation 経由の検証テスト（21 章）とパネルのテスト | 入らない |
 
-- 依存の向き: `Tests` → `Sequencer` / `Level` → `ActionCameraFramework`、`Editor` → `ActionCameraFramework`。Runtime の 3 モジュールは `Tests` / `Editor` に依存せず、Core は `Sequencer` / `Level` を参照しません。
+- 依存の向き: `Tests` → `Sequencer` / `Level` → `ActionCameraFramework`、`Editor` → `Level`（Debugger の [Zone]、7C-3A）/ `ActionCameraFramework`。Runtime の 3 モジュールは `Tests` / `Editor` に依存せず、Core は `Sequencer` / `Level` を参照しません。
 - テストは公開済みの API だけを使っています。モジュールを分けるために公開した API・追加した `_API` はありません。
 - `DeveloperTool` は UE の `bBuildDeveloperTools`（Target.cs）が有効な構成でビルド・ロードされます。既定では Editor と Debug / Development のゲームで有効、Test / Shipping で無効です（プロジェクトが Target.cs で変えればそれに従います）。`-game`（エディターのバイナリ）でもテストは今までどおり見つかり、実行されます（件数は B-9 と同じ、テスト名の一覧も一致）。
 
@@ -2400,9 +2400,9 @@ Movement Assistance は `Input Source = Camera Input` のときだけ動きま�
 - 補助の ON / OFF・Recenter Heading・`Input Rate Ignores Time Dilation` は Runtime Tuning のパラメータではありません（Preset で変更。`ACF.Sample.Assist` の切り替えは保存されない）。
 - 人による操作感の確認は、上の 1 項目以外は未実施です。
 
-## 32. Camera Zone（Phase 7C-1 / 7C-2: Zone の選択・カメラの要求・滞留時間・Teleport・高優先度カメラからの復帰）
+## 32. Camera Zone（Phase 7C-1 / 7C-2 / 7C-3A: Zone の選択・カメラの要求・滞留時間・Teleport・復帰・Editor とサンプル）
 
-プレイヤーが入った空間に応じてカメラを切り替える Camera Zone です。7C-1A で「どの Zone にいるか」を決め、7C-1B でその Zone のカメラを既存の Camera Director に要求し、7C-2A で滞留時間（Enter / Exit Delay）・Teleport・Pawn の差し替えを扱います。7C-2B で Lock-On / Finisher / Sequencer から Zone のカメラへ戻るときの向きを整理しました。Editor の表示・サンプルマップ・性能の最適化は 7C-3 です。
+プレイヤーが入った空間に応じてカメラを切り替える Camera Zone です。7C-1A で「どの Zone にいるか」を決め、7C-1B でその Zone のカメラを既存の Camera Director に要求し、7C-2A で滞留時間（Enter / Exit Delay）・Teleport・Pawn の差し替えを扱います。7C-2B で Lock-On / Finisher / Sequencer から Zone のカメラへ戻るときの向きを整理しました。7C-3A で Editor での検証（Data Validation / Map Check）、Debugger の Zone 表示、`L_ACFCameraTest` のサンプルを追加しました。大量の Zone の性能の計測と最適化は 7C-3B です。
 
 ### 構成
 
@@ -2505,10 +2505,75 @@ Teleport のときは、Enter / Exit Delay と Exit Margin を使わずにその
 
 **確認**: コンソール `ACF.Zone.Status`（Shipping では無効）で、Zone の一覧と、各プレイヤーの選択・Zone の要求（Handle、Preset なし、再要求の待ちなど）がログに出ます。
 
+### Editor での検証（7C-3A）
+
+Zone の設定は **Data Validation**（アセットの保存時、Content Browser の右クリック > Asset Actions > Validate Assets、Tools > Validate Data）と **Map Check**（Build > Map Check）で検査されます。どちらも同じ `ACFCameraZoneValidation`（Level モジュール、Editor のときだけ）で、Zone を読むだけです（何も直しません）。Data Validation は Error があると Invalid、Warning / Info だけなら Valid です。Map Check は Zone の Actor へのリンク付きで出ます。
+
+| Id | 重さ | 内容 |
+|---|---|---|
+| `ACF.Zone.NoShape` / `ACF.Zone.WrongShape` | Error | Box / Sphere が無い、`Shape` が Box / Sphere 以外を指している（選ばれない） |
+| `ACF.Zone.EmptyShape` | Error | 体積が 0（Extent・半径・スケールが 0） |
+| `ACF.Zone.SphereScale` | Warning | Sphere の非一様スケール（最小のスケールが使われる） |
+| `ACF.Zone.NoPreset` | Warning | Camera Preset が無い（選ばれるがカメラを要求しない。実行時も警告） |
+| `ACF.Zone.Blend.NonFinite` / `ACF.Zone.Blend.Exponent` | Error | 上書きした Blend In / Out の時間が数でない、指数が 0 以下 |
+| `ACF.Zone.Blend.Negative` / `ACF.Zone.Blend.MissingCurve` | Warning | 負の時間（Cut になる）、Custom の Curve が無い |
+| `ACF.Zone.Delay.Invalid` / `ACF.Zone.Margin.Invalid` | Error | Enter / Exit Delay・Exit Margin が負または数でない |
+| `ACF.Zone.Delay.Long` | Warning | Delay が 10 秒を超える |
+| `ACF.Zone.Tie` | Warning | 同じ Priority・同じ体積の Zone と重なっている（パス名で決まり、名前を変えると順番が変わる） |
+| `ACF.Zone.Overlap` | Info | 同じ Priority の大きさの違う Zone と重なっている（中にいる Zone が続き、両方に同時に入ると小さい方。Resolver が決めるので Error / Warning にしない） |
+| `ACF.Zone.KeepViewControlRotation` | Info | Keep View と Control Rotation のカメラ（入るときに Control Rotation を変える） |
+| `ACF.Zone.Disabled` | Info | 最初から無効 |
+
+Priority の違う Zone の重なりは何も出しません（入れ子の Zone の普通の使い方です）。Blueprint の Component のテンプレート（Actor が無い）は検査しません。
+
+### Debugger の Zone 表示（7C-3A）
+
+Camera Tuning パネル（25 章）の Debugger（27 章）に **[Zone]** の行を足しました（同じパネル・同じ対象のプレイヤー。別のウィンドウは作っていません）。
+
+| 行 | 内容 |
+|---|---|
+| Zones | World の Zone の数 |
+| Selected zone | 選択中の Zone（Priority、Enter / Exit Delay、Exit Margin） |
+| Pending candidate | 待っている変更: 次の Zone（または「no zone (leaving)」）、経過 / 必要な時間、残り時間 |
+| Zone request | Zone Subsystem が持つ要求: Handle・Priority・Preset と「in control」/「below <上のカメラ>」、Keep View で画面の向きを追っている間はそう表示。要求が無いときは理由（Preset なし、外部で消えて再要求待ちと残り秒数） |
+| Camera in control | Director の実際の Active Request と、それが Zone の要求かどうか |
+| Teleports | Teleport として扱った回数（距離・NotifyTeleport・Pawn の差し替え） |
+
+### サンプル（7C-3A）
+
+`/ActionCameraFramework/Samples/L_ACFCameraTest` の北西の隅（床の x -3900〜-2100、y 2000〜3800。ほかのサンプルとテストの場所から離れた所）に Zone のサンプルがあります。`Scripts/CreateZoneSampleAssets.py`（Editor を閉じて `Scripts/RunEditorPython.sh Scripts/CreateZoneSampleAssets.py`）が作り、何度実行しても同じ結果です（タグ `ACFZoneSample` の Actor だけを作り直し、ほかのサンプルと Preset には触れません）。
+
+| Actor | Priority | 形 | カメラ（Preset） | Delay | 確かめること |
+|---|---|---|---|---|---|
+| `Zone_Plaza` | 0 | 広場 1800 × 1800 cm | `DA_ACFSample_Zone_Plaza`: 上からのクレーン（Follow をワールド軸で + Look At）、Blend 1.0 秒 | Exit 0.5 秒 | 広いエリア、入退場の Blend |
+| `Zone_Corridor` | 1 | 広場の南の壁沿いの通路 1600 × 300 cm（壁の東の端が開いている） | `DA_ACFSample_Zone_Corridor`: 真横から、Blend 0.8 秒 | Enter 0.2 / Exit 0.3 秒 | 重なり（広場の中で Priority が高い）、Enter Delay |
+| `Zone_Alcove` | 2 | 北西の隅 700 × 700 cm（2 枚の壁） | `DA_ACFSample_Zone_Alcove`: 近い Orbit（入力なし）+ Collision、Enter Rotation = Keep View | Enter 0.5 秒 | 入れ子の Zone、Keep View（広場の向きのまま近づく） |
+| `Enemy_7_Zone` | | 広場の中の円柱（タグ ACFEnemy） | | | `ACF.Sample.LockOn 7` で Lock-On からの復帰 |
+
+既存のサンプルとの関係: Enemy は名前順なので 0〜6 の番号は変わりません。`ACF.Sample.Group` の要求は Priority 5 で、Zone の要求（5）と「新しい方が勝つ」で取り合います（Zone Subsystem が 1 回警告します）。Zone の確認中は Group を使わないでください。
+
+**Editor での確認の手順**（以下の操作感の確認は **未実施** です。自動テストで確かめた内容は下の「テスト」の表です）
+
+1. Editor で `/ActionCameraFramework/Samples/L_ACFCameraTest` を開き、Play（PIE）。
+2. コンソール（`~`）で `ACF.Sample.Zone Go`: Pawn が入口（広場の東、Zone の外）へ移動します。西へ歩きます。
+3. Camera Tuning パネル（Window > Developer Tools > Debug > ACF Camera Tuning、25 章）を開き、PIE の World とプレイヤーを選んで Debugger の **[Zone]** を見ながら歩きます。
+   - 広場に入る: Selected zone が `Zone_Plaza`、Zone request が「in control」、上からのカメラへ 1 秒で Blend。
+   - 南の通路へ（壁の東の端から入る）: Pending candidate に `Zone_Corridor` と残り時間（0.2 秒）が出てから切り替わる。通路の端を行き来しても切り替わらない（Exit Margin 50 cm と Exit Delay 0.3 秒）。
+   - 北西の隅へ: `Zone_Alcove` に 0.5 秒後に切り替わり、近いカメラが広場のカメラの向きから始まる（Keep View）。
+4. **Lock-On からの復帰**: 広場で `ACF.Sample.LockOn 7` → Zone request が「below …」、Camera in control が「not the zone request」→ 通路へ歩く（Zone は下で切り替わる）→ `ACF.Sample.LockOff 0.5` → 通路のカメラへ戻る。
+5. **Level Sequence からの復帰**: 広場で `ACF.Sample.Sequencer Play Blend` → Sequence の後、広場のカメラへ戻る。Sequence 中に通路へ移ると、終わったあと通路のカメラへ戻る。
+6. 値を変える:
+   - 実行中に全部の Zone へ: `ACF.Sample.Zone Delay <Enter> [Exit]`、`ACF.Sample.Zone Blend <秒>`（0 で Cut）、`ACF.Sample.Zone KeepView On|Off`、`ACF.Sample.Zone Priority <Plaza|Corridor|Alcove> <N>`、`ACF.Sample.Zone Enable <Name> 0|1`、`ACF.Sample.Zone Status`（= `ACF.Zone.Status`）。`ACF.Sample.Zone Go <Plaza|Corridor|Alcove>` はその Zone の中へ Teleport（Teleport なので Delay なし・Cut）。
+   - Editor で恒久的に: World Outliner で `Zone_Plaza` などを選び、Details の **Zone**（Zone Priority、Exit Margin、Enter / Exit Delay、Zone Enabled）と **Camera**（Preset、Look At Target、Blend In / Out、Enter / Exit Rotation）を変えて Play。Preset のカメラそのものは `DA_ACFSample_Zone_*` を開いて変える（PIE 中は Camera Tuning パネル、24〜26 章）。
+7. 検証: Build > Map Check（Zone の Info が出るだけで Error / Warning は無いはず）。わざと `Zone_Corridor` の Box Extent の Y を 0 にすると `ACF.Zone.EmptyShape` が出ます（確認後は戻すこと）。
+
 ### テスト
 
 | テスト | 内容 |
 |---|---|
+| `.Editor.Zone.Validation`（Editor の一時的な World） | 各 Id と重さ、Priority / 体積で決まる重なりは Info だけ・完全に同じなら両方に Warning・Priority が違えば何もなし、Data Validation（Error で Invalid、Warning だけなら Valid、Actor 経由でも報告）、Map Check にメッセージが出る |
+| `.Editor.Zone.SampleRealPIE`（実 PIE、`L_ACFCameraTest`） | Editor の World でサンプルの 3 つの Zone に Error / Warning が無い。PIE で `ACF.Sample.Zone Go Corridor`、Debugger の Selected zone / Zone request「in control」/ Camera in control「= the zone request」、Delay 5 秒で歩くと Pending candidate に残り時間、Lock-On で「below」「not the zone request」、解除後に広場のカメラ |
+| `.Samples.ZonesOnTestMap`（`--context samples` / `samples-host`、テストマップの実ゲーム） | Pawn を毎フレーム少しずつ歩かせて（Teleport でなく）入口 → 広場（Blend）→ 通路（Pending を経て）→ Lock-On の下で広場へ → 解除で広場のカメラ → 実際の Level Sequence `LS_ACFSample_Blend` → 終了後に広場のカメラ（Weight 1）→ 隅。Zone の要求は常に 1 つ以下、最後に何も残らない |
 | `.Zone.Resolver.PriorityAndTieBreaks` | Priority・現在の Zone・体積・パス名の順、無効の Zone、Margin は現在の Zone だけ、厳密な全順序、200 通りの並べ替えで結果が同じ |
 | `.Zone.Resolver.ExitMarginHysteresis` | 隣り合う同順位の Zone の境界で、Margin 内は切り替わらない、±40 cm の往復 200 回で切り替え 0、入れ子の高 Priority の Zone、無効化で即座に外れる |
 | `.Zone.Geometry.BoxAndSphere` | 回転・非一様スケール・負のスケール・0 のスケール、Margin は世界座標の cm、体積 |
@@ -2545,9 +2610,11 @@ Teleport のときは、Enter / Exit Delay と Exit Margin を使わずにその
 - 外部で意図して外された要求も、Zone にいる間は遅れて戻ってきます（上の「意図して Zone のカメラを止めたいとき」）。
 - 形は Box と Sphere だけです（Capsule・Brush の Volume は未対応）。判定する点は Pawn の位置（Actor の原点）です。
 - Zone の数に比例する線形の走査です（空間の索引なし）。性能は 7C-3 で計測します。
-- Blueprint からは Zone の設定と `Set Zone Enabled` / `Is Zone Enabled` だけです（選択・要求の取得とイベントは C++）。
+- Blueprint からは Zone の設定と `Set Zone Enabled` / `Is Zone Enabled` だけです（選択・要求の取得とイベントは C++、Editor では Debugger の [Zone]）。
+- Editor のビューポートでの Zone の表示は Box の線だけです（Priority・Delay・選択中かどうかの色分けや文字は無い）。
+- 大量の Zone の性能（線形の走査）の計測と最適化は 7C-3B です。
 - Lock-On / Finisher の下で Zone が替わった場合、`Use Camera Setting`（既定）の Zone のカメラは Preset の Initial Rotation から始まり、画面の向きから Blend で回ります（Keep View なら画面の向きのまま。上の「高優先度カメラからの復帰」）。Control Rotation で向きを決める Zone のカメラは、Keep View でも Control Rotation のまま出ます。
 - 一度画面に出た Zone のカメラは、Lock-On などの後に自分の前の向きへ戻ります（Director の既存の規則）。「Lock-On の向きのまま続けたい」場合は、ゲームが Lock-On の解除時に `SetOrbitRotation` を呼んでください（Zone はしません）。
 - 実行中に Zone の `Preset` / `Blend` を書き換えても、出している要求には反映されません（次に選ばれたときから）。
-- 人による Editor 上の操作感の確認は未実施です（7C-3 のサンプルマップで行う予定）。ここまでの確認はすべて自動テストです。
+- 人による Editor 上の操作感の確認は未実施です。手順は上の「サンプル」にあります。7C-1〜7C-3A の確認はすべて自動テスト（実 PIE・テストマップの実ゲームを含む）です。
 - Sequencer からの復帰のテストは、Sequencer の連携が使う Director の API（出力のバイパスと `Blend From Pose`）で行っています。実際の Level Sequence を流す Zone のテストはありません。

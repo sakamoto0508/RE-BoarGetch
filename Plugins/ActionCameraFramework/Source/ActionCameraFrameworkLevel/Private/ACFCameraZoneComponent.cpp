@@ -2,6 +2,10 @@
 #include "ACFCameraPreset.h"
 #include "ACFCameraZoneResolver.h"
 #include "ACFCameraZoneSubsystem.h"
+#include "ACFCameraZoneValidation.h"
+#if WITH_EDITOR
+#include "Misc/DataValidation.h"
+#endif
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "Engine/World.h"
@@ -56,6 +60,28 @@ void UACFCameraZoneComponent::SetZoneEnabled(bool bEnabled)
 		}
 	}
 }
+
+#if WITH_EDITOR
+EDataValidationResult UACFCameraZoneComponent::IsDataValid(FDataValidationContext& Context) const
+{
+	EDataValidationResult Result = Super::IsDataValid(Context);
+	TArray<FACFCameraZoneIssue> Issues;
+	ACFCameraZoneValidation::Validate(*this, Issues);
+	if (ACFCameraZoneValidation::Report(*this, Issues, Context) == EDataValidationResult::Invalid)
+	{
+		Result = EDataValidationResult::Invalid;
+	}
+	return Result;
+}
+
+void UACFCameraZoneComponent::CheckForErrors()
+{
+	Super::CheckForErrors();
+	TArray<FACFCameraZoneIssue> Issues;
+	ACFCameraZoneValidation::Validate(*this, Issues);
+	ACFCameraZoneValidation::ReportMapCheck(*this, Issues);
+}
+#endif
 
 FACFCameraBlendSettings UACFCameraZoneComponent::GetExitBlend() const
 {

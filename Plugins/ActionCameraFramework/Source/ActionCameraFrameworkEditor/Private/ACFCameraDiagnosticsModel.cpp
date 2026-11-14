@@ -3,6 +3,8 @@
 #include "ACFCameraSequence.h"
 #include "ACFCameraSubsystem.h"
 #include "ACFCameraTuningPanelModel.h"
+#include "ACFCameraZoneComponent.h"
+#include "ACFCameraZoneSubsystem.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Debug/DebugDrawService.h"
 #include "Editor.h"
@@ -328,6 +330,57 @@ FACFCameraDiagnosticsModel::FDebugView FACFCameraDiagnosticsModel::ReadDebug() c
 		Add(TEXT("Request"), TEXT("  request"), FString::Printf(TEXT("%s pri %d %s%s%s  follow [%s]  look at [%s]"), *Info.Handle.ToString(), Info.Priority, *Info.Preset.ToString(),
 			Info.bActive ? TEXT(" ACTIVE") : TEXT(""), Info.bTuning ? TEXT(" TUNING") : TEXT(""), *Info.FollowTarget, *Info.LookAtTarget));
 	}
+	// Phase 7C-3A: Camera Zone. What the zone subsystem decided for this player (selection, the change waiting for its delay,
+	// the zone request it owns) next to what the director shows (the request in control). README 32 章.
+	{
+		UWorld* ZoneWorld = Target.GetWorld();
+		const UACFCameraZoneSubsystem* Zones = ZoneWorld ? ZoneWorld->GetSubsystem<UACFCameraZoneSubsystem>() : nullptr;
+		if (!Zones)
+		{
+			Add(TEXT("Zone"), TEXT("Zones"), TEXT("no zone subsystem in this World"));
+		}
+		else
+		{
+			FACFCameraZonePlayerDebug Z;
+			const bool bKnown = Zones->GetPlayerDebug(Target.GetPlayer(), Z);
+			auto ZoneText = [](const UACFCameraZoneComponent* Zone)
+			{
+				return Zone ? FString::Printf(TEXT("%s (priority %d, enter %.2f s / exit %.2f s, margin %.0f cm)"), Zone->GetOwner() ? *Zone->GetOwner()->GetActorNameOrLabel() : *Zone->GetName(),
+					Zone->ZonePriority, Zone->EnterDelay, Zone->ExitDelay, Zone->ExitMargin) : FString(TEXT("none"));
+			};
+			Add(TEXT("Zone"), TEXT("Zones"), FString::Printf(TEXT("%d in the World%s"), Zones->GetNumZones(), bKnown ? TEXT("") : TEXT(", no zone state for this player yet")));
+			Add(TEXT("Zone"), TEXT("Selected zone"), ZoneText(Z.Selected.Get()));
+			Add(TEXT("Zone"), TEXT("Pending candidate"), Z.bHasPending
+				? FString::Printf(TEXT("%s: %.2f / %.2f s (%.2f s left)"), Z.Pending.IsValid() ? *ZoneText(Z.Pending.Get()) : TEXT("no zone (leaving)"), Z.PendingElapsed, Z.PendingRequired, FMath::Max(0.f, Z.PendingRequired - Z.PendingElapsed))
+				: FString(TEXT("none")));
+			FString ZoneRequest;
+			if (Z.ZoneRequest.IsValid())
+			{
+				const FACFCameraRequestInfo* Info = Requests.FindByPredicate([&Z](const FACFCameraRequestInfo& Entry) { return Entry.Handle == Z.ZoneRequest; });
+				ZoneRequest = FString::Printf(TEXT("%s pri %d %s: %s%s"), *Z.ZoneRequest.ToString(), Info ? Info->Priority : 0, Info ? *Info->Preset.ToString() : TEXT("?"),
+					R.ActiveRequest == Z.ZoneRequest ? TEXT("in control") : *FString::Printf(TEXT("below %s"), Active ? *FString::Printf(TEXT("%s (pri %d)"), *Active->DebugName.ToString(), Active->Priority) : TEXT("another camera")),
+					Z.bTrackingView ? TEXT(", follows the view until it is shown (Keep View)") : TEXT(""));
+			}
+			else if (Z.bRequestFailed)
+			{
+				ZoneRequest = TEXT("none: the selected zone has no Camera Preset");
+			}
+			else if (Z.bWaitingForRetry)
+			{
+				ZoneRequest = FString::Printf(TEXT("none: removed from outside %d time(s), requested again in %.2f s"), Z.NumLost, Z.RetryIn);
+			}
+			else
+			{
+				ZoneRequest = TEXT("none");
+			}
+			Add(TEXT("Zone"), TEXT("Zone request"), ZoneRequest);
+			Add(TEXT("Zone"), TEXT("Camera in control"), Active
+				? FString::Printf(TEXT("%s%s"), *Active->Handle.ToString(), Active->Handle == Z.ZoneRequest ? TEXT(" = the zone request") : *FString::Printf(TEXT(" (%s, pri %d: not the zone request)"), *Active->DebugName.ToString(), Active->Priority))
+				: FString(TEXT("none (the UE camera)")));
+			Add(TEXT("Zone"), TEXT("Teleports"), FString::Printf(TEXT("%d (distance, NotifyTeleport, new pawn)"), Z.NumTeleports));
+		}
+	}
+
 	const FACFCameraTransitionInfo& T = View.Transition;
 	Add(TEXT("Blend"), TEXT("Blend"), T.bActive ? FString::Printf(TEXT("blending, alpha %.3f, %.2f / %.2f s (%.2f s left), from %s, weight %.2f -> %.2f"), R.BlendAlpha, T.Elapsed, T.Duration,
 		FMath::Max(0.f, T.Duration - T.Elapsed), T.From.IsValid() ? *T.From.ToString() : TEXT("snapshot / UE camera"), T.FromWeight, T.ToWeight) : TEXT("not blending"));

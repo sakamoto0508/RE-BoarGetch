@@ -377,6 +377,33 @@ bool UACFCameraZoneSubsystem::GetPendingZone(const ULocalPlayer* Player, UACFCam
 	return true;
 }
 
+bool UACFCameraZoneSubsystem::GetPlayerDebug(const ULocalPlayer* Player, FACFCameraZonePlayerDebug& Out) const
+{
+	Out = FACFCameraZonePlayerDebug();
+	const FPlayerState* Found = Players.FindByPredicate([Player](const FPlayerState& State) { return Player && State.Player.Get() == Player; });
+	if (!Found)
+	{
+		return false;
+	}
+	Out.Selected = Found->Selected;
+	Out.bHasPending = Found->bHasPending;
+	Out.Pending = Found->Pending;
+	Out.PendingElapsed = Found->PendingElapsed;
+	const UACFCameraZoneComponent* Current = IsUsable(Found->Selected.Get()) ? Found->Selected.Get() : nullptr;
+	Out.PendingRequired = Found->bHasPending ? ACFCameraZoneSubsystemImpl::RequiredDelay(Current, Found->Pending.Get()) : 0.f;
+	Out.NumTeleports = Found->NumTeleports;
+	const FACFCameraZoneRequestState& Request = Found->Request;
+	Out.RequestZone = Request.GetActiveZone();
+	Out.ZoneRequest = Request.GetHandle();
+	Out.bRequestFailed = Request.HasFailed();
+	Out.bWaitingForRetry = Request.IsWaitingForRetry();
+	Out.NumLost = Request.GetNumLost();
+	const UWorld* World = GetWorld();
+	Out.RetryIn = Request.IsWaitingForRetry() && World ? FMath::Max(0.0, Request.GetNextRetryTime() - World->GetRealTimeSeconds()) : 0.0;
+	Out.bTrackingView = Request.IsTrackingView();
+	return true;
+}
+
 int32 UACFCameraZoneSubsystem::GetNumTeleports(const ULocalPlayer* Player) const
 {
 	const FPlayerState* Found = Players.FindByPredicate([Player](const FPlayerState& State) { return State.Player.Get() == Player; });
