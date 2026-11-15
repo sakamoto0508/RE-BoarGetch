@@ -2745,6 +2745,19 @@ Camera Tuning パネル（25 章）の Debugger（27 章）に **[Zone]** の行
 
 - ACF にロードさせる: `Play Level Transition (Async)`（Preset、Level Name = Stage）。Covered のあと ACF が `OpenLevel` を呼び、新しい World の準備ができたら Open します。
 - ゲームがロードする: Subsystem の `Play Level Transition`（Level Name = None）→ `On Transition Event` の `Covered` でゲームが自分の方法でロード。Level Streaming など Map の読み込みが無いときは Options の `Manual Load` をオンにして、ロードが終わったら `Notify Load Completed` を呼びます。
+
+**ロードの担当**（Level Name と `Manual Load` の組み合わせ）:
+
+| Manual Load | Level Name | ロードするのは | 進み方 |
+|---|---|---|---|
+| オフ | あり | ACF | `Covered` の後に ACF が `OpenLevel`。`PreLoadMap` / `PostLoadMapWithWorld` で進む |
+| オフ | None | ゲーム | ゲームが `Covered` で `OpenLevel` などを呼ぶ。Map の読み込みなら `PreLoadMap` / `PostLoadMapWithWorld` で進む |
+| オン | None | ゲーム | `Notify Load Started`（任意）/ `Notify Load Completed` で進む（Map の読み込みは追わない） |
+| オン | あり | ゲーム | 上と同じ。**ACF は `OpenLevel` しません**（Level Name は情報として残るだけ。ログに 1 行出します） |
+
+- どの場合も、ロードが来ないままタイムアウトすると Failed で画面を開きます。`Notify Load Failed` も同じです。
+- `Covered` のリスナーがその遷移を Cancel / `ClearScreen` したとき、または Interrupt の要求を出したときは、ACF は `OpenLevel` しません。リスナーの要求は `OpenLevel` の前に適用します（別の遷移の下で Map が読み込まれないように）。Queue / Reject の要求では、そのまま `OpenLevel` します。
+- 以前は、`Manual Load` がオンでも Level Name があると ACF が `OpenLevel` していました（レビューで修正）。
 - 新しいレベルの準備（敵の配置・ステージの初期化）を待つ: Options の `Wait For Ready Signal` をオンにして、準備ができたらレベル側から `Notify World Ready`（Handle は空で可）を呼びます。
 
 ### 使い方（C++）
@@ -2833,7 +2846,7 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 
 1. `PlayLevelTransition` → `Started`、Close のアニメーション（Subsystem の Tick、実時間、ポーズ中も進む）。画面キャプチャを使う演出は、この最初に 1 回だけ画面をキャプチャし、キャプチャができてから（通常 1〜2 フレーム後）Close のアニメーションを始めます（下の「キャプチャ」）。
 2. 被覆率 1 になったら、そのフレームが `CoveredFrames` フレーム表示されるまで待って `Covered`（ここまでは画面が確実に覆われている）。
-3. Level Name があれば ACF が `UGameplayStatics::OpenLevel` を呼ぶ（無ければゲームが `Covered` で呼ぶ）。`OpenLevel` は次のエンジンの Tick で読み込みを始めます。
+3. Level Name があり `Manual Load` がオフなら、ACF が `UGameplayStatics::OpenLevel` を呼ぶ（無ければゲームが `Covered` で呼ぶ。上の「ロードの担当」）。`OpenLevel` は次のエンジンの Tick で読み込みを始めます。
 4. `PreLoadMap` → `LoadStarted`。ここから Game Thread は読み込みで止まり、オーバーレイの Tick も描画も止まります。画面には最後に表示された「完全に覆ったフレーム」が残ります（ちらつきなし）。
 5. 古い World の破棄。オーバーレイは Game Viewport に載っているので消えません（自動テストで `PreLoadMap` と `PostLoadMapWithWorld` の両方の時点で確認）。
 6. `PostLoadMapWithWorld` → 新しい World の待ち。BeginPlay 済み + `WorldReadyFrames` フレーム（+ Ready の合図）。その間も覆ったまま描画されます。
@@ -2952,6 +2965,7 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 | `.Transitions.Lifecycle.CancelSkipNoHold` | 途中の Cancel（すぐ消える）・二重 Cancel・Skip・Hold なし・長さ 0・覆った画面への Close |
 | `.Transitions.Lifecycle.InterruptQueueReject` | 割り込み（被覆率が飛ばない）・Queue の順序・Reject（Failed）・1 フレームに 42 個の割り込み |
 | `.Transitions.Lifecycle.LevelManualLoad` | Manual Load の通知、Ready の合図を待つ、入力のロックと解除、タイムアウト → Failed で画面が戻る、`NotifyLoadFailed` |
+| `.Transitions.Level.LoadOwnership` | 「ロードの担当」: Manual Load + Level Name で `OpenLevel` しない（通知で Finished）、Level Name なしの通知、Manual Load オフ + Level Name で `OpenLevel` が 1 回だけ（Travel Options 付き）、`Covered` のリスナーの Cancel / `ClearScreen` / Interrupt で `OpenLevel` しない・Queue / Reject ではする、Manual Load 中の Cancel / Interrupt / タイムアウトでイベントと入力が戻る。World Context の Travel URL を読んで空にするので、実際の Map は読み込まない |
 | `.Transitions.Lifecycle.ReleaseAndBlueprintApi` | Blueprint の関数、終了後に Material Instance が GC される、ビューが残らない |
 | `.Transitions.Travel.OpenLevelABA` | 実際の `OpenLevel` で 開始マップ → A → B → A → 開始マップ（41/42、Zoom Rush を開始直後に Skip、Cross Dissolve で Ready の合図を待つ、Black Fade）。各ロードの `PreLoadMap` / `PostLoadMapWithWorld` で被覆率 1 とオーバーレイの存在、イベントの順序、到着後に画面が消える、新しい Controller の入力、古い World が GC される。Ready 待ちの間に新しい World の Controller がロックされている、Open の Settings の一時的な Curve / Texture / Material がロードの GC と明示の GC を越えて残り、終了後に解放される |
 | `.Transitions.Reentry.InterruptListener` | A の `Interrupted` のリスナーが C を要求（B が A を Interrupt したとき）→ B が始まり C が B を Interrupt、C が有効な Handle。始めている途中の要求をリスナーが Cancel → `Started` なしで Cancelled |

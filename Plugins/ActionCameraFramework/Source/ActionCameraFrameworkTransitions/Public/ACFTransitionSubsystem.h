@@ -25,9 +25,10 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FACFOnTransitionEventNative, FACFTransition
  *
  *  - PlayClose / PlayOpen: scene -> covered / covered -> scene (screen fades, warps, camera cuts, Game Over, ...).
  *  - PlayLevelTransition: Close -> Covered (the game loads: OpenLevel, streaming, its own stage system) -> the new world
- *    is ready -> Open. The subsystem never loads by itself unless a level name is given (then it calls OpenLevel after
- *    Covered). It follows the load through PreLoadMap / PostLoadMapWithWorld, or NotifyLoadStarted / NotifyLoadCompleted
- *    with bManualLoad.
+ *    is ready -> Open. The subsystem loads only when a level name is given and bManualLoad is off (then it calls
+ *    OpenLevel after Covered, once the Covered listeners' requests are applied). It follows the load through PreLoadMap /
+ *    PostLoadMapWithWorld, or, with bManualLoad (the game owns the load; a level name is then not opened), through
+ *    NotifyLoadStarted / NotifyLoadCompleted.
  *
  * Every handle ends with exactly one terminal event (Finished, Failed, Cancelled, Interrupted); a handle that sent Started
  * always gets one. Events are sent synchronously (OnTransitionEventNative, then OnTransitionEvent). Re-entrancy (README 33
