@@ -25,12 +25,22 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "ActionCameraFrameworkTransitions",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "ActionCameraFrameworkTests",
 			"Type": "DeveloperTool",
 			"LoadingPhase": "Default"
 		},
 		{
 			"Name": "ActionCameraFrameworkEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "ActionCameraFrameworkTransitionsEditor",
 			"Type": "Editor",
 			"LoadingPhase": "Default"
 		}
