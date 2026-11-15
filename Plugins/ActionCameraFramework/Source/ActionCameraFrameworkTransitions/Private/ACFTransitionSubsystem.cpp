@@ -144,6 +144,10 @@ FACFTransitionHandle UACFTransitionSubsystem::PlayLevelTransition(const FACFTran
 	Request.Options = Options;
 	Request.LevelName = LevelName;
 	Request.TravelOptions = TravelOptions;
+	if (Options.bManualLoad && !LevelName.IsNone())
+	{
+		UE_LOG(LogACFTransition, Log, TEXT("ACF Transition: Level Name %s is not opened by ACF (Manual Load: the game loads and calls NotifyLoadCompleted)."), *LevelName.ToString());
+	}
 	return Submit(MoveTemp(Request));
 }
 
@@ -661,7 +665,7 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 				Emit(Done, EACFTransitionEvent::Finished);
 				return; // then Settle: what the listeners requested, then the queue
 			}
-			SetStage(Active->Options.bManualLoad || Active->LevelName.IsNone() ? EStage::WaitingForLoad : EStage::WaitingForLoad);
+			SetStage(EStage::WaitingForLoad);
 			if (Settings->bUseMoviePlayerDuringLoad && !GIsEditor && IsMoviePlayerEnabled() && !Active->Options.bManualLoad && GetMoviePlayer())
 			{
 				FLoadingScreenAttributes Attributes;
@@ -677,11 +681,16 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 				GetMoviePlayer()->SetupLoadingScreen(Attributes);
 			}
 			Emit(*Active, EACFTransitionEvent::Covered);
+			// What the Covered listeners requested is applied before the load starts: an Interrupt / Cancel / ClearScreen
+			// there means this transition does not load (the map must not load under another transition).
+			Settle(false);
 			if (!StillMine())
 			{
 				return;
 			}
-			if (!Active->LevelName.IsNone() && !bLevelOpened)
+			// Who loads (README 33 章「ロードの担当」): with bManualLoad the game does, also when a LevelName is given (it is
+			// then only information); otherwise ACF opens the LevelName, or the game loads when there is none.
+			if (!Active->Options.bManualLoad && !Active->LevelName.IsNone() && !bLevelOpened)
 			{
 				bLevelOpened = true;
 				if (UWorld* World = GetGameWorld())

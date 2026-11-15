@@ -223,7 +223,8 @@ struct ACTIONCAMERAFRAMEWORKTRANSITIONS_API FACFTransitionOptions
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
 	bool bWaitForReadySignal = false;
 
-	/** Level transitions: no map load is expected (level streaming / own loading). The game calls NotifyLoadStarted
+	/** Level transitions: the game owns the load (level streaming / its own loading / its own OpenLevel). ACF never
+	 *  opens a level, also when a LevelName is given, and does not follow map loads; the game calls NotifyLoadStarted
 	 *  (optional) and NotifyLoadCompleted when the content is ready. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
 	bool bManualLoad = false;
