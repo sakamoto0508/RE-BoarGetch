@@ -8,6 +8,7 @@
 #include "ACFTransitionSubsystem.generated.h"
 
 class APlayerController;
+class UAudioComponent;
 class FACFTransitionView;
 class UACFTransitionPreset;
 class UTexture;
@@ -162,6 +163,8 @@ public:
 	bool IsSendingEvent() const { return DispatchDepth > 0; }
 	/** Player controllers whose move / look input this subsystem currently ignores. */
 	int32 GetLockedControllerCount() const { return LockedControllers.Num(); }
+	/** Sounds this subsystem will stop (SoundStop other than PlayToEnd) that are still playing. Tests / debugging. */
+	int32 GetTrackedSoundCount() const;
 	/** CPU seconds of the last Tick (cycles of this subsystem only). */
 	double GetLastTickSeconds() const { return LastTickSeconds; }
 	/** Advances the transition by DeltaSeconds (tests drive time explicitly). */
@@ -288,6 +291,19 @@ private:
 	};
 	TArray<FInputLock> LockedControllers;
 	bool bInputLocked = false;
+
+	/** Sounds to stop when their handle ends (weak: the audio device owns the component; auto-destroyed when done). */
+	struct FTransitionSound
+	{
+		FACFTransitionHandle Handle;
+		TWeakObjectPtr<UAudioComponent> Component;
+		EACFTransitionSoundStop Stop = EACFTransitionSoundStop::PlayToEnd;
+		float FadeOutSeconds = 0.f;
+	};
+	TArray<FTransitionSound> Sounds;
+	void PlaySound(FACFTransitionHandle Handle, const FACFTransitionSettings& Settings);
+	/** The handle ended with Terminal: its sounds stop according to their SoundStop. */
+	void EndSounds(FACFTransitionHandle Handle, EACFTransitionEvent Terminal);
 
 	int32 NextHandleId = 1;
 	double LastTickSeconds = 0.0;

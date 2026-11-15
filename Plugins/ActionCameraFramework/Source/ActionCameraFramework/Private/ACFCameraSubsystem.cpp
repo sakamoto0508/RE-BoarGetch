@@ -7,6 +7,7 @@
 #include "Camera/CameraTypes.h"
 #include "SceneView.h"
 #include "HAL/IConsoleManager.h"
+#include "Misc/ScopeExit.h"
 #include "Nodes/ACFCameraFraming.h"
 #include "UnrealClient.h"
 #include "Camera/PlayerCameraManager.h"
@@ -280,6 +281,9 @@ void UACFCameraSubsystem::Deinitialize()
 	UDebugDrawService::Unregister(DebugDrawHandle);
 	DebugDrawHandle.Reset();
 #endif
+	// No sequence event is sent after this point (the waiting ones and those of the playbacks stopped now are dropped).
+	bSequenceEventsClosed = true;
+	PendingSequenceEvents.Empty();
 	DetachOutput();
 	if (Director)
 	{
@@ -302,6 +306,9 @@ void UACFCameraSubsystem::PlayerControllerChanged(APlayerController* NewPlayerCo
 
 void UACFCameraSubsystem::HandleWorldTickStart(UWorld* World, ELevelTick TickType, float DeltaSeconds)
 {
+	// Fallback safe point for sequence events of a camera update that had no post actor tick after it (a paused world
+	// whose controller updates its camera while paused, or an evaluation outside a world tick).
+	FlushSequenceEvents();
 	// B-5: effects that are still running when the last request is gone keep the output attached (weight 0, nothing
 	// visible) so their time advances and they end on schedule instead of waiting for the next request.
 	if (!Director || (!Director->IsInfluencingOutput() && Director->GetNumActiveEffects() == 0))
@@ -557,6 +564,8 @@ int32 UACFCameraSubsystem::SetAllOrbitRotations(FRotator Rotation, bool bInstant
 
 void UACFCameraSubsystem::HandleWorldPostActorTick(UWorld* World, ELevelTick TickType, float DeltaSeconds)
 {
+	// The camera update of this world tick is over: the sequence events it made are sent now.
+	FlushSequenceEvents();
 	// このフレームに Modifier 経由で評価済みなら何もしない（通常のゲームプレイ中のコストは比較 1 回だけ）。
 	// 評価されていないのは、更新された ViewTarget がすべて外部 ViewTarget だった（Sequencer の Camera Cut 中など）か、
 	// デバッグ用の CameraStyle で Modifier 自体が呼ばれなかった場合。
@@ -618,6 +627,10 @@ FACFCameraPose UACFCameraSubsystem::GetVisualCameraPose() const
 
 const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateForOutput(float DeltaTime, const FMinimalViewInfo& UpstreamPOV)
 {
+	// Called by the output modifier inside the PlayerCameraManager's update: listeners must not run here (they could
+	// change the view target, destroy actors, start other cameras while the manager is half-way through its update).
+	++CameraUpdateDepth;
+	ON_SCOPE_EXIT { --CameraUpdateDepth; };
 	return EvaluateInternal(DeltaTime, UpstreamPOV, /*bOutputBypassed*/ false);
 }
 
@@ -727,7 +740,7 @@ const FACFCameraEvaluationResult& UACFCameraSubsystem::EvaluateInternal(float De
 
 	// Stages 2-6 (input is consumed inside, once per time-advancing evaluation).
 	const FACFCameraEvaluationResult& Result = Director->Evaluate(Context);
-	FlushSequenceEvents();
+	FlushSequenceEvents(); // queued only inside the camera update (EvaluateForOutput); sent here for the background evaluation
 #if ENABLE_DRAW_DEBUG && !UE_BUILD_SHIPPING
 	if (Result.FrameNumber != LastDebugDrawFrame && ACFCameraDebug::IsWorldDrawEnabled())
 	{
@@ -953,9 +966,27 @@ void UACFCameraSubsystem::StopAllCameraEffects(bool bImmediate)
 UACFCameraEffectPreset* UACFCameraSubsystem::GetDefaultEffectPreset(bool bImpulse)
 {
 	const UACFCameraSettings* Settings = GetDefault<UACFCameraSettings>();
-	if (UACFCameraEffectPreset* Configured = (bImpulse ? Settings->DefaultImpulsePreset : Settings->DefaultRecoilPreset).LoadSynchronous())
+	const TSoftObjectPtr<UACFCameraEffectPreset>& Configured = bImpulse ? Settings->DefaultImpulsePreset : Settings->DefaultRecoilPreset;
+	TObjectPtr<UACFCameraEffectPreset>& Loaded = bImpulse ? LoadedImpulsePreset : LoadedRecoilPreset;
+	FSoftObjectPath& LoadedPath = bImpulse ? LoadedImpulsePath : LoadedRecoilPath;
+	if (Configured.IsNull())
 	{
-		return Configured;
+		Loaded = nullptr; // the setting was cleared: release the kept preset
+		LoadedPath.Reset();
+	}
+	else
+	{
+		if (Loaded && LoadedPath == Configured.ToSoftObjectPath())
+		{
+			return Loaded; // loaded once and kept: no lookup, no load
+		}
+		// First use (or the setting changed): a synchronous load unless something already loaded it. Kept from now on.
+		Loaded = Configured.LoadSynchronous();
+		LoadedPath = Configured.ToSoftObjectPath();
+		if (Loaded)
+		{
+			return Loaded;
+		}
 	}
 	TObjectPtr<UACFCameraEffectPreset>& Builtin = bImpulse ? BuiltinImpulsePreset : BuiltinRecoilPreset;
 	if (!Builtin)
@@ -1192,17 +1223,45 @@ bool UACFCameraSubsystem::IsCameraSequencePlaying(FACFCameraSequenceHandle Handl
 
 void UACFCameraSubsystem::FlushSequenceEvents()
 {
-	if (!Director || !Director->HasSequenceEvents())
+	if (!Director || bSequenceEventsClosed)
 	{
 		return;
 	}
-	// Take the queue first: handlers may start / end playbacks, which queues new events for the next flush.
-	Director->ConsumeSequenceEvents(SequenceEventScratch);
-	for (const FACFCameraSequenceEvent& Event : SequenceEventScratch)
+	auto Collect = [this]()
 	{
-		OnCameraSequenceEvent.Broadcast(Event);
+		if (Director && Director->HasSequenceEvents())
+		{
+			Director->ConsumeSequenceEvents(SequenceEventScratch);
+			PendingSequenceEvents.Append(SequenceEventScratch);
+			SequenceEventScratch.Reset();
+		}
+	};
+	Collect();
+	// Re-entrant call (a handler's Play / Finish / Cancel) or inside the camera update: queued; the running dispatch or
+	// the next safe point sends them, in order.
+	if (PendingSequenceEvents.IsEmpty() || bDispatchingSequenceEvents || CameraUpdateDepth > 0)
+	{
+		return;
 	}
-	SequenceEventScratch.Reset();
+	TGuardValue<bool> Guard(bDispatchingSequenceEvents, true);
+	// Bounded: handlers that answer every event with a new playback cannot hang the game thread (the rest: next flush).
+	constexpr int32 MaxPerDispatch = 1024;
+	int32 Sent = 0;
+	while (Sent < PendingSequenceEvents.Num() && Sent < MaxPerDispatch)
+	{
+		const FACFCameraSequenceEvent Event = PendingSequenceEvents[Sent++]; // a copy: handlers may grow the queue
+		OnCameraSequenceEvent.Broadcast(Event);
+		if (bSequenceEventsClosed)
+		{
+			return; // a handler tore the player down (Deinitialize emptied the queue)
+		}
+		Collect(); // events of handler calls that do not flush themselves (JumpToCameraShotIndex, play rate, ...)
+	}
+	PendingSequenceEvents.RemoveAt(0, Sent, EAllowShrinking::No);
+	if (!PendingSequenceEvents.IsEmpty())
+	{
+		UE_LOG(LogActionCamera, Warning, TEXT("Camera sequence events: handlers keep making events; %d wait for the next flush."), PendingSequenceEvents.Num());
+	}
 }
 
 // -------------------------------------------------------------------------------------------------

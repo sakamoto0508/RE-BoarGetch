@@ -201,8 +201,15 @@ public:
 	bool IsCameraSequencePlaying(FACFCameraSequenceHandle Handle) const;
 
 	/**
-	 * Shot started / ended and playback ended. Broadcast after the director evaluation of the frame (never while it
-	 * runs), or right away for Finish / Cancel; handlers may call any ACF function.
+	 * Shot started / ended and playback ended (README 24 章「イベントの配信」). Events are sent one at a time, in the order
+	 * they happened, each once:
+	 *  - made by the camera evaluation (a shot ends on time, the next one starts): sent after the camera update of the
+	 *    frame (OnWorldPostActorTick), never inside the PlayerCameraManager's update;
+	 *  - made by a call from gameplay code (Play / Finish / Cancel / commands): sent before that call returns (after the
+	 *    events still waiting, if any).
+	 * Handlers may call any ACF function. Events their calls make are queued behind the current ones and sent by the
+	 * same dispatch (no nested broadcast); at most 1024 per dispatch, the rest at the next safe point. Nothing is sent
+	 * once the subsystem is deinitialized (waiting events are dropped).
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Action Camera|Sequence")
 	FACFCameraSequenceEventSignature OnCameraSequenceEvent;
@@ -455,12 +462,24 @@ public:
 	/** Distance the guard moved the camera in the given frame (0 if it did not act). Tests / debugging. */
 	float GetGuardCorrection(uint64 Frame) const { return Frame == LastGuardFrame ? LastGuardCorrection : 0.f; }
 
-	/** Broadcasts queued sequence notifications (outside the camera update). */
+	/**
+	 * Takes the director's new sequence events and sends the waiting ones (see OnCameraSequenceEvent). Inside the camera
+	 * update or inside a running dispatch it only queues them.
+	 */
 	void FlushSequenceEvents();
+
+	/** True while ACF evaluates for the PlayerCameraManager's update (sequence events wait). Tests / debugging. */
+	bool IsInCameraUpdate() const { return CameraUpdateDepth > 0; }
 
 private:
 	void EnsureOutputAttached();
+	/** Transfer buffer for the director's queue (never iterated while broadcasting). */
 	TArray<FACFCameraSequenceEvent> SequenceEventScratch;
+	/** Events waiting to be sent, FIFO; the dispatch reads it by index and copies each event before broadcasting it. */
+	TArray<FACFCameraSequenceEvent> PendingSequenceEvents;
+	int32 CameraUpdateDepth = 0;
+	bool bDispatchingSequenceEvents = false;
+	bool bSequenceEventsClosed = false;
 	bool AttachModifier(APlayerCameraManager* CameraManager, TSubclassOf<UACFCameraModifierBase> ModifierClass, TWeakObjectPtr<UACFCameraModifierBase>& InOutModifier);
 	void DetachOutput();
 	APlayerCameraManager* GetCurrentCameraManager() const;
@@ -542,6 +561,14 @@ private:
 	TObjectPtr<UACFCameraEffectPreset> BuiltinImpulsePreset;
 	UPROPERTY(Transient)
 	TObjectPtr<UACFCameraEffectPreset> BuiltinRecoilPreset;
+	/** D-2: the configured default presets once loaded, kept for the subsystem's life (a GC does not unload them, so a
+	 *  later impulse does not load them again in combat); the path they were loaded from (a changed setting reloads). */
+	UPROPERTY(Transient)
+	TObjectPtr<UACFCameraEffectPreset> LoadedImpulsePreset;
+	UPROPERTY(Transient)
+	TObjectPtr<UACFCameraEffectPreset> LoadedRecoilPreset;
+	FSoftObjectPath LoadedImpulsePath;
+	FSoftObjectPath LoadedRecoilPath;
 	UPROPERTY(Transient)
 	TMap<TObjectPtr<UClass>, TObjectPtr<UACFCameraEffectPreset>> ShakePresets;
 	UPROPERTY(Transient)

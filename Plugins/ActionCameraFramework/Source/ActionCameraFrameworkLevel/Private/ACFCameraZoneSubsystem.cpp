@@ -55,7 +55,10 @@ void UACFCameraZoneSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UACFCameraZoneSubsystem::Deinitialize()
 {
-	// The World ends: the zone requests go (the local players and their cameras outlive the World).
+	// The World ends: the zone requests go (the local players and their cameras outlive the World). No change is told
+	// any more (the waiting ones are dropped).
+	bNotificationsClosed = true;
+	PendingNotifications.Empty();
 	ReleaseAllZoneRequests();
 	Zones.Reset();
 	Players.Reset();
@@ -73,12 +76,14 @@ void UACFCameraZoneSubsystem::RegisterZone(UACFCameraZoneComponent* Zone)
 
 void UACFCameraZoneSubsystem::UnregisterZone(UACFCameraZoneComponent* Zone)
 {
+	FNotifyScope Notify(*this);
 	Zones.RemoveAll([Zone](const TWeakObjectPtr<UACFCameraZoneComponent>& Entry) { return !Entry.IsValid() || Entry.Get() == Zone; });
 	ResolvePlayersOf(Zone);
 }
 
 void UACFCameraZoneSubsystem::NotifyZoneChanged(UACFCameraZoneComponent* Zone)
 {
+	FNotifyScope Notify(*this); // the listeners run after the loop (they may add / remove players)
 	// Enabled or disabled: every player is resolved again from its last location (a disabled zone is left at once; an
 	// enabled zone is taken by players already inside it without waiting for the next frame).
 	for (FPlayerState& State : Players)
@@ -137,41 +142,45 @@ UACFCameraZoneComponent* UACFCameraZoneSubsystem::UpdatePlayer(ULocalPlayer* Pla
 	{
 		return nullptr;
 	}
-	FPlayerState& State = FindOrAddState(Player);
-	const bool bHasLocation = Update.Location && !Update.Location->ContainsNaN();
-	EResolveMode Mode = EResolveMode::Normal;
-	if (!bHasLocation)
 	{
-		// No pawn: nothing to follow, the zone is left at once. The next pawn starts without history.
-		Mode = EResolveMode::Immediate;
-		State.LastPawn.Reset();
-	}
-	else
-	{
-		bool bTeleport = Update.bTeleport;
-		if (Update.Pawn)
+		FNotifyScope Notify(*this); // the listeners run when this block ends: State is not used after them
+		FPlayerState& State = FindOrAddState(Player);
+		const bool bHasLocation = Update.Location && !Update.Location->ContainsNaN();
+		EResolveMode Mode = EResolveMode::Normal;
+		if (!bHasLocation)
 		{
-			if (State.LastPawn.Get() != Update.Pawn || State.LastPawn.IsExplicitlyNull())
+			// No pawn: nothing to follow, the zone is left at once. The next pawn starts without history.
+			Mode = EResolveMode::Immediate;
+			State.LastPawn.Reset();
+		}
+		else
+		{
+			bool bTeleport = Update.bTeleport;
+			if (Update.Pawn)
 			{
-				// A new pawn (first one, possession, respawn): no movement history and no pending change of the old pawn.
-				bTeleport = true;
-				State.LastPawn = Update.Pawn;
+				if (State.LastPawn.Get() != Update.Pawn || State.LastPawn.IsExplicitlyNull())
+				{
+					// A new pawn (first one, possession, respawn): no movement history and no pending change of the old pawn.
+					bTeleport = true;
+					State.LastPawn = Update.Pawn;
+				}
+				else if (State.bHasLocation && FVector::DistSquared(State.Location, *Update.Location) > FMath::Square(static_cast<double>(GetDefault<UACFCameraZoneSettings>()->TeleportDistance)))
+				{
+					bTeleport = true; // the same pawn jumped
+				}
 			}
-			else if (State.bHasLocation && FVector::DistSquared(State.Location, *Update.Location) > FMath::Square(static_cast<double>(GetDefault<UACFCameraZoneSettings>()->TeleportDistance)))
+			if (bTeleport)
 			{
-				bTeleport = true; // the same pawn jumped
+				Mode = EResolveMode::Teleport;
+				++State.NumTeleports;
 			}
 		}
-		if (bTeleport)
-		{
-			Mode = EResolveMode::Teleport;
-			++State.NumTeleports;
-		}
+		State.bHasLocation = bHasLocation;
+		State.Location = bHasLocation ? *Update.Location : FVector::ZeroVector;
+		Resolve(State, Mode, FMath::IsFinite(Update.DeltaTime) ? FMath::Max(Update.DeltaTime, 0.f) : 0.f);
 	}
-	State.bHasLocation = bHasLocation;
-	State.Location = bHasLocation ? *Update.Location : FVector::ZeroVector;
-	Resolve(State, Mode, FMath::IsFinite(Update.DeltaTime) ? FMath::Max(Update.DeltaTime, 0.f) : 0.f);
-	return State.Selected.Get();
+	// Looked up again: the listeners may have moved, removed or re-added this player (or reallocated the states).
+	return GetSelectedZone(Player);
 }
 
 bool UACFCameraZoneSubsystem::IsUsable(const UACFCameraZoneComponent* Zone) const
@@ -279,15 +288,6 @@ void UACFCameraZoneSubsystem::Resolve(FPlayerState& State, EResolveMode Mode, fl
 		State.bHasPending = false;
 		State.Pending.Reset();
 		State.PendingElapsed = 0.f;
-		if (Candidate != Previous || bSelectedInvalid)
-		{
-			OnZoneSelectionChanged.Broadcast(State.Player.Get(), Previous, Candidate);
-			if (OnZoneChanged.IsBound())
-			{
-				ULocalPlayer* Player = State.Player.Get();
-				OnZoneChanged.Broadcast(Player ? Player->GetPlayerController(GetWorld()) : nullptr, Previous, Candidate);
-			}
-		}
 	}
 #if !UE_BUILD_SHIPPING
 	const uint64 RequestStart = bRecordCost ? FPlatformTime::Cycles64() : 0;
@@ -300,6 +300,53 @@ void UACFCameraZoneSubsystem::Resolve(FPlayerState& State, EResolveMode Mode, fl
 		++Cost.Updates;
 	}
 #endif
+	// Told when the outermost call has finished (FNotifyScope): the selection and the request are in line by then, and
+	// State (an element of Players) is not used after any listener ran.
+	if (bCommit && (Candidate != Previous || bSelectedInvalid) && !bNotificationsClosed)
+	{
+		PendingNotifications.Add({ State.Player, Previous, Candidate });
+	}
+}
+
+void UACFCameraZoneSubsystem::DispatchNotifications()
+{
+	if (bNotifying || bNotificationsClosed || PendingNotifications.IsEmpty())
+	{
+		return;
+	}
+	TGuardValue<bool> Guard(bNotifying, true);
+	constexpr int32 MaxPerDispatch = 1024; // listeners that answer every change with another cannot hang the game thread
+	int32 Sent = 0;
+	while (Sent < PendingNotifications.Num() && Sent < MaxPerDispatch)
+	{
+		const FZoneNotification Change = PendingNotifications[Sent++]; // a copy: listeners may grow the queue
+		ULocalPlayer* Player = Change.Player.Get();
+		if (!Player)
+		{
+			continue; // the player object is gone
+		}
+		// A zone destroyed by an earlier listener of this dispatch is still passed (not collected before the dispatch ends).
+		UACFCameraZoneComponent* Previous = Change.Previous.Get(/*bEvenIfGarbage*/ true);
+		UACFCameraZoneComponent* New = Change.New.Get(/*bEvenIfGarbage*/ true);
+		OnZoneSelectionChanged.Broadcast(Player, Previous, New);
+		if (bNotificationsClosed)
+		{
+			return;
+		}
+		if (OnZoneChanged.IsBound())
+		{
+			OnZoneChanged.Broadcast(Player->GetPlayerController(GetWorld()), Previous, New);
+			if (bNotificationsClosed)
+			{
+				return;
+			}
+		}
+	}
+	PendingNotifications.RemoveAt(0, Sent, EAllowShrinking::No);
+	if (!PendingNotifications.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ACF Camera Zone: listeners keep changing selections; %d change(s) are told at the next call."), PendingNotifications.Num());
+	}
 }
 
 void UACFCameraZoneSubsystem::SyncRequest(FPlayerState& State, bool bCut)
@@ -539,6 +586,8 @@ void UACFCameraZoneSubsystem::Tick(float DeltaTime)
 	{
 		return;
 	}
+	// The listeners run when the whole frame update is done (they may add / remove local players or zones).
+	FNotifyScope Notify(*this);
 	// A destroyed suppression source releases its suppression (the requests come back with this frame's update).
 	PruneSuppressionSources();
 #if !UE_BUILD_SHIPPING

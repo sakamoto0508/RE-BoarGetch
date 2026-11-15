@@ -20,10 +20,16 @@ public:
 		TWeakObjectPtr<UACFCameraZoneComponent> New;
 	};
 	TArray<FCall> Calls;
+	/** Phase C: optional reaction (re-entrant calls from a Blueprint-like listener). */
+	TFunction<void(APlayerController*, UACFCameraZoneComponent*, UACFCameraZoneComponent*)> Callback;
 
 	UFUNCTION()
 	void OnZoneChanged(APlayerController* PlayerController, UACFCameraZoneComponent* PreviousZone, UACFCameraZoneComponent* NewZone)
 	{
 		Calls.Add({ PlayerController, PreviousZone, NewZone });
+		if (Callback)
+		{
+			Callback(PlayerController, PreviousZone, NewZone);
+		}
 	}
 };
