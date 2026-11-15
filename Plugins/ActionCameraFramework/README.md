@@ -2800,7 +2800,7 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 
 ### OpenLevel のときの処理の順序
 
-1. `PlayLevelTransition` → `Started`、Close のアニメーション（Subsystem の Tick、実時間、ポーズ中も進む）。画面キャプチャを使う演出は、この最初に 1 回だけ画面を読み出します。
+1. `PlayLevelTransition` → `Started`、Close のアニメーション（Subsystem の Tick、実時間、ポーズ中も進む）。画面キャプチャを使う演出は、この最初に 1 回だけ画面をキャプチャし、キャプチャができてから（通常 1〜2 フレーム後）Close のアニメーションを始めます（下の「キャプチャ」）。
 2. 被覆率 1 になったら、そのフレームが `CoveredFrames` フレーム表示されるまで待って `Covered`（ここまでは画面が確実に覆われている）。
 3. Level Name があれば ACF が `UGameplayStatics::OpenLevel` を呼ぶ（無ければゲームが `Covered` で呼ぶ）。`OpenLevel` は次のエンジンの Tick で読み込みを始めます。
 4. `PreLoadMap` → `LoadStarted`。ここから Game Thread は読み込みで止まり、オーバーレイの Tick も描画も止まります。画面には最後に表示された「完全に覆ったフレーム」が残ります（ちらつきなし）。
@@ -2814,7 +2814,7 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 
 すべて `M_ACFTransition` の 1 つの Custom ノード（HLSL）で描きます。共通の部品: 方向に沿った座標（Wipe 系）、中心からの距離・角度（Iris / Spiral 系）、値ノイズと fBm（Burn / Smoke / Ink）、Voronoi、SDF の形（蹄の跡・箱・線分）、1 ピクセルのアンチエイリアス、画面キャプチャの読み出し（歪み系）。各 ID は別の関数で、名前だけ違う同じ絵はありません（自動テストで全ペアの差を確認、後述）。
 
-「キャプチャ」= Close の開始時に読み出したゲーム画面（3D + UI）の静止画を歪ませる演出です。キャプチャが無いとき（NullRHI、`bCaptureScreen` オフ、読み出し失敗）と Open（新しいシーンはまだキャプチャできない）では、同じ ID の手続き的な絵（右の列）を描きます。使う Asset は全 ID で `M_ACFTransition` だけで、Texture は任意の差し替え（`OverlayTexture`）だけです。
+「キャプチャ」= Close の開始時に読み出したゲーム画面（3D + UI）の静止画を歪ませる演出です。キャプチャが無いとき（NullRHI、`bCaptureScreen` オフ、キャプチャの失敗）と Open（新しいシーンはまだキャプチャできない）では、同じ ID の手続き的な絵（右の列）を描きます。使う Asset は全 ID で `M_ACFTransition` だけで、Texture は任意の差し替え（`OverlayTexture`）だけです。
 
 | ID | 演出 | 系統 | 実装（Close） | キャプチャ無し / Open |
 |---|---|---|---|---|
@@ -2863,12 +2863,12 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 
 **41 Spiral Close / 42 Spiral Open**
 
-- 1 本の螺旋のリボン（腕は 1 本）です。花びら状の分割も、回転する扇形のシャッターも使っていません。リボンの両側の縁は滑らかな螺旋の曲線で、先端は丸く、マスクと映像の境界は 1 本の閉じた滑らかな曲線です（1 ピクセルのアンチエイリアス）。
-- 41: 黒いアルキメデス螺旋（幅が一定）のリボンが画面の端から入り、回り込みながら中心へ巻き、太くなって、映像の螺旋状の隙間を閉じます。最後は画面全体が黒。`Count` = 巻き数の調整（巻き数 = Count + 1.25。既定 Count 1.25 で 2.5 巻）、`Intensity` = 最初のリボンの太さ、`Reverse` = 巻く向きと回転の向き、`Center` = 中心。
-- 42: 対数螺旋（外ほど広い、オウムガイの形）の映像のリボンが中心に小さく現れ、全体が回転しながら外へ伸び、太くなって画面全体が見えます。`Count` = 回転量、`Intensity` = 螺旋の開き（1 巻での拡大率）、`Reverse` = 向き。
-- 41 と 42 は時間を逆にしたものではありません（螺旋の種類・伸びる向き・回転の量と向きが違う）。どちらも Close / Open の両方で使えます（41 を Open で再生 = 41 の逆再生）。
-- 被覆率 0 で完全に透明、1 で完全に黒になることを、Material の最後でも保証し（`T <= 0` → 0、`T >= 1` → 1）、自動テストで確認しています。
-- 参考動画: 以前の会話の参考動画はこの作業では参照できませんでした。形と動きは文章の仕様（螺旋状に回り込む・中央に小さな螺旋の開口・回転しながら外へ）から作っています。動画に合わせた調整は `Count` / `Intensity` / `Reverse` / `Duration` / Easing と、`ACFTransitionEffects.hlsl` の `E41` / `E42` で行います（目で見ての確認は未実施）。
+- 41 と 42 は **1 つの螺旋のマスク関数**（`ACFTransitionEffects.hlsl` の `SpiralCover(k)`）を共有します。41 は Close で被覆率 k を 0 → 1、42 は Open で同じ k を 1 → 0 に動かすので、**42 は 41 を時間的に逆再生した動き**です（同じ形・逆向きの動き）。既定の Easing は両方 Linear、Duration は 0.9 秒です（EaseIn / EaseOut の組なども逆再生の関係を保ちます）。
+- 形（螺旋ワイプ）: Center のまわりを針が回り（既定は 12 時から時計回り）、針が通ったところは「その時の針の半径」より外が黒くなります。針の半径は、最初の 15 % で画面の隅から R0（= Intensity × 画面の高さの半分）まで素早く縮み（Iris）、その後 `Count` 回転で 0 まで一定の割合で縮みます。最後の 1 回転で残りの螺旋状の隙間を閉じます（既定 Count 1 → 全部で 2 回転）。見えている部分は、境界が **1 本の滑らかな螺旋の曲線**（各角度の半径 = 針が最後に通った時の半径）と針の所の 1 段の段差だけの、1 つの開口です。花びらや複数のシャッターではありません。
+- 設定: `Reverse` = 反時計回り、`DirectionDegrees` = 針の開始角度（12 時から時計回りの度）、`Count` = 縮み切るまでの回転数、`Intensity` = Iris の後の半径（R0）、`Center` = 中心、**`bFromCenter`**（Phase 7D の追加）= 黒が Center から外へ広がる向き（オフ: 外から中心へ閉じる）。開閉の向き（Close / Open）は再生する Phase で決まり、Open は常に同じ動きの逆再生です。
+- 被覆率 0 で完全に透明、1 で完全に黒（Material の最後でも `T <= 0` → 0、`T >= 1` → 1 を保証）。
+- 自動テスト（`.Transitions.Render.AllEffects`）: 42 の Open を p だけ再生したフレームが 41 の被覆率 1 − p のフレームと一致する（アルファの差 2/255 以下、12 点）、30〜95 % の間で黒い部分が 1 つの領域（画面の端に触れる部分は 1 つとして数える）、`bFromCenter` で動きが変わる。
+- 参考動画との比較: ローカルの `ACF_Spiral_Wipe_Close_Open.mp4`（960×540、7.4 秒。Close 約 1.27〜2.13 秒、Open 約 2.90〜3.80 秒）と、実際の UE の描画を同じ進み具合で並べた画像を `MakeTransitionReview.ps1 -Reference` で作れます（下の「目視確認用の出力」）。Claude（AI）がこの並べた画像を見て、針が 12 時から時計回りに約 2 回転する、最初に円形に縮む、2 回転目に半円の部分が食べられて点で閉じる、Open がその逆再生、という構造が一致することを確認し、それに合わせて形を作り直しました。**人による比較の確認は未実施です。** 分かっている違い: 参考動画は 2 回転目が速い（前半約 60 % で 1 回転）、Open の針の後ろに半透明の暗い帯がある、中心が少し上（キャラクターの位置）。
 
 ### Preset と設定の項目
 
@@ -2886,7 +2886,7 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 
 Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPreset**。標準の 42 個は複製して使ってください（`CreateTransitionAssets.py` を再実行すると標準の値に戻ります）。
 
-**プロジェクトの設定**（Project Settings > Plugins > ACF Transitions）: Transition Material、Overlay Z Order（10000）、Capture Screen（オン）と Max Capture Width（1920）、Covered Frames（2）、World Ready Frames（3）、Level Timeout Seconds（30）、Use Movie Player During Load（オフ）、Max Delta Seconds（0.1。ヒッチや再開で演出が飛ばない）。
+**プロジェクトの設定**（Project Settings > Plugins > ACF Transitions）: Transition Material、Overlay Z Order（10000）、Capture Screen（オン）、Capture On Gpu（オン）と Max Capture Wait Frames（6）、Max Capture Width（1920。同期の読み出しのときだけ）、Covered Frames（2）、World Ready Frames（3）、Level Timeout Seconds（30）、Use Movie Player During Load（オフ）、Max Delta Seconds（0.1。ヒッチや再開で演出が飛ばない）。
 
 ### Editor Preview
 
@@ -2927,6 +2927,10 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 | `.Transitions.Render.ViewportFullCover`（描画あり） | 実際の Game Viewport で、42 種類それぞれを被覆率 1 で表示し、World の描画を止めても画面が変わらない（= World が 1 ピクセルも見えない）こと。何も出ていないときは変わること |
 | `.Transitions.Profile.Cost`（描画あり） | 下の「性能」 |
 | `.Editor.Transitions.PreviewPanel` | Preview の 42 種類の再生・完全被覆に達する・終わると消える・Material の Effect の値 |
+| `.Transitions.Capture.Profile`（描画あり） | 下の「キャプチャ」: 同期の読み出しと GPU のコピーを同じ条件で 10 回ずつ計測し、GPU のコピーの色が読み出しと同じこと（生の値、Material を通した絵） |
+| `.Transitions.Capture.FailureRecovers` | `ACF.Transition.Debug.FailCapture 1` で全キャプチャを失敗させても、キャプチャを使う Close / Open が Finished まで進み、何も残らない |
+| `.Transitions.Capture.CancelWhilePending` | キャプチャを待っている間の Cancel / Interrupt / Skip で、待ちのキャプチャ・キャプチャ・オーバーレイが残らない |
+| `.Transitions.Record.Frames`（描画あり、回帰には含めない） | 環境変数 `ACF_RECORD_TRANSITIONS` があるときだけ、実際の Game Viewport の連番を保存（下の「目視確認用の出力」） |
 | `.Editor.Transitions.PieLevelTravel` | PIE の中の `OpenLevel`（A → B）: イベントの順序、ロード開始時の被覆率 1 とオーバーレイ、到着後に消える |
 
 実行: `Scripts/RunTests.sh --context game ActionCameraFramework.Transitions`（NullRHI。描画のテストは Skip）、`--context samples ActionCameraFramework.Transitions`（描画あり）、`--context editor-rendered ActionCameraFramework.Editor.Transitions`。
@@ -2935,35 +2939,67 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 
 `.Transitions.Profile.Cost`、1280×720 の描画ありの `-game`（GPU は計測した環境のもの）。GPU の値は「その演出を被覆率 0.5 で毎フレーム描いたときの GPU のフレーム時間 − 何も出していないとき」の 120 フレームの平均です。
 
-計測環境: RTX 4060 Laptop GPU、1280×720、何も出していないときの GPU フレーム時間 3.049 ms。
+計測環境: RTX 4060 Laptop GPU、1280×720、何も出していないときの GPU フレーム時間 3.517 ms（2026-11-15 の最終の計測。Phase 7D の最初の計測 3.049 ms とは GPU の状態が違い、増分も ±0.1 ms 程度ぶれます）。
 
 | ID | 演出 | GPU の増分 |
 | --- | --- | --- |
-| 01 | Black Fade | +0.019 ms |
-| 04 | Cross Dissolve（キャプチャ） | +0.042 ms |
-| 12 | Scanlines（キャプチャ） | +0.049 ms |
-| 15 | Mosaic（キャプチャ） | +0.050 ms |
-| 18 | Portal Ring | +0.093 ms |
-| 19 | Cell Disintegration | +0.538 ms（最も重い） |
-| 22 | Film Burn | +0.087 ms |
-| 25 | Net Sweep | +0.036 ms |
-| 30 | Wireframe Conversion（キャプチャ） | +0.049 ms |
-| 37 | Fog / Smoke | +0.117 ms |
-| 41 | Spiral Close | +0.081 ms |
-| 42 | Spiral Open | +0.071 ms |
+| 01 | Black Fade | +0.051 ms |
+| 04 | Cross Dissolve（キャプチャ） | +0.048 ms |
+| 12 | Digital Glitch（キャプチャ） | +0.136 ms |
+| 15 | Zoom Rush（キャプチャ） | +0.208 ms |
+| 18 | Cell Disintegration | +0.261 ms |
+| 19 | Ink Spread | +0.684 ms（最も重い） |
+| 22 | Film Burn | +0.202 ms |
+| 25 | Net Sweep | +0.013 ms |
+| 30 | Wireframe Conversion（キャプチャ） | +0.193 ms |
+| 37 | Fog / Smoke | +0.284 ms |
+| 41 | Spiral Close | +0.192 ms |
+| 42 | Spiral Open | +0.142 ms |
 
-- CPU（Subsystem の Tick + オーバーレイの更新）: 平均 0.0358 ms、最大 0.2569 ms。
+- CPU（Subsystem の Tick + オーバーレイの更新）: 平均 0.0364 ms、最大 0.5675 ms（431 フレーム）。
 - 計測は上の 12 種類だけです（他の 30 種類の GPU の値は計測していません）。数値はこの GPU とこの解像度のもので、別の環境では変わります。
 
 - 何も再生していないとき: Subsystem は Tick しません（`IsTickable` = false）、オーバーレイは Viewport に無く、Material Instance とキャプチャは解放済み（テストで確認）。覆ったまま保持している間は Tick せず、オーバーレイの描画（1 枚の全画面の UI Material）だけが続きます。
 - 毎フレームの処理: Material のパラメーターの設定（既にある値の更新）と、文字が変わったときだけの `SetText`。毎フレームのメモリ確保をする処理は書いていません（確保の回数の計測はしていません）。
-- キャプチャ: キャプチャを使う演出（04, 12, 14, 15, 16, 20, 23, 29, 30, 32, 36, 38, 39, 40）は Close の開始時に 1 回、画面を同期で読み出します。720p で最大 48.0 ms の 1 回のヒッチです。気になる場合は `Capture Screen` をオフ（手続き的な絵になる）にするか、ヒッチが目立たない場面で使ってください。
+- キャプチャ: 下の「キャプチャ」。
+
+### キャプチャ
+
+キャプチャを使う演出（04, 12, 14, 15, 16, 20, 23, 29, 30, 32, 36, 38, 39, 40）は、Close の開始時に 1 回だけゲーム画面（3D + UI）をキャプチャします。
+
+**以前の停止の原因**（Phase 7D の最初の版、最大 48 ms と記録していたもの）: `FSlateApplication::TakeScreenshot` は、(1) ウィンドウ全体の Slate をもう一度描き（`PrivateDrawWindows`）、(2) その描画の中で Back Buffer を GPU から CPU へ同期で読み出し（`ReadSurfaceData`）、(3) Game Thread で `FlushRenderingCommands` して Render Thread と GPU の完了を待ちます。その後の縮小は 0 ms（720p）、Texture の作成と転送は約 1.5 ms でした。時間のほとんどは (1)〜(3)（計測: TakeScreenshot の中で平均 44.0 ms）で、GPU の待ちを含むので値は GPU の負荷で大きく変わります（同じ PC の 3 回の実行で、呼び出しの平均 45〜88 ms、1 回の最大 111 ms）。初回の Shader の準備は、この計測では主因ではありませんでした（1 回目と 2 回目以降の差が小さい）。
+
+**変更**（`bCaptureOnGpu`、既定オン）: Slate の `OnBackBufferReadyToPresent`（Render Thread、そのウィンドウのフレームが表示される直前）で、Back Buffer の Viewport の部分を GPU 上で Render Target にコピーします（`CopyTexture`。CPU への読み出し・Slate の再描画・Game Thread の待ちは無し）。Close は、コピーができるまで（通常 1〜2 フレーム）被覆率 0 のまま待ってから始まります（キャプチャ前の画面が変わらない・演出の時間は待ちを含まない）。`MaxCaptureWaitFrames`（6）を過ぎても届かない、またはコピーできない（HDR 出力・8 bit BGRA と 10 bit A2B10G10R10 以外の Back Buffer・ウィンドウの変化）ときは、従来の同期の読み出しに戻り、それも失敗したらその ID の手続き的な絵で続けます（`.Capture.FailureRecovers`）。Back Buffer が 10 bit（UE 5 の既定 `r.DefaultBackBufferPixelFormat` 4）のときは同じ形式でコピーし、sRGB のデコードを Material で行います（`SnapshotEncoded`）。
+
+**計測**（`.Transitions.Capture.Profile`、RTX 4060 Laptop、1280×720 の `-game`、同じマップ・同じ演出（04）で 10 回ずつ。1 回目は別に記録）:
+
+| 方式 | Close の開始の呼び出し（Game Thread） | その後 12 フレームの最長フレーム − 直前の中央値 | キャプチャまでの待ち |
+| --- | --- | --- | --- |
+| 同期の読み出し（変更前） | 平均 45.5 ms / 最大 56.7 ms（1 回目 39.9 ms） | 平均 3.0 ms | 0 フレーム |
+| GPU のコピー（変更後） | 平均 0.08 ms / 最大 0.11 ms（1 回目 0.06 ms） | 平均 3.0 ms / 最大 4.7 ms | 最大 3 フレーム |
+
+GPU のコピーと同期の読み出しの同じ画面の差: 生の値で平均 0.34/255、Material（Cross Dissolve 30 %）を通した絵で 0.49/255。GPU のコピーは Viewport の大きさのまま持ちます（720p で約 3.7 MB の VRAM、Close の間だけ）。
+
+### 目視確認用の出力
+
+実際の UE の描画（Game Viewport のスクリーンショット: 3D・ゲームの UI・オーバーレイ）を、番号と名前つきで確認する手順です。
+
+1. `ACF_RECORD_TRANSITIONS=1 Scripts/RunTests.sh --context samples ActionCameraFramework.Transitions.Record`（`41,42` のように番号でも可）→ `Saved/ACFTransitions/Record/<ID>_<C|O>_<NN>.png`（42 種類 × Close 17 点 + Open 17 点 = 1428 枚、480×270）。演出を ShowStill で各点に止め、そのときの実際の画面を保存します。
+2. `powershell -ExecutionPolicy Bypass -File Scripts/Transitions/MakeTransitionReview.ps1 -Project <プロジェクト>`（Windows 標準の Media Foundation を使い、追加のツールは不要）→ `Saved/ACFTransitions/Review/`:
+   - `Frames/`: 全フレームに番号・名前・Close / Open と %
+   - `Sheet_01-14.png` / `Sheet_15-28.png` / `Sheet_29-42.png`: 1 行 1 演出、Close 0 / 25 / 50 / 75 / 100 %、Open 25 / 50 / 75 / 100 %（開始・中間・終了）
+   - `ACF_Transitions_42.mp4`: 全フレームを ID 順に（約 113 秒、各 Phase の最初と最後は少し長く表示）
+   - `-Reference <動画> -RefClose 開始,終了 -RefOpen 開始,終了` を付けると `Spiral_Reference.png`（参考動画の Close / Open と 41 / 42 を同じ進み具合で 9 点ずつ）
+
+実時間の再生（ShowStill ではない動き）は、`ACF.Transition.PreviewAll`（PIE / Development）と、パッケージ版の `-ACFTransitionDemo=All` で見られます。
+
+**人による目視確認は未実施です**（42 種類の見た目、41 / 42 と参考動画の比較）。上の出力は Claude が作成し、41 / 42 の比較画像と全体のシートを Claude が見て確認しただけです。
 
 ### 別のプロジェクトへの導入
 
 `Plugins/ActionCameraFramework` をフォルダごと（`Binaries` / `Intermediate` / `Docs` は不要）別のプロジェクトの `Plugins/` にコピーし、`.uproject` で有効にするだけで使えます。プロジェクトの設定・ini・ゲームのコードの追加はいりません（Material と Preset はプラグインの Content にあり、パッケージ時のクックも Editor モジュールが自動で追加します）。
 
-確認済み（2026-11-15）: C++ のゲームモジュールが無い空のプロジェクト（`ACFPortTest`、UE 5.8）にコピーし、`Build.bat UnrealEditor -Project=...` でビルド成功。そのプロジェクトで `--context game ActionCameraFramework.Transitions` 7 pass / 3 skip（描画のテスト）、`--context samples` 10 / 10 pass、`--context editor-rendered ActionCameraFramework.Editor.Transitions` 2 / 2 pass。
+確認済み（2026-11-15、最終品質改善の後に再確認）: C++ のゲームモジュールが無い空のプロジェクト（`ACFPortTest`、UE 5.8）にコピーし、`Build.bat UnrealEditor -Project=...` でビルド成功。そのプロジェクトで `--context game ActionCameraFramework.Transitions` 9 pass / 5 skip（描画が必要なテストと Record）、`--context samples` 13 pass / 1 skip（Record）、`--context editor-rendered ActionCameraFramework.Editor.Transitions` 2 / 2 pass。
 
 ### パッケージ版
 
@@ -2974,7 +3010,8 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 | Development | PASS（毎回 `PreLoadMap` / `PostLoadMap` で被覆率 1.000・オーバーレイあり、イベント Started → Covered → LoadStarted → LoadCompleted → Finished、1 往復 約 2.4 秒） | PASS（42 / 42、失敗 0、終了後にオーバーレイ・View が残っていない） |
 | Shipping | PASS（同上、1 往復 2.36〜2.62 秒） | PASS（42 / 42、失敗 0、残りなし） |
 
-- サンプルのマップは標準ではクックされません。デモを含めるときは `-additionalcookeroptions=-ACFCookTransitionSamples` を付けてください（Material と 42 の Preset は常にクックされます）。
+- クックの確認（最終品質改善の後）: Development / Shipping の IoStore コンテナ（`REBoarGetch-Windows.utoc`、`UnrealPak -List`）に、`Content/Transitions` の 53 パッケージ（Material 1・Preset 42・サンプル 10）がすべて入っていることを、ソースの一覧と突き合わせて確認。`-ACFTransitionDemo=All` では、キャプチャを使う 14 種類すべてが GPU のコピーでキャプチャされた（各 2 フレーム待ち、読み出しへの切り替え 0。デモのログの `CAPTURE` 行）。
+- サンプルのマップは標準ではクックされません。
 - Shipping はコマンドラインのマップを無視する（`UE_ALLOW_MAP_OVERRIDE_IN_SHIPPING` = 0）ので、`-ACFTransitionDemo=...` を付けて起動すると、最初のゲームのマップ（このプロジェクトでは L_Lobby）が始まった後にプラグインが `L_ACFTransitionA` を開き直します。この引数が無いときは何もしません。
 - デモの結果は `<Saved>/ACFTransitionDemo.log` に書きます（Shipping は `%LOCALAPPDATA%/<Project>/Saved`）。`-ACFTransitionDemoExit` で終了後にゲームを閉じます。
 
@@ -2983,8 +3020,8 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 - ロード中のアニメーション: ブロッキングの `OpenLevel` の間は Game Thread が止まるので、演出は進みません（最後の完全に覆ったフレームが残る）。`bUseMoviePlayerDuringLoad` の Loading Screen は単色 + 文字で、演出の絵ではありません。
 - 新しい World の映像を歪ませる Open はできません（UI Material はシーンの色を読めない・新しいシーンのキャプチャは表示前に取れない）。キャプチャを使う演出の Open は、その ID の手続き的な絵です（Cross Dissolve だけは古い画面のキャプチャを Open で使う）。
 - Wireframe Conversion は画面のエッジ検出（Sobel）で、メッシュのワイヤーフレームではありません。Match Cut は形（スポット）の一致で、ゲームのカメラの構図を合わせるのはゲーム側です。
-- キャプチャは画面の同期の読み出しで、1 回のヒッチがあります（上の「性能」）。NullRHI・専用サーバーではキャプチャも描画もしません（タイミングとイベントは動く）。
+- キャプチャは GPU のコピーで、Close は 1〜2 フレーム遅れて始まります。HDR 出力や 8 / 10 bit 以外の Back Buffer では同期の読み出し（1 回のヒッチ）になります（上の「キャプチャ」）。NullRHI・専用サーバーではキャプチャも描画もしません（タイミングとイベントは動く）。
 - 分割画面: オーバーレイは Game Viewport 全体に 1 枚です（プレイヤーごとの演出はありません）。
-- 41 / 42 の形と動きは、参考動画を見ずに文章の仕様から作りました。人が目で見て参考動画と比べる確認は未実施です。
-- 人による Editor 上の操作の確認（Preview タブの操作感、42 種類の見た目の好み）は未実施です。見た目の確認は自動テストのコンタクトシートの画像だけです。
+- 41 / 42 は参考動画の構造に合わせましたが、人による比較の確認は未実施で、速さの配分・半透明の帯・中心の位置に違いがあります（上の「41 Spiral Close / 42 Spiral Open」）。
+- 人による Editor 上の操作の確認（Preview タブの操作感、42 種類の見た目の好み）は未実施です。見た目の確認用に、実際の描画の連番・代表フレームのシート・MP4 を出力できます（上の「目視確認用の出力」）。
 - Seamless Travel（`ServerTravel`）と Level Streaming の実際の組み合わせは自動テストしていません（`Manual Load` の通知の流れはテスト済み）。

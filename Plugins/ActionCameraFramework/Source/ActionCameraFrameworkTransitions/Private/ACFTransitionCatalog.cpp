@@ -76,8 +76,8 @@ namespace ACFTransition
 			{ 38, TEXT("Shockwave"), C::Distortion, true, false, TEXT("A refracting ring displaces the capture and leaves the colour behind; Open: ring with chromatic edge."), 0.7f, EZ::EaseOut, White, White, 0, 1, 1, 0, false },
 			{ 39, TEXT("Match Cut"), C::CameraScreenshot, true, false, TEXT("The frozen frame zooms to a soft spotlight that holds on Center, then cuts; Open pops the same spot and widens."), 0.9f, EZ::Linear, Black, White, 0, 1, 1, 0, false },
 			{ 40, TEXT("Whip Pan"), C::CameraScreenshot, true, false, TEXT("The capture pans away with a 12-tap motion blur; Open: fast horizontal streak rows."), 0.4f, EZ::EaseIn, FLinearColor(0.12f, 0.12f, 0.14f), FLinearColor(0.5f, 0.5f, 0.55f), 0, 1, 1, 0, false },
-			{ 41, TEXT("Spiral Close"), C::IrisSpiral, false, false, TEXT("Archimedean snail opening that shrinks and turns: the black wraps in along one smooth spiral curve."), 1.1f, EZ::EaseIn, Black, White, 0, 1.25f, 1, 0, false },
-			{ 42, TEXT("Spiral Open"), C::IrisSpiral, false, false, TEXT("Logarithmic snail opening that appears small at the centre and grows outward while it turns."), 1.2f, EZ::EaseOut, Black, White, 0, 1.0f, 1, 0, true },
+			{ 41, TEXT("Spiral Close"), C::IrisSpiral, false, false, TEXT("Spiral wipe: a hand turns around Center and blacks out everything beyond its shrinking radius, so the scene closes in one smooth spiral to a point. Same mask as 42."), 1.0f, EZ::Linear, Black, White, 0, 1.0f, 1, 0, false },
+			{ 42, TEXT("Spiral Open"), C::IrisSpiral, false, false, TEXT("The exact reverse of 41 Spiral Close: the scene opens from a point along the same spiral while the hand turns back."), 0.9f, EZ::Linear, Black, White, 0, 1.0f, 1, 0, false },
 		};
 
 		TArray<FACFTransitionEffectInfo> BuildInfos()

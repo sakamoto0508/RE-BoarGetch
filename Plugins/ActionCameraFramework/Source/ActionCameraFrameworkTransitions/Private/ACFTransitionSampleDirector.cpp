@@ -1,6 +1,7 @@
 #include "ACFTransitionSampleDirector.h"
 
 #include "ACFTransitionCatalog.h"
+#include "ACFTransitionSettings.h"
 #include "ACFTransitionSubsystem.h"
 #include "ACFTransitionView.h"
 #include "Containers/Ticker.h"
@@ -275,6 +276,17 @@ void AACFTransitionSampleDirector::HandleEvent(FACFTransitionHandle Handle, EACF
 	if (Handle != ACFTransitionDemo::Current || !ACFTransition::IsTerminal(Event))
 	{
 		return;
+	}
+	if (!bEffectOpenNext)
+	{
+		// A Close ended: how the screen capture of the capture-based effects was taken (README 33 章「キャプチャ」).
+		const UACFTransitionSubsystem* S = UACFTransitionSubsystem::Get(this);
+		const EACFTransitionEffect Effect = ACFTransition::FromId(EffectCursor + 1);
+		if (S && ACFTransition::GetEffectInfo(Effect).bUsesSnapshot)
+		{
+			WriteDemoLog(FString::Printf(TEXT("CAPTURE %02d captured=%d gpu=%d waited=%d frames fallback=%d"), EffectCursor + 1, S->HasCapture() ? 1 : 0,
+				GetDefault<UACFTransitionProjectSettings>()->bCaptureOnGpu && !S->DidLastCaptureFallBack() ? 1 : 0, S->GetLastCaptureWaitFrames(), S->DidLastCaptureFallBack() ? 1 : 0));
+		}
 	}
 	if (bEffectOpenNext)
 	{

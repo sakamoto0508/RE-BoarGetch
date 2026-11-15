@@ -27,7 +27,8 @@
  *  - AllEffects: the transition widget (the same widget + M_ACFTransition as in the game) is rendered off-screen by Slate
  *    (FWidgetRenderer) for every effect at several coverages, Close and Open, over a known test picture that is also the
  *    screen capture. Checked: coverage 0 draws nothing, coverage 1 covers every pixel; every pair of effects differs (the
- *    mean difference of their frame sequences is above a threshold: no effect is another one under a second name).
+ *    mean difference of their frame sequences is above a threshold: no effect is another one under a second name),
+ *    except 41 / 42, which share one spiral mask by design (42 is checked to be the exact reverse of 41).
  *    Contact sheets go to Saved/ACFTransitions/ (one cell per effect, ID order, 7 per row).
  *  - ViewportFullCover: in the real game viewport, each effect frozen at coverage 1 hides the world completely (the
  *    frame does not change when world rendering is switched off) and at coverage 0 shows it.
@@ -119,6 +120,49 @@ namespace ACFTransitionRender
 			return Out;
 		}
 	};
+
+	static int32 MaxAlphaDiff(const TArray<FColor>& A, const TArray<FColor>& B)
+	{
+		int32 M = A.Num() == B.Num() ? 0 : 255;
+		for (int32 i = 0; i < A.Num() && i < B.Num(); ++i) { M = FMath::Max(M, FMath::Abs((int32)A[i].A - (int32)B[i].A)); }
+		return M;
+	}
+
+	/**
+	 * 4-connected regions of covered pixels (alpha > 127), ignoring specks under 6 pixels (anti-aliasing). The regions that
+	 * touch the frame border count as one (a ribbon that leaves the screen and comes back is still one ribbon).
+	 */
+	static int32 CountRegions(const TArray<FColor>& P, int32 W, int32 H)
+	{
+		TArray<uint8> Seen;
+		Seen.Init(0, W * H);
+		int32 Regions = 0;
+		bool bAnyBorder = false;
+		TArray<int32> Stack;
+		for (int32 i = 0; i < W * H; ++i)
+		{
+			if (Seen[i] || P[i].A <= 127) { continue; }
+			int32 Size = 0;
+			bool bBorder = false;
+			Stack.Reset();
+			Stack.Add(i);
+			Seen[i] = 1;
+			while (Stack.Num() > 0)
+			{
+				const int32 j = Stack.Pop(EAllowShrinking::No);
+				++Size;
+				const int32 x = j % W, y = j / W;
+				bBorder |= x == 0 || y == 0 || x == W - 1 || y == H - 1;
+				const int32 N[4] = { x > 0 ? j - 1 : -1, x < W - 1 ? j + 1 : -1, y > 0 ? j - W : -1, y < H - 1 ? j + W : -1 };
+				for (int32 k : N)
+				{
+					if (k >= 0 && !Seen[k] && P[k].A > 127) { Seen[k] = 1; Stack.Add(k); }
+				}
+			}
+			if (bBorder) { bAnyBorder = true; } else { Regions += Size >= 6 ? 1 : 0; }
+		}
+		return Regions + (bAnyBorder ? 1 : 0);
+	}
 
 	static float MeanDiff(const TArray<FColor>& A, const TArray<FColor>& B)
 	{
@@ -275,6 +319,10 @@ bool FACFTransitionRenderAllTest::RunTest(const FString&)
 	{
 		for (int32 b = a + 1; b < ACFTransition::NumEffects; ++b)
 		{
+			if (a + 1 == 41 && b + 1 == 42)
+			{
+				continue; // one shared spiral mask by design (Close and its exact reverse); checked below
+			}
 			const float D = MeanDiff(Signatures[a], Signatures[b]);
 			if (D < MinDiff) { MinDiff = D; MinA = a + 1; MinB = b + 1; }
 			if (D < Threshold)
@@ -291,7 +339,12 @@ bool FACFTransitionRenderAllTest::RunTest(const FString&)
 		NumShots, FPlatformTime::Seconds() - T0, MinA, MinB, MinDiff, Close.IsEmpty() ? TEXT("none") : *FString::Join(Close, TEXT(", "))));
 	AddInfo(FString::Printf(TEXT("Contact sheets: %s"), *FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("ACFTransitions")))));
 
-	// Spiral strips: 41 and 42 at 11 coverages each (shape review).
+	// Spiral strips: 41 and 42 at 12 points each (shape review), plus the checks of the shared spiral mask:
+	//  - 42 Spiral Open is the exact time reverse of 41 Spiral Close: Open with p played == Close at coverage 1 - p.
+	//  - The black is one connected region (one ribbon, not petals or several shutters) from 30 % to 95 % coverage.
+	//  - The start point setting (bFromCenter) changes the motion.
+	int32 SpiralFailures = 0;
+	TArray<TArray<FColor>> CloseFrames;
 	for (const EACFTransitionEffect Effect : { EACFTransitionEffect::SpiralClose, EACFTransitionEffect::SpiralOpen })
 	{
 		const EACFTransitionPhase Phase = Effect == EACFTransitionEffect::SpiralClose ? EACFTransitionPhase::Close : EACFTransitionPhase::Open;
@@ -305,12 +358,42 @@ bool FACFTransitionRenderAllTest::RunTest(const FString&)
 			const float Played = k / 11.f;
 			const float Coverage = Phase == EACFTransitionPhase::Close ? Played : 1.f - Played;
 			View.Apply(ACFTransition::MakeDefaultSettings(Effect, Phase), Phase, Coverage, 0.f, nullptr);
-			Blit(Strip, StripW, k % 6, k / 6, Off.Draw(View), ScenePixels);
+			TArray<FColor> Pixels = Off.Draw(View);
+			if (Phase == EACFTransitionPhase::Close)
+			{
+				CloseFrames.Add(Pixels);
+				const int32 Regions = CountRegions(Pixels, CellW, CellH);
+				if (Coverage > 0.3f && Coverage < 0.95f && Regions != 1) // earlier the ribbon leaves and re-enters the frame
+				{
+					AddError(FString::Printf(TEXT("41 at coverage %.2f: the black is %d separate regions (expected one ribbon)."), Coverage, Regions));
+					++SpiralFailures;
+				}
+			}
+			else
+			{
+				const int32 Mirror = 11 - k; // the Close frame with the same coverage
+				const int32 Diff = MaxAlphaDiff(Pixels, CloseFrames[Mirror]);
+				if (Diff > 2)
+				{
+					AddError(FString::Printf(TEXT("42 with %.2f played differs from 41 at coverage %.2f (max alpha difference %d): the masks are not shared."), Played, Coverage, Diff));
+					++SpiralFailures;
+				}
+			}
+			Blit(Strip, StripW, k % 6, k / 6, Pixels, ScenePixels);
 		}
 		SaveSheet(FString::Printf(TEXT("Spiral_%02d"), (int32)Effect), Strip, StripW, StripH);
 	}
+	{
+		FACFTransitionView View;
+		View.SetFallbackSize(FVector2D(CellW, CellH));
+		FACFTransitionSettings FromCenter = ACFTransition::MakeDefaultSettings(EACFTransitionEffect::SpiralClose);
+		FromCenter.bFromCenter = true;
+		View.Apply(FromCenter, EACFTransitionPhase::Close, 5.f / 11.f, 0.f, nullptr);
+		const int32 Diff = MaxAlphaDiff(Off.Draw(View), CloseFrames[5]);
+		TestTrue(TEXT("bFromCenter changes the spiral"), Diff > 128);
+	}
 	SceneTex->RemoveFromRoot();
-	return CoverFailures == 0;
+	return CoverFailures == 0 && SpiralFailures == 0;
 }
 
 namespace ACFTransitionViewport

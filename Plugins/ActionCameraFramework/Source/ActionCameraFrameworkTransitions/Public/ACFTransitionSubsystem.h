@@ -10,6 +10,7 @@
 class APlayerController;
 class FACFTransitionView;
 class UACFTransitionPreset;
+class UTexture;
 class UTexture2D;
 class UWorld;
 
@@ -139,6 +140,11 @@ public:
 	bool IsOverlayAttached() const { return bOverlayAttached; }
 	bool HasView() const { return View.IsValid(); }
 	bool HasCapture() const { return Capture != nullptr; }
+	/** A GPU capture is requested and the Close waits for it (README 33 章「キャプチャ」). */
+	bool IsCapturePending() const { return PendingCapture.IsValid(); }
+	/** Frames the last Close waited for its capture, and whether it fell back to the synchronous read back (or to no capture). */
+	int32 GetLastCaptureWaitFrames() const { return LastCaptureWaitFrames; }
+	bool DidLastCaptureFallBack() const { return bLastCaptureFellBack; }
 	FACFTransitionView* GetView() const { return View.Get(); }
 	/** CPU seconds of the last Tick (cycles of this subsystem only). */
 	double GetLastTickSeconds() const { return LastTickSeconds; }
@@ -197,6 +203,8 @@ private:
 	void AttachOverlay();
 	void DetachOverlay();
 	void ReleaseCapture();
+	void StartCapture();
+	bool ResolvePendingCapture();
 	void ApplyInputLock(bool bLock);
 	float GetTimeoutSeconds() const;
 	const FACFTransitionSettings& CurrentSettings() const;
@@ -234,7 +242,11 @@ private:
 	TWeakObjectPtr<class UGameViewportClient> AttachedViewport;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UTexture2D> Capture = nullptr;
+	TObjectPtr<UTexture> Capture = nullptr;
+
+	TSharedPtr<class FACFTransitionGpuCapture> PendingCapture;
+	int32 LastCaptureWaitFrames = 0;
+	bool bLastCaptureFellBack = false;
 
 	TArray<TWeakObjectPtr<APlayerController>> LockedControllers;
 	bool bInputLocked = false;

@@ -24,11 +24,21 @@ public:
 	int32 OverlayZOrder = 10000;
 
 	/** Capture the screen for the effects that distort it (Cross Dissolve, Zoom Rush, ...). Off: they draw their
-	 *  procedural variant. The capture reads the frame back once at the start of the Close (a one-frame hitch). */
+	 *  procedural variant. The capture is taken once at the start of the Close (bCaptureOnGpu). */
 	UPROPERTY(Config, EditAnywhere, Category = "Rendering")
 	bool bCaptureScreen = true;
 
-	/** The capture is halved until it is at most this wide (memory / upload cost). */
+	/** Copy the screen on the GPU when the frame is presented (no CPU read back, no game thread stall; the Close starts one or
+	 *  two frames later, when the copy is ready). Off, or when the copy is not possible (HDR / non-BGRA back buffer): the
+	 *  synchronous read back (a one-frame hitch, README 33 章「キャプチャ」). */
+	UPROPERTY(Config, EditAnywhere, Category = "Rendering")
+	bool bCaptureOnGpu = true;
+
+	/** Frames a Close waits for the GPU capture before it uses the read back instead. */
+	UPROPERTY(Config, EditAnywhere, Category = "Rendering", meta = (ClampMin = "1", ClampMax = "30"))
+	int32 MaxCaptureWaitFrames = 6;
+
+	/** The read back capture is halved until it is at most this wide (memory / upload cost). The GPU copy keeps the viewport size. */
 	UPROPERTY(Config, EditAnywhere, Category = "Rendering", meta = (ClampMin = "256"))
 	int32 MaxCaptureWidth = 1920;
 

@@ -152,6 +152,10 @@ struct ACTIONCAMERAFRAMEWORKTRANSITIONS_API FACFTransitionSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Look")
 	bool bReverse = false;
 
+	/** Spiral Close / Open (41, 42): the black ribbon starts at Center and winds outward (off: it enters at the screen edge and winds inward). Open plays the same motion backwards. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Look")
+	bool bFromCenter = false;
+
 	/** Effect strength (distortion amount, spiral tightness, glitch amount, net density, print size, ...). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Look", meta = (ClampMin = "0", UIMin = "0.2", UIMax = "3"))
 	float Intensity = 1.f;

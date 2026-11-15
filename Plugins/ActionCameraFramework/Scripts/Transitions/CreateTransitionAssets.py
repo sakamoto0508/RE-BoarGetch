@@ -30,7 +30,7 @@ SCALARS = [  # (parameter, custom input, default)
     ('Effect', 'Effect', 1.0), ('Progress', 'T', 0.0), ('Opening', 'Opening', 0.0), ('Intensity', 'Intensity', 1.0),
     ('Direction', 'Direction', 0.0), ('Seed', 'Seed', 0.0), ('Aspect', 'Aspect', 1.7778), ('Time', 'Time', 0.0),
     ('Softness', 'Softness', 0.0), ('Count', 'Count', 1.0), ('Reverse', 'Reverse', 1.0), ('UseSnapshot', 'UseSnap', 0.0),
-    ('UseOverlay', 'UseOver', 0.0),
+    ('UseOverlay', 'UseOver', 0.0), ('Origin', 'Origin', 0.0), ('SnapshotEncoded', 'SnapEnc', 0.0),
 ]
 VECTORS = [('Color', 'Col', (0, 0, 0, 1)), ('Color2', 'Col2', (1, 1, 1, 1)), ('Center', 'Center', (0.5, 0.5, 0, 0))]
 TEXTURES = [('Snapshot', 'SnapTex', '/Engine/EngineResources/Black.Black'),

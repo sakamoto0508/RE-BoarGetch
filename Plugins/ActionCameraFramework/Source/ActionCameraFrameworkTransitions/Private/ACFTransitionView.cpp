@@ -4,6 +4,13 @@
 #include "ACFTransitionSettings.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
+#include "Engine/RendererSettings.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "HAL/IConsoleManager.h"
+#include "RHICommandList.h"
+#include "RHIUtilities.h"
+#include "Rendering/SlateRenderer.h"
+#include "Slate/SlateViewportProvider.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -32,6 +39,8 @@ namespace ACFTransitionParams
 	static const FName Softness(TEXT("Softness"));
 	static const FName Count(TEXT("Count"));
 	static const FName Reverse(TEXT("Reverse"));
+	static const FName Origin(TEXT("Origin"));
+	static const FName SnapshotEncoded(TEXT("SnapshotEncoded"));
 	static const FName UseSnapshot(TEXT("UseSnapshot"));
 	static const FName UseOverlay(TEXT("UseOverlay"));
 	static const FName Color(TEXT("Color"));
@@ -208,7 +217,11 @@ void FACFTransitionView::Apply(const FACFTransitionSettings& Settings, EACFTrans
 		MID->SetScalarParameterValue(Softness, Settings.Softness);
 		MID->SetScalarParameterValue(Count, FMath::Max(Settings.Count, 0.25f));
 		MID->SetScalarParameterValue(Reverse, Settings.bReverse ? -1.f : 1.f);
+		MID->SetScalarParameterValue(Origin, Settings.bFromCenter ? 1.f : 0.f);
 		MID->SetScalarParameterValue(UseSnapshot, Snapshot ? 1.f : 0.f);
+		// The 10-bit GPU copy is not an sRGB texture: the material decodes it.
+		const UTextureRenderTarget2D* SnapshotTarget = Cast<UTextureRenderTarget2D>(Snapshot);
+		MID->SetScalarParameterValue(SnapshotEncoded, SnapshotTarget && !SnapshotTarget->IsSRGB() ? 1.f : 0.f);
 		MID->SetScalarParameterValue(UseOverlay, Settings.OverlayTexture ? 1.f : 0.f);
 		MID->SetVectorParameterValue(Color, Settings.Color);
 		MID->SetVectorParameterValue(Color2, Settings.SecondaryColor);
@@ -249,9 +262,56 @@ void FACFTransitionView::AddReferencedObjects(FReferenceCollector& Collector)
 	Collector.AddReferencedObject(BaseMaterial);
 }
 
+namespace ACFTransitionCapture
+{
+	static FACFTransitionView::FCaptureTiming GLastTiming;
+
+#if !UE_BUILD_SHIPPING
+	static TAutoConsoleVariable<int32> CVarFailCapture(TEXT("ACF.Transition.Debug.FailCapture"), 0,
+		TEXT("Tests: 1 = every screen capture fails (GPU copy and read back), to check that the transitions recover (procedural look)."));
+	static bool ForceFail() { return CVarFailCapture.GetValueOnGameThread() != 0; }
+#else
+	static bool ForceFail() { return false; }
+#endif
+
+	/** The viewport widget's rectangle in its window's back buffer (pixels), as FSlateApplication::TakeScreenshot computes it. */
+	static bool GetViewportRect(UGameViewportClient* ViewportClient, TSharedPtr<SWindow>& OutWindow, FIntRect& OutRect)
+	{
+		if (!ViewportClient || GUsingNullRHI || !FApp::CanEverRender() || !FSlateApplication::IsInitialized())
+		{
+			return false;
+		}
+		TSharedPtr<SViewport> ViewportWidget = ViewportClient->GetGameViewportWidget();
+		if (!ViewportWidget.IsValid())
+		{
+			return false;
+		}
+		OutWindow = FSlateApplication::Get().FindWidgetWindow(ViewportWidget.ToSharedRef());
+		if (!OutWindow.IsValid())
+		{
+			return false;
+		}
+		const FGeometry& Geometry = ViewportWidget->GetTickSpaceGeometry();
+		const FVector2f Position = FVector2f(Geometry.GetAbsolutePosition()) - FVector2f(OutWindow->GetPositionInScreen());
+		const FVector2f Size = FVector2f(Geometry.GetDrawSize());
+		const int32 X = FMath::RoundToInt(Position.X);
+		const int32 Y = FMath::RoundToInt(Position.Y);
+		OutRect = FIntRect(X, Y, X + FMath::RoundToInt(Size.X), Y + FMath::RoundToInt(Size.Y));
+		return OutRect.Width() >= 4 && OutRect.Height() >= 4 && OutRect.Min.X >= 0 && OutRect.Min.Y >= 0;
+	}
+}
+
+const FACFTransitionView::FCaptureTiming& FACFTransitionView::GetLastCaptureTiming()
+{
+	return ACFTransitionCapture::GLastTiming;
+}
+
 UTexture2D* FACFTransitionView::CaptureViewport(UGameViewportClient* ViewportClient, int32 MaxWidth)
 {
-	if (!ViewportClient || GUsingNullRHI || !FApp::CanEverRender() || !FSlateApplication::IsInitialized())
+	using namespace ACFTransitionCapture;
+	const double T0 = FPlatformTime::Seconds();
+	GLastTiming = FCaptureTiming();
+	if (!ViewportClient || GUsingNullRHI || !FApp::CanEverRender() || !FSlateApplication::IsInitialized() || ForceFail())
 	{
 		return nullptr;
 	}
@@ -262,7 +322,10 @@ UTexture2D* FACFTransitionView::CaptureViewport(UGameViewportClient* ViewportCli
 	}
 	TArray<FColor> Pixels;
 	FIntVector Size;
-	if (!FSlateApplication::Get().TakeScreenshot(ViewportWidget.ToSharedRef(), Pixels, Size) || Size.X <= 0 || Size.Y <= 0 || Pixels.Num() != Size.X * Size.Y)
+	const bool bRead = FSlateApplication::Get().TakeScreenshot(ViewportWidget.ToSharedRef(), Pixels, Size);
+	const double T1 = FPlatformTime::Seconds();
+	GLastTiming.ScreenshotMs = (T1 - T0) * 1000.0;
+	if (!bRead || Size.X <= 0 || Size.Y <= 0 || Pixels.Num() != Size.X * Size.Y)
 	{
 		return nullptr;
 	}
@@ -289,7 +352,9 @@ UTexture2D* FACFTransitionView::CaptureViewport(UGameViewportClient* ViewportCli
 		W = NW;
 		H = NH;
 	}
-	UTexture2D* Texture = UTexture2D::CreateTransient(W, H, PF_B8G8R8A8, TEXT("ACFTransitionCapture"));
+	const double T2 = FPlatformTime::Seconds();
+	GLastTiming.ResizeMs = (T2 - T1) * 1000.0;
+	UTexture2D* Texture = UTexture2D::CreateTransient(W, H, PF_B8G8R8A8, MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), TEXT("ACFTransitionCapture")));
 	if (!Texture)
 	{
 		return nullptr;
@@ -308,7 +373,136 @@ UTexture2D* FACFTransitionView::CaptureViewport(UGameViewportClient* ViewportCli
 	FMemory::Memcpy(Data, Pixels.GetData(), Pixels.Num() * sizeof(FColor));
 	Mip.BulkData.Unlock();
 	Texture->UpdateResource();
+	const double T3 = FPlatformTime::Seconds();
+	GLastTiming.UploadMs = (T3 - T2) * 1000.0;
+	GLastTiming.GameThreadMs = (T3 - T0) * 1000.0;
+	GLastTiming.Width = W;
+	GLastTiming.Height = H;
 	return Texture;
+}
+
+// ------------------------------------------------------------------------------------------------ GPU copy
+
+struct FACFTransitionGpuCapture::FShared
+{
+	std::atomic<int32> State { static_cast<int32>(EState::Pending) };
+	const SWindow* Window = nullptr;   // compared only, never dereferenced on the render thread
+	FIntRect Rect;
+	FTextureRenderTargetResource* Resource = nullptr; // kept alive by Target until the delegate is removed
+};
+
+TSharedPtr<FACFTransitionGpuCapture> FACFTransitionView::RequestGpuCapture(UGameViewportClient* ViewportClient)
+{
+	using namespace ACFTransitionCapture;
+	const double T0 = FPlatformTime::Seconds();
+	TSharedPtr<SWindow> Window;
+	FIntRect Rect;
+	if (!GetViewportRect(ViewportClient, Window, Rect) || !FSlateApplication::Get().GetRenderer())
+	{
+		return nullptr;
+	}
+	// The copy keeps the back buffer's format: 8-bit BGRA (an sRGB texture, decoded by the sampler) or 10-bit A2B10G10R10
+	// (the UE 5 default, r.DefaultBackBufferPixelFormat 4; decoded by the material). HDR output and float back buffers are
+	// not sRGB-encoded: the read back is used.
+	static const auto CVarBackBufferFormat = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.DefaultBackBufferPixelFormat"));
+	static const auto CVarHDROutput = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.HDR.EnableHDROutput"));
+	const EPixelFormat Format = CVarBackBufferFormat ? EDefaultBackBufferPixelFormat::Convert2PixelFormat(EDefaultBackBufferPixelFormat::FromInt(CVarBackBufferFormat->GetValueOnGameThread())) : PF_B8G8R8A8;
+	if ((Format != PF_B8G8R8A8 && Format != PF_A2B10G10R10) || (CVarHDROutput && CVarHDROutput->GetValueOnGameThread() != 0))
+	{
+		return nullptr;
+	}
+	TSharedPtr<FACFTransitionGpuCapture> Capture = MakeShared<FACFTransitionGpuCapture>();
+	UTextureRenderTarget2D* Target = NewObject<UTextureRenderTarget2D>(GetTransientPackage(), NAME_None, RF_Transient);
+	Target->ClearColor = FLinearColor::Black;
+	Target->AddressX = TA_Clamp;
+	Target->AddressY = TA_Clamp;
+	// The bytes are copied as they are. 8-bit: an sRGB texture, like the read back texture of CaptureViewport (SRGB = true).
+	Target->InitCustomFormat(Rect.Width(), Rect.Height(), Format, /*bForceLinearGamma*/ Format != PF_B8G8R8A8);
+	Capture->Target = Target;
+	Capture->RequestFrame = GFrameCounter;
+	Capture->Shared = MakeShared<FACFTransitionGpuCapture::FShared, ESPMode::ThreadSafe>();
+	Capture->Shared->Window = Window.Get();
+	Capture->Shared->Rect = Rect;
+	Capture->Shared->Resource = Target->GameThread_GetRenderTargetResource();
+	if (ForceFail())
+	{
+		Capture->Shared->State = static_cast<int32>(FACFTransitionGpuCapture::EState::Failed);
+	}
+	else
+	{
+		TWeakPtr<FACFTransitionGpuCapture::FShared, ESPMode::ThreadSafe> Weak = Capture->Shared;
+		Capture->Handle = FSlateApplication::Get().GetRenderer()->OnBackBufferReadyToPresent().AddLambda([Weak](SWindow& InWindow, ISlateViewportProvider& Provider)
+		{
+			TSharedPtr<FACFTransitionGpuCapture::FShared, ESPMode::ThreadSafe> Shared = Weak.Pin();
+			if (!Shared || &InWindow != Shared->Window || Shared->State.load() != static_cast<int32>(FACFTransitionGpuCapture::EState::Pending))
+			{
+				return;
+			}
+			FRHITexture* BackBuffer = Provider.GetBackBufferResource();
+			FRHITexture* Dest = Shared->Resource ? Shared->Resource->GetRenderTargetTexture() : nullptr;
+			const FIntRect& R = Shared->Rect;
+			if (!Dest)
+			{
+				return; // the render target is created on the render thread: the next frame
+			}
+			if (!BackBuffer || BackBuffer->GetFormat() != Dest->GetFormat()
+				|| R.Max.X > (int32)BackBuffer->GetSizeX() || R.Max.Y > (int32)BackBuffer->GetSizeY()
+				|| (int32)Dest->GetSizeX() != R.Width() || (int32)Dest->GetSizeY() != R.Height())
+			{
+				UE_LOG(LogACFTransition, Log, TEXT("GPU capture not possible: back buffer %s %dx%d, target %s %dx%d, viewport rect (%d,%d)-(%d,%d)."),
+					BackBuffer ? GPixelFormats[BackBuffer->GetFormat()].Name : TEXT("none"), BackBuffer ? (int32)BackBuffer->GetSizeX() : 0, BackBuffer ? (int32)BackBuffer->GetSizeY() : 0,
+					Dest ? GPixelFormats[Dest->GetFormat()].Name : TEXT("none"), Dest ? (int32)Dest->GetSizeX() : 0, Dest ? (int32)Dest->GetSizeY() : 0, R.Min.X, R.Min.Y, R.Max.X, R.Max.Y);
+				Shared->State = static_cast<int32>(FACFTransitionGpuCapture::EState::Failed);
+				return;
+			}
+			FRHICommandListImmediate& RHICmdList = FRHICommandListImmediate::Get();
+			FRHICopyTextureInfo Info;
+			Info.Size = FIntVector(R.Width(), R.Height(), 1);
+			Info.SourcePosition = FIntVector(R.Min.X, R.Min.Y, 0);
+			TransitionAndCopyTexture(RHICmdList, BackBuffer, Dest, Info);
+			Shared->State = static_cast<int32>(FACFTransitionGpuCapture::EState::Ready);
+		});
+	}
+	GLastTiming = FCaptureTiming();
+	GLastTiming.bGpuCopy = true;
+	GLastTiming.GameThreadMs = (FPlatformTime::Seconds() - T0) * 1000.0;
+	GLastTiming.Width = Rect.Width();
+	GLastTiming.Height = Rect.Height();
+	return Capture;
+}
+
+FACFTransitionGpuCapture::~FACFTransitionGpuCapture()
+{
+	Cancel();
+}
+
+FACFTransitionGpuCapture::EState FACFTransitionGpuCapture::GetState() const
+{
+	return Shared ? static_cast<EState>(Shared->State.load()) : EState::Failed;
+}
+
+UTexture* FACFTransitionGpuCapture::GetTexture() const
+{
+	return Target;
+}
+
+uint64 FACFTransitionGpuCapture::GetFramesWaited() const
+{
+	return GFrameCounter - RequestFrame;
+}
+
+void FACFTransitionGpuCapture::Cancel()
+{
+	if (Handle.IsValid() && FSlateApplication::IsInitialized() && FSlateApplication::Get().GetRenderer())
+	{
+		FSlateApplication::Get().GetRenderer()->OnBackBufferReadyToPresent().Remove(Handle);
+	}
+	Handle.Reset();
+}
+
+void FACFTransitionGpuCapture::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObject(Target);
 }
 
 UTexture2D* FACFTransitionView::CreatePreviewPicture(int32 W, int32 H)

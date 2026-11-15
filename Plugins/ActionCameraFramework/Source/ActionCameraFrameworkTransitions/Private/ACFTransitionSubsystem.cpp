@@ -206,8 +206,7 @@ void UACFTransitionSubsystem::Start(FRequest&& Request)
 			ReleaseCapture();
 			if (Settings->bCaptureScreen && ACFTransition::GetEffectInfo(R.Close.Effect).bUsesSnapshot)
 			{
-				UGameInstance* GI = GetGameInstance();
-				Capture = FACFTransitionView::CaptureViewport(GI ? GI->GetGameViewportClient() : nullptr, Settings->MaxCaptureWidth);
+				StartCapture();
 			}
 		}
 		if (bAlreadyCovered)
@@ -493,6 +492,8 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 	const float RawDelta = FMath::Max(DeltaSeconds, 0.f);
 	const float Delta = FMath::Min(RawDelta, Settings->MaxDeltaSeconds);
 	EffectTime += Delta;
+	// A capture-based Close starts drawing once its capture is ready (the screen is unchanged until then).
+	const bool bWaitingForCapture = PendingCapture.IsValid() && !ResolvePendingCapture();
 	const FACFTransitionHandle Handle = Active->Handle;
 	auto StillMine = [this, Handle]() { return Active.IsSet() && Active->Handle == Handle; };
 
@@ -500,6 +501,10 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 	{
 	case EStage::Closing:
 	{
+		if (bWaitingForCapture)
+		{
+			break;
+		}
 		PhaseTime += Delta;
 		const float Duration = DrawSettings.Duration;
 		const float Alpha = Duration > 0.f ? FMath::Clamp(PhaseStartAlpha + PhaseTime / Duration, 0.f, 1.f) : 1.f;
@@ -786,8 +791,65 @@ void UACFTransitionSubsystem::DetachOverlay()
 	ReleaseCapture();
 }
 
+void UACFTransitionSubsystem::StartCapture()
+{
+	const UACFTransitionProjectSettings* Settings = GetDefault<UACFTransitionProjectSettings>();
+	UGameInstance* GI = GetGameInstance();
+	UGameViewportClient* ViewportClient = GI ? GI->GetGameViewportClient() : nullptr;
+	LastCaptureWaitFrames = 0;
+	bLastCaptureFellBack = false;
+	if (Settings->bCaptureOnGpu)
+	{
+		PendingCapture = FACFTransitionView::RequestGpuCapture(ViewportClient);
+	}
+	if (!PendingCapture.IsValid())
+	{
+		bLastCaptureFellBack = Settings->bCaptureOnGpu;
+		Capture = FACFTransitionView::CaptureViewport(ViewportClient, Settings->MaxCaptureWidth);
+	}
+}
+
+bool UACFTransitionSubsystem::ResolvePendingCapture()
+{
+	using EState = FACFTransitionGpuCapture::EState;
+	const EState State = PendingCapture->GetState();
+	LastCaptureWaitFrames = static_cast<int32>(PendingCapture->GetFramesWaited());
+	if (State == EState::Ready)
+	{
+		Capture = PendingCapture->GetTexture();
+		PendingCapture.Reset();
+		return true;
+	}
+	const UACFTransitionProjectSettings* Settings = GetDefault<UACFTransitionProjectSettings>();
+	if (State == EState::Pending && LastCaptureWaitFrames <= Settings->MaxCaptureWaitFrames)
+	{
+		return false;
+	}
+	// Failed (HDR / non-BGRA back buffer, window changed) or not presented in time: the synchronous read back, and
+	// without it the effect's procedural look. The transition always goes on.
+	UE_LOG(LogACFTransition, Log, TEXT("Screen capture on the GPU %s after %d frames; using the read back."), State == EState::Failed ? TEXT("failed") : TEXT("not ready"), LastCaptureWaitFrames);
+	if (UTexture* Unused = PendingCapture->GetTexture())
+	{
+		Unused->MarkAsGarbage();
+	}
+	PendingCapture.Reset();
+	bLastCaptureFellBack = true;
+	UGameInstance* GI = GetGameInstance();
+	Capture = FACFTransitionView::CaptureViewport(GI ? GI->GetGameViewportClient() : nullptr, Settings->MaxCaptureWidth);
+	return true;
+}
+
 void UACFTransitionSubsystem::ReleaseCapture()
 {
+	if (PendingCapture.IsValid())
+	{
+		PendingCapture->Cancel();
+		if (UTexture* Unused = PendingCapture->GetTexture())
+		{
+			Unused->MarkAsGarbage();
+		}
+		PendingCapture.Reset();
+	}
 	if (Capture)
 	{
 		Capture->MarkAsGarbage();
