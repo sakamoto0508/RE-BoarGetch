@@ -114,9 +114,9 @@ namespace ACFTransitionRender
 			Renderer.DrawWidget(Target, View.GetWidget(), FVector2D(CellW, CellH), 0.f);
 			FlushRenderingCommands();
 			TArray<FColor> Out;
-			FReadSurfaceDataFlags Flags(RCM_UNorm);
-			Flags.SetLinearToGamma(false);
-			Target->GameThread_GetRenderTargetResource()->ReadPixels(Out, Flags);
+			FReadSurfaceDataFlags ReadFlags(RCM_UNorm);
+			ReadFlags.SetLinearToGamma(false);
+			Target->GameThread_GetRenderTargetResource()->ReadPixels(Out, ReadFlags);
 			return Out;
 		}
 	};

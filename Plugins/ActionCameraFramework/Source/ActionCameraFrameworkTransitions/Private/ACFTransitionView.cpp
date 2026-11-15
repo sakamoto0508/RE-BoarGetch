@@ -265,6 +265,8 @@ void FACFTransitionView::AddReferencedObjects(FReferenceCollector& Collector)
 namespace ACFTransitionCapture
 {
 	static FACFTransitionView::FCaptureTiming GLastTiming;
+	static int32 GLiveGpuCaptures = 0; // game thread
+	static int32 GListeners = 0;       // game thread
 
 #if !UE_BUILD_SHIPPING
 	static TAutoConsoleVariable<int32> CVarFailCapture(TEXT("ACF.Transition.Debug.FailCapture"), 0,
@@ -299,6 +301,12 @@ namespace ACFTransitionCapture
 		OutRect = FIntRect(X, Y, X + FMath::RoundToInt(Size.X), Y + FMath::RoundToInt(Size.Y));
 		return OutRect.Width() >= 4 && OutRect.Height() >= 4 && OutRect.Min.X >= 0 && OutRect.Min.Y >= 0;
 	}
+}
+
+bool FACFTransitionView::GetViewportPixelRect(UGameViewportClient* ViewportClient, FIntRect& OutRect)
+{
+	TSharedPtr<SWindow> Window;
+	return ACFTransitionCapture::GetViewportRect(ViewportClient, Window, OutRect);
 }
 
 const FACFTransitionView::FCaptureTiming& FACFTransitionView::GetLastCaptureTiming()
@@ -388,7 +396,13 @@ struct FACFTransitionGpuCapture::FShared
 	std::atomic<int32> State { static_cast<int32>(EState::Pending) };
 	const SWindow* Window = nullptr;   // compared only, never dereferenced on the render thread
 	FIntRect Rect;
-	FTextureRenderTargetResource* Resource = nullptr; // kept alive by Target until the delegate is removed
+	// Raw pointer, read on the render thread only inside the listener. The resource is released by a render command that
+	// the game thread queues when the GC destroys Target (UTexture::BeginDestroy -> ReleaseResource, FinishDestroy waits
+	// for it). Target is referenced by the FACFTransitionGpuCapture until the listener is removed, so that release command
+	// is always queued after every Slate draw command that can still call the listener: the render thread runs commands
+	// in order, so the listener never sees a released resource. The copy itself is recorded on the immediate command list
+	// before that release, and the RHI keeps a texture alive until the commands that use it have run.
+	FTextureRenderTargetResource* Resource = nullptr;
 };
 
 TSharedPtr<FACFTransitionGpuCapture> FACFTransitionView::RequestGpuCapture(UGameViewportClient* ViewportClient)
@@ -420,6 +434,7 @@ TSharedPtr<FACFTransitionGpuCapture> FACFTransitionView::RequestGpuCapture(UGame
 	Target->InitCustomFormat(Rect.Width(), Rect.Height(), Format, /*bForceLinearGamma*/ Format != PF_B8G8R8A8);
 	Capture->Target = Target;
 	Capture->RequestFrame = GFrameCounter;
+	Capture->RequestRect = Rect;
 	Capture->Shared = MakeShared<FACFTransitionGpuCapture::FShared, ESPMode::ThreadSafe>();
 	Capture->Shared->Window = Window.Get();
 	Capture->Shared->Rect = Rect;
@@ -431,6 +446,7 @@ TSharedPtr<FACFTransitionGpuCapture> FACFTransitionView::RequestGpuCapture(UGame
 	else
 	{
 		TWeakPtr<FACFTransitionGpuCapture::FShared, ESPMode::ThreadSafe> Weak = Capture->Shared;
+		++GListeners;
 		Capture->Handle = FSlateApplication::Get().GetRenderer()->OnBackBufferReadyToPresent().AddLambda([Weak](SWindow& InWindow, ISlateViewportProvider& Provider)
 		{
 			TSharedPtr<FACFTransitionGpuCapture::FShared, ESPMode::ThreadSafe> Shared = Weak.Pin();
@@ -452,7 +468,8 @@ TSharedPtr<FACFTransitionGpuCapture> FACFTransitionView::RequestGpuCapture(UGame
 				UE_LOG(LogACFTransition, Log, TEXT("GPU capture not possible: back buffer %s %dx%d, target %s %dx%d, viewport rect (%d,%d)-(%d,%d)."),
 					BackBuffer ? GPixelFormats[BackBuffer->GetFormat()].Name : TEXT("none"), BackBuffer ? (int32)BackBuffer->GetSizeX() : 0, BackBuffer ? (int32)BackBuffer->GetSizeY() : 0,
 					Dest ? GPixelFormats[Dest->GetFormat()].Name : TEXT("none"), Dest ? (int32)Dest->GetSizeX() : 0, Dest ? (int32)Dest->GetSizeY() : 0, R.Min.X, R.Min.Y, R.Max.X, R.Max.Y);
-				Shared->State = static_cast<int32>(FACFTransitionGpuCapture::EState::Failed);
+				int32 Expected = static_cast<int32>(FACFTransitionGpuCapture::EState::Pending);
+				Shared->State.compare_exchange_strong(Expected, static_cast<int32>(FACFTransitionGpuCapture::EState::Failed));
 				return;
 			}
 			FRHICommandListImmediate& RHICmdList = FRHICommandListImmediate::Get();
@@ -460,7 +477,8 @@ TSharedPtr<FACFTransitionGpuCapture> FACFTransitionView::RequestGpuCapture(UGame
 			Info.Size = FIntVector(R.Width(), R.Height(), 1);
 			Info.SourcePosition = FIntVector(R.Min.X, R.Min.Y, 0);
 			TransitionAndCopyTexture(RHICmdList, BackBuffer, Dest, Info);
-			Shared->State = static_cast<int32>(FACFTransitionGpuCapture::EState::Ready);
+			int32 Expected = static_cast<int32>(FACFTransitionGpuCapture::EState::Pending);
+			Shared->State.compare_exchange_strong(Expected, static_cast<int32>(FACFTransitionGpuCapture::EState::Ready)); // stays Failed when cancelled meanwhile
 		});
 	}
 	GLastTiming = FCaptureTiming();
@@ -471,9 +489,31 @@ TSharedPtr<FACFTransitionGpuCapture> FACFTransitionView::RequestGpuCapture(UGame
 	return Capture;
 }
 
+FACFTransitionGpuCapture::FACFTransitionGpuCapture()
+{
+	++ACFTransitionCapture::GLiveGpuCaptures;
+}
+
 FACFTransitionGpuCapture::~FACFTransitionGpuCapture()
 {
 	Cancel();
+	--ACFTransitionCapture::GLiveGpuCaptures;
+}
+
+int32 FACFTransitionGpuCapture::GetLiveCount()
+{
+	return ACFTransitionCapture::GLiveGpuCaptures;
+}
+
+int32 FACFTransitionGpuCapture::GetListenerCount()
+{
+	return ACFTransitionCapture::GListeners;
+}
+
+bool FACFTransitionGpuCapture::MatchesViewport(UGameViewportClient* ViewportClient) const
+{
+	FIntRect Now;
+	return FACFTransitionView::GetViewportPixelRect(ViewportClient, Now) && Now == RequestRect;
 }
 
 FACFTransitionGpuCapture::EState FACFTransitionGpuCapture::GetState() const
@@ -493,11 +533,22 @@ uint64 FACFTransitionGpuCapture::GetFramesWaited() const
 
 void FACFTransitionGpuCapture::Cancel()
 {
-	if (Handle.IsValid() && FSlateApplication::IsInitialized() && FSlateApplication::Get().GetRenderer())
+	// The listener holds only a weak pointer to Shared: after Remove (thread-safe delegate) a call that is already running
+	// on the render thread finishes with the resource that Target still keeps; later presents do not call it.
+	if (Handle.IsValid())
 	{
-		FSlateApplication::Get().GetRenderer()->OnBackBufferReadyToPresent().Remove(Handle);
+		if (FSlateApplication::IsInitialized() && FSlateApplication::Get().GetRenderer())
+		{
+			FSlateApplication::Get().GetRenderer()->OnBackBufferReadyToPresent().Remove(Handle);
+		}
+		--ACFTransitionCapture::GListeners;
 	}
 	Handle.Reset();
+	if (Shared && Shared->State.load() == static_cast<int32>(EState::Pending))
+	{
+		int32 Expected = static_cast<int32>(EState::Pending);
+		Shared->State.compare_exchange_strong(Expected, static_cast<int32>(EState::Failed)); // a listener that has not started yet does not copy
+	}
 }
 
 void FACFTransitionGpuCapture::AddReferencedObjects(FReferenceCollector& Collector)

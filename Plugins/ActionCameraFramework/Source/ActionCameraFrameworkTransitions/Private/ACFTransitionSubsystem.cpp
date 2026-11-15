@@ -64,12 +64,44 @@ void UACFTransitionSubsystem::Deinitialize()
 	ApplyInputLock(false);
 	Active.Reset();
 	Queue.Reset();
+	Incoming.Reset();
+	Starting.Reset();
 	PendingEvents.Reset();
 	Stage = EStage::None;
 	Coverage = 0.f;
 	bStill = false;
 	DetachOverlay();
 	Super::Deinitialize();
+}
+
+void UACFTransitionSubsystem::AddReferencedObjects(UObject* InThis, FReferenceCollector& Collector)
+{
+	Super::AddReferencedObjects(InThis, Collector);
+	// GC path: GameInstance -> its subsystem collection -> this subsystem -> here -> the properties of each request's
+	// FACFTransitionSettings (Curve, OverlayTexture, MaterialOverride, Sound). DrawSettings and Capture are UPROPERTYs.
+	UACFTransitionSubsystem* This = CastChecked<UACFTransitionSubsystem>(InThis);
+	UScriptStruct* SettingsStruct = FACFTransitionSettings::StaticStruct();
+	auto AddRequest = [&Collector, This, SettingsStruct](FRequest& Request)
+	{
+		Collector.AddPropertyReferencesWithStructARO(SettingsStruct, &Request.Close, This);
+		Collector.AddPropertyReferencesWithStructARO(SettingsStruct, &Request.Open, This);
+	};
+	if (This->Active.IsSet())
+	{
+		AddRequest(*This->Active);
+	}
+	if (This->Starting.IsSet())
+	{
+		AddRequest(*This->Starting);
+	}
+	for (FRequest& Request : This->Incoming)
+	{
+		AddRequest(Request);
+	}
+	for (FRequest& Request : This->Queue)
+	{
+		AddRequest(Request);
+	}
 }
 
 // ------------------------------------------------------------------------------------------------ requests
@@ -133,6 +165,44 @@ FACFTransitionHandle UACFTransitionSubsystem::Submit(FRequest&& Request)
 		if (!Request.Close.IsValid()) { Request.Close.Effect = EACFTransitionEffect::BlackFade; }
 		if (!Request.Open.IsValid()) { Request.Open.Effect = EACFTransitionEffect::BlackFade; }
 	}
+	// Every request goes through Incoming. Outside an event it is applied before Submit returns; inside an event (a
+	// listener calls Play*) it waits until the operation that sends the event has finished its own state change, so that
+	// operation never overwrites a transition a listener started (README 33 章「イベントと再入」).
+	Incoming.Add(MoveTemp(Request));
+	Settle(true);
+	return Handle;
+}
+
+void UACFTransitionSubsystem::Settle(bool bStartQueued)
+{
+	if (DispatchDepth > 0 || bSettling)
+	{
+		return; // the outermost operation settles when its listeners have returned
+	}
+	TGuardValue<bool> Guard(bSettling, true);
+	// Bounded: listeners that answer every event with a new request cannot hang the game thread (the rest: next tick).
+	for (int32 Step = 0; Step < 256; ++Step)
+	{
+		if (!Incoming.IsEmpty())
+		{
+			FRequest Next = MoveTemp(Incoming[0]);
+			Incoming.RemoveAt(0);
+			Admit(MoveTemp(Next));
+			continue;
+		}
+		if (bStartQueued && !Active.IsSet() && !Queue.IsEmpty())
+		{
+			StartNextQueued();
+			continue;
+		}
+		return;
+	}
+	UE_LOG(LogACFTransition, Warning, TEXT("ACF Transition: listeners keep requesting transitions; %d request(s) wait for the next tick."), Incoming.Num());
+}
+
+void UACFTransitionSubsystem::Admit(FRequest&& Request)
+{
+	const FACFTransitionHandle Handle = Request.Handle;
 	if (bStill)
 	{
 		bStill = false; // a real request replaces a still frame (it keeps the coverage for continuity)
@@ -145,20 +215,36 @@ FACFTransitionHandle UACFTransitionSubsystem::Submit(FRequest&& Request)
 			UE_LOG(LogACFTransition, Log, TEXT("ACF Transition: %s rejected (%s is playing)."), *Handle.ToString(), *GetActiveHandle().ToString());
 			FinishedEvents.Add(Handle, EACFTransitionEvent::Failed);
 			EmitDeferred(Handle, EACFTransitionEvent::Failed);
-			return Handle;
+			return;
 		case EACFTransitionConcurrency::Queue:
 			Queue.Add(MoveTemp(Request));
-			return Handle;
+			return;
 		default:
 			if (Active.IsSet())
 			{
+				// The new request stays visible (Starting) while the old handle sends Interrupted: a listener can Cancel
+				// it or ClearScreen; its own Play* requests wait in Incoming and come after this one.
+				Starting.Emplace(MoveTemp(Request));
+				bStartingCancelled = false;
 				EndActive(EACFTransitionEvent::Interrupted);
+				FRequest Next = MoveTemp(*Starting);
+				Starting.Reset();
+				if (bStartingCancelled)
+				{
+					Emit(Next, EACFTransitionEvent::Cancelled);
+					return;
+				}
+				if (!ensureMsgf(!Active.IsSet(), TEXT("ACF Transition: a transition became active while %s was interrupted."), *Handle.ToString()))
+				{
+					EndActive(EACFTransitionEvent::Interrupted);
+				}
+				Start(MoveTemp(Next));
+				return;
 			}
 			break;
 		}
 	}
 	Start(MoveTemp(Request));
-	return Handle;
 }
 
 void UACFTransitionSubsystem::Start(FRequest&& Request)
@@ -244,21 +330,35 @@ bool UACFTransitionSubsystem::Cancel(FACFTransitionHandle Handle, bool bClearScr
 	if (Active.IsSet() && Active->Handle == Handle)
 	{
 		EndActive(EACFTransitionEvent::Cancelled);
+		Settle(false); // what the Cancelled listeners requested starts from the screen as it is (e.g. an Open)
 		if (bClearScreen && !Active.IsSet())
 		{
 			Coverage = 0.f;
 			DetachOverlay();
 		}
-		StartNextQueued();
+		Settle(true);
 		return true;
 	}
-	const int32 Index = Queue.IndexOfByPredicate([Handle](const FRequest& R) { return R.Handle == Handle; });
-	if (Index != INDEX_NONE)
+	if (Starting.IsSet() && Starting->Handle == Handle)
 	{
-		FRequest Removed = MoveTemp(Queue[Index]);
-		Queue.RemoveAt(Index);
-		Emit(Removed, EACFTransitionEvent::Cancelled);
+		if (bStartingCancelled)
+		{
+			return false;
+		}
+		bStartingCancelled = true; // ends with Cancelled (without Started) once the interrupted handle's event returns
 		return true;
+	}
+	for (TArray<FRequest>* List : { &Queue, &Incoming })
+	{
+		const int32 Index = List->IndexOfByPredicate([Handle](const FRequest& R) { return R.Handle == Handle; });
+		if (Index != INDEX_NONE)
+		{
+			FRequest Removed = MoveTemp((*List)[Index]);
+			List->RemoveAt(Index);
+			Emit(Removed, EACFTransitionEvent::Cancelled);
+			Settle(true);
+			return true;
+		}
 	}
 	return false;
 }
@@ -271,6 +371,10 @@ bool UACFTransitionSubsystem::Skip(FACFTransitionHandle Handle)
 	}
 	if (Stage == EStage::Closing || Stage == EStage::Opening)
 	{
+		if (PendingCapture.IsValid())
+		{
+			SkipPendingCapture(); // a Close waiting for its GPU capture must not wait any longer
+		}
 		PhaseTime = FMath::Max(PhaseTime, 1.0e6f);
 		return true;
 	}
@@ -279,8 +383,17 @@ bool UACFTransitionSubsystem::Skip(FACFTransitionHandle Handle)
 
 void UACFTransitionSubsystem::ClearScreen()
 {
+	// Everything requested before this call ends with Cancelled: the active handle, an Interrupt request being started,
+	// the queue and the requests waiting in Incoming. What the listeners of these events request starts afterwards, from
+	// the clear screen.
 	TArray<FRequest> Dropped = MoveTemp(Queue);
 	Queue.Reset();
+	Dropped.Append(MoveTemp(Incoming));
+	Incoming.Reset();
+	if (Starting.IsSet())
+	{
+		bStartingCancelled = true;
+	}
 	if (Active.IsSet())
 	{
 		EndActive(EACFTransitionEvent::Cancelled);
@@ -295,6 +408,7 @@ void UACFTransitionSubsystem::ClearScreen()
 		Coverage = 0.f;
 		DetachOverlay();
 	}
+	Settle(true);
 }
 
 bool UACFTransitionSubsystem::NotifyLoadStarted(FACFTransitionHandle Handle)
@@ -305,6 +419,7 @@ bool UACFTransitionSubsystem::NotifyLoadStarted(FACFTransitionHandle Handle)
 	}
 	SetStage(EStage::Loading);
 	Emit(*Active, EACFTransitionEvent::LoadStarted);
+	Settle(true);
 	return true;
 }
 
@@ -353,7 +468,7 @@ bool UACFTransitionSubsystem::NotifyLoadFailed(FACFTransitionHandle Handle)
 
 bool UACFTransitionSubsystem::ShowStill(const FACFTransitionSettings& Settings, EACFTransitionPhase Phase, float InCoverage)
 {
-	if (Active.IsSet() || !Queue.IsEmpty())
+	if (IsTransitionActive())
 	{
 		return false;
 	}
@@ -389,7 +504,7 @@ EACFTransitionScreenState UACFTransitionSubsystem::GetScreenState() const
 
 bool UACFTransitionSubsystem::IsTransitionActive() const
 {
-	return Active.IsSet() || !Queue.IsEmpty();
+	return Active.IsSet() || !Queue.IsEmpty() || !Incoming.IsEmpty() || Starting.IsSet();
 }
 
 FACFTransitionHandle UACFTransitionSubsystem::GetActiveHandle() const
@@ -413,16 +528,26 @@ FACFTransitionInfo UACFTransitionSubsystem::GetTransitionInfo(FACFTransitionHand
 		Info.LastEvent = Active->LastEvent;
 		return Info;
 	}
-	for (const FRequest& R : Queue)
+	// Queued, waiting in Incoming or being started: not on screen yet.
+	auto Waiting = [&Info](const FRequest& R)
 	{
-		if (R.Handle == Handle)
+		Info.bQueued = true;
+		Info.Kind = R.Kind;
+		Info.Effect = R.Kind == EACFTransitionKind::Open ? R.Open.Effect : R.Close.Effect;
+		Info.Phase = R.Kind == EACFTransitionKind::Open ? EACFTransitionPhase::Open : EACFTransitionPhase::Close;
+	};
+	for (const TArray<FRequest>* List : { &Queue, &Incoming })
+	{
+		if (const FRequest* R = List->FindByPredicate([Handle](const FRequest& Q) { return Q.Handle == Handle; }))
 		{
-			Info.bQueued = true;
-			Info.Kind = R.Kind;
-			Info.Effect = R.Kind == EACFTransitionKind::Open ? R.Open.Effect : R.Close.Effect;
-			Info.Phase = R.Kind == EACFTransitionKind::Open ? EACFTransitionPhase::Open : EACFTransitionPhase::Close;
+			Waiting(*R);
 			return Info;
 		}
+	}
+	if (Starting.IsSet() && Starting->Handle == Handle)
+	{
+		Waiting(*Starting);
+		return Info;
 	}
 	if (const EACFTransitionEvent* Ended = FinishedEvents.Find(Handle))
 	{
@@ -441,7 +566,7 @@ ETickableTickType UACFTransitionSubsystem::GetTickableTickType() const
 
 bool UACFTransitionSubsystem::IsTickable() const
 {
-	return bInitialized && (Active.IsSet() || !Queue.IsEmpty() || !PendingEvents.IsEmpty());
+	return bInitialized && (IsTransitionActive() || !PendingEvents.IsEmpty());
 }
 
 TStatId UACFTransitionSubsystem::GetStatId() const
@@ -469,19 +594,21 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 		PendingEvents.Reset();
 		for (const TPair<FACFTransitionHandle, EACFTransitionEvent>& Event : Events)
 		{
-			OnTransitionEventNative.Broadcast(Event.Key, Event.Value);
-			OnTransitionEvent.Broadcast(Event.Key, Event.Value);
+			Broadcast(Event.Key, Event.Value);
 		}
 	}
+	// Requests of listeners and queued transitions; and once more on every way out of this tick.
+	Settle(true);
+	ON_SCOPE_EXIT { Settle(true); };
 	if (!Active.IsSet())
 	{
-		StartNextQueued();
-		if (!Active.IsSet())
-		{
-			return;
-		}
+		return;
 	}
 	const UACFTransitionProjectSettings* Settings = GetDefault<UACFTransitionProjectSettings>();
+	if (Active->Options.bLockInput)
+	{
+		ApplyInputLock(true); // controllers spawned / restarted since the last tick (also while waiting for a load)
+	}
 	if (!Active->Options.bPlayWhenPaused)
 	{
 		if (UWorld* World = GetGameWorld(); World && World->IsPaused())
@@ -532,11 +659,7 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 				}
 				Emit(Done, EACFTransitionEvent::Covered);
 				Emit(Done, EACFTransitionEvent::Finished);
-				if (!Active.IsSet())
-				{
-					StartNextQueued();
-				}
-				return;
+				return; // then Settle: what the listeners requested, then the queue
 			}
 			SetStage(Active->Options.bManualLoad || Active->LevelName.IsNone() ? EStage::WaitingForLoad : EStage::WaitingForLoad);
 			if (Settings->bUseMoviePlayerDuringLoad && !GIsEditor && IsMoviePlayerEnabled() && !Active->Options.bManualLoad && GetMoviePlayer())
@@ -619,11 +742,11 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 		{
 			Coverage = 0.f;
 			EndActive(bOpeningAfterFailure ? EACFTransitionEvent::Failed : EACFTransitionEvent::Finished);
+			Settle(false); // a listener's next transition starts on the overlay as it is
 			if (!Active.IsSet() && Coverage <= 0.f)
 			{
 				DetachOverlay();
 			}
-			StartNextQueued();
 			return;
 		}
 		break;
@@ -706,6 +829,11 @@ void UACFTransitionSubsystem::EndActive(EACFTransitionEvent Terminal)
 
 void UACFTransitionSubsystem::Emit(FRequest& Request, EACFTransitionEvent Event)
 {
+	if (!ensureMsgf(!ACFTransition::IsTerminal(Request.LastEvent), TEXT("ACF Transition: %s already ended with %s; %s is not sent."),
+		*Request.Handle.ToString(), ACFTransition::LexEvent(Request.LastEvent), ACFTransition::LexEvent(Event)))
+	{
+		return; // at most one terminal event per handle, nothing after it
+	}
 	Request.LastEvent = Event;
 	if (ACFTransition::IsTerminal(Event))
 	{
@@ -716,7 +844,14 @@ void UACFTransitionSubsystem::Emit(FRequest& Request, EACFTransitionEvent Event)
 		FinishedEvents.Add(Request.Handle, Event);
 	}
 	UE_LOG(LogACFTransition, Verbose, TEXT("ACF Transition: %s %s."), *Request.Handle.ToString(), ACFTransition::LexEvent(Event));
-	const FACFTransitionHandle Handle = Request.Handle;
+	Broadcast(Request.Handle, Event);
+}
+
+void UACFTransitionSubsystem::Broadcast(FACFTransitionHandle Handle, EACFTransitionEvent Event)
+{
+	// While listeners run, Play* requests wait in Incoming (Submit -> Settle returns at once).
+	++DispatchDepth;
+	ON_SCOPE_EXIT { --DispatchDepth; };
 	OnTransitionEventNative.Broadcast(Handle, Event);
 	OnTransitionEvent.Broadcast(Handle, Event);
 }
@@ -789,6 +924,10 @@ void UACFTransitionSubsystem::DetachOverlay()
 		View.Reset();
 	}
 	ReleaseCapture();
+	if (!Active.IsSet())
+	{
+		DrawSettings = FACFTransitionSettings(); // nothing is drawn: no curve / texture / material / sound kept
+	}
 }
 
 void UACFTransitionSubsystem::StartCapture()
@@ -814,7 +953,9 @@ bool UACFTransitionSubsystem::ResolvePendingCapture()
 	using EState = FACFTransitionGpuCapture::EState;
 	const EState State = PendingCapture->GetState();
 	LastCaptureWaitFrames = static_cast<int32>(PendingCapture->GetFramesWaited());
-	if (State == EState::Ready)
+	UGameInstance* GI = GetGameInstance();
+	UGameViewportClient* ViewportClient = GI ? GI->GetGameViewportClient() : nullptr;
+	if (State == EState::Ready && PendingCapture->MatchesViewport(ViewportClient))
 	{
 		Capture = PendingCapture->GetTexture();
 		PendingCapture.Reset();
@@ -825,42 +966,56 @@ bool UACFTransitionSubsystem::ResolvePendingCapture()
 	{
 		return false;
 	}
-	// Failed (HDR / non-BGRA back buffer, window changed) or not presented in time: the synchronous read back, and
-	// without it the effect's procedural look. The transition always goes on.
-	UE_LOG(LogACFTransition, Log, TEXT("Screen capture on the GPU %s after %d frames; using the read back."), State == EState::Failed ? TEXT("failed") : TEXT("not ready"), LastCaptureWaitFrames);
-	if (UTexture* Unused = PendingCapture->GetTexture())
-	{
-		Unused->MarkAsGarbage();
-	}
+	// Failed (HDR / non-BGRA back buffer), the viewport was resized / moved since the request, or not presented in time:
+	// the synchronous read back, and without it the effect's procedural look. The transition always goes on.
+	UE_LOG(LogACFTransition, Log, TEXT("Screen capture on the GPU %s after %d frames; using the read back."),
+		State == EState::Failed ? TEXT("failed") : (State == EState::Ready ? TEXT("is stale (the viewport changed)") : TEXT("not ready")), LastCaptureWaitFrames);
+	// Dropping the request removes its render thread listener; the render target is left to the GC (it is never
+	// destroyed while a render command that was queued before can still copy into it, see README 33 章「キャプチャ」).
 	PendingCapture.Reset();
 	bLastCaptureFellBack = true;
-	UGameInstance* GI = GetGameInstance();
-	Capture = FACFTransitionView::CaptureViewport(GI ? GI->GetGameViewportClient() : nullptr, Settings->MaxCaptureWidth);
+	Capture = FACFTransitionView::CaptureViewport(ViewportClient, Settings->MaxCaptureWidth);
 	return true;
+}
+
+int32 UACFTransitionSubsystem::GetPendingCaptureState() const
+{
+	return PendingCapture.IsValid() ? static_cast<int32>(PendingCapture->GetState()) : -1;
+}
+
+void UACFTransitionSubsystem::SkipPendingCapture()
+{
+	// Skip never waits for the GPU and never reads the screen back: a copy that is already there is used, otherwise the
+	// effect continues with its procedural look (the Close is covered within a few frames anyway).
+	using EState = FACFTransitionGpuCapture::EState;
+	LastCaptureWaitFrames = static_cast<int32>(PendingCapture->GetFramesWaited());
+	UGameInstance* GI = GetGameInstance();
+	if (PendingCapture->GetState() == EState::Ready && PendingCapture->MatchesViewport(GI ? GI->GetGameViewportClient() : nullptr))
+	{
+		Capture = PendingCapture->GetTexture();
+	}
+	else
+	{
+		bLastCaptureFellBack = true;
+		UE_LOG(LogACFTransition, Verbose, TEXT("ACF Transition: Skip while the screen capture is pending; the effect draws without it."));
+	}
+	PendingCapture.Reset();
 }
 
 void UACFTransitionSubsystem::ReleaseCapture()
 {
-	if (PendingCapture.IsValid())
-	{
-		PendingCapture->Cancel();
-		if (UTexture* Unused = PendingCapture->GetTexture())
-		{
-			Unused->MarkAsGarbage();
-		}
-		PendingCapture.Reset();
-	}
-	if (Capture)
-	{
-		Capture->MarkAsGarbage();
-		Capture = nullptr;
-	}
+	// No MarkAsGarbage: the overlay's material instance may still reference the capture (Snapshot parameter) and draw
+	// with it on the render thread; the GC frees it once nothing references it.
+	PendingCapture.Reset(); // cancels the request
+	Capture = nullptr;
 }
 
 void UACFTransitionSubsystem::ApplyInputLock(bool bLock)
 {
 	if (bLock)
 	{
+		bInputLocked = true;
+		LockedControllers.RemoveAll([](const FInputLock& Lock) { return !Lock.Controller.IsValid(); });
 		UWorld* World = GetGameWorld();
 		if (!World)
 		{
@@ -869,23 +1024,38 @@ void UACFTransitionSubsystem::ApplyInputLock(bool bLock)
 		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 		{
 			APlayerController* PC = It->Get();
-			if (PC && PC->IsLocalController() && !LockedControllers.Contains(PC))
+			if (!PC || !PC->IsLocalController())
+			{
+				continue;
+			}
+			FInputLock* Lock = LockedControllers.FindByPredicate([PC](const FInputLock& L) { return L.Controller.Get() == PC; });
+			if (!Lock)
+			{
+				Lock = &LockedControllers.AddDefaulted_GetRef();
+				Lock->Controller = PC;
+			}
+			// One lock per controller. Taken again only when it is gone (ClientRestart / ResetIgnoreInputFlags cleared the
+			// counters, e.g. a respawn): otherwise another system's lock would be given back by ours.
+			if (!Lock->bMove || !PC->IsMoveInputIgnored())
 			{
 				PC->SetIgnoreMoveInput(true);
+				Lock->bMove = true;
+			}
+			if (!Lock->bLook || !PC->IsLookInputIgnored())
+			{
 				PC->SetIgnoreLookInput(true);
-				LockedControllers.Add(PC);
+				Lock->bLook = true;
 			}
 		}
-		bInputLocked = true;
 	}
 	else
 	{
-		for (const TWeakObjectPtr<APlayerController>& Weak : LockedControllers)
+		for (const FInputLock& Lock : LockedControllers)
 		{
-			if (APlayerController* PC = Weak.Get())
+			if (APlayerController* PC = Lock.Controller.Get())
 			{
-				PC->SetIgnoreMoveInput(false);
-				PC->SetIgnoreLookInput(false);
+				if (Lock.bMove) { PC->SetIgnoreMoveInput(false); }
+				if (Lock.bLook) { PC->SetIgnoreLookInput(false); }
 			}
 		}
 		LockedControllers.Reset();
@@ -940,6 +1110,7 @@ void UACFTransitionSubsystem::HandlePreLoadMap(const FString& MapName)
 		SetStage(EStage::Loading);
 		Emit(*Active, EACFTransitionEvent::LoadStarted);
 	}
+	Settle(true);
 }
 
 void UACFTransitionSubsystem::HandlePostLoadMap(UWorld* World)
@@ -956,6 +1127,12 @@ void UACFTransitionSubsystem::HandlePostLoadMap(UWorld* World)
 			return;
 		}
 		SetStage(EStage::WaitingWorld);
+	}
+	if (Active.IsSet() && Active->Options.bLockInput)
+	{
+		// The new world's local controllers exist now (spawned by the load): locked before they get a tick, also while
+		// the transition waits for the world / NotifyWorldReady.
+		ApplyInputLock(true);
 	}
 	// The viewport keeps its widgets through a map load; re-add the overlay if something removed it.
 	if (bOverlayAttached && View.IsValid() && !View->GetWidget()->GetParentWidget().IsValid())

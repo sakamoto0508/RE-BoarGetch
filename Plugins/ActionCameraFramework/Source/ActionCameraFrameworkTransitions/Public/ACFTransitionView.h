@@ -46,6 +46,9 @@ public:
 	 *  RequestGpuCapture and the capture of ShowStill (tools, tests). */
 	static UTexture2D* CaptureViewport(UGameViewportClient* ViewportClient, int32 MaxWidth);
 
+	/** The game viewport's rectangle in its window's back buffer (pixels); false without a renderer / window. */
+	static bool GetViewportPixelRect(UGameViewportClient* ViewportClient, FIntRect& OutRect);
+
 	/**
 	 * Starts a capture of the game viewport without stalling the game thread: when the window's next frame is ready to be
 	 * presented, the render thread copies the viewport's part of the back buffer into a render target on the GPU (no read
@@ -99,8 +102,16 @@ public:
 	UTexture* GetTexture() const;
 	/** Frames since the request. */
 	uint64 GetFramesWaited() const;
-	/** Stops listening for the frame (the render target is left to the caller / GC). */
+	/** Stops listening for the frame (the render target is left to the caller / GC). Safe to call any number of times. */
 	void Cancel();
+	/** The viewport still has the rectangle the copy was requested for (not resized / moved since): the copy is usable. */
+	bool MatchesViewport(UGameViewportClient* ViewportClient) const;
+
+	/** Live requests and registered render thread listeners (the tests check that nothing is left). */
+	static int32 GetLiveCount();
+	static int32 GetListenerCount();
+
+	FACFTransitionGpuCapture();
 
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 	virtual FString GetReferencerName() const override { return TEXT("FACFTransitionGpuCapture"); }
@@ -112,4 +123,5 @@ private:
 	TObjectPtr<class UTextureRenderTarget2D> Target = nullptr;
 	FDelegateHandle Handle;
 	uint64 RequestFrame = 0;
+	FIntRect RequestRect;
 };

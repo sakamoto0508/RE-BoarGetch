@@ -29,7 +29,13 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FACFOnTransitionEventNative, FACFTransition
  *    Covered). It follows the load through PreLoadMap / PostLoadMapWithWorld, or NotifyLoadStarted / NotifyLoadCompleted
  *    with bManualLoad.
  *
- * Every handle ends with exactly one terminal event (Finished, Failed, Cancelled, Interrupted). The overlay is removed
+ * Every handle ends with exactly one terminal event (Finished, Failed, Cancelled, Interrupted); a handle that sent Started
+ * always gets one. Events are sent synchronously (OnTransitionEventNative, then OnTransitionEvent). Re-entrancy (README 33
+ * 章「イベントと再入」): a Play* request made while an event is being sent is not applied inside that event; it waits and
+ * is applied, in request order and with its own Concurrency, as soon as the operation that sent the event has finished its
+ * own state change (before queued transitions start). Cancel / Skip / ClearScreen / Notify* act at once, also from a
+ * listener. ClearScreen cancels everything requested before it (also such waiting requests); requests made by the
+ * listeners of its Cancelled events start after the screen is cleared. The overlay is removed
  * (material instance and capture released) when the screen is clear; a failed / timed-out level transition opens the
  * screen instead of leaving it covered. No camera request is needed; the camera Core is not used.
  */
@@ -127,6 +133,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "ACF|Transition")
 	FACFTransitionInfo GetTransitionInfo(FACFTransitionHandle Handle) const;
 
+	/** Queued transitions (Concurrency Queue) waiting for the active one. */
 	UFUNCTION(BlueprintPure, Category = "ACF|Transition")
 	int32 GetQueueLength() const { return Queue.Num(); }
 
@@ -145,7 +152,15 @@ public:
 	/** Frames the last Close waited for its capture, and whether it fell back to the synchronous read back (or to no capture). */
 	int32 GetLastCaptureWaitFrames() const { return LastCaptureWaitFrames; }
 	bool DidLastCaptureFallBack() const { return bLastCaptureFellBack; }
+	/** -1 = no capture request; otherwise FACFTransitionGpuCapture::EState of the pending request (tests). */
+	int32 GetPendingCaptureState() const;
 	FACFTransitionView* GetView() const { return View.Get(); }
+	/** Play* requests made by event listeners that wait for the current operation (see the class comment). */
+	int32 GetWaitingRequestCount() const { return Incoming.Num() + (Starting.IsSet() ? 1 : 0); }
+	/** True while an event is being sent (a listener is running). */
+	bool IsSendingEvent() const { return DispatchDepth > 0; }
+	/** Player controllers whose move / look input this subsystem currently ignores. */
+	int32 GetLockedControllerCount() const { return LockedControllers.Num(); }
 	/** CPU seconds of the last Tick (cycles of this subsystem only). */
 	double GetLastTickSeconds() const { return LastTickSeconds; }
 	/** Advances the transition by DeltaSeconds (tests drive time explicitly). */
@@ -155,6 +170,9 @@ public:
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+
+	// UObject: the UObjects of the active, starting, waiting and queued requests (FRequest is not reflected).
+	static void AddReferencedObjects(UObject* InThis, FReferenceCollector& Collector);
 
 	// FTickableGameObject
 	virtual void Tick(float DeltaTime) override;
@@ -190,7 +208,11 @@ private:
 	};
 
 	FACFTransitionHandle Submit(FRequest&& Request);
+	void Admit(FRequest&& Request);
+	void Settle(bool bStartQueued);
 	void Start(FRequest&& Request);
+	void Broadcast(FACFTransitionHandle Handle, EACFTransitionEvent Event);
+	void SkipPendingCapture();
 	void TickTransitions(float DeltaSeconds);
 	void Emit(FRequest& Request, EACFTransitionEvent Event);
 	void EmitDeferred(FACFTransitionHandle Handle, EACFTransitionEvent Event);
@@ -215,8 +237,14 @@ private:
 	void HandleTravelFailure(UWorld* World, ETravelFailure::Type Type, const FString& Error);
 	void HandleNetworkFailure(UWorld* World, class UNetDriver* Driver, ENetworkFailure::Type Type, const FString& Error);
 
+	// Every UObject in these requests is reported to the GC by AddReferencedObjects.
 	TOptional<FRequest> Active;
 	TArray<FRequest> Queue;
+	TArray<FRequest> Incoming;     // Play* requests not applied yet (made while an event was being sent), oldest first
+	TOptional<FRequest> Starting;  // an Interrupt request while the interrupted handle sends its terminal event
+	bool bStartingCancelled = false;
+	int32 DispatchDepth = 0;       // > 0 while listeners run
+	bool bSettling = false;
 	TArray<TPair<FACFTransitionHandle, EACFTransitionEvent>> PendingEvents;
 	TMap<FACFTransitionHandle, EACFTransitionEvent> FinishedEvents; // terminal events of ended handles (bounded)
 
@@ -234,6 +262,8 @@ private:
 
 	float Coverage = 0.f;
 	EACFTransitionPhase DrawPhase = EACFTransitionPhase::Close;
+	/** What the overlay draws (the active phase, a held cover or a still). Reset when the overlay is removed. */
+	UPROPERTY(Transient)
 	FACFTransitionSettings DrawSettings;
 	bool bStill = false;
 
@@ -248,7 +278,14 @@ private:
 	int32 LastCaptureWaitFrames = 0;
 	bool bLastCaptureFellBack = false;
 
-	TArray<TWeakObjectPtr<APlayerController>> LockedControllers;
+	/** The locks this subsystem took (SetIgnoreMoveInput / SetIgnoreLookInput are counters: only these are given back). */
+	struct FInputLock
+	{
+		TWeakObjectPtr<APlayerController> Controller;
+		bool bMove = false;
+		bool bLook = false;
+	};
+	TArray<FInputLock> LockedControllers;
 	bool bInputLocked = false;
 
 	int32 NextHandleId = 1;

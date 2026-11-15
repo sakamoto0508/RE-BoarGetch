@@ -2783,7 +2783,26 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 | `Failed` | Reject、ロード失敗、Travel の失敗、タイムアウト。画面は Open して見える状態に戻す。終端 |
 | `Cancelled` / `Interrupted` | `Cancel` / 別の要求の割り込み。終端 |
 
-1 つの Handle には必ず終端のイベントが 1 つだけ来ます。Close の `Covered` と `Finished` は、Handle を終えてから送ります（`Covered` を受けてすぐ `PlayOpen` を呼んでも、Close は Interrupted にならず Finished で終わる）。
+1 つの Handle には終端のイベントが最大 1 つ来ます。`Started` を送った Handle には必ず 1 つ来ます。まだ始まっていない Handle（Queue や、下の「待ち」の要求）は、`Cancelled` / `Failed` だけで終わることがあります。終端の後には、その Handle のイベントは来ません。Close の `Covered` と `Finished` は、Handle を終えてから送ります（`Covered` を受けてすぐ `PlayOpen` を呼んでも、Close は Interrupted にならず Finished で終わる）。
+
+**イベントと再入**（レビュー対応）: イベントは同期で送ります（`OnTransitionEventNative`、続けて Blueprint の `OnTransitionEvent`）。どちらのリスナーからでも、次の API を呼べます。
+
+- **リスナーからの `Play*` の要求**: そのイベントの中ではすぐに適用しません。要求はいったん待ちに入り、Handle はすぐ返ります。`GetTransitionInfo` では `bQueued` になります。
+  - イベントを送った処理が自分の状態の変更を終えた時点で、要求した順に、それぞれの `Concurrency` で適用します。Queue で待っている遷移より先に適用します。
+  - 例: B が A を Interrupt し、A の `Interrupted` のリスナーが C を要求したとします。この場合は B が始まり、続いて C が B を Interrupt します。以前は、C が B に上書きされて終端のイベントが来ませんでした。
+  - `Finished` / `Cancelled` から要求した次の遷移は、その処理の中で、いま画面にある被覆から始まります。
+- **`Cancel` / `Skip` / `Notify*`**: リスナーからでもすぐに効きます。
+  - Interrupt の要求を始めている途中（割り込まれた Handle の `Interrupted` を送っている間）に、その新しい要求を `Cancel` すると、その要求は `Started` なしで `Cancelled` になります。
+- **`ClearScreen`**: それより前に要求されたものを、すべて `Cancelled` で終えます。対象は、再生中の遷移、始めている途中の要求、Queue、待ちの要求です。
+  - その `Cancelled` のリスナーが要求したものは、画面を消した後に、何も無い画面から始まります。
+- **上限**: 1 回の処理で適用する要求は 256 件までです。リスナーが要求を返し続けても止まらず、残りは次の Tick に回します。
+
+**参照の保持（GC）**: Settings の Curve / Overlay Texture / Material Override / Sound は、どの段階でも GC されません。
+
+- **保持している段階**: 再生中、Queue や待ちの要求、OpenLevel のロード中と Ready 待ち、覆ったまま保持している間（描いている Settings）。
+- **GC が参照をたどる経路**: GameInstance → Subsystem → `AddReferencedObjects`（各要求の Close / Open の Settings）。描いている Settings は `UPROPERTY` です。
+- **解放**: 遷移が終わってオーバーレイを外した時点で、すべての参照を放します。
+- **以前の問題**: 要求が GC から見えない C++ の構造体だったため、`OpenLevel` の LoadMap の GC で Curve が解放され、Open で落ちることがありました。
 
 **多重要求**（Options の `Concurrency`）
 
@@ -2792,9 +2811,21 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 - `Reject`: 再生中なら始めず、次のフレームに Failed を送ります。
 - 覆った画面への Close はアニメーションせずにすぐ Covered → Finished、何も出ていない画面への Open は完全被覆から始まります。
 
-**Cancel / Skip / Clear**: `Cancel(Handle, bClearScreen = true)` は Cancelled で終え、既定では画面を消します。`Skip` は今の段階（Close / Open）を最後まで飛ばします。`ClearScreen` はすべて（Queue も）を Cancelled にして画面を消します。
+**Cancel / Skip / Clear**:
 
-**入力のロック**（Options の `Lock Input`、既定オフ）: ローカルの Player Controller の Move / Look Input を無視し、オーバーレイがマウスのクリックを止めます。終端のイベント（どの理由でも）で戻します。レベルの切り替えでは新しい World の Controller もロックし、Open の終わりに戻します。
+- `Cancel(Handle, bClearScreen = true)`: Cancelled で終え、既定では画面を消します。Queue や待ちの要求も Cancel できます。
+- `Skip`: 今の段階（Close / Open）を最後まで飛ばします。
+  - キャプチャを使う Close が GPU のコピーを待っている間でも、それ以上待ちません。コピーが既にできていればそれを使い、無ければ要求を取り消して、その ID の手続き的な絵で続けます。同期の読み出しはしません。
+  - Close は次の Tick で被覆率 1 になり、`CoveredFrames` を経て `Covered` になります。Level の遷移では、その後に `OpenLevel` します。
+- `ClearScreen`: すべて（Queue と待ちの要求も）を Cancelled にして画面を消します。
+
+**入力のロック**（Options の `Lock Input`、既定オフ）: ローカルの Player Controller の Move / Look Input を無視し、オーバーレイがマウスのクリックを止めます。終端のイベント（どの理由でも）で戻します。
+
+- **ロックする Controller**: 遷移の間は毎 Tick、ローカルの Controller を確かめてロックします。
+  - ロード後の新しい World の Controller は、`PostLoadMapWithWorld` の時点でロックします。Ready の合図を待っている間もロックしたままです。
+  - 途中で増えたローカルプレイヤーの Controller もロックします。
+  - ClientRestart / `ResetIgnoreInputFlags` でロックが消えた Controller は、もう一度ロックします。
+- **他のシステムのロックは壊しません**: `SetIgnoreMoveInput` / `SetIgnoreLookInput` は回数で数えます。そのため、各 Controller に ACF が取ったロックを 1 つだけ記録し、それだけを戻します。`Reset*` は呼びません。
 
 **黒い画面のまま残らないための仕組み**: Level のタイムアウト（`LevelTimeoutSeconds` 既定 30 秒、Options の `TimeoutSeconds` で上書き。ブロッキングのロード中の時間は数えない）、`PostLoadMapWithWorld(nullptr)`・Travel / Network Failure・`NotifyLoadFailed` → Open して Failed。GameInstance の終了時は何も送らずにオーバーレイを外し、入力を戻します。
 
@@ -2922,7 +2953,16 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 | `.Transitions.Lifecycle.InterruptQueueReject` | 割り込み（被覆率が飛ばない）・Queue の順序・Reject（Failed）・1 フレームに 42 個の割り込み |
 | `.Transitions.Lifecycle.LevelManualLoad` | Manual Load の通知、Ready の合図を待つ、入力のロックと解除、タイムアウト → Failed で画面が戻る、`NotifyLoadFailed` |
 | `.Transitions.Lifecycle.ReleaseAndBlueprintApi` | Blueprint の関数、終了後に Material Instance が GC される、ビューが残らない |
-| `.Transitions.Travel.OpenLevelABA` | 実際の `OpenLevel` で 開始マップ → A → B → A → 開始マップ（41/42、Black Fade、Cross Dissolve）。各ロードの `PreLoadMap` / `PostLoadMapWithWorld` で被覆率 1 とオーバーレイの存在、イベントの順序、到着後に画面が消える、新しい Controller の入力、古い World が GC される |
+| `.Transitions.Travel.OpenLevelABA` | 実際の `OpenLevel` で 開始マップ → A → B → A → 開始マップ（41/42、Zoom Rush を開始直後に Skip、Cross Dissolve で Ready の合図を待つ、Black Fade）。各ロードの `PreLoadMap` / `PostLoadMapWithWorld` で被覆率 1 とオーバーレイの存在、イベントの順序、到着後に画面が消える、新しい Controller の入力、古い World が GC される。Ready 待ちの間に新しい World の Controller がロックされている、Open の Settings の一時的な Curve / Texture / Material がロードの GC と明示の GC を越えて残り、終了後に解放される |
+| `.Transitions.Reentry.InterruptListener` | A の `Interrupted` のリスナーが C を要求（B が A を Interrupt したとき）→ B が始まり C が B を Interrupt、C が有効な Handle。始めている途中の要求をリスナーが Cancel → `Started` なしで Cancelled |
+| `.Transitions.Reentry.BlueprintListener` | 同じことを Blueprint の Dynamic Delegate から。`Finished` のリスナーから次の Open（覆ったまま続く） |
+| `.Transitions.Reentry.CancelledAndClearScreen` | `Cancelled` のリスナーの Open は被覆から続く、`ClearScreen` の `Cancelled` のリスナーの要求は何も無い画面から、`Interrupted` のリスナーの `ClearScreen` は割り込んだ要求も Cancel、自分の `Started` で Cancel |
+| `.Transitions.Reentry.QueueInterruptMix` | リスナーから Queue・Interrupt・Reject を混ぜて要求 → 順序（C → Q1 → Q2）と各 Handle のイベント |
+| `.Transitions.Reentry.RandomListeners` | 固定の乱数で、Native と Blueprint のリスナーと外側から Play / Cancel / Skip / ClearScreen を混ぜる（600 Tick）。全 Handle で終端のイベントが重複・欠落しない、入力・オーバーレイ・キャプチャが残らない |
+| `.Transitions.GC.ActiveQueuedWaitingHeld` | 一時的な Curve / Texture / Material を、再生中・Queue・覆ったまま保持・Ready 待ちの要求に持たせて GC → 残る、終了後の GC → 解放される |
+| `.Transitions.InputLock.Lifetime` | 他のシステムのロックが残る、Ready の合図の長い待ちの間に増えたローカルプレイヤーの Controller と `ResetIgnoreInputFlags` された Controller がロックされる、終了・タイムアウト・Cancel・Interrupt で戻る |
+| `.Transitions.Capture.SkipWhilePending`（描画ありで完全） | キャプチャ待ちの Close を同じフレームで Skip → 次の Tick で被覆率 1・読み出しなし、Skip → Cancel、Skip → Interrupt、失敗するキャプチャ + Skip、フレームを経て Covered → Finished、コピーが GPU にできた直後の Skip はそのコピーを使う |
+| `.Transitions.Capture.RenderThreadLifetime`（描画あり） | 要求直後の Cancel（同じフレームに 3 回）、要求の破棄、開始と ClearScreen を同じフレームに 20 回、1 フレーム後の Cancel × 10、連続のキャプチャ × 15、コピー待ちのウィンドウのリサイズ → Render Thread のリスナー・要求・Render Target が残らない |
 | `.Transitions.Render.AllEffects`（描画あり） | ゲームと同じ Widget + Material を Slate でオフスクリーンに描き（FWidgetRenderer）、42 種類 × 9 枚（Close 0 / 25 / 50 / 75 / 100%、Open 0 / 35 / 70 / 100%）を読み出す。被覆率 0 で何も描かない（Alpha ≤ 2/255）、1 で全ピクセルを覆う（Alpha ≥ 253/255）、42 種類の全 861 ペアの中間フレームの差が 3/255 以上（最も近いペアも表示）。コンタクトシートを `Saved/ACFTransitions/` に保存 |
 | `.Transitions.Render.ViewportFullCover`（描画あり） | 実際の Game Viewport で、42 種類それぞれを被覆率 1 で表示し、World の描画を止めても画面が変わらない（= World が 1 ピクセルも見えない）こと。何も出ていないときは変わること |
 | `.Transitions.Profile.Cost`（描画あり） | 下の「性能」 |
@@ -2978,7 +3018,21 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 | 同期の読み出し（変更前） | 平均 45.5 ms / 最大 56.7 ms（1 回目 39.9 ms） | 平均 3.0 ms | 0 フレーム |
 | GPU のコピー（変更後） | 平均 0.08 ms / 最大 0.11 ms（1 回目 0.06 ms） | 平均 3.0 ms / 最大 4.7 ms | 最大 3 フレーム |
 
-GPU のコピーと同期の読み出しの同じ画面の差: 生の値で平均 0.34/255、Material（Cross Dissolve 30 %）を通した絵で 0.49/255。GPU のコピーは Viewport の大きさのまま持ちます（720p で約 3.7 MB の VRAM、Close の間だけ）。
+GPU のコピーと同期の読み出しの同じ画面の差: 生の値で平均 0.34/255、Material（Cross Dissolve 30 %）を通した絵で 0.49/255。GPU のコピーは Viewport の大きさのまま持ちます（720p で約 3.7 MB の VRAM）。遷移が終わった後は次の GC で解放されます（以前は `MarkAsGarbage` ですぐ消していましたが、下の理由でやめました）。
+
+**Render Thread との寿命**（レビューでの監査）:
+
+- **リスナーの解除**: リスナーは、Cancel・取り消し・Subsystem の終了のたびに外します。外した後のリスナーの数が 0 になることを、テストで確かめています。
+  - リスナーは `FShared` を弱い参照で持ちます。Window は比べるだけで、参照しません。
+  - 状態は atomic で、Pending → Ready / Failed の一方向だけに変わります（compare-exchange）。Cancel すると Failed にするので、まだ動いていないリスナーはコピーしません。
+- **コピー先の寿命**: 要求が終わるまで、コピー先の Render Target は要求のオブジェクトが GC から守ります。
+  - Render Target のリソースは、GC の破棄で Game Thread がキューに積む `ReleaseResource` で解放されます（`FinishDestroy` はその完了を待ちます）。
+  - その解放は、それより前に積まれた「リスナーを呼ぶ可能性のある Slate の描画」より後に Render Thread で実行されます。
+  - コピーは、その前に RHI のコマンドとして記録されます（RHI は使用中のテクスチャを保持します）。
+  - そのため、`FlushRenderingCommands` を追加しなくても、解放後のリソースを使うことはありません。
+- **`MarkAsGarbage` の削除**: キャプチャを `MarkAsGarbage` していたのをやめました。オーバーレイの Material Instance が Snapshot のパラメーターとしてまだ参照し、Render Thread の描画で使う可能性があったためです。今は参照が無くなってから GC が解放します。
+- **ウィンドウの変化**: 要求後に Viewport の大きさや位置が変わったとき、できたコピーは使わず（`MatchesViewport`）、同期の読み出しに戻ります。
+- **自動テストで確かめていないこと**: Render Thread のタイミングの競合そのもの。上の順序の保証は、エンジンのコードの読解によるものです。
 
 ### 目視確認用の出力
 

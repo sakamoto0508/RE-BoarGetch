@@ -4,7 +4,11 @@
 
 #include "ACFTransitionTestUtils.h"
 #include "ACFTransitionView.h"
+#include "Curves/CurveFloat.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/Texture2D.h"
+#include "GameFramework/PlayerController.h"
+#include "Materials/MaterialInstanceConstant.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -13,6 +17,9 @@
  * L_ACFTransitionB -> L_ACFTransitionA -> start map. At every PreLoadMap the screen must be fully covered and the overlay in
  * the viewport, after every load the overlay must still be there and covered, the events must come in order, the screen
  * must be clear at the end and the old worlds must be garbage collected. Game context (-game; -NullRHI works too).
+ * Review fixes: the second leg is skipped right after it starts (a capture effect: the GPU copy may be pending) and must still
+ * be covered before the load; the third leg waits for NotifyWorldReady, and while it waits after the real load the new
+ * world's controller must be locked and the Open settings' transient curve / texture / material must survive a GC.
  */
 namespace ACFTransitionTravel
 {
@@ -30,6 +37,11 @@ namespace ACFTransitionTravel
 		FDelegateHandle Pre, Post;
 		int32 Loads = 0;
 		bool bHasViewport = false;
+		TWeakObjectPtr<UCurveFloat> Curve;
+		TWeakObjectPtr<UTexture2D> Texture;
+		TWeakObjectPtr<UMaterialInterface> Material;
+		double Mark = 0.0;
+		bool bHasMaterial = false;
 
 		~FCtx()
 		{
@@ -83,13 +95,63 @@ bool FACFTransitionTravelTest::RunTest(const FString&)
 		}
 	});
 
-	auto Go = [this, Ctx](const FString& Map, EACFTransitionEffect Close, EACFTransitionEffect Open, const FString& TravelOptions = FString())
+	enum class ELeg : uint8 { Plain, Skip, WaitReady };
+	auto Go = [this, Ctx](const FString& Map, EACFTransitionEffect Close, EACFTransitionEffect Open, const FString& TravelOptions = FString(), ELeg Leg = ELeg::Plain)
 	{
-		return [this, Ctx, Map, Close, Open, TravelOptions]()
+		return [this, Ctx, Map, Close, Open, TravelOptions, Leg]()
 		{
 			FACFTransitionOptions O;
 			O.bLockInput = true;
-			Ctx->Handle = Ctx->S->PlayLevelTransition(Settings(Close, 0.35f), Settings(Open, 0.35f, EACFTransitionPhase::Open), O, FName(*Map), TravelOptions);
+			FACFTransitionSettings OpenSettings = Settings(Open, 0.35f, EACFTransitionPhase::Open);
+			if (Leg == ELeg::WaitReady)
+			{
+				O.bWaitForReadySignal = true;
+				// Referenced only by this request: LoadMap's own GC and the GC below must not collect them.
+				UCurveFloat* Curve = NewObject<UCurveFloat>(GetTransientPackage(), NAME_None, RF_Transient);
+				Curve->FloatCurve.AddKey(0.f, 0.f);
+				Curve->FloatCurve.AddKey(1.f, 1.f);
+				UTexture2D* Texture = UTexture2D::CreateTransient(4, 4);
+				UMaterialInterface* Base = FACFTransitionView::LoadDefaultMaterial();
+				OpenSettings.Easing = EACFTransitionEasing::Curve;
+				OpenSettings.Curve = Curve;
+				OpenSettings.OverlayTexture = Texture;
+#if WITH_EDITOR
+				if (Base)
+				{
+					UMaterialInstanceConstant* Mic = NewObject<UMaterialInstanceConstant>(GetTransientPackage(), NAME_None, RF_Transient);
+					Mic->SetParentEditorOnly(Base);
+					Mic->PostEditChange();
+					OpenSettings.MaterialOverride = Mic;
+				}
+#endif
+				Ctx->Curve = Curve;
+				Ctx->Texture = Texture;
+				Ctx->Material = OpenSettings.MaterialOverride.Get();
+				Ctx->bHasMaterial = OpenSettings.MaterialOverride != nullptr;
+			}
+			Ctx->Handle = Ctx->S->PlayLevelTransition(Settings(Close, 0.35f), OpenSettings, O, FName(*Map), TravelOptions);
+			if (Leg == ELeg::Skip)
+			{
+				TestTrue(TEXT("Skip right after the start"), Ctx->S->Skip(Ctx->Handle));
+				TestFalse(TEXT("Skip drops a pending capture"), Ctx->S->IsCapturePending());
+			}
+			return true;
+		};
+	};
+	auto WaitReady = [this, Ctx](int32 Loads)
+	{
+		return [this, Ctx, Loads]()
+		{
+			if (Ctx->Loads < Loads) { Ctx->Mark = FPlatformTime::Seconds(); return false; }
+			if (FPlatformTime::Seconds() - Ctx->Mark < 0.5) { return false; } // the new world runs while the transition waits
+			TestTrue(TEXT("Waiting for NotifyWorldReady after the load"), Ctx->S->GetActiveHandle() == Ctx->Handle && !Ctx->Rec.Has(Ctx->Handle, EACFTransitionEvent::LoadCompleted));
+			if (APlayerController* PC = FindGameWorld()->GetFirstPlayerController())
+			{
+				TestTrue(TEXT("The new world's controller is locked while waiting"), PC->IsMoveInputIgnored() && PC->IsLookInputIgnored());
+			}
+			CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+			TestTrue(TEXT("Open settings' curve / texture / material survive the load and a GC"), Ctx->Curve.IsValid() && Ctx->Texture.IsValid() && (Ctx->Material.IsValid() || !Ctx->bHasMaterial));
+			TestTrue(TEXT("NotifyWorldReady"), Ctx->S->NotifyWorldReady(Ctx->Handle));
 			return true;
 		};
 	};
@@ -117,9 +179,10 @@ bool FACFTransitionTravelTest::RunTest(const FString&)
 	TArray<TFunction<bool()>> Steps;
 	Steps.Add(Go(MapA, EACFTransitionEffect::SpiralClose, EACFTransitionEffect::SpiralOpen));
 	Steps.Add(Arrive(MapA));
-	Steps.Add(Go(MapB, EACFTransitionEffect::BlackFade, EACFTransitionEffect::BlackFade));
+	Steps.Add(Go(MapB, EACFTransitionEffect::ZoomRush, EACFTransitionEffect::BlackFade, FString(), ELeg::Skip));
 	Steps.Add(Arrive(MapB));
-	Steps.Add(Go(MapA, EACFTransitionEffect::CrossDissolve, EACFTransitionEffect::CrossDissolve));
+	Steps.Add(Go(MapA, EACFTransitionEffect::CrossDissolve, EACFTransitionEffect::CrossDissolve, FString(), ELeg::WaitReady));
+	Steps.Add(WaitReady(3));
 	Steps.Add(Arrive(MapA));
 	Steps.Add([this, Ctx, Go]()
 	{
@@ -138,6 +201,8 @@ bool FACFTransitionTravelTest::RunTest(const FString&)
 		}
 		TestEqual(TEXT("Old worlds collected (no reference kept by the transition)"), Alive, 0);
 		TestEqual(TEXT("No view object left"), FACFTransitionView::GetLiveViewCount(), 0);
+		TestFalse(TEXT("Transient Open settings released after the travel"), Ctx->Curve.IsValid() || Ctx->Texture.IsValid() || Ctx->Material.IsValid());
+		TestEqual(TEXT("No input lock left"), Ctx->S->GetLockedControllerCount(), 0);
 		for (const FString& Line : Ctx->Log)
 		{
 			AddInfo(Line);

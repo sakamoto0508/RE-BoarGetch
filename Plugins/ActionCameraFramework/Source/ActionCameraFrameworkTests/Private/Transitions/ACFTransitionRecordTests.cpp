@@ -50,7 +50,7 @@ namespace ACFTransitionRecord
 		UWorld* World = ACFTransitionTest::FindGameWorld();
 		UGameViewportClient* VC = World ? World->GetGameViewport() : nullptr;
 		TSharedPtr<SViewport> Widget = VC ? VC->GetGameViewportWidget() : nullptr;
-		FIntVector Size;
+		FIntVector Size(0, 0, 0);
 		TArray<FColor> Pixels;
 		if (!Widget.IsValid() || !FSlateApplication::Get().TakeScreenshot(Widget.ToSharedRef(), Pixels, Size) || Size.X <= 0 || Pixels.Num() != Size.X * Size.Y)
 		{
