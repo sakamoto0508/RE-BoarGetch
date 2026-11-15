@@ -93,6 +93,13 @@ struct FACFCameraZonePlayerUpdate
  *   (FACFCameraZoneRequestState: at most one request per player, Priority UACFCameraZoneSettings::ZoneRequestPriority).
  *   The request is released when the zone is left, disabled, destroyed or streamed out, when the player leaves this World
  *   or is removed, and when the World ends.
+ * - Notifications and re-entrancy (README 32 章「通知と再入」): a selection change is told to the listeners
+ *   (OnZoneSelectionChanged, then OnZoneChanged, per change) after the call that made it has finished all of its work:
+ *   the selection and the zone request of every player it touched are up to date, and no reference into the players'
+ *   states is held. Changes are told once each, in the order they happened. A listener may call any function of this
+ *   subsystem (UpdatePlayer of any player, RemovePlayer, enable / disable / destroy zones); the changes its calls make
+ *   are told after the current ones by the same dispatch (no nested broadcast), at most 1024 per dispatch (the rest at
+ *   the next call). Nothing is told after the World ends.
  */
 UCLASS(BlueprintType)
 class ACTIONCAMERAFRAMEWORKLEVEL_API UACFCameraZoneSubsystem : public UTickableWorldSubsystem
@@ -100,7 +107,8 @@ class ACTIONCAMERAFRAMEWORKLEVEL_API UACFCameraZoneSubsystem : public UTickableW
 	GENERATED_BODY()
 
 public:
-	/** Native: (local player, previous zone, new zone); either can be null. Called when the selection changes. */
+	/** Native: (local player, previous zone, new zone); either can be null. Called when the selection changes (see the class
+	 *  comment for when: after the change and its zone request, never while the players' states are being updated). */
 	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnZoneSelectionChanged, ULocalPlayer*, UACFCameraZoneComponent*, UACFCameraZoneComponent*);
 	FOnZoneSelectionChanged OnZoneSelectionChanged;
 
@@ -246,6 +254,36 @@ private:
 	bool PruneSuppressionSources();
 	/** Brings every player's zone request in line (after the suppression changed). */
 	void SyncAllRequests();
+
+	/** A selection change waiting to be told (no reference into Players: listeners may add / remove players). */
+	struct FZoneNotification
+	{
+		TWeakObjectPtr<ULocalPlayer> Player;
+		TWeakObjectPtr<UACFCameraZoneComponent> Previous;
+		TWeakObjectPtr<UACFCameraZoneComponent> New;
+	};
+
+	/** Public entry points that change selections: the outermost one tells the listeners when it has finished. */
+	struct FNotifyScope
+	{
+		explicit FNotifyScope(UACFCameraZoneSubsystem& InOwner) : Owner(InOwner) { ++Owner.NotifyDepth; }
+		~FNotifyScope()
+		{
+			if (--Owner.NotifyDepth == 0)
+			{
+				Owner.DispatchNotifications();
+			}
+		}
+		UACFCameraZoneSubsystem& Owner;
+	};
+
+	/** Tells the waiting changes, FIFO (re-entrant calls only queue). */
+	void DispatchNotifications();
+
+	TArray<FZoneNotification> PendingNotifications;
+	int32 NotifyDepth = 0;
+	bool bNotifying = false;
+	bool bNotificationsClosed = false;
 
 	TArray<TWeakObjectPtr<UACFCameraZoneComponent>> Zones;
 	TArray<FPlayerState> Players;
