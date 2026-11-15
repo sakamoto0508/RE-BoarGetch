@@ -561,6 +561,14 @@ private:
 	TObjectPtr<UACFCameraEffectPreset> BuiltinImpulsePreset;
 	UPROPERTY(Transient)
 	TObjectPtr<UACFCameraEffectPreset> BuiltinRecoilPreset;
+	/** D-2: the configured default presets once loaded, kept for the subsystem's life (a GC does not unload them, so a
+	 *  later impulse does not load them again in combat); the path they were loaded from (a changed setting reloads). */
+	UPROPERTY(Transient)
+	TObjectPtr<UACFCameraEffectPreset> LoadedImpulsePreset;
+	UPROPERTY(Transient)
+	TObjectPtr<UACFCameraEffectPreset> LoadedRecoilPreset;
+	FSoftObjectPath LoadedImpulsePath;
+	FSoftObjectPath LoadedRecoilPath;
 	UPROPERTY(Transient)
 	TMap<TObjectPtr<UClass>, TObjectPtr<UACFCameraEffectPreset>> ShakePresets;
 	UPROPERTY(Transient)

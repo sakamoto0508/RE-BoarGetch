@@ -488,4 +488,103 @@ bool FACFSequenceReentryCameraUpdateTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+
+// Phase D-3: split screen. Each local player has its own camera subsystem, queue and listeners; a listener of player 1
+// cancels player 2's sequence and plays another one there (a call into the other player's subsystem while player 1's
+// events are being sent).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFSequenceReentrySplitScreenTest, "ActionCameraFramework.Sequence.Reentry.SplitScreenPlayers", ACFSequenceReentry::Flags)
+bool FACFSequenceReentrySplitScreenTest::RunTest(const FString& Parameters)
+{
+	using namespace ACFSequenceReentry;
+	UWorld* World = ACFTestEnvironment::FindGameWorld();
+	APlayerController* PC1 = World ? World->GetFirstPlayerController() : nullptr;
+	UACFCameraSubsystem* Acf1 = PC1 && PC1->GetLocalPlayer() ? PC1->GetLocalPlayer()->GetSubsystem<UACFCameraSubsystem>() : nullptr;
+	if (!World || !World->HasBegunPlay() || !Acf1 || !PC1->PlayerCameraManager)
+	{
+		AddWarning(TEXT("Skipped: needs a game World with the first player's camera (run with -game)."));
+		return true;
+	}
+	ACFTestEnvironment::ExpectHostWidgetErrorForExtraLocalPlayers(*this);
+	TSharedPtr<FCtx> C1 = MakeShared<FCtx>();
+	TSharedPtr<FCtx> C2 = MakeShared<FCtx>();
+	C1->Test = this;
+	C1->World = World;
+	C1->Guard.Capture(World, {});
+	APlayerController* PC2 = UGameplayStatics::CreatePlayer(World, -1, true);
+	UACFCameraSubsystem* Acf2 = PC2 && PC2->GetLocalPlayer() ? PC2->GetLocalPlayer()->GetSubsystem<UACFCameraSubsystem>() : nullptr;
+	if (!Acf2 || !PC2->PlayerCameraManager)
+	{
+		AddWarning(TEXT("Skipped: no second local player with a camera here."));
+		C1->Guard.Restore();
+		return true;
+	}
+	C1->Acf = Acf1;
+	C1->PCM = PC1->PlayerCameraManager;
+	C2->Test = this;
+	C2->World = World;
+	C2->Acf = Acf2;
+	C2->PCM = PC2->PlayerCameraManager;
+	FCtx* R1 = C1.Get();
+	FCtx* R2 = C2.Get();
+	for (FCtx* R : { R1, R2 })
+	{
+		R->Listener.Reset(NewObject<UACFCameraSequenceTestListener>());
+		R->Listener->Callback = [R](const FACFCameraSequenceEvent& Event) { R->Record(Event); };
+		R->S()->OnCameraSequenceEvent.AddDynamic(R->Listener.Get(), &UACFCameraSequenceTestListener::OnSequenceEvent);
+	}
+
+	TArray<TFunction<bool()>> Steps;
+	Steps.Add([R1, R2]()
+	{
+		R1->H[0] = R1->Play(R1->Seq(2, 0.05f, 0.05f));
+		R2->H[0] = R2->Play(R2->Seq(1, 5.f));
+		// Player 1's first shot: cancel player 2's sequence and start another one there.
+		R1->React = [R1, R2](const FACFCameraSequenceEvent& E)
+		{
+			if (E.Sequence == R1->H[0] && E.Type == EACFCameraSequenceEventType::ShotStarted && E.ShotIndex == 0)
+			{
+				R1->R[0] = R2->Cancel(R2->H[0]);
+				R2->H[1] = R2->Play(R2->Seq(1, 0.05f));
+			}
+		};
+		return true;
+	});
+	Steps.Add([this, R1, R2]()
+	{
+		if (!R1->Ended(R1->H[0]) || !R2->Ended(R2->H[1])) { return false; }
+		TestTrue(TEXT("Player 1's listener cancelled player 2's sequence"), R1->R[0]);
+		TestEqual(TEXT("Player 1: its own sequence, in order"), R1->Of(R1->H[0]),
+			FString(TEXT("ShotStarted0,ShotEnded0:Completed,ShotStarted1,ShotEnded1:Completed,SequenceEnded:Completed")));
+		TestEqual(TEXT("Player 2: cancelled from player 1's listener"), R2->Of(R2->H[0]), FString(TEXT("ShotStarted0,ShotEnded0:Cancelled,SequenceEnded:Cancelled")));
+		TestEqual(TEXT("Player 2: the sequence started from player 1's listener"), R2->Of(R2->H[1]), FString(TEXT("ShotStarted0,ShotEnded0:Completed,SequenceEnded:Completed")));
+		int32 Crossed = 0;
+		for (const FRec& E : R1->Events) { Crossed += (E.Handle == R2->H[0] || E.Handle == R2->H[1]) ? 1 : 0; }
+		for (const FRec& E : R2->Events) { Crossed += E.Handle == R1->H[0] ? 1 : 0; }
+		TestEqual(TEXT("Each player's listener gets only its own player's events"), Crossed, 0);
+		R1->CheckContract(TEXT("Split screen player 1"), true);
+		R2->CheckContract(TEXT("Split screen player 2"), true);
+		return true;
+	});
+	ADD_LATENT_AUTOMATION_COMMAND(FSteps(this, MoveTemp(Steps), [this, C1, C2]()
+	{
+		for (FCtx* R : { C1.Get(), C2.Get() })
+		{
+			R->React = nullptr;
+			if (UACFCameraSubsystem* S = R->S())
+			{
+				S->OnCameraSequenceEvent.RemoveAll(R->Listener.Get());
+				if (UACFCameraDirector* Director = S->GetDirector())
+				{
+					Director->StopAllSequences(true);
+				}
+			}
+		}
+		for (const FString& Restored : C1->Guard.Restore())
+		{
+			AddInfo(FString::Printf(TEXT("Restored: %s"), *Restored));
+		}
+	}));
+	return true;
+}
+
 #endif

@@ -19,6 +19,8 @@
 #   --repeat N          N separate runs (fresh process each).
 #   --isolate           every matching test in its own process (order / state independence). Slow: ~20 s per test.
 #   --list              print the matching test names and exit.
+#   --with-sound        run with an audio device (without -nosound): tests that need sound (.Transitions.Sound.*) skip
+#                       themselves otherwise. Logs go to <context>-sound unless --log-dir is given.
 #   --project FILE      .uproject (default: the first one found above this plugin).
 #   --engine DIR        engine root (default $UE_ROOT, else "C:/Program Files/Epic Games/UE_5.8").
 #   --log-dir DIR       logs and summary.tsv (default <project>/Saved/Logs/ACFTests/<context>).
@@ -36,6 +38,7 @@ FILTER=""
 REPEAT=1
 ISOLATE=0
 LIST=0
+WITH_SOUND=0
 PROJECT=""
 ENGINE="${UE_ROOT:-C:/Program Files/Epic Games/UE_5.8}"
 LOGDIR=""
@@ -46,6 +49,7 @@ while [ $# -gt 0 ]; do
 		--repeat) REPEAT="$2"; shift 2 ;;
 		--isolate) ISOLATE=1; shift ;;
 		--list) LIST=1; shift ;;
+		--with-sound) WITH_SOUND=1; shift ;;
 		--project) PROJECT="$2"; shift 2 ;;
 		--engine) ENGINE="$2"; shift 2 ;;
 		--log-dir) LOGDIR="$2"; shift 2 ;;
@@ -75,12 +79,13 @@ if [ ! -f "$EDITOR_CMD" ]; then
 	exit 2
 fi
 PROJECT_DIR="$(dirname "$PROJECT")"
-[ -z "$LOGDIR" ] && LOGDIR="$PROJECT_DIR/Saved/Logs/ACFTests/$CONTEXT"
+[ -z "$LOGDIR" ] && LOGDIR="$PROJECT_DIR/Saved/Logs/ACFTests/$CONTEXT$([ $WITH_SOUND = 1 ] && echo -sound)"
 mkdir -p "$LOGDIR"
 LOGDIR="$(cd "$LOGDIR" && pwd)"
 command -v cygpath > /dev/null 2>&1 && LOGDIR="$(cygpath -m "$LOGDIR")"
 
 ARGS=(-unattended -nosplash -nosound)
+[ $WITH_SOUND = 1 ] && ARGS=(-unattended -nosplash)
 case "$CONTEXT" in
 	game)
 		[ -z "$FILTER" ] && FILTER=ActionCameraFramework

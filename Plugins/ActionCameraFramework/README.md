@@ -601,6 +601,14 @@ ViewTarget の CameraComponent / SpringArm         → UE カメラ（Upstream�
   - Enable Output Collision Guard（既定 ON）
   - Effect FOV Min / Max（演出が FOV を動かせる範囲。既定 20〜130 度）
   - Default Impulse Preset / Default Recoil Preset（Preset を渡さない `Play ACF Camera Impulse` / `Recoil` で使う。空なら組み込みの既定値）
+    - **ロードの時期**（Phase D-2）: 最初に使ったときに同期でロードし、その後はローカルプレイヤーの Subsystem が保持します（GC で外れません）。
+      - 以前は、何も保持していませんでした。そのため、演出が終わって GC が走るたびに Preset がアンロードされ、次の Impulse でまた同期ロードしていました。
+      - 実行中に設定を変えると、次の呼び出しで新しい Preset をロードし、古い Preset は放します。空にすると放します。
+      - 計測（Editor ビルド・未 Cook、`.Effects.DefaultPresetLoad`、3 回）:
+        - 最初の 1 回: 0.65〜0.71 ms
+        - 2 回目: 0.001 ms 以下
+        - 演出の終了と GC の後: 以前は 0.63〜0.70 ms（再ロード）、今は 0.003 ms
+      - Cook 済みのパッケージやコンソールでの読み込み時間は計測していません。戦闘中の最初の 1 回も避けたいときは、ゲームの読み込み中に `Play ACF Camera Impulse` を 1 回呼ぶか、Preset をどこかのアセットから参照してください。
   - Log Requests
 - **`ACF.Debug.Draw 1`**: ワールドに描画します。
   - 追従対象（緑）、Lookahead の予測位置（水色）、注視点（黄）
@@ -837,6 +845,9 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
   - 1 回の配信では最大 1024 件まで送ります。リスナーが Play を返し続けても止まらず、残りは次の安全な時点で送ります。
 - **終了時**: Subsystem の終了（ローカルプレイヤーの削除・ゲームの終了）の後は何も送りません。待っていたイベントは捨てます。
 - **Delegate**: `OnCameraSequenceEvent` は Dynamic Delegate（Blueprint 用）だけで、C++ 専用の Native Delegate はありません。C++ からも `AddDynamic` で同じものを受け取ります。
+- **分割画面**: ローカルプレイヤーごとに Subsystem、Queue、リスナーが分かれています。
+  - あるプレイヤーのリスナーから、別のプレイヤーの Sequence を操作できます。そのプレイヤーのイベントは、そのプレイヤーの Subsystem のリスナーにだけ、順に届きます。
+  - 制限: 別のプレイヤーのカメラ更新の中（その出力 Modifier など）から、このプレイヤーの API を呼んだ場合は、その場で送ります。遅らせるのは、自分のカメラ更新の中だけです。
 - Finisher の再生中に Level Sequence の Camera Cut が割り込むと、Interrupt Policy に従います（14 章）。
 - 実機での演出の見栄え（各 Shot の構図・ブレンド時間の既定値）は、サンプルのスクリーンショットでしか確認していません。
 
@@ -944,6 +955,8 @@ Sequence 全体に、Lifetime = Sequence の「緊張」演出（FOV -3°、Roll
     - リスナーが 64 回 Play する（配信中に Queue が伸びて再確保される）。
     - 全 Handle で、順序・回数・Sequence Ended の後に何もないことを確かめます。PlayerCameraManager の更新の中で送られたイベントは 0 件です（カメラのキャッシュの時刻で判定）。2 つ目のリスナーも全イベントを 1 回ずつ受け取ります。
   - `CameraUpdateAndTeardown`: 出力 Modifier と同じ `EvaluateForOutput` の中では送らないこと、その後にローカルプレイヤーを削除すると、待っていたイベントは送られないことを確かめます。
+  - `SplitScreenPlayers`（Phase D-3）: 2 人のローカルプレイヤーで、プレイヤー 1 のリスナーがプレイヤー 2 の Sequence を Cancel し、別の Sequence を Play します。各プレイヤーのイベントが、そのプレイヤーのリスナーにだけ順に届き、カメラ更新の中では送られないことを確かめます。
+- `.Effects.DefaultPresetLoad`（Phase D-2）: 既定の Impulse Preset の保持です。最初の使用でロードされ、演出の終了と GC の後も残ること、設定を変えると新しい Preset が使われて古い Preset は放されること、空にすると組み込みの既定値になって Preset が放されることを確かめます。ロードの時間はログに出します。
 - Phase 5A のテスト（`.Sequencer.*` 14 件、`.Authority.*` 3 件、`.Samples.SequencerOnTestMap`）の確認内容:
   - カットで入り / 戻る Sequence（裏で毎フレーム評価、Weight は 1 のまま、Return Blend の最初のフレームで跳ばない）、Ease In / Out（PCM のブレンド 1 本だけ。プローブ Modifier で ViewTarget ごとの出力を確認）
   - Pause / Stop / 連続再生 / Level Sequence Actor の破棄、Keep State で終わる Sequence（ゲームがブレンド / カットで戻す）、終了と次の Camera Cut が同じフレーム（Stop + Play、OnFinished から再生）、重なる Sequence
@@ -2884,6 +2897,22 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 
 **黒い画面のまま残らないための仕組み**: Level のタイムアウト（`LevelTimeoutSeconds` 既定 30 秒、Options の `TimeoutSeconds` で上書き。ブロッキングのロード中の時間は数えない）、`PostLoadMapWithWorld(nullptr)`・Travel / Network Failure・`NotifyLoadFailed` → Open して Failed。GameInstance の終了時は何も送らずにオーバーレイを外し、入力を戻します。
 
+**音**（Settings の `Sound`、Phase D-1）: Close の開始と Open の開始に、2D の音を 1 回鳴らします。
+
+- **鳴らし方**: レベルの切り替えをまたいで鳴ります（ロード中も Close の音が続く）。音が終わると、音声デバイスがコンポーネントを破棄します。
+- **止めるかどうか**（`Sound Stop`）: 音は遷移の Handle に属します。レベルの切り替えでは、Close の音と Open の音が、遷移全体の終わりに合わせて止まります。
+
+  | Sound Stop | 動き | 向いている音 |
+  |---|---|---|
+  | Play To End（既定、以前と同じ） | どう終わっても最後まで鳴る | 短い効果音 |
+  | Stop If Aborted | Cancelled / Interrupted / Failed（ClearScreen、ロードの失敗・タイムアウトを含む）で止める。Finished なら最後まで鳴る | 中断したら不自然な音（溜め・ワープ音） |
+  | Stop With Transition | Handle の終わりで、Finished を含めて必ず止める | ループや長い演出音 |
+
+- **フェード**: 止めるときは `Sound Fade Out Seconds`（既定 0.2 秒、実時間）でフェードアウトします。0 なら即座に止めます。
+- **音の重なり**: Interrupt を続けると、Play To End の音は重なって鳴ります（それぞれの遷移の音のため）。重ねたくない音には Stop If Aborted を使ってください。
+- **終了時**: GameInstance の終了時は、追跡している音（Play To End 以外）を止めます。
+- **確認の範囲**: 自動テストは `.Transitions.Sound.StopPolicy` で、音声デバイスがあるときだけ動きます。フェードの聞こえ方は、人が聞いて確かめる必要があります（未実施）。
+
 ### OpenLevel のときの処理の順序
 
 1. `PlayLevelTransition` → `Started`、Close のアニメーション（Subsystem の Tick、実時間、ポーズ中も進む）。画面キャプチャを使う演出は、この最初に 1 回だけ画面をキャプチャし、キャプチャができてから（通常 1〜2 フレーム後）Close のアニメーションを始めます（下の「キャプチャ」）。
@@ -2967,7 +2996,8 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 | Intensity / Softness / Count / Center / Seed | 強さ（歪み量・螺旋の締まり・網の密度・足跡の大きさなど）/ 縁の柔らかさ / 数（ブラインド・走査線・ピクセル・羽根・セル・帯・柵・巻き数）/ 中心（0..1）/ ノイズの種 |
 | Overlay Texture | 任意の絵。Net Sweep（網のタイル）・Cage Door（柵のタイル）・Boar Footprints（足跡 1 個、Alpha が形）では形の代わりに使い、それ以外では覆った部分に重ねます |
 | Material Override | `M_ACFTransition` の代わりの UI Material。同じパラメーター（Scalar: `Effect` `Progress`（被覆率） `Opening` `Intensity` `Direction` `Seed` `Aspect` `Time` `Softness` `Count` `Reverse` `UseSnapshot` `UseOverlay`、Vector: `Color` `Color2` `Center`、Texture: `Snapshot` `OverlayTexture`）を受け取ります |
-| Sound | 開始時の 2D の音（レベルの切り替えをまたいで鳴る） |
+| Sound | 開始時の 2D の音（レベルの切り替えをまたいで鳴る）。Close の開始と Open の開始で鳴る |
+| Sound Stop / Sound Fade Out Seconds | 音を止めるかどうかと、止めるときのフェードの秒数（下の「音」） |
 | Loading Text | 覆っている間の文字（Loading Card は右下、Stage Card は中央） |
 
 Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPreset**。標準の 42 個は複製して使ってください（`CreateTransitionAssets.py` を再実行すると標準の値に戻ります）。
@@ -3018,6 +3048,7 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 | `.Transitions.GC.ActiveQueuedWaitingHeld` | 一時的な Curve / Texture / Material を、再生中・Queue・覆ったまま保持・Ready 待ちの要求に持たせて GC → 残る、終了後の GC → 解放される |
 | `.Transitions.InputLock.Lifetime` | 他のシステムのロックが残る、Ready の合図の長い待ちの間に増えたローカルプレイヤーの Controller と `ResetIgnoreInputFlags` された Controller がロックされる、終了・タイムアウト・Cancel・Interrupt で戻る |
 | `.Transitions.Capture.SkipWhilePending`（描画ありで完全） | キャプチャ待ちの Close を同じフレームで Skip → 次の Tick で被覆率 1・読み出しなし、Skip → Cancel、Skip → Interrupt、失敗するキャプチャ + Skip、フレームを経て Covered → Finished、コピーが GPU にできた直後の Skip はそのコピーを使う |
+| `.Transitions.Sound.StopPolicy`（音声デバイスが要る: `Scripts/RunTests.sh --with-sound`。通常の実行ではスキップ） | 下の「音」の確認です。<br>・Play To End: Cancel の後も鳴り続ける（以前と同じ）。<br>・Stop If Aborted: Cancel / Interrupt / ClearScreen / ロードのタイムアウトで止まり、Close の正常終了では鳴り続ける。<br>・Stop With Transition: Close の終了で止まる。レベルの切り替えでは、ロードの間は Close の音が鳴り、Open の音が加わり、遷移の終わりで両方止まる。<br>・最後に追跡中の音が残らない。<br>無音のループ（`USoundWaveProcedural`）を使い、フェードは 0 で確認します |
 | `.Transitions.Capture.RenderThreadLifetime`（描画あり） | 要求直後の Cancel（同じフレームに 3 回）、要求の破棄、開始と ClearScreen を同じフレームに 20 回、1 フレーム後の Cancel × 10、連続のキャプチャ × 15、コピー待ちのウィンドウのリサイズ → Render Thread のリスナー・要求・Render Target が残らない |
 | `.Transitions.Render.AllEffects`（描画あり） | ゲームと同じ Widget + Material を Slate でオフスクリーンに描き（FWidgetRenderer）、42 種類 × 9 枚（Close 0 / 25 / 50 / 75 / 100%、Open 0 / 35 / 70 / 100%）を読み出す。被覆率 0 で何も描かない（Alpha ≤ 2/255）、1 で全ピクセルを覆う（Alpha ≥ 253/255）、42 種類の全 861 ペアの中間フレームの差が 3/255 以上（最も近いペアも表示）。コンタクトシートを `Saved/ACFTransitions/` に保存 |
 | `.Transitions.Render.ViewportFullCover`（描画あり） | 実際の Game Viewport で、42 種類それぞれを被覆率 1 で表示し、World の描画を止めても画面が変わらない（= World が 1 ピクセルも見えない）こと。何も出ていないときは変わること |

@@ -94,6 +94,18 @@ enum class EACFTransitionConcurrency : uint8
 	Reject,
 };
 
+/** What happens to a transition's Sound when its handle ends (README 33 章「音」). */
+UENUM(BlueprintType)
+enum class EACFTransitionSoundStop : uint8
+{
+	/** The sound plays to its own end, however the transition ends (short one-shot sounds; the default, as before). */
+	PlayToEnd,
+	/** Fades out when the transition does not finish normally: Cancelled, Interrupted, Failed (also ClearScreen). */
+	StopIfAborted,
+	/** Fades out whenever the transition ends, Finished included (loops and long sounds that belong to the transition). */
+	StopWithTransition,
+};
+
 /** Events of one transition handle, in the order they can happen. */
 UENUM(BlueprintType)
 enum class EACFTransitionEvent : uint8
@@ -185,9 +197,18 @@ struct ACTIONCAMERAFRAMEWORKTRANSITIONS_API FACFTransitionSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
 	TObjectPtr<UMaterialInterface> MaterialOverride = nullptr;
 
-	/** Optional 2D sound played when the transition starts (it survives a level change). */
+	/** Optional 2D sound played when the transition (Close) or its Open starts (it survives a level change). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
 	TObjectPtr<USoundBase> Sound = nullptr;
+
+	/** When the Sound stops: plays to its end (default), or fades out when the transition is aborted / ends. The sound
+	 *  belongs to the transition handle (a level transition's Close and Open sounds end with the whole transition). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets", meta = (EditCondition = "Sound != nullptr"))
+	EACFTransitionSoundStop SoundStop = EACFTransitionSoundStop::PlayToEnd;
+
+	/** Fade-out of a stopped Sound (seconds, real time; 0 stops at once). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets", meta = (ClampMin = "0", EditCondition = "Sound != nullptr && SoundStop != EACFTransitionSoundStop::PlayToEnd"))
+	float SoundFadeOutSeconds = 0.2f;
 
 	/** Optional text shown while the screen is covered (Loading Card, Stage Card or any effect). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")

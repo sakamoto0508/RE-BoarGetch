@@ -60,7 +60,16 @@ void UACFTransitionSubsystem::Deinitialize()
 		GEngine->OnTravelFailure().Remove(TravelFailureHandle);
 		GEngine->OnNetworkFailure().Remove(NetworkFailureHandle);
 	}
-	// No events at shutdown (listeners may be gone); just give the input back and drop the overlay.
+	// No events at shutdown (listeners may be gone); just give the input back and drop the overlay. Sounds that belong to
+	// a transition stop now (the PlayToEnd ones finish on their own).
+	for (const FTransitionSound& Tracked : Sounds)
+	{
+		if (UAudioComponent* Component = Tracked.Component.Get())
+		{
+			Component->Stop();
+		}
+	}
+	Sounds.Reset();
 	ApplyInputLock(false);
 	Active.Reset();
 	Queue.Reset();
@@ -311,13 +320,7 @@ void UACFTransitionSubsystem::Start(FRequest&& Request)
 		}
 	}
 
-	if (USoundBase* Sound = DrawSettings.Sound)
-	{
-		if (UWorld* World = GetGameWorld())
-		{
-			UGameplayStatics::SpawnSound2D(World, Sound, 1.f, 1.f, 0.f, nullptr, /*bPersistAcrossLevelTransition*/ true, /*bAutoDestroy*/ true);
-		}
-	}
+	PlaySound(Handle, DrawSettings);
 
 	UE_LOG(LogACFTransition, Verbose, TEXT("ACF Transition: %s started (%s %s)."), *Handle.ToString(), *UEnum::GetValueAsString(R.Kind), *ACFTransition::GetEffectInfo(DrawSettings.Effect).Name);
 	Emit(R, EACFTransitionEvent::Started);
@@ -656,6 +659,7 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 				Active.Reset();
 				SetStage(EStage::None);
 				ApplyInputLock(false);
+				EndSounds(Done.Handle, EACFTransitionEvent::Finished);
 				if (!Done.Options.bHoldWhenCovered)
 				{
 					Coverage = 0.f;
@@ -793,13 +797,7 @@ void UACFTransitionSubsystem::BeginOpening(bool bFailed)
 	PhaseTime = 0.f;
 	PhaseStartAlpha = FMath::Clamp(1.f - Coverage, 0.f, 1.f);
 	SetStage(EStage::Opening);
-	if (USoundBase* Sound = DrawSettings.Sound)
-	{
-		if (UWorld* World = GetGameWorld())
-		{
-			UGameplayStatics::SpawnSound2D(World, Sound, 1.f, 1.f, 0.f, nullptr, true, true);
-		}
-	}
+	PlaySound(Active->Handle, DrawSettings);
 	UpdateView();
 }
 
@@ -833,7 +831,64 @@ void UACFTransitionSubsystem::EndActive(EACFTransitionEvent Terminal)
 	Active.Reset();
 	SetStage(EStage::None);
 	ApplyInputLock(false);
+	EndSounds(Done.Handle, Terminal);
 	Emit(Done, Terminal);
+}
+
+void UACFTransitionSubsystem::PlaySound(FACFTransitionHandle Handle, const FACFTransitionSettings& Settings)
+{
+	USoundBase* Sound = Settings.Sound;
+	UWorld* World = Sound ? GetGameWorld() : nullptr;
+	if (!World)
+	{
+		return;
+	}
+	// 2D, survives a map load (the Close sound of a level transition goes on while the new map loads), destroyed by the
+	// audio device when it has finished. Null without an audio device (-nosound, dedicated server).
+	UAudioComponent* Component = UGameplayStatics::SpawnSound2D(World, Sound, 1.f, 1.f, 0.f, nullptr, /*bPersistAcrossLevelTransition*/ true, /*bAutoDestroy*/ true);
+	if (Component && Settings.SoundStop != EACFTransitionSoundStop::PlayToEnd)
+	{
+		Sounds.RemoveAll([](const FTransitionSound& Tracked) { return !Tracked.Component.IsValid() || !Tracked.Component->IsPlaying(); });
+		Sounds.Add({ Handle, Component, Settings.SoundStop, FMath::Max(Settings.SoundFadeOutSeconds, 0.f) });
+	}
+}
+
+void UACFTransitionSubsystem::EndSounds(FACFTransitionHandle Handle, EACFTransitionEvent Terminal)
+{
+	for (int32 Index = Sounds.Num() - 1; Index >= 0; --Index)
+	{
+		const FTransitionSound Tracked = Sounds[Index];
+		if (Tracked.Handle != Handle)
+		{
+			continue;
+		}
+		Sounds.RemoveAt(Index);
+		const bool bStop = Tracked.Stop == EACFTransitionSoundStop::StopWithTransition
+			|| (Tracked.Stop == EACFTransitionSoundStop::StopIfAborted && Terminal != EACFTransitionEvent::Finished);
+		UAudioComponent* Component = Tracked.Component.Get();
+		if (!bStop || !Component || !Component->IsPlaying())
+		{
+			continue;
+		}
+		if (Tracked.FadeOutSeconds > 0.f)
+		{
+			Component->FadeOut(Tracked.FadeOutSeconds, 0.f);
+		}
+		else
+		{
+			Component->Stop();
+		}
+	}
+}
+
+int32 UACFTransitionSubsystem::GetTrackedSoundCount() const
+{
+	int32 Count = 0;
+	for (const FTransitionSound& Tracked : Sounds)
+	{
+		Count += Tracked.Component.IsValid() && Tracked.Component->IsPlaying() ? 1 : 0;
+	}
+	return Count;
 }
 
 void UACFTransitionSubsystem::Emit(FRequest& Request, EACFTransitionEvent Event)
