@@ -13,7 +13,8 @@ public class ActionCameraFrameworkTests : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new[]
 		{
 			"Core", "CoreUObject", "Engine", "DeveloperSettings",
-			"ActionCameraFramework", "ActionCameraFrameworkSequencer", "ActionCameraFrameworkLevel",
+			"ActionCameraFramework", "ActionCameraFrameworkSequencer", "ActionCameraFrameworkLevel", "ActionCameraFrameworkTransitions",
+			"Slate", "SlateCore", "UMG", "RHI", "RenderCore",
 			"LevelSequence", "MovieScene", "MovieSceneTracks",
 		});
 	}

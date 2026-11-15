@@ -4,6 +4,7 @@
 #
 #   Scripts/RunEditorPython.sh Scripts/CreateVerificationAssets.py
 #   Scripts/RunEditorPython.sh Scripts/CreateManualTestAssets.py
+#   Scripts/RunEditorPython.sh Scripts/Transitions/CreateTransitionAssets.py [--only material|presets|maps]   (README 33 章)
 #
 # --project FILE / --engine DIR as in RunTests.sh (defaults: the first .uproject above this plugin, $UE_ROOT or
 # "C:/Program Files/Epic Games/UE_5.8"). The log goes to <project>/Saved/Logs/ACFPython_<script>.log; the script exits
@@ -14,11 +15,12 @@ export MSYS_NO_PATHCONV=1
 PROJECT=""
 ENGINE="${UE_ROOT:-C:/Program Files/Epic Games/UE_5.8}"
 SCRIPT=""
+SCRIPT_ARGS=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--project) PROJECT="$2"; shift 2 ;;
 		--engine) ENGINE="$2"; shift 2 ;;
-		*) SCRIPT="$1"; shift ;;
+		*) if [ -z "$SCRIPT" ]; then SCRIPT="$1"; else SCRIPT_ARGS="$SCRIPT_ARGS $1"; fi; shift ;;
 	esac
 done
 if [ -z "$SCRIPT" ] || [ ! -f "$SCRIPT" ]; then
@@ -41,7 +43,7 @@ if command -v cygpath > /dev/null 2>&1; then
 	SCRIPT="$(cygpath -m "$SCRIPT")"
 	LOG="$(cygpath -m "$LOG")"
 fi
-"$ENGINE/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "$PROJECT" -run=pythonscript "-script=$SCRIPT" -unattended -nosplash -NullRHI "-abslog=$LOG" > /dev/null 2>&1
+"$ENGINE/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "$PROJECT" -run=pythonscript "-script=$SCRIPT$SCRIPT_ARGS" -unattended -nosplash -NullRHI "-abslog=$LOG" > /dev/null 2>&1
 CODE=$?
 ERRORS=$(grep -cE "LogPython: Error|Traceback" "$LOG" 2>/dev/null)
 echo "exit $CODE, python errors ${ERRORS:-0}: $LOG"
