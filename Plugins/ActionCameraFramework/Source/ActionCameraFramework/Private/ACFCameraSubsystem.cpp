@@ -966,9 +966,27 @@ void UACFCameraSubsystem::StopAllCameraEffects(bool bImmediate)
 UACFCameraEffectPreset* UACFCameraSubsystem::GetDefaultEffectPreset(bool bImpulse)
 {
 	const UACFCameraSettings* Settings = GetDefault<UACFCameraSettings>();
-	if (UACFCameraEffectPreset* Configured = (bImpulse ? Settings->DefaultImpulsePreset : Settings->DefaultRecoilPreset).LoadSynchronous())
+	const TSoftObjectPtr<UACFCameraEffectPreset>& Configured = bImpulse ? Settings->DefaultImpulsePreset : Settings->DefaultRecoilPreset;
+	TObjectPtr<UACFCameraEffectPreset>& Loaded = bImpulse ? LoadedImpulsePreset : LoadedRecoilPreset;
+	FSoftObjectPath& LoadedPath = bImpulse ? LoadedImpulsePath : LoadedRecoilPath;
+	if (Configured.IsNull())
 	{
-		return Configured;
+		Loaded = nullptr; // the setting was cleared: release the kept preset
+		LoadedPath.Reset();
+	}
+	else
+	{
+		if (Loaded && LoadedPath == Configured.ToSoftObjectPath())
+		{
+			return Loaded; // loaded once and kept: no lookup, no load
+		}
+		// First use (or the setting changed): a synchronous load unless something already loaded it. Kept from now on.
+		Loaded = Configured.LoadSynchronous();
+		LoadedPath = Configured.ToSoftObjectPath();
+		if (Loaded)
+		{
+			return Loaded;
+		}
 	}
 	TObjectPtr<UACFCameraEffectPreset>& Builtin = bImpulse ? BuiltinImpulsePreset : BuiltinRecoilPreset;
 	if (!Builtin)
