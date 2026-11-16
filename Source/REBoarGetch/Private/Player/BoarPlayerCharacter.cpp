@@ -181,7 +181,8 @@ void ABoarPlayerCharacter::Move(const FVector2D& Input)
 	const bool bAirNetDropSteering = AirNetDropPhase != EAirNetDropPhase::None &&
 		AirNetDropPhase != EAirNetDropPhase::Landing && AirNetDropHorizontalControlMultiplier > 0.0f &&
 		!bIsDowned;
-	if (IsActionLocked() && !bAirNetDropSteering)
+	// 使用中の移動可否は使用開始時に保存したCanMoveWhileUsingに従う（アミ等は従来どおり拒否）。
+	if (!CanUseMovementActions() && !bAirNetDropSteering)
 		return;
 
 	if (!FMath::IsNearlyZero(Input.Y))
@@ -219,7 +220,9 @@ void ABoarPlayerCharacter::Look(const FVector2D& Input)
 	}
 
 	// ガジェット使用中はカメラのYawにキャラクターの向きも追従させる。
-	if (bIsGadgetInUse)
+	// 移動を許可する使用（Hold型レーダー等）で移動入力がある間は、移動方向への自動回転を優先して上書きしない。
+	const bool bMovingDuringUse = bGadgetUseAllowsMovement && !GetLastMovementInputVector().IsNearlyZero();
+	if (bIsGadgetInUse && !bMovingDuringUse)
 	{
 		const FRotator ControlRotation = Controller->GetControlRotation();
 		SetActorRotation(FRotator(0.0f, ControlRotation.Yaw, 0.0f));
@@ -228,7 +231,7 @@ void ABoarPlayerCharacter::Look(const FVector2D& Input)
 
 void ABoarPlayerCharacter::StartJump()
 {
-	if (IsActionLocked()) 
+	if (!CanUseMovementActions())
 		return;
 	if (!CanJump()) 
 		return;
@@ -276,6 +279,8 @@ void ABoarPlayerCharacter::StartGadgetUse()
 		if (!GadgetComponent->BeginUseCurrentGadget())
 			return;
 
+		// 移動可否も使用開始時点で確定する。空中アミは専用の操舵だけを許可するため対象外。
+		bGadgetUseAllowsMovement = !bAirNetDrop && CurrentGadget->CanMoveWhileUsing();
 		bIsGadgetInUse = true;
 
 		if (bAirNetDrop)
@@ -287,7 +292,7 @@ void ABoarPlayerCharacter::StartGadgetUse()
 			}
 		}
 		else if (UCharacterMovementComponent* Move = GetCharacterMovement();
-				Move && !CurrentGadget->CanMoveWhileUsing())
+				Move && !bGadgetUseAllowsMovement)
 		{
 				// ガジェット使用中は移動入力を受けても動かないようにする。
 				Move->StopMovementImmediately();
@@ -295,7 +300,11 @@ void ABoarPlayerCharacter::StartGadgetUse()
 				Move->bOrientRotationToMovement = false;
 		}
 
-		bHadMoveInput = false;
+		// 移動を止める使用だけ入力記録を消す。移動可能な使用では現在の入力を維持する。
+		if (!bGadgetUseAllowsMovement)
+		{
+			bHadMoveInput = false;
+		}
 
 		SetPlayerActionState(EPlayerActionState::UseGadget);
 		if (bAirNetDrop)
@@ -406,17 +415,27 @@ void ABoarPlayerCharacter::StopGadgetUseMontage()
 // ガジェットスロットを切り替える
 void ABoarPlayerCharacter::SwitchGadgetSlot(int32 SlotIndex)
 {
-	if (GadgetComponent == nullptr || IsActionLocked())
+	// Stun・Downed・Stage停止中、およびOneShot使用中（アミ等）は切り替えない。
+	if (GadgetComponent == nullptr || !CanSwitchGadgetSlot())
 		return;
 
 	if (bIsGadgetInUse)
 	{
-		// 継続使用形式のガジェットを使用中に装備変更する場合 前のガジェットの終了処理を先に行う。
-		StopGadgetUse();
-		// OneShot形式の場合、StopGadgetUseは終了を行わないため、現在のIsActionLockedの条件では基本的にここには到達しない。
+		// 同じSlot・範囲外の指定では装備が変わらないため、Hold使用を終了させずに継続する。
+		if (!GadgetComponent->WouldSwitchChangeGadget(SlotIndex))
+			return;
+		// CanSwitchGadgetSlotによりここへ来るのはHold使用中だけ。ボタンを離した時と同じ通常終了経路で
+		// 演出停止・使用状態解除・既存のCooldown開始を一度だけ行ってから切り替える。
+		// 後続のUnequipGadget→InterruptGadgetUseは使用中フラグが下りているため重複しない。
+		EndGadgetUse(false);
 	}
 
-	GadgetComponent->SwitchGadgetBySlot(SlotIndex);
+	if (!GadgetComponent->SwitchGadgetBySlot(SlotIndex))
+	{
+		// 装備に失敗した場合、GadgetComponentは旧Gadgetを装備したまま残す。
+		// Hold使用は終了済みで入力ロックも残らず、旧Gadgetを再度押せば通常どおり使用できる。
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Quick switch to slot %d failed; previous gadget kept equipped"), SlotIndex);
+	}
 }
 
 void ABoarPlayerCharacter::Capture()
@@ -433,7 +452,7 @@ void ABoarPlayerCharacter::Capture()
 
 void ABoarPlayerCharacter::StartDash()
 {
-	if (IsActionLocked())
+	if (!CanUseMovementActions())
 		return;
 
 	bIsDashing = true;
@@ -599,11 +618,13 @@ void ABoarPlayerCharacter::EndGadgetUse(bool bWasInterrupted)
 	}
 
 	bIsGadgetInUse = false;
+	bGadgetUseAllowsMovement = false;
 
 	// 中断時は地上用Montageも止め、後続の捕獲Notifyを再生させない。
 	// 使用中フラグを先に下ろしているため、停止によるInterrupted通知が再入しても終了処理は重複しない。
-	// 通常終了（OnCompleted）では既に再生が終わっているので、記録だけを消す。
-	if (bWasInterrupted)
+	// OneShotの通常終了（OnCompleted）では既に再生が終わっているので、記録だけを消す。
+	// Holdの通常終了（ボタン解除・クイック切替）では構えMontageが自然終了しないため、今回の使用分だけを止める。
+	if (bWasInterrupted || CurrentGadgetUseStyle == EGadgetUseStyle::Hold)
 	{
 		StopGadgetUseMontage();
 	}
@@ -638,11 +659,18 @@ void ABoarPlayerCharacter::EndGadgetUse(bool bWasInterrupted)
 
 void ABoarPlayerCharacter::UpdateGroundActionState(bool bHasMoveInput)
 {
-	if (IsActionLocked())
+	if (IsGameplayActionBlocked())
 		return;
 
 	if (GetCharacterMovement() && GetCharacterMovement()->IsFalling())
 		return;
+
+	// 使用中の地上状態はUseGadgetを維持する。移動可能な使用でジャンプ後に着地した場合もここで戻す。
+	if (bIsGadgetInUse)
+	{
+		SetPlayerActionState(EPlayerActionState::UseGadget);
+		return;
+	}
 
 	if (!bHasMoveInput)
 	{
@@ -659,12 +687,34 @@ void ABoarPlayerCharacter::SetPlayerActionState(EPlayerActionState NewState)
 	CurrentActionState = NewState;
 }
 
-bool ABoarPlayerCharacter::IsActionLocked() const
+bool ABoarPlayerCharacter::IsGameplayActionBlocked() const
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage()) 
+		if (!Mode->CanAdvanceStage())
 			return true;
-	return bIsStunned || bIsGadgetInUse || bIsDowned;
+	return bIsStunned || bIsDowned;
+}
+
+bool ABoarPlayerCharacter::CanUseMovementActions() const
+{
+	if (IsGameplayActionBlocked())
+		return false;
+	return !bIsGadgetInUse || bGadgetUseAllowsMovement;
+}
+
+bool ABoarPlayerCharacter::CanSwitchGadgetSlot() const
+{
+	if (IsGameplayActionBlocked())
+		return false;
+	if (!bIsGadgetInUse)
+		return true;
+	// OneShot（アミの振り・捕獲判定窓・空中アミ）は途中で切り替えず、完了または中断経路を待つ。
+	return CurrentGadgetUseStyle == EGadgetUseStyle::Hold && AirNetDropPhase == EAirNetDropPhase::None;
+}
+
+bool ABoarPlayerCharacter::IsActionLocked() const
+{
+	return IsGameplayActionBlocked() || bIsGadgetInUse;
 }
 
 //-------------------------------------------------

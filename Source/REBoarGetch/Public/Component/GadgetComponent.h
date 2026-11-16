@@ -97,6 +97,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Gadget")
 	bool SwitchGadgetBySlot(int32 SlotIndex);
 
+	/**
+	 * SwitchGadgetBySlotで現在の装備が入れ替わるかを返します。副作用はありません。
+	 * 範囲外、または装備済みの同じスロットならfalseです（使用中のHoldを無駄に終了させないための事前判定）。
+	 */
+	bool WouldSwitchChangeGadget(int32 SlotIndex) const;
+
 	/** スロット内容または選択中スロットが変わったときに通知します。 */
 	UPROPERTY(BlueprintAssignable, Category = "Gadget")
 	FOnGadgetLoadoutChanged OnGadgetLoadoutChanged;
