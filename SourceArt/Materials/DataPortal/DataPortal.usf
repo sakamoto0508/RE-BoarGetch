@@ -3,11 +3,14 @@ float2 q=abs(p)-float2(.80,.84);
 float sd=length(max(q,0))+min(max(q.x,q.y),0)-.16;
 float mask=1-smoothstep(-.004,.004,sd);
 float t=Clock*ScrollSpeed;
+// Camera proximity (cm): approach 0 far -> 1 near; nearFade 0 visible -> 1 dissolved.
+float approach=1-smoothstep(NearFadeStart,max(ApproachDistance,NearFadeStart+1),CamDist);
+float nearFade=1-smoothstep(NearFadeEnd,max(NearFadeStart,NearFadeEnd+1),CamDist);
 float burst=step(.975,frac(sin(floor(Clock*.35)*91.7)*43758.54));
 float row=floor(UV.y*90);
 float jitter=(frac(sin(row*12.9898+floor(Clock*8))*43758.54)-.5);
 p.x+=DistortionStrength*jitter*(.12+burst);
-// Rectangular perspective tunnel, with four walls converging into a dark center.
+// Rectangular perspective tunnel, with four walls converging into a lit center.
 float r=max(abs(p.x),abs(p.y));
 float depth=min(18.,1./max(r,.05)-1.);
 float along=abs(p.x)>abs(p.y)?p.y/max(abs(p.x),.05):p.x/max(abs(p.y),.05);
@@ -26,7 +29,16 @@ float noise=frac(sin(dot(floor(UV*float2(230,320)),float2(12.9898,78.233))+floor
 float scan=(.5+.5*sin(UV.y*650-Clock*.55))*NoiseStrength*.018;
 float rim=exp(-abs(sd+.015)*155)*RimBrightness;
 float ambient=(1-saturate(CenterBlackness))*.014*(.15+.85*r*r);
-float light=grid+packets+rim+noise*NoiseStrength*.012*fade+scan*fade;
+// Soft cyan depth light so the opening reads as a tunnel instead of a dark slab.
+float core=CoreGlow*(.3*saturate(1-r)+exp(-r*r*12));
+// Slow rings drifting inward; faint from afar, clearer when the camera comes close.
+float ring=pow(.5+.5*sin(depth*1.6-Clock*ScrollSpeed*8),12)*smoothstep(.06,.30,r)*exp(-depth*.18)*(.15+.85*approach)*.35;
+float light=(grid+packets+rim+ring)*(1+ApproachBoost*approach)+noise*NoiseStrength*.012*fade+scan*fade;
 light+=burst*NoiseStrength*.07*step(.985,noise)*fade;
-float3 col=float3(.001,.003,.008)*ambient+PortalColor*(light*EmissiveStrength);
+// Coarse block dissolve near the camera (no TAA needed; survives retro pixelation).
+float blk=frac(sin(dot(floor(UV*float2(22,29)),float2(41.3,289.1)))*43758.5453)*.98+.01;
+float keep=step(nearFade,blk);
+float edgeGlow=(keep-step(nearFade+.06,blk))*step(.001,nearFade);
+mask*=keep;
+float3 col=float3(.001,.003,.008)*ambient+PortalColor*((light+core+edgeGlow*.6)*EmissiveStrength)+float3(.5,.8,1)*CoreGlow*exp(-r*r*60)*.35;
 return float4(col,mask);
