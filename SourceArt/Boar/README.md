@@ -24,4 +24,5 @@ Mesh・Skeletonは作り直さず、`UEExport/` にUEから書き出したIdle�
 - A_Boar_Trot 4.5m/s（BaseWalkSpeed 450）/ A_Boar_Run 6.75m/s（青の逃走 450×1.5）/ A_Boar_Charge 10m/s（ChargeSpeed 1000）
 - A_Boar_AttackTelegraph 1.0秒（ABPが予兆時間に合わせて再生速度を調整）
 - A_Boar_ChargeRecovery 1.0秒（後退 300cm/s・200cm に同期）
+- A_Boar_PivotBrace 0.6秒（Normal切り返しの減速0.25＋踏ん張り0.2＋停止0.15）/ A_Boar_PivotTurn_L・R 0.6秒ループ（旋回150度/秒で足滑り0。`build_pivot.py`、AKI-152）
 - 60fps・インプレース（ルートモーションなし）。ループは最終フレーム＝先頭フレーム

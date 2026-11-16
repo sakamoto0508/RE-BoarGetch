@@ -107,7 +107,10 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 		return EStateTreeRunStatus::Failed;
 
 	InstanceData.ReplanTimeRemaining = ReplanInterval;
+	InstanceData.bHasPendingEscapeLocation = false;
 	Boar->SetEscaping(true);
+	// 逃走開始の旋回・加速、または到着直後の再入での切り返しを始める（EscapeTurn無効の種別では何もしない）。
+	Boar->BeginEscapeMotion((InstanceData.EscapeLocation - Boar->GetActorLocation()).GetSafeNormal2D());
 	return EStateTreeRunStatus::Running;
 }
 
@@ -122,6 +125,14 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 	if (IsStoppedByStamina(*Boar))
 		return EStateTreeRunStatus::Failed;
 
+	// 切り返しの新しい逃走先は、止まって踏ん張ってから（または切り返しが中断されたら）経路へ反映する。
+	// 減速中に新しい経路へ曲がり始めないようにするため。
+	if (InstanceData.bHasPendingEscapeLocation && (Boar->IsEscapeMovementHeld() || !Boar->IsEscapePivoting()))
+	{
+		InstanceData.EscapeLocation = InstanceData.PendingEscapeLocation;
+		InstanceData.bHasPendingEscapeLocation = false;
+	}
+
 	if (InstanceData.TargetPlayer == nullptr || ReplanInterval <= 0.0f)
 		return EStateTreeRunStatus::Running;
 
@@ -129,6 +140,10 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 	if (InstanceData.ReplanTimeRemaining > 0.0f)
 		return EStateTreeRunStatus::Running;
 	InstanceData.ReplanTimeRemaining = ReplanInterval;
+
+	// 逃走開始・切り返し後の継続走行区間と旋回中は、逃走先を引き直さない。
+	if (InstanceData.bHasPendingEscapeLocation || !Boar->CanReplanEscape())
+		return EStateTreeRunStatus::Running;
 
 	// 逃走先がプレイヤー側へ向いた場合だけ再計算し、通常時は経路を毎回引き直さない。
 	const FVector BoarLocation = Boar->GetActorLocation();
@@ -138,10 +153,25 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 		return EStateTreeRunStatus::Running;
 
 	// 更新した逃走先はMove ToのTrack Moving Goalが有効な場合に経路へ反映される。
-	if (UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(Boar->GetWorld()))
+	UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(Boar->GetWorld());
+	FVector NewLocation;
+	if (Nav == nullptr || !FindEscapeLocation(*Boar, InstanceData.TargetPlayer->GetActorLocation(), *Nav, MinEscapeDistance, MinEscapeDistanceRatio, NewLocation))
+		return EStateTreeRunStatus::Running;
+
+	// 大きな方向転換だけを切り返しにする。小さな方向修正は止まらず走りながら曲がる。
+	const FVector NewDirection = (NewLocation - BoarLocation).GetSafeNormal2D();
+	if (Boar->NeedsEscapePivot(NewDirection))
 	{
-		FindEscapeLocation(*Boar, InstanceData.TargetPlayer->GetActorLocation(), *Nav, MinEscapeDistance, MinEscapeDistanceRatio, InstanceData.EscapeLocation);
+		if (Boar->TryStartEscapePivot(NewDirection))
+		{
+			InstanceData.PendingEscapeLocation = NewLocation;
+			InstanceData.bHasPendingEscapeLocation = true;
+		}
+		// 再発動間隔中は大きく向きを変えず、今の逃走先へ走り続ける。
+		return EStateTreeRunStatus::Running;
 	}
+
+	InstanceData.EscapeLocation = NewLocation;
 	return EStateTreeRunStatus::Running;
 }
 

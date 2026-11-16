@@ -5,6 +5,9 @@
 #include "Input/Reply.h"
 #include "Animation/WidgetAnimation.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
+#include "Core/BoarGameMode.h"
+#include "Engine/World.h"
+#include "Stage/StageConfig.h"
 
 namespace
 {
@@ -59,9 +62,11 @@ void UBoarResultWidget::InitializeResult(const FStageRunData& Run, int32 TargetC
 	if (TargetCountText) TargetCountText->SetText(FText::AsNumber(TargetCount));
 	if (CapturedCountText) CapturedCountText->SetText(FText::AsNumber(Run.CurrentHousedCount));
 	if (UTextBlock* Text = ResolveNamedWidget<UTextBlock>(WidgetTree, ClearTimeTextWidgetName))
-		Text->SetText(FText::AsTimespan(FTimespan::FromSeconds(Run.ClearTimeSeconds)));
+		Text->SetText(FormatClearTime(Run.ClearTimeSeconds));
 	if (UTextBlock* Text = ResolveNamedWidget<UTextBlock>(WidgetTree, NewBoarCountTextWidgetName))
 		Text->SetText(FText::AsNumber(Run.NewBoarUniqueIds.Num()));
+	if (UTextBlock* Text = ResolveNamedWidget<UTextBlock>(WidgetTree, NewBoarListTextWidgetName))
+		Text->SetText(BuildNewBoarList(Run));
 	if (UTextBlock* Text = ResolveNamedWidget<UTextBlock>(WidgetTree, SpecialCoinCountTextWidgetName))
 		Text->SetText(FText::AsNumber(Run.SpecialCoinIds.Num()));
 	// 確定Runの値だけで文面を作ります（仮の数値は使いません）。
@@ -73,6 +78,41 @@ void UBoarResultWidget::InitializeResult(const FStageRunData& Run, int32 TargetC
 	if (Text_CoinLine) Text_CoinLine->SetText(FText::Format(CoinLineFormat, Args));
 	OnRunResultUpdated();
 	StartReveal();
+}
+
+FText UBoarResultWidget::FormatClearTime(float Seconds) const
+{
+	const int32 TotalHundredths = FMath::Max(0, FMath::FloorToInt(Seconds * 100.f));
+	auto Two = [](int32 V) { return FText::FromString(FString::Printf(TEXT("%02d"), V)); };
+	FFormatNamedArguments Args;
+	Args.Add(TEXT("Minutes"), Two(TotalHundredths / 6000));
+	Args.Add(TEXT("Seconds"), Two(TotalHundredths / 100 % 60));
+	Args.Add(TEXT("Hundredths"), Two(TotalHundredths % 100));
+	return FText::Format(ClearTimeFormat, Args);
+}
+
+// NEWの判定はしない。確定済みRunのNewBoarUniqueIdsを、表示名へ置き換えて並べるだけ。
+FText UBoarResultWidget::BuildNewBoarList(const FStageRunData& Run) const
+{
+	if (Run.NewBoarUniqueIds.IsEmpty())
+		return NewBoarListEmptyText;
+	const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
+	const UStageConfig* Stage = Mode ? Mode->GetStageConfig() : nullptr;
+	if (Stage && Stage->StageId != Run.StageId)
+		Stage = nullptr;
+	TArray<FText> Lines;
+	for (const FName Id : Run.NewBoarUniqueIds)
+	{
+		FText Name = FText::FromName(Id);
+		if (Stage)
+			if (const FBoarSpawnDefinition* Def = Stage->BoarSpawnDefinitions.FindByPredicate(
+				[Id](const FBoarSpawnDefinition& D) { return D.BoarUniqueId == Id; }); Def && !Def->EncyclopediaName.IsEmpty())
+				Name = Def->EncyclopediaName;
+		FFormatNamedArguments Args;
+		Args.Add(TEXT("Name"), Name);
+		Lines.Add(FText::Format(NewBoarEntryFormat, Args));
+	}
+	return FText::Join(FText::FromString(TEXT("\n")), Lines);
 }
 
 void UBoarResultWidget::StartReveal()
@@ -142,6 +182,8 @@ void UBoarResultWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
 		bRevealRunning = false;
 		bDismissInputAccepted = true;
 		LateRevealAge = 0.f;
+		if (Anim_ContinueGuide)
+			PlayAnimation(Anim_ContinueGuide, 0.f, 0);
 		OnRevealFinished();
 	}
 }

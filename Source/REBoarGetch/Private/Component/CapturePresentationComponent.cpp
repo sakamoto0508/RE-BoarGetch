@@ -1,4 +1,7 @@
 #include "Component/CapturePresentationComponent.h"
+#include "ACFCameraBlueprintLibrary.h"
+#include "ACFCameraSubsystem.h"
+#include "Effects/ACFCameraEffect.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Boar/BoarBase.h"
 #include "Boar/BoarMovementComponent.h"
@@ -69,6 +72,8 @@ void UCapturePresentationComponent::ReportMissingVisualAssets() const
 		Missing.Add(TEXT("CageReceptionVFX (cage reception)"));
 	if (!DataFragmentVFX)
 		Missing.Add(TEXT("DataFragmentVFX (data fragments)"));
+	if (!ImpactVFX)
+		Missing.Add(TEXT("ImpactVFX (hit burst)"));
 	if (!CameraShake || CameraShake->HasAnyClassFlags(CLASS_Abstract))
 		Missing.Add(TEXT("CameraShake (BP_CaptureSuccessCameraShake)"));
 	if (!Missing.IsEmpty())
@@ -105,9 +110,14 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 		T.CaptureHeight = FMath::Max(1.f, Bounds.BoxExtent.Z * 2.f);
 		T.OriginalOverlay = T.Mesh->GetOverlayMaterial();
 		T.Glow = UMaterialInstanceDynamic::Create(GlowMaterial, this);
-		T.Glow->SetScalarParameterValue(TEXT("GlowAmount"), .15f);
+		// 命中の瞬間は白いフラッシュから始め、UpdateTargetで通常の発光へ戻す。
+		const bool bFlash = HitFlashDuration > 0.f;
+		T.Glow->SetScalarParameterValue(TEXT("GlowAmount"), bFlash ? HitFlashGlowAmount : .15f);
+		T.Glow->SetVectorParameterValue(TEXT("GlowColor"), bFlash ? HitFlashColor : GlowStartColor);
 		T.Mesh->SetOverlayMaterial(T.Glow);
 	}
+	// 命中インパクト（Boarごと）。捕獲の確定とは無関係の使い捨て演出。
+	SpawnImpact(T);
 	if (CaptureVFX)
 	{
 		T.VFX = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, CaptureVFX,
@@ -124,14 +134,24 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 	}
 	Targets.Add(T);
 	Boar->OnDestroyed.AddUniqueDynamic(this, &ThisClass::OnTargetDestroyed);
+	// 1回のNet使用で捕獲した数。NetGadgetは使用ごとの最初の捕獲だけbSharedFeedback=trueで呼ぶ。
+	if (bSharedFeedback)
+	{
+		SameUseCaptureCount = 1;
+		bMultiFeedbackPlayed = false;
+	}
+	else
+		++SameUseCaptureCount;
 	if (bSharedFeedback && !bSharedActive)
 	{
 		bSharedActive = true;
 		SharedAge = 0.f;
 		bConfirmed = false;
 		bTransferSoundPlayed = false;
-		// 変更前の値を保存してからCameraを取得する。復元はRestoreSharedState()が担当する。
-		Camera = PC->GetPawn() ? PC->GetPawn()->FindComponentByClass<UCameraComponent>() : nullptr;
+		// ACFの通常カメラが出ていればCamera Effectで揺らす（FollowCameraのFOVはACFに上書きされるため触らない）。
+		// 出ていなければ従来どおりFollowCameraのFOVでPunch Inする。復元はRestoreSharedState()が担当する。
+		bUsingACFEffect = PlayCameraEffect(CameraEffect, T.CaptureLocation, false);
+		Camera = !bUsingACFEffect && PC->GetPawn() ? PC->GetPawn()->FindComponentByClass<UCameraComponent>() : nullptr;
 		if (Camera.IsValid())
 		{
 			OriginalFOV = AppliedFOV = Camera->FieldOfView;
@@ -152,14 +172,78 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 		CollectLocalSlowTargets(T.CaptureLocation);
 		ApplyLocalSlow(SharedAge < HitStopDuration);
 	}
+	// 複数体の強調はNet 1回につき1回だけ。個々のBoarの見た目（発光・インパクト・データ化）は体ごとに出す。
+	if (bSharedActive && !bMultiFeedbackPlayed && SameUseCaptureCount >= MultiCaptureThreshold)
+		PlayMultiCaptureFeedback(T.CaptureLocation);
 	return true;
 }
 
-void UCapturePresentationComponent::PlaySound(USoundBase* Sound)
+void UCapturePresentationComponent::PlaySound(USoundBase* Sound, float Pitch)
 {
 	if (Sound && GetWorld() && GetWorld()->GetGameInstance())
 		if (auto* Audio = GetWorld()->GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>())
-			Audio->PlaySoundEffect2D(this, Sound);
+			Audio->PlaySoundEffect2D(this, Sound, 1.f, Pitch);
+}
+
+void UCapturePresentationComponent::SpawnImpact(const FCaptureVisualTarget& T)
+{
+	if (!ImpactVFX || !T.Boar.IsValid())
+		return;
+	FVector Location = T.CaptureLocation;
+	if (T.Mesh.IsValid())
+	{
+		const FBoxSphereBounds Bounds = T.Mesh->Bounds;
+		Location = Bounds.Origin;
+		Location.Z = Bounds.Origin.Z - Bounds.BoxExtent.Z + Bounds.BoxExtent.Z * 2.f * ImpactHeightRatio;
+	}
+	// 自動で破棄される使い捨て。粒子の動きはNiagara側で決め、C++は位置・色・Scaleだけを渡す。
+	if (UNiagaraComponent* VFX = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		this, ImpactVFX, Location, FRotator::ZeroRotator, FVector(ImpactVFXScale), true, false))
+	{
+		VFX->SetVariableLinearColor(TEXT("User.Color"), ImpactColor);
+		VFX->Activate(true);
+	}
+}
+
+UACFCameraSubsystem* UCapturePresentationComponent::GetACFSubsystem() const
+{
+	const auto* PC = Cast<APlayerController>(GetOwner());
+	return PC && PC->IsLocalController() ? UACFCameraBlueprintLibrary::GetCameraSubsystem(PC) : nullptr;
+}
+
+bool UCapturePresentationComponent::PlayCameraEffect(UACFCameraEffectPreset* Preset, const FVector& Source,
+                                                     bool bReplaceImmediately)
+{
+	UACFCameraSubsystem* Cameras = GetACFSubsystem();
+	if (!Preset || !Cameras || !Cameras->CanPlayCameraEffects())
+		return false;
+	ReleaseCameraEffect(bReplaceImmediately);
+	FACFCameraEffectParams Params;
+	Params.bUseSourceLocation = true;
+	Params.SourceLocation = Source;
+	// このComponentが破棄されたらACF側でも止まる。
+	Params.Instigator = this;
+	ActiveCameraEffect = Cameras->PlayCameraEffect(Preset, Params);
+	return ActiveCameraEffect.IsValid();
+}
+
+// 自分が再生したEffectだけを止める（Stop All は使わない）。何度呼んでも安全。
+void UCapturePresentationComponent::ReleaseCameraEffect(bool bImmediate)
+{
+	if (!ActiveCameraEffect.IsValid())
+		return;
+	if (UACFCameraSubsystem* Cameras = GetACFSubsystem())
+		Cameras->StopCameraEffect(ActiveCameraEffect, bImmediate);
+	ActiveCameraEffect.Invalidate();
+}
+
+void UCapturePresentationComponent::PlayMultiCaptureFeedback(const FVector& Source)
+{
+	bMultiFeedbackPlayed = true;
+	PlaySound(MultiCaptureSound);
+	// 通常のEffectと重ねず入れ替える。同じフレームの複数Hitなら通常分は即座に消す。
+	if (bUsingACFEffect && MultiCaptureCameraEffect)
+		PlayCameraEffect(MultiCaptureCameraEffect, Source, SharedAge < .05f);
 }
 
 // 捕獲地点から半径内の未捕獲Boarを減速対象に加える。捕獲されたBoarは発光・データ化の演出側で扱うため含めない。
@@ -285,6 +369,9 @@ void UCapturePresentationComponent::RestoreSharedState()
 	ReleaseLocalSlow();
 	ReleaseCamera();
 	ReleaseCameraShake();
+	// Stage終了カメラ・Pause・キャンセルへ残さないよう即座に止める（正常終了時は既にEnvelopeが終わっている）。
+	ReleaseCameraEffect(true);
+	bUsingACFEffect = false;
 }
 
 // 対象ごとの見た目の復元とVFX破棄。一度だけ実行し、生成物の参照も手放す。
@@ -499,7 +586,7 @@ void UCapturePresentationComponent::UpdateSharedFeedback(float RealDelta)
 	}
 	if (!bConfirmed && SharedAge >= GetTotalDuration())
 	{
-		PlaySound(CaptureSuccessSound);
+		PlaySound(CaptureSuccessSound, bMultiFeedbackPlayed ? MultiCaptureSuccessPitch : 1.f);
 		bConfirmed = true;
 	}
 	if (SharedAge >= FMath::Max(GetTotalDuration(), CameraDuration))
@@ -532,8 +619,17 @@ bool UCapturePresentationComponent::UpdateTarget(FCaptureVisualTarget& T, float 
 	if (T.Glow)
 	{
 		const float Envelope = FMath::Lerp(.15f, 1.f, FMath::SmoothStep(0.f, 1.f, P));
-		T.Glow->SetScalarParameterValue(TEXT("GlowAmount"), Envelope);
-		T.Glow->SetVectorParameterValue(TEXT("GlowColor"), FMath::Lerp(GlowStartColor, GlowPeakColor, P));
+		FLinearColor Color = FMath::Lerp(GlowStartColor, GlowPeakColor, P);
+		float Amount = Envelope;
+		// 命中直後の白いフラッシュから通常の発光へ戻す。
+		if (HitFlashDuration > 0.f && T.Age < HitFlashDuration)
+		{
+			const float F = FMath::SmoothStep(0.f, 1.f, T.Age / HitFlashDuration);
+			Amount = FMath::Lerp(HitFlashGlowAmount, Envelope, F);
+			Color = FMath::Lerp(HitFlashColor, Color, F);
+		}
+		T.Glow->SetScalarParameterValue(TEXT("GlowAmount"), Amount);
+		T.Glow->SetVectorParameterValue(TEXT("GlowColor"), Color);
 	}
 	if (IsValid(T.VFX))
 	{
@@ -559,8 +655,14 @@ bool UCapturePresentationComponent::UpdateTarget(FCaptureVisualTarget& T, float 
 			T.DataMaterial->SetScalarParameterValue(TEXT("GlowAmount"), 1.f + .45f * (1.f - DissolveP));
 		}
 		if (IsValid(T.DataMesh) && T.Mesh.IsValid())
+		{
 			T.DataMesh->SetRelativeLocation(
 				T.Mesh->GetRelativeLocation() + FVector(0, 0, TransferRiseDistance * FinishP));
+			// 上昇しながら横方向に細く吸い込まれる（残像Proxyだけを変形し、元のMeshは変えない）。
+			const float Width = FMath::Lerp(1.f, TransferEndWidthScale, FMath::SmoothStep(0.f, 1.f, FinishP));
+			const FVector Base = T.Mesh->GetRelativeScale3D();
+			T.DataMesh->SetRelativeScale3D(FVector(Base.X * Width, Base.Y * Width, Base.Z));
+		}
 		if (IsValid(T.DataVFX)) 
 			T.DataVFX->SetDesiredAge(DataAge);
 	}

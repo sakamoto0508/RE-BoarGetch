@@ -2,6 +2,22 @@
 #include "Misc/AutomationTest.h"
 #include "Save/BoarSaveGame.h"
 #include "Kismet/GameplayStatics.h"
+namespace
+{
+	// Clear確定済みRun。IdsはClear時の収容個体で、並び順がそのまま今回の捕獲順（別々の一振り）。
+	FStageRunData ClearedRun(const TArray<FName>& Ids)
+	{
+		FStageRunData Run;
+		Run.StageId = TEXT("Stage1");
+		Run.bResultFrozen = true;
+		Run.bHousedSnapshotTaken = true;
+		Run.HousedBoarUniqueIds = Ids;
+		for (int32 I = 0; I < Ids.Num(); ++I)
+			Run.LastCaptureOrderByBoar.Add(Ids[I], I + 1);
+		return Run;
+	}
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FArchiveDisplaysTest, "REBoarGetch.Spec.ArchiveDisplays",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
@@ -9,11 +25,7 @@ bool FArchiveDisplaysTest::RunTest(const FString& Parameters)
 {
 	auto* Save = NewObject<UBoarSaveGame>();
 	TestEqual(TEXT("Empty archive has three slots"), Save->ResolveArchiveDisplays().Num(), 3);
-	FStageRunData Run;
-	Run.StageId = TEXT("Stage1");
-	Run.bResultFrozen = true;
-	Run.CapturedBoarUniqueIds = {TEXT("A"),TEXT("B"),TEXT("C"),TEXT("D")};
-	Save->MergeClearedRun(Run);
+	Save->MergeClearedRun(ClearedRun({TEXT("A"),TEXT("B"),TEXT("C"),TEXT("D")}));
 	auto Ids = Save->ResolveArchiveDisplays();
 	TestEqual(TEXT("Latest first"), Ids[0], FName(TEXT("D")));
 	TestEqual(TEXT("Third latest"), Ids[2], FName(TEXT("B")));
@@ -21,8 +33,7 @@ bool FArchiveDisplaysTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("Wrong slot count rejected"), Save->SetArchiveDisplays({TEXT("A")}));
 	TestFalse(TEXT("Duplicate individual rejected"), Save->SetArchiveDisplays({TEXT("A"),TEXT("A"), NAME_None}));
 	TestTrue(TEXT("Captured IDs and empties accepted"), Save->SetArchiveDisplays({TEXT("A"), NAME_None,TEXT("C")}));
-	Run.CapturedBoarUniqueIds = {TEXT("B")};
-	Save->MergeClearedRun(Run);
+	Save->MergeClearedRun(ClearedRun({TEXT("B")}));
 	TestEqual(TEXT("Saved selection takes priority"), Save->ResolveArchiveDisplays()[0], FName(TEXT("A")));
 	TArray<uint8> Bytes;
 	TestTrue(TEXT("Save serializes"), UGameplayStatics::SaveGameToMemory(Save, Bytes));
@@ -39,8 +50,7 @@ bool FArchiveDisplaysTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("Uncaptured assignment rejected"), Save->AssignArchiveDisplay(0,TEXT("X")));
 	TestFalse(TEXT("Invalid slot rejected"), Save->AssignArchiveDisplay(3,TEXT("A")));
 	for (int32 I = 0; I < 3; ++I)TestTrue(TEXT("Explicitly clear each slot"), Save->AssignArchiveDisplay(I, NAME_None));
-	Run.CapturedBoarUniqueIds = {TEXT("D")};
-	Save->MergeClearedRun(Run);
+	Save->MergeClearedRun(ClearedRun({TEXT("D")}));
 	TestTrue(
 		TEXT("Empty custom archive does not revert to default"),
 		Save->ResolveArchiveDisplays()[0].IsNone() && Save->ResolveArchiveDisplays()[1].IsNone() && Save->

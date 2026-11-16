@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Camera/CameraShakeBase.h"
+#include "Effects/ACFCameraEffectTypes.h"
 #include "CapturePresentationComponent.generated.h"
 
 class ABoarBase;
@@ -113,6 +114,23 @@ public:
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ToolTip="Boarのデータ化が始まる瞬間の転送音。既存AudioManager経由で再生します。未設定なら無音です。")) TObjectPtr<USoundBase> TransferStartSound;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ToolTip="捕獲地点での転送が完了した瞬間の確定音。Net 1回につき1回、既存AudioManager経由で再生します。未設定なら無音です。")) TObjectPtr<USoundBase> CaptureSuccessSound;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ToolTip="網の命中時に再生する小さなCamera Shake。Net 1回につき1回だけ再生します。振幅・周波数・Blend時間はBP_CaptureSuccessCameraShakeのClass Defaults（Root Shake Pattern）で調整します。未設定なら揺れません。")) TSubclassOf<UCameraShakeBase> CameraShake;
+ // ---- 命中インパクト（AKI-137）。捕獲の確定とは別に、命中した瞬間だけを短く強調します。 ----
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Impact", meta=(ToolTip="網が命中した瞬間にBoarの体の位置で1回だけ出す短いNiagara（星形の弾け）。捕獲したBoarごとに出ます。粒子数・大きさ・寿命はこのSystemで調整します。未設定なら出しません。")) TObjectPtr<UNiagaraSystem> ImpactVFX;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Impact", meta=(ToolTip="命中インパクトの色（User.Colorへ渡します）。成功の瞬間なので白～黄色の明るい色を推奨します。")) FLinearColor ImpactColor = FLinearColor(1.f,.92f,.45f);
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Impact", meta=(ClampMin="0.01",ClampMax="5", ToolTip="命中インパクトのScale。")) float ImpactVFXScale = .6f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Impact", meta=(ClampMin="0",ClampMax="1", ToolTip="命中インパクトを出す高さ（Boarの足元=0、頭頂=1）。")) float ImpactHeightRatio = .6f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Impact", meta=(ClampMin="0",ClampMax="0.3",Units="s", ToolTip="命中直後にBoarを白く光らせる長さ（実時間・秒）。その後はGlow Start Colorからの通常の発光へ移ります。0で無効。")) float HitFlashDuration = .08f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Impact", meta=(ToolTip="命中直後のフラッシュの色。")) FLinearColor HitFlashColor = FLinearColor(1.f,1.f,1.f);
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Impact", meta=(ClampMin="0",ClampMax="5", ToolTip="命中直後のフラッシュの強さ（Glow MaterialのGlowAmount）。通常の発光の最大は1です。")) float HitFlashGlowAmount = 2.2f;
+ // ---- 転送（吸い込み） ----
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ClampMin="0.05",ClampMax="1", ToolTip="転送完了時のデータ残像の横方向の大きさ（元=1）。上昇しながら細く吸い込まれて消えます。1で縮めません。元のBoarのMeshは変更しません。")) float TransferEndWidthScale = .35f;
+ // ---- ACFカメラ演出。ACFの通常カメラが出ている間だけ使い、出ていなければ従来のFOV Punch In（FollowCamera）へ戻します。 ----
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ToolTip="ACFカメラ使用中に、Net 1回につき1回再生するCamera Effect Preset（FOV Punch・捕獲地点から押し返す方向性のあるImpulse）。強さ・時間はPresetのLayerで調整します。ACFのRequestが無いときと未設定のときは、Camera Zoom AmountのFOV Punch Inを使います。")) TObjectPtr<class UACFCameraEffectPreset> CameraEffect;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ToolTip="1回のNetでMulti Capture Threshold体以上を捕獲したときだけ、通常のCamera Effectと入れ替えて再生する強めのPreset。未設定なら通常のPresetのままです。")) TObjectPtr<class UACFCameraEffectPreset> MultiCaptureCameraEffect;
+ // ---- 複数体捕獲 ----
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Multi Capture", meta=(ClampMin="2",ClampMax="10", ToolTip="1回のNetで何体以上捕獲したら複数体の強調（Multi Capture Sound・Multi Capture Camera Effect）を出すか。強調はNet 1回につき1回だけです。")) int32 MultiCaptureThreshold = 2;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Multi Capture", meta=(ToolTip="複数体捕獲になった瞬間に1回だけ鳴らす追加の効果音。未設定なら鳴らしません。")) TObjectPtr<USoundBase> MultiCaptureSound;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Multi Capture", meta=(ClampMin="0.5",ClampMax="2", ToolTip="複数体捕獲のとき、転送完了の確定音（Capture Success Sound）を鳴らすピッチ倍率。")) float MultiCaptureSuccessPitch = 1.12f;
 protected:
  virtual void BeginPlay() override;
  virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -139,7 +157,13 @@ private:
  void StartDataConversion(FCaptureVisualTarget& Target);
  void StartCageReception(const FVector& Location);
  float GetTotalDuration() const;
- void PlaySound(USoundBase* Sound);
+ void PlaySound(USoundBase* Sound, float Pitch = 1.f);
+ void SpawnImpact(const FCaptureVisualTarget& Target);
+ /** ACFが通常カメラを出していればCamera Effectを再生してtrue。出ていなければfalse（従来のFOV Punch Inを使う）。 */
+ bool PlayCameraEffect(class UACFCameraEffectPreset* Preset, const FVector& Source, bool bReplaceImmediately);
+ void ReleaseCameraEffect(bool bImmediate);
+ void PlayMultiCaptureFeedback(const FVector& Source);
+ class UACFCameraSubsystem* GetACFSubsystem() const;
  UFUNCTION() void OnTargetDestroyed(AActor* Actor);
  UPROPERTY(Transient) TArray<FCaptureVisualTarget> Targets;
  UPROPERTY(Transient) TArray<FCaptureReception> Receptions;
@@ -154,4 +178,11 @@ private:
  float AppliedFOV = 90.f;
  bool bCommittingCaptures = false;
  bool bSharedActive = false, bOwnCamera = false, bConfirmed = false, bTransferSoundPlayed = false;
+ /** 再生中のACF Camera Effect。共有演出の終了・キャンセル・Pause・EndPlayで止めます。 */
+ FACFCameraEffectHandle ActiveCameraEffect;
+ /** 共有演出のカメラをACF Effectで出しているか（trueならFollowCameraのFOVには触れない）。 */
+ bool bUsingACFEffect = false;
+ /** 現在のNet使用で捕獲した数と、複数体の強調を出したか。 */
+ int32 SameUseCaptureCount = 0;
+ bool bMultiFeedbackPlayed = false;
 };

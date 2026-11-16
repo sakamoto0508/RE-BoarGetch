@@ -13,6 +13,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/DateTime.h"
@@ -142,6 +143,8 @@ namespace BoarGameplayCamera
 		float DesiredDistance = 0.f;
 		float ActualDistance = 0.f;
 		FVector Rendered = FVector::ZeroVector;
+		FVector ACFPose = FVector::ZeroVector;  // ACFの評価結果（Output Modifierが書く値）
+		bool bHasACFPose = false;
 		FVector SpringArmCamera = FVector::ZeroVector;
 		FVector ShoulderOffset = FVector::ZeroVector;
 		FVector PivotOffset = FVector::ZeroVector;
@@ -189,6 +192,7 @@ struct UBoarGameplayCameraComponent::FTraceState
 	int32 Frames = 0;
 	int32 ValidFrames = 0;
 	int32 CollisionHitFrames = 0;
+	int32 RenderedOffFrames = 0;     // 計測可能フレームのうち、描画カメラがACF姿勢から1cm以上ずれたフレーム
 	double SumDt = 0.0;
 	float MinDt = TNumericLimits<float>::Max();
 	float MaxDt = 0.f;
@@ -448,6 +452,8 @@ static bool BoarComputeCameraSample(const UBoarGameplayCameraComponent& Self, co
 	Out.bBlending = Result.bIsBlending;
 	Out.BlendAlpha = Result.BlendAlpha;
 	Out.bOurRequestActive = Handle.IsValid() && Result.ActiveRequest == Handle;
+	Out.ACFPose = Result.Pose.Location;
+	Out.bHasACFPose = Result.HasInfluence();
 	const UACFCameraDirector* Director = Cameras->GetDirector();
 	const UACFCameraNode_OrbitalFollow* Orbit = FindOrbit(Preset);
 	if (!Director || !Orbit)
@@ -495,8 +501,30 @@ void UBoarGameplayCameraComponent::DumpCameraState() const
 		       Result.Weight, Result.RequestWeight, Result.bIsBlending ? 1 : 0, Result.bOutputSuppressed ? 1 : 0, Result.bOutputBypassed ? 1 : 0,
 		       *Result.ActiveRequest.ToString(), Result.NumRequests,
 		       *Result.Pose.Location.ToCompactString(), *Result.Pose.Rotation.ToCompactString(), Result.Pose.FieldOfView);
+		// Requestがあることと、画面のカメラがACFの結果であることは別。Output Modifierの書き込み回数と、描画カメラとACF姿勢の差で判定する。
+		const FACFCameraOutputDiagnostics Output = Cameras->GetOutputDiagnostics();
+		const APlayerCameraManager* PCM = PC ? PC->PlayerCameraManager.Get() : nullptr;
+		const float ToACF = PCM ? static_cast<float>(FVector::Dist(PCM->GetCameraLocation(), Result.Pose.Location)) : -1.f;
+		const float ToACFDeg = PCM ? static_cast<float>(FMath::RadiansToDegrees(PCM->GetCameraRotation().Quaternion().AngularDistance(Result.Pose.Rotation.Quaternion()))) : -1.f;
+		const TCHAR* Authority = !Result.HasInfluence() || Output.Writes == 0 ? TEXT("NOT ACF (SpringArm / other view target)")
+			                         : Result.Weight < 0.999f ? TEXT("BLEND (ACF + upstream)")
+			                         : ToACF <= 1.f && ToACFDeg <= 0.5f ? TEXT("ACF")
+			                         : TEXT("ACF written, but the rendered camera differs (shake / collision guard / later modifier?)");
+		UE_LOG(LogBoarCamera, Display, TEXT("[Camera]   Output: Modifier passes=%d writes=%d unresolved=%d (frame %lld, now %llu) Rendered-ACF %.2fcm %.2fdeg -> Authority=%s"),
+		       Output.Passes, Output.Writes, Output.UnresolvedPasses, Output.Frame, static_cast<uint64>(GFrameCounter), ToACF, ToACFDeg, Authority);
 	}
 #if !UE_BUILD_SHIPPING
+	// アセット（DA）に保存されている値。下の「in use」と違えば検証用CVar／Runtime Tuningが効いている。
+	if (const UACFCameraNode_OrbitalFollow* AssetOrbit = BoarGameplayCamera::FindOrbit(NormalCameraPreset))
+	{
+		const UACFCameraNode_Collision* AssetCollision = BoarGameplayCamera::FindCollision(NormalCameraPreset);
+		UE_LOG(LogBoarCamera, Display, TEXT("[Camera]   Damping in asset %s: Pivot=%s (%s) Rotation=%s CollisionPullIn=%.3f CollisionReturn=%.3f BlendIn=%.2f BlendOut=%.2f"),
+		       *GetNameSafe(NormalCameraPreset), *AssetOrbit->PivotDamping.Time.ToCompactString(),
+		       *StaticEnum<EACFCameraDampingSpace>()->GetNameStringByValue(static_cast<int64>(AssetOrbit->PivotDamping.Space)),
+		       *AssetOrbit->RotationDamping.ToString(), AssetCollision ? AssetCollision->PullInDampingTime : -1.f,
+		       AssetCollision ? AssetCollision->ReturnDampingTime : -1.f, NormalCameraPreset->DefaultBlendIn.Duration,
+		       NormalCameraPreset->DefaultBlendOut.Duration);
+	}
 	// 実際に使われているDamping値（Runtime Tuning中はその値、検証用複製ならその値）
 	if (const UACFCameraNode_OrbitalFollow* Orbit = BoarGameplayCamera::FindOrbit(RequestedPreset))
 	{
@@ -530,6 +558,15 @@ void UBoarGameplayCameraComponent::DumpCameraState() const
 			       *Camera->GetComponentLocation().ToCompactString(), *Camera->GetComponentRotation().ToCompactString(),
 			       Camera->FieldOfView, *PC->GetControlRotation().ToCompactString());
 		}
+		if (const USpringArmComponent* Arm = Pawn->FindComponentByClass<USpringArmComponent>())
+		{
+			// 比較用（Boar.Camera.ACF 0）。Lag Speed s はおおよそ 1/s 秒のDampingに相当。
+			UE_LOG(LogBoarCamera, Display, TEXT("[Camera]   SpringArm Lag (ACF 0 comparison): Pos=%d Speed=%.1f (~%.3fs) Rot=%d Speed=%.1f (~%.3fs) Arm=%.0f Socket=%s"),
+			       Arm->bEnableCameraLag ? 1 : 0, Arm->CameraLagSpeed, Arm->CameraLagSpeed > 0.f ? 1.f / Arm->CameraLagSpeed : 0.f,
+			       Arm->bEnableCameraRotationLag ? 1 : 0, Arm->CameraRotationLagSpeed,
+			       Arm->CameraRotationLagSpeed > 0.f ? 1.f / Arm->CameraRotationLagSpeed : 0.f, Arm->TargetArmLength,
+			       *Arm->SocketOffset.ToCompactString());
+		}
 	}
 	if (const APlayerCameraManager* PCM = PC ? PC->PlayerCameraManager.Get() : nullptr)
 	{
@@ -552,7 +589,7 @@ void UBoarGameplayCameraComponent::StartTrace(const FString& Label)
 	Trace->Rows.Add(TEXT("RealTime,GameTime,Dt,Mode,OurRequestActive,Weight,RequestWeight,Blending,BlendAlpha,")
 		TEXT("TargetX,TargetY,TargetZ,VelX,VelY,VelZ,Speed,IdealPivotX,IdealPivotY,IdealPivotZ,DampedPivotX,DampedPivotY,DampedPivotZ,")
 		TEXT("PivotErr,PivotErrFwd,PivotErrRight,PivotErrUp,PivotLagTime,CtrlPitch,CtrlYaw,OrbitPitch,OrbitYaw,RotErrYaw,RotErrPitch,CtrlYawRate,RotLagTime,")
-		TEXT("CollisionHit,DesiredDist,ActualDist,RenderedX,RenderedY,RenderedZ,SpringArmX,SpringArmY,SpringArmZ,ValidForMeasure"));
+		TEXT("CollisionHit,DesiredDist,ActualDist,RenderedX,RenderedY,RenderedZ,SpringArmX,SpringArmY,SpringArmZ,ValidForMeasure,RenderedToACF"));
 	FWorldDelegates::OnWorldPostActorTick.RemoveAll(this);
 	FWorldDelegates::OnWorldPostActorTick.AddUObject(this, &ThisClass::HandleWorldPostActorTick);
 	UE_LOG(LogBoarCamera, Display, TEXT("[CameraTrace] Started '%s'"), *Trace->Label);
@@ -586,6 +623,8 @@ void UBoarGameplayCameraComponent::HandleWorldPostActorTick(UWorld* World, ELeve
 	const bool bTurning = FMath::Abs(YawRate) >= 60.f;
 	const float PivotLag = bValid && bMoving ? S.PivotLagTime() : 0.f;
 	const float RotLag = bValid && bTurning ? S.RotErrorYaw / YawRate : 0.f;
+	// 描画カメラとACF姿勢の距離（-1 = ACFの出力なし）。CameraShake・Collision Guard中は0にならない。
+	const float RenderedToACF = S.bHasACFPose ? static_cast<float>(FVector::Dist(S.Rendered, S.ACFPose)) : -1.f;
 
 	++T.Frames;
 	T.SumDt += Dt;
@@ -595,6 +634,7 @@ void UBoarGameplayCameraComponent::HandleWorldPostActorTick(UWorld* World, ELeve
 	{
 		++T.ValidFrames;
 		T.CollisionHitFrames += S.bCollisionHit ? 1 : 0;
+		T.RenderedOffFrames += RenderedToACF > 1.f ? 1 : 0;
 		T.MaxPivotError = FMath::Max(T.MaxPivotError, PivotErr);
 		T.MaxRotError = FMath::Max(T.MaxRotError, RotErr);
 		if (bMoving)
@@ -655,12 +695,12 @@ void UBoarGameplayCameraComponent::HandleWorldPostActorTick(UWorld* World, ELeve
 		}
 	}
 
-	T.Rows.Add(FString::Printf(TEXT("%.4f,%.4f,%.5f,%s,%d,%.3f,%.3f,%d,%.3f,%s,%s,%.2f,%s,%s,%.3f,%.3f,%.3f,%.3f,%.4f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f,%.4f,%d,%.2f,%.2f,%s,%s,%d"),
+	T.Rows.Add(FString::Printf(TEXT("%.4f,%.4f,%.5f,%s,%d,%.3f,%.3f,%d,%.3f,%s,%s,%.2f,%s,%s,%.3f,%.3f,%.3f,%.3f,%.4f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f,%.4f,%d,%.2f,%.2f,%s,%s,%d,%.2f"),
 		Now, GameTime, Dt, S.bACFMode ? TEXT("ACF") : TEXT("SpringArm"), S.bOurRequestActive ? 1 : 0, S.Weight, S.RequestWeight,
 		S.bBlending ? 1 : 0, S.BlendAlpha, *V(S.Target), *V(S.Velocity), Speed, *V(S.IdealPivot), *V(S.DampedPivot),
 		PivotErr, S.PivotErrorCamera.X, S.PivotErrorCamera.Y, S.PivotErrorCamera.Z, PivotLag,
 		S.ControlRotation.Pitch, S.ControlRotation.Yaw, S.OrbitRotation.Pitch, S.OrbitRotation.Yaw, S.RotErrorYaw, S.RotErrorPitch, YawRate, RotLag,
-		S.bCollisionHit ? 1 : 0, S.DesiredDistance, S.ActualDistance, *V(S.Rendered), *V(S.SpringArmCamera), bValid ? 1 : 0));
+		S.bCollisionHit ? 1 : 0, S.DesiredDistance, S.ActualDistance, *V(S.Rendered), *V(S.SpringArmCamera), bValid ? 1 : 0, RenderedToACF));
 
 	if (GEngine)
 	{
@@ -698,6 +738,7 @@ void UBoarGameplayCameraComponent::StopTrace()
 	       Median(Done->PivotLagSamples), Done->PivotLagSamples.Num(), Median(Done->PivotDecayTimes), Done->PivotDecayTimes.Num(), Done->MaxPivotError);
 	UE_LOG(LogBoarCamera, Display, TEXT("[CameraTrace]   Rotation: turning lag time median %.3fs over %d frames, decay to 1/e after turn median %.3fs (%d turns), max error %.2fdeg"),
 	       Median(Done->RotLagSamples), Done->RotLagSamples.Num(), Median(Done->RotDecayTimes), Done->RotDecayTimes.Num(), Done->MaxRotError);
-	UE_LOG(LogBoarCamera, Display, TEXT("[CameraTrace]   Collision hit frames %d"), Done->CollisionHitFrames);
+	UE_LOG(LogBoarCamera, Display, TEXT("[CameraTrace]   Collision hit frames %d. Rendered camera off the ACF pose (>1cm) in %d of %d measurable frames (0 = the screen shows the ACF result; shakes / collision guard also count)"),
+	       Done->CollisionHitFrames, Done->RenderedOffFrames, Done->ValidFrames);
 #endif
 }

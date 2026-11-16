@@ -79,18 +79,8 @@ void UBoarArchiveSelectionWidget::NativeConstruct()
 	Grid->ClearChildren();
 	if (const auto* Save = GI ? GI->GetProgress() : nullptr)
 	{
-		for (int32 I = Save->CapturedBoarHistory.Num() - 1; I >= 0; --I)
-		{
-			const FName Id = Save->CapturedBoarHistory[I];
-			if (!Id.IsNone() && Save->CapturedBoarUniqueIds.Contains(Id))
-				Candidates.AddUnique(Id);
-		}
-		// 古いセーブで捕獲順のないIDは名前順で補います。表示順のために履歴を書き換えません。
-		auto Remaining = Save->CapturedBoarUniqueIds.Array();
-		Remaining.Sort([](FName A, FName B) { return A.LexicalLess(B); });
-		for (FName Id : Remaining)
-			if (!Id.IsNone())
-				Candidates.AddUnique(Id);
+		// 最近捕獲順（Default展示と同じ並び）。捕獲順のない旧セーブのIDはSaveGame側でID昇順に補われる。
+		Candidates = Save->GetRecentCapturedBoarIds();
 	}
 	// カードもWBPで作成します。未設定時はC++のカードで代替せず、Errorを出してカードを並べません。
 	const TSubclassOf<UBoarLoadoutEntry> CardClass = EntryClass;

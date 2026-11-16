@@ -76,6 +76,9 @@ bool FRunProgressTest::RunTest(const FString& Parameters)
 	FStageRunData Run;
 	Run.StageId = TEXT("S1");
 	Run.CapturedBoarUniqueIds = {FName("S1_B01"), FName("S1_B02"), FName("S1_B02")};
+	// Clear時の収容個体（登録・NEWの共通入力）。
+	Run.HousedBoarUniqueIds = {FName("S1_B01"), FName("S1_B02")};
+	Run.bHousedSnapshotTaken = true;
 	Run.SpecialCoinIds = {FName("S1_C01"), FName("S1_C02")};
 	Run.CurrentHousedCount = 1;
 	TestFalse(TEXT("未確定Runは保存不可"), Save->MergeClearedRun(Run));

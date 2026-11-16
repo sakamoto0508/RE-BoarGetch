@@ -23,7 +23,10 @@ namespace
 		static const TMap<EBoarArchetype, FBoarArchetypeSettings> Settings = []
 		{
 			TMap<EBoarArchetype, FBoarArchetypeSettings> Result;
-			Result.Add(EBoarArchetype::Normal, MakeSettings(0.8f, 0.9f, 1.4f, true, false));
+			FBoarArchetypeSettings NormalSettings = MakeSettings(0.8f, 0.9f, 1.4f, true, false);
+			// 逃走中の大きな切り返しを捕獲好機にするのはNormalだけ（AKI-152）。
+			NormalSettings.EscapeTurn.bEnabled = true;
+			Result.Add(EBoarArchetype::Normal, NormalSettings);
 			Result.Add(EBoarArchetype::PlayerAttacker, MakeSettings(1.8f, 0.8f, 0.4f, true, false));
 
 			FBoarArchetypeSettings EscapeSettings = MakeSettings(0.4f, 0.1f, 2.2f, false, true);

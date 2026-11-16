@@ -28,13 +28,14 @@ public:
 
 	/** 捕獲成功時の共通後処理（檻送致/カウント/ドロップ）を実行します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Game")
-	void HandleBoarCaptured(class ABoarBase* Boar);
+	/** bStartsNewCaptureUse：この捕獲がGadget使用（アミの一振り）の最初の捕獲成功か。falseなら直前と同じ使用として同順位にします。 */
+	void HandleBoarCaptured(class ABoarBase* Boar, bool bStartsNewCaptureUse = true);
 
 	/**
 	 * 捕獲演出の開始時に、捕獲状態になったBoarを「確定待ち」として登録します（演出完了まで檻収容・記録を保留）。
 	 * 確定待ちの正本はこのGameModeです。演出側は見た目だけを持ち、完了・中断をここへ通知します。
 	 */
-	void RegisterPendingCapture(class ABoarBase* Boar);
+	void RegisterPendingCapture(class ABoarBase* Boar, bool bStartsNewCaptureUse = true);
 	/**
 	 * 確定待ちの捕獲を確定します（HandleBoarCapturedと同じ判定：Stage進行中・捕獲中・未確定のときだけ収容・記録）。
 	 * 渡したBoarは確定できなかった場合も確定待ちから外します。収容数の再集計・通知は確定ごとに1回（1体も確定しなければ最後に1回）です。確定できたBoarを返します。
@@ -113,6 +114,12 @@ private:
 	friend class FBoarPendingCaptureTest;
 	/** 捕獲を確定して収容・記録します。確定できた（今回初めて確定した）場合true。 */
 	bool ConfirmCapture(class ABoarBase* Boar);
+	/** 捕獲成功の順序をRunへ記録します。同じGadget使用（同じ一振り）の捕獲は、フレームが違っても同じ番号になります。 */
+	void RecordCaptureOrder(const class ABoarBase* Boar, bool bStartsNewCaptureUse);
+	/** Clear確定時に、全Cageの現在収容個体をRunへ確定します（1回だけ）。 */
+	void SnapshotHousedBoars();
+	/** 今回のRunの捕獲使用の通し番号（Run内だけで有効。保存しない）。 */
+	int32 CaptureEventOrder = 0;
 	/** Validate -> spawn -> initialize -> check readiness; BeginPlay follows this sequence. */
 	bool PrepareStage();
 	bool ValidateStageSetup();

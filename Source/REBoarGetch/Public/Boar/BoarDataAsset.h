@@ -20,6 +20,84 @@ enum class EBoarArchetype : uint8
 	CageBreaker,
 };
 
+/**
+ * 逃走開始の旋回と、逃走中の大きな切り返し（減速→踏ん張り→停止→ゆっくり旋回→加速）の調整値です（AKI-152）。
+ * bEnabledがfalseの種別は従来どおりCharacterMovementの向き追従だけで逃走します。
+ */
+USTRUCT(BlueprintType)
+struct REBOARGETCH_API FBoarEscapeTurnSettings
+{
+	GENERATED_BODY()
+
+	/** 逃走開始の旋回と大きな切り返しを使うかです。初期値ではNormalだけ有効です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn")
+	bool bEnabled = false;
+
+	/** 逃走開始時、逃走方向との差がこの角度以上ならその場で素早く向きを変えてから走り出します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Start", meta = (ClampMin = "0.0", ClampMax = "180.0", Units = "Degrees"))
+	float StartTurnMinAngle = 45.0f;
+
+	/** 逃走開始の旋回速度です。切り返しの旋回より速くします。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Start", meta = (ClampMin = "1.0", Units = "DegreesPerSecond"))
+	float StartTurnRateDegreesPerSecond = 540.0f;
+
+	/** 逃走開始の加速時間です。この時間で初速割合から逃走速度へ戻します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Start", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float StartAccelerationDuration = 0.35f;
+
+	/** 逃走開始の加速を始める速度割合です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Start", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float StartInitialSpeedRatio = 0.3f;
+
+	/** 逃走先の方向と現在の向きの差がこの角度以上のときだけ切り返しにします。未満は止まらず走りながら曲がります。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", ClampMax = "180.0", Units = "Degrees"))
+	float PivotAngleThreshold = 100.0f;
+
+	/** 切り返しの減速時間です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float DecelerateDuration = 0.25f;
+
+	/** 停止して踏ん張る時間です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float BraceDuration = 0.2f;
+
+	/** 踏ん張りの後、旋回を始めるまで止まっている時間です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float HoldDuration = 0.15f;
+
+	/** 切り返しの旋回速度です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "1.0", Units = "DegreesPerSecond"))
+	float PivotTurnRateDegreesPerSecond = 150.0f;
+
+	/** 旋回の最大時間です。超えたら残りの角度は走りながら合わせます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float PivotTurnMaxDuration = 1.5f;
+
+	/** 切り返し後の加速時間です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float PivotAccelerationDuration = 0.5f;
+
+	/** 切り返し後の加速を始める速度割合です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float PivotInitialSpeedRatio = 0.15f;
+
+	/** 前回の切り返し開始から、次の切り返しを許可するまでの秒数（再発動間隔）です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float MinPivotInterval = 2.0f;
+
+	/** 逃走開始・切り返し後に、方向を変えずに走り続ける最低時間です。時間と距離の両方を満たすまで逃走先を引き直しません。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Commit", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float CommitMinDuration = 1.2f;
+
+	/** 逃走開始・切り返し後に、方向を変えずに走り続ける最低距離です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Commit", meta = (ClampMin = "0.0", Units = "Centimeters"))
+	float CommitMinDistance = 400.0f;
+
+	/** 逃走Stateを抜けてからこの秒数以内に再び逃走へ入った場合は、逃走開始ではなく逃走の継続として扱います。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Commit", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float ContinueEscapeGraceDuration = 0.5f;
+};
+
 /** イノシシ1種分のAI・スタミナ・移動設定です。 */
 USTRUCT(BlueprintType)
 struct REBOARGETCH_API FBoarArchetypeSettings
@@ -164,6 +242,10 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 	/** スタミナ消費対象の移動中と判定する速度のしきい値です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))
 	float MovingSpeedThreshold = 10.0f;
+
+	/** 逃走開始の旋回と逃走中の大きな切り返しの設定です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	FBoarEscapeTurnSettings EscapeTurn;
 };
 
 /** イノシシ種別ごとの調整値をまとめるDataAssetです。 */

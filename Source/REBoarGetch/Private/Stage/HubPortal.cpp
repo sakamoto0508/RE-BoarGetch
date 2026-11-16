@@ -10,6 +10,7 @@
 #include "GadgetDataAsset.h"
 #include "Engine/TextRenderActor.h"
 #include "Components/TextRenderComponent.h"
+#include "Stage/BoarLevelDestination.h"
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
 #endif
@@ -39,12 +40,13 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 {
 	if (!PC || !PC->IsLocalController() || bTravelRequested)
 		return;
+	TSoftObjectPtr<UWorld> TravelDestination = GetTravelDestination();
 	if (Action == EHubPortalAction::GadgetTest)
 	{
 		auto* GI = GetGameInstance<UBoarGameInstance>();
 		if (!GI || !GI->IsInGadgetLab())
 			return;
-		Destination = GI->GetSelectedTestLevel();
+		TravelDestination = GI->GetSelectedTestLevel();
 	}
 	else if (Action != EHubPortalAction::Travel)
 	{
@@ -53,10 +55,10 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 	}
 	// PIE rewrites soft references to visited worlds. Validate and travel using
 	// the on-disk package, never the transient UEDPIE_<instance>_ package.
-	const FString PackageName = UWorld::RemovePIEPrefix(Destination.ToSoftObjectPath().GetLongPackageName());
-	if (Destination.IsNull() || !FPackageName::DoesPackageExist(PackageName))
+	const FString PackageName = UWorld::RemovePIEPrefix(TravelDestination.ToSoftObjectPath().GetLongPackageName());
+	if (TravelDestination.IsNull() || !FPackageName::DoesPackageExist(PackageName))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[HubPortal] Missing destination: %s"), *Destination.ToString());
+		UE_LOG(LogTemp, Error, TEXT("[HubPortal] Missing destination: %s"), *TravelDestination.ToString());
 		return;
 	}
 	bTravelRequested = true;
@@ -64,6 +66,11 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 		if (auto* GI = GetGameInstance<UBoarGameInstance>())
 			GI->ClearTestGadget();
 	UGameplayStatics::OpenLevel(this, FName(*PackageName));
+}
+
+TSoftObjectPtr<UWorld> AHubPortal::GetTravelDestination() const
+{
+	return DestinationAsset ? DestinationAsset->Level : Destination;
 }
 
 void AHubPortal::BeginPlay()
@@ -192,6 +199,11 @@ EDataValidationResult AHubPortal::IsDataValid(FDataValidationContext& Context) c
 	for (const FString& Problem : FindGadgetLabelProblems(GadgetLabels, nullptr))
 	{
 		Context.AddError(FText::FromString(FString::Printf(TEXT("%s GadgetLabels: %s"), *GetActorNameOrLabel(), *Problem)));
+		Result = EDataValidationResult::Invalid;
+	}
+	if (Action == EHubPortalAction::Travel && GetTravelDestination().IsNull())
+	{
+		Context.AddError(FText::FromString(FString::Printf(TEXT("%s: 行き先が未設定です（DestinationAsset、またはそのLevel）"), *GetActorNameOrLabel())));
 		Result = EDataValidationResult::Invalid;
 	}
 	return Result;

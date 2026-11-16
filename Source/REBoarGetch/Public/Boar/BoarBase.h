@@ -14,6 +14,27 @@ class ACage;
 class APawn;
 class APatrolPath;
 class UAnimSequenceBase;
+class UAnimMontage;
+
+/** 逃走開始の旋回と、逃走中の大きな切り返しの段階です（AKI-152）。AnimBPはこれを読んで見た目を切り替えます。 */
+UENUM(BlueprintType)
+enum class EBoarEscapeTurnPhase : uint8
+{
+	/** 通常の走行です。 */
+	None,
+	/** 逃走開始時、その場で素早く逃走方向へ向きを変えています。 */
+	StartTurn,
+	/** 切り返しのため減速しています。 */
+	Decelerate,
+	/** 停止して踏ん張っています。 */
+	Brace,
+	/** 踏ん張った姿勢のまま止まっています。 */
+	Hold,
+	/** 停止したままゆっくり旋回しています。 */
+	Turn,
+	/** 逃走開始・切り返しの後に加速しています。 */
+	Accelerate,
+};
 
 UCLASS()
 class REBOARGETCH_API ABoarBase : public ACharacter
@@ -203,6 +224,57 @@ public:
 	/** StateTreeの逃走タスクから呼び、逃走速度とスタミナ消費対象を切り替えます。 */
 	void SetEscaping(bool bNewEscaping);
 
+	/** 現在の種別が逃走開始の旋回と大きな切り返しを使うか返します。 */
+	bool IsEscapeTurnEnabled() const { return ActiveSettings.EscapeTurn.bEnabled; }
+
+	/**
+	 * 逃走Stateに入ったときに呼びます。直前まで逃走していた場合（継続）は切り返しを判定し、
+	 * そうでなければ逃走開始の旋回と加速を始めます。切り返しを始めた場合はtrueを返します。
+	 */
+	bool BeginEscapeMotion(const FVector& EscapeDirection);
+
+	/** 逃走中に逃走先を引き直してよいか返します（逃走開始・切り返し後の継続走行区間を過ぎ、旋回中でない）。 */
+	bool CanReplanEscape() const;
+
+	/** 向きとの差が切り返し角度以上なら切り返しを始めてtrueを返します。再発動間隔中はfalseです。 */
+	bool NeedsEscapePivot(const FVector& EscapeDirection) const;
+	/** bSkipDecelerate：到着直後の再入など、新しい経路が既に入っているときは減速を飛ばして踏ん張りから始めます。 */
+	bool TryStartEscapePivot(const FVector& EscapeDirection, bool bSkipDecelerate = false);
+
+	/** 減速を終えて停止中（踏ん張り・旋回）か返します。保留中の逃走先はこの間に経路へ反映します。 */
+	bool IsEscapeMovementHeld() const;
+
+	/** 逃走開始の旋回・切り返しの段階です。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
+	EBoarEscapeTurnPhase GetEscapeTurnPhase() const { return EscapeTurnPhase; }
+
+	/** 旋回方向です。+1で右（時計回り）、-1で左、旋回していないときは0です。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
+	float GetEscapeTurnDirection() const;
+
+	/** 切り返し中（減速〜旋回）か返します。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
+	bool IsEscapePivoting() const;
+
+	/** 現在の旋回速度（度/秒）です。旋回していないときは0です。AnimBPで旋回ループの再生速度を合わせる用途に使います。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
+	float GetEscapeTurnRateDegreesPerSecond() const;
+
+	/** 旋回・切り返しの状態を中断し、移動速度と向き追従を元に戻します。 */
+	void ResetEscapeMotion();
+
+	/**
+	 * 旋回・切り返しの段階が変わったときの見た目の通知です。既定の実装は下のMontage設定を既存のDefaultSlotで再生します。
+	 * Blueprintでoverrideすれば見た目を差し替えられます。Gameplay（移動・旋回・捕獲）はこの結果に依存しません。
+	 */
+	UFUNCTION(BlueprintNativeEvent, Category = "Boar|Animation")
+	void OnEscapeTurnPhaseChanged(EBoarEscapeTurnPhase NewPhase, float TurnDirection);
+
+protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+public:
+
 	/** DataAssetから適用された通常時の移動速度を返します。アニメーションの速度正規化に使用します。 */
 	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
 	float GetBaseWalkSpeed() const { return ActiveSettings.BaseWalkSpeed; }
@@ -235,6 +307,65 @@ private:
 
 	/** スタミナ切れになった瞬間に、AIの移動要求と現在の慣性を止めます。 */
 	void StopForStaminaRecovery();
+
+	/** 旋回・切り返しの段階を進めます。 */
+	void TickEscapeTurn(float DeltaSeconds);
+	void SetEscapeTurnPhase(EBoarEscapeTurnPhase NewPhase);
+	/** 固定した旋回方向へ目標の向きまで回します。到達したらtrueです。 */
+	bool StepEscapeRotation(float RateDegreesPerSecond, float DeltaSeconds);
+	/** 向き追従（bOrientRotationToMovement）を止める／元に戻します。 */
+	void HoldOrientRotation();
+	void RestoreOrientRotation();
+	/** 継続走行区間を今から始めます。 */
+	void StartEscapeCommit();
+	/** 逃走中の速度倍率（減速・停止・加速）です。 */
+	float GetEscapeTurnSpeedScale() const;
+	/** スタミナか旋回のどちらかで毎フレーム更新が必要な間だけTickします。 */
+	void UpdateTickEnabled();
+
+	/** 切り返しの減速〜停止で1回再生し、最終フレームで保持するMontageです（自動Blend Outを無効にして使います）。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> EscapeBraceMontage;
+
+	/** その場旋回のループMontageです（左右）。逃走開始の素早い旋回にも再生速度を上げて使います。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> EscapeTurnLeftMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> EscapeTurnRightMontage;
+
+	/** 旋回ループを等速（再生速度1）で再生したときの旋回速度です。足滑りを抑えるため実際の旋回速度に再生速度を合わせます。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true", ClampMin = "1.0", Units = "DegreesPerSecond"))
+	float EscapeTurnAnimationRate = 150.0f;
+
+	/** 旋回ループの再生速度の上限です（逃走開始の素早い旋回で使います）。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true", ClampMin = "0.1"))
+	float EscapeTurnMaxPlayRate = 2.0f;
+
+	/** 旋回Montageを止めるときのBlend Out時間です。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", Units = "Seconds"))
+	float EscapeTurnBlendOutTime = 0.12f;
+
+	/** 現在の旋回・切り返しの段階です。 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI|EscapeTurn", meta = (AllowPrivateAccess = "true"))
+	EBoarEscapeTurnPhase EscapeTurnPhase = EBoarEscapeTurnPhase::None;
+	/** 現在の段階に入ってからの経過秒数です。 */
+	float EscapeTurnPhaseElapsed = 0.0f;
+	/** 旋回開始時に固定した目標Yawと回転方向（+1右 / -1左）です。旋回中に再抽選しません。 */
+	float EscapeTurnTargetYaw = 0.0f;
+	float EscapeTurnSign = 0.0f;
+	/** 加速を始める速度割合と加速時間です（逃走開始と切り返しで異なる）。 */
+	float EscapeAccelerationStartRatio = 1.0f;
+	float EscapeAccelerationDuration = 0.0f;
+	/** 向き追従を止める前の値です。 */
+	bool bSavedOrientRotationToMovement = true;
+	bool bOrientRotationHeld = false;
+	/** 継続走行区間の開始時刻と開始位置です。 */
+	double EscapeCommitStartTime = -1.0;
+	FVector EscapeCommitStartLocation = FVector::ZeroVector;
+	/** 前回の切り返し開始時刻と、前回逃走Stateを抜けた時刻です。 */
+	double LastEscapePivotTime = -1.0e9;
+	double LastEscapeExitTime = -1.0e9;
 
 	/**
 	 * 捕獲状態を管理するコンポーネントです。
