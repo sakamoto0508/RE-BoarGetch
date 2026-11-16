@@ -24,7 +24,9 @@ public class REBoarGetch : ModuleRules
 			"Slate",
 			"SlateCore",
 			"Niagara",
-			"EngineCameras"
+			"EngineCameras",
+			// 通常TPSカメラ（UBoarGameplayCameraComponent）と演出のACF連携で使用します。
+			"ActionCameraFramework"
 		});
 
 		// Editor専用の自動化関数（UBoarUIAuthoringLibrary）だけが使用します。

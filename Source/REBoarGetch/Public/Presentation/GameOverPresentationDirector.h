@@ -75,6 +75,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera", meta = (ToolTip = "演出中にSpringArmの壁判定で使うChannel。BoarのCapsuleはCameraをBlockするため既定はVisibility。")) TEnumAsByte<ECollisionChannel> CameraProbeChannel = ECC_Visibility;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera", meta = (ToolTip = "後退の進行カーブ（0～1）。未設定はEase Out。")) TObjectPtr<UCurveFloat> CameraCurve;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera", meta = (ClampMin = "1")) float CameraEaseExponent = 2.6f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera", meta = (ClampMin = "0", ToolTip = "後退開始時、ACFの通常カメラからこの演出のSpringArmカメラへ切り替えるブレンド秒数。ACF未使用時は無関係です。")) float ACFHandOffBlendTime = .2f;
 
 	// ---- Warning / VFX ----
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning", meta = (ToolTip = "赤フラッシュ・警告ライン・ノイズを描画するWidget（WBP_GameOverEffect）。未設定時はエフェクトを表示しません。")) TSubclassOf<UBoarGameOverEffectWidget> EffectWidgetClass;
@@ -116,6 +117,8 @@ private:
 	UPROPERTY(Transient) TArray<FGameOverGadgetMesh> GadgetMeshes;
 	// Camera（既存SpringArmの元設定を保存し、中断時に戻します）
 	bool bCameraStarted = false; float CameraAge = 0.f, CameraDuration = 1.4f, CameraRiseDuration = .6f;
+	/** 後退中だけACFの出力を抑制し、SpringArm演出に最終カメラのAuthorityを渡しているか。 */
+	bool bSuppressedACF = false;
 	TWeakObjectPtr<USpringArmComponent> Arm;
 	TWeakObjectPtr<UCameraComponent> Camera;
 	float OrigArmLength = 0.f, OrigFOV = 90.f;

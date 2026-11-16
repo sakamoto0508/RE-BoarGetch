@@ -46,6 +46,9 @@ public:
 	/** GameOver確定（HP0）後からGameOver UI表示までのダウン演出です。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
 	TObjectPtr<class UGameOverPresentationComponent> GameOverPresentation;
+	/** 通常TPSカメラのACF Requestを所有します（ACF無効・Preset未設定ならSpringArmカメラのまま）。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
+	TObjectPtr<class UBoarGameplayCameraComponent> GameplayCamera;
 	/** 勝利演出中に通常HUDを隠します。 */
 	void SetPlayerHUDHidden(bool bHideHUD);
 	/** GameOver演出中に通常HUDをフェードアウトします（1で元に戻ります）。 */

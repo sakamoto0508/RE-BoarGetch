@@ -1,4 +1,6 @@
 #include "Presentation/StageClearPresentationDirector.h"
+#include "ACFCameraBlueprintLibrary.h"
+#include "ACFCameraSubsystem.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Camera/CameraActor.h"
@@ -149,6 +151,10 @@ void AStageClearPresentationDirector::BeginVictoryShot()
 		VictoryCamera->GetCameraComponent()->SetConstraintAspectRatio(false);
 		VictoryCamera->GetCameraComponent()->SetFieldOfView(VictoryFOV);
 		OriginalViewTarget = PC->GetViewTarget();
+		// ACFはViewTargetに関係なく上に乗るため、勝利カメラを外部ViewTargetとして登録し、ACFの通常カメラで上書きさせない。
+		// 切替・復帰のブレンドは従来どおりPCMのViewTarget Blendだけが行う（ACFは裏で評価を続ける）。
+		if (UACFCameraSubsystem* Cameras = UACFCameraBlueprintLibrary::GetCameraSubsystem(PC))
+			Cameras->AddExternalViewTarget(VictoryCamera, this);
 		PC->SetViewTargetWithBlend(VictoryCamera, CameraBlendTime, VTBlend_Cubic);
 	}
 	UE_LOG(LogTemp, Log, TEXT("[StageClear] Victory start Focus=%s RetreatScale=%.2f"), *VictoryFocusPoint.ToString(),
@@ -523,9 +529,15 @@ void AStageClearPresentationDirector::RestoreVisuals()
 void AStageClearPresentationDirector::RestoreCamera()
 {
 	if (APlayerController* PC = GetPresentationController())
+	{
 		if (VictoryCamera && PC->GetViewTarget() == VictoryCamera)
 			PC->SetViewTarget(OriginalViewTarget.IsValid() ? OriginalViewTarget.Get() : PC->GetPawn());
-	if (IsValid(VictoryCamera)) 
+		// カットで戻した後に外部ViewTargetの登録を外す（ACFの通常カメラは裏で更新済みなので最新の構図から再開する）。
+		if (VictoryCamera)
+			if (UACFCameraSubsystem* Cameras = UACFCameraBlueprintLibrary::GetCameraSubsystem(PC))
+				Cameras->RemoveExternalViewTarget(VictoryCamera, this);
+	}
+	if (IsValid(VictoryCamera))
 		VictoryCamera->Destroy();
 	VictoryCamera = nullptr;
 }

@@ -1,4 +1,6 @@
 #include "Presentation/GameOverPresentationDirector.h"
+#include "ACFCameraBlueprintLibrary.h"
+#include "ACFCameraSubsystem.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Boar/BoarBase.h"
@@ -334,6 +336,13 @@ void AGameOverPresentationDirector::BeginCameraPullBack(float Duration, float Ri
 	StartControlRotation = PC->GetControlRotation();
 	StartControlRotation.Pitch = FRotator::NormalizeAxis(StartControlRotation.Pitch);
 	Focus = Arm->GetComponentLocation() + OrigTargetOffset;
+	// この演出はSpringArm / FollowCameraを動かすため、ACFの通常カメラが有効なら後退中はACFの出力を抑制して
+	// 最終カメラのAuthorityを演出へ渡す（ACFは裏で評価を続ける）。解除はEndPlay。Directorが破棄されればACF側でも自動で外れる。
+	if (UACFCameraSubsystem* Cameras = UACFCameraBlueprintLibrary::GetCameraSubsystem(PC))
+	{
+		Cameras->SuppressOutput(this, ACFHandOffBlendTime);
+		bSuppressedACF = true;
+	}
 }
 
 void AGameOverPresentationDirector::UpdateCamera(float Dt)
@@ -462,8 +471,14 @@ void AGameOverPresentationDirector::EndPlay(const EEndPlayReason::Type Reason)
 		Arm->TargetOffset = OrigTargetOffset;
 		Arm->SocketOffset = OrigSocketOffset;
 		Arm->ProbeChannel = OrigProbeChannel;
-		if (Camera.IsValid()) 
+		if (Camera.IsValid())
 			Camera->SetFieldOfView(OrigFOV);
+	}
+	if (bSuppressedACF)
+	{
+		bSuppressedACF = false;
+		if (UACFCameraSubsystem* Cameras = UACFCameraBlueprintLibrary::GetCameraSubsystem(GetPresentationController()))
+			Cameras->ReleaseOutputSuppression(this, 0.f);
 	}
 	if (ABoarPlayerCharacter* Player = GetPresentationPlayer())
 	{
