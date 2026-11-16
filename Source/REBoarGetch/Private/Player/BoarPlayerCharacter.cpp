@@ -308,8 +308,23 @@ void ABoarPlayerCharacter::StartGadgetUse()
 			}
 			return;
 		}
+		// 地上用MontageはBPが再生するため、呼び出し前後の再生インスタンスを比べて今回の使用分だけを記録する。
+		// 既に再生中の無関係なMontageは記録せず、中断時にも止めない。
+		UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+		const FAnimMontageInstance* MontageBefore = AnimInstance ? AnimInstance->GetActiveMontageInstance() : nullptr;
+		const int32 MontageIDBefore = MontageBefore ? MontageBefore->GetInstanceID() : INDEX_NONE;
+		GadgetUseMontage = nullptr;
+		GadgetUseMontageInstanceID = INDEX_NONE;
+
 		//BPイベントでガジェット使用開始を通知する。
 		OnGadgetUseStarted(CurrentGadgetUseStyle, CurrentGadget);
+
+		const FAnimMontageInstance* MontageAfter = AnimInstance ? AnimInstance->GetActiveMontageInstance() : nullptr;
+		if (bIsGadgetInUse && MontageAfter && MontageAfter->GetInstanceID() != MontageIDBefore)
+		{
+			GadgetUseMontage = MontageAfter->Montage;
+			GadgetUseMontageInstanceID = MontageAfter->GetInstanceID();
+		}
 
 		UpdateGroundActionState(bHadMoveInput);
 	}
@@ -331,7 +346,61 @@ void ABoarPlayerCharacter::StopGadgetUse()
 
 void ABoarPlayerCharacter::FinishGadgetUseAnimation(bool bWasInterrupted)
 {
+	// BPのPlayMontageはどのMontageの終了かを渡さない。今回の使用で開始したMontageがまだ再生中
+	// （BlendOutも始まっていない）なら、届いたのは以前の使用の古い終了通知なので今回の使用を終えない。
+	if (bIsGadgetInUse && GadgetUseMontageInstanceID != INDEX_NONE)
+	{
+		UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+		const FAnimMontageInstance* Instance =
+			AnimInstance ? AnimInstance->GetMontageInstanceForID(GadgetUseMontageInstanceID) : nullptr;
+		if (Instance && Instance->IsActive())
+		{
+			UE_LOG(LogTemp, Verbose, TEXT("[Gadget] Ignored a finish callback from an older gadget montage"));
+			return;
+		}
+	}
 	EndGadgetUse(bWasInterrupted);
+}
+
+bool ABoarPlayerCharacter::CanOpenNetCaptureWindow(const ANetGadget* Gadget, int32 MontageInstanceID) const
+{
+	if (!IsValid(this) || !IsValid(Gadget) || GadgetComponent == nullptr)
+		return false;
+	// 中断済み（Stun・Downed・装備解除・Stage終了）の後に届いたNotifyでは開かない。
+	if (!bIsGadgetInUse || bIsStunned || bIsDowned)
+		return false;
+	if (const UWorld* World = GetWorld())
+		if (const ABoarGameMode* Mode = World->GetAuthGameMode<ABoarGameMode>())
+			if (!Mode->CanAdvanceStage())
+				return false;
+	// Notifyの対象と現在使用中のガジェットが同じ網であること。
+	if (GadgetComponent->GetCurrentGadget() != Gadget)
+		return false;
+	// 地上アミは今回の使用で開始したMontageのNotifyだけを受け付ける（BlendOut中の古いインスタンスを除外）。
+	// 空中アミは段階ごとにC++がMontageを差し替えるため、使用中・空中段階であることで判断する。
+	if (AirNetDropPhase == EAirNetDropPhase::None && MontageInstanceID != INDEX_NONE &&
+		GadgetUseMontageInstanceID != INDEX_NONE && MontageInstanceID != GadgetUseMontageInstanceID)
+		return false;
+	return true;
+}
+
+void ABoarPlayerCharacter::StopGadgetUseMontage()
+{
+	UAnimMontage* Montage = GadgetUseMontage;
+	const int32 InstanceID = GadgetUseMontageInstanceID;
+	// 停止で届くInterrupted通知が再入しても、記録が消えているため二重に停止しない。
+	GadgetUseMontage = nullptr;
+	GadgetUseMontageInstanceID = INDEX_NONE;
+	if (Montage == nullptr || InstanceID == INDEX_NONE)
+		return;
+
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	FAnimMontageInstance* Instance = AnimInstance ? AnimInstance->GetMontageInstanceForID(InstanceID) : nullptr;
+	// 既にBlendOut中・終了済み、または別のMontageに置き換わっている場合は触らない。
+	if (Instance == nullptr || !Instance->IsActive() || Instance->Montage != Montage)
+		return;
+	// Montage自身のBlendOut設定で止め、他のMontage・同じMontageの別インスタンスには影響させない。
+	Instance->Stop(Montage->BlendOut);
 }
 
 // ガジェットスロットを切り替える
@@ -530,6 +599,19 @@ void ABoarPlayerCharacter::EndGadgetUse(bool bWasInterrupted)
 	}
 
 	bIsGadgetInUse = false;
+
+	// 中断時は地上用Montageも止め、後続の捕獲Notifyを再生させない。
+	// 使用中フラグを先に下ろしているため、停止によるInterrupted通知が再入しても終了処理は重複しない。
+	// 通常終了（OnCompleted）では既に再生が終わっているので、記録だけを消す。
+	if (bWasInterrupted)
+	{
+		StopGadgetUseMontage();
+	}
+	else
+	{
+		GadgetUseMontage = nullptr;
+		GadgetUseMontageInstanceID = INDEX_NONE;
+	}
 
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{

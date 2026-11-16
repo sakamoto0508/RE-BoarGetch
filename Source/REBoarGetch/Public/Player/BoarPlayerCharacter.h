@@ -91,6 +91,7 @@ public:
 
 private:
 	friend class FBoarGameplayRegressionTest;
+	friend class FBoarNetStunInterruptTest;
 	bool bStageInitialized = false;
 
 protected:
@@ -145,6 +146,14 @@ public:
 	void StopGadgetUse();
 	/** 装備変更・Stage終了から既存の中断経路を呼び出します。 */
 	void InterruptGadgetUse() { EndGadgetUse(true); }
+
+	/**
+	 * 網の捕獲判定窓を今開いてよいかを返します。AnimNotifyとNetGadgetの両方から確認します。
+	 * GadgetBase::IsUsingはOneShotで開始直後にfalseへ戻るため使わず、Character側の使用状態で判断します。
+	 * @param Gadget 判定窓を開こうとしている網です。現在装備中のガジェットと一致する必要があります。
+	 * @param MontageInstanceID Notify元のMontage再生インスタンスです。不明ならINDEX_NONEを渡します。
+	 */
+	bool CanOpenNetCaptureWindow(const ANetGadget* Gadget, int32 MontageInstanceID = INDEX_NONE) const;
 
 	/** 指定スロットのガジェットへ切替。 */
 	void SwitchGadgetSlot(int32 SlotIndex);
@@ -398,6 +407,15 @@ private:
 	/** 現在の段階で再生しているMontageです。段階切替や外部の割り込みを識別します。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimMontage> AirNetDropMontage;
+
+	/** 地上のガジェット使用でBP（OnGadgetUseStarted）が開始したMontageです。中断時に止める対象を限定します。 */
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimMontage> GadgetUseMontage;
+	/** GadgetUseMontageの再生インスタンスIDです。古いインスタンスのNotify・終了通知を今回の使用と区別します。 */
+	int32 GadgetUseMontageInstanceID = INDEX_NONE;
+
+	/** 今回の使用で開始した地上Montageだけを停止し、記録を消します。 */
+	void StopGadgetUseMontage();
 
 	//-------------------------------------------------
 	// Components
