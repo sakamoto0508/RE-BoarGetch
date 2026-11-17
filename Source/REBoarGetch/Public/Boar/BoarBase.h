@@ -476,6 +476,8 @@ private:
 	/** アニメ診断ログ（Boar.AI.AnimDebug）を0.2秒ごとに出すTimerです。 */
 	FTimerHandle AnimDebugTimerHandle;
 	void LogAnimDebug() const;
+	/** アニメ診断ログを1行出します（Boar.AI.AnimDebug有効時のみ）。Triggerは出力のきっかけ（tick／phase）です。 */
+	void LogAnimDebugEvent(const TCHAR* Trigger) const;
 
 	double EscapeSessionStartTime = -1.0;
 	double EscapeThreatLostTime = -1.0;

@@ -22,6 +22,7 @@
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "HAL/IConsoleManager.h"
+#include "Components/StateTreeComponent.h"
 #include "Engine/Engine.h"
 #include "REBoarGetch.h"
 
@@ -109,6 +110,15 @@ void ABoarBase::LogAnimDebug() const
 {
 	if (GBoarAnimDebug == 0)
 		return;
+	LogAnimDebugEvent(TEXT("tick"));
+}
+
+// Gameplay側（実速度・MaxWalkSpeed・段階・向き追従）とAnimation側（ABPの入力値・Montageの再生／保持状態）を1行に並べ、
+// どちらの層がずれているかを区別できるようにする（AKI-172）。
+void ABoarBase::LogAnimDebugEvent(const TCHAR* Trigger) const
+{
+	if (GBoarAnimDebug == 0)
+		return;
 	const USkeletalMeshComponent* SkeletalMesh = GetMesh();
 	const UAnimInstance* AnimInstance = SkeletalMesh ? SkeletalMesh->GetAnimInstance() : nullptr;
 	const UCharacterMovementComponent* Move = GetCharacterMovement();
@@ -118,14 +128,29 @@ void ABoarBase::LogAnimDebug() const
 	{
 		if (const UAnimMontage* Montage = AnimInstance->GetCurrentActiveMontage())
 		{
-			MontageText = FString::Printf(TEXT("%s pos=%.2f/%.2f rate=%.2f weight=%.2f"), *Montage->GetName(),
+			// playing=0のままweightが残っていれば、自動Blend Out無効のMontageが最終フレームで保持されている。
+			MontageText = FString::Printf(TEXT("%s pos=%.2f/%.2f rate=%.2f playing=%d slotWeight=%.2f"), *Montage->GetName(),
 				AnimInstance->Montage_GetPosition(Montage), Montage->GetPlayLength(), AnimInstance->Montage_GetPlayRate(Montage),
+				AnimInstance->Montage_IsPlaying(Montage) ? 1 : 0,
 				AnimInstance->GetSlotMontageGlobalWeight(FName(TEXT("DefaultSlot"))));
 		}
 	}
-	UE_LOG(LogREBoarGetch, Log, TEXT("[AnimDebug] %s t=%.2f speed=%.0f maxWalk=%.0f escaping=%d phase=%s blendX=%.2f playRate=%.2f mode=%.0f charging=%.0f tired=%.0f | montage=%s"),
-		*GetName(), World ? World->GetTimeSeconds() : 0.0, GetVelocity().Size2D(), Move ? Move->MaxWalkSpeed : 0.0f,
-		bIsEscaping ? 1 : 0, *EscapePhaseName(EscapeTurnPhase),
+	FString StateText = TEXT("-");
+	if (const AController* OwnerController = GetController())
+	{
+		if (const UStateTreeComponent* StateTree = OwnerController->FindComponentByClass<UStateTreeComponent>())
+		{
+			TArray<FString> Names;
+			for (const FName& Name : StateTree->GetActiveStateNames())
+				Names.Add(Name.ToString());
+			StateText = FString::Join(Names, TEXT("/"));
+		}
+	}
+	UE_LOG(LogREBoarGetch, Log, TEXT("[AnimDebug] %s(%s) %s t=%.2f state=%s speed=%.0f maxWalk=%.0f escaping=%d phase=%s orient=%d | abpSpeed=%.0f norm=%.2f blendX=%.2f playRate=%.2f mode=%.0f charging=%.0f tired=%.0f | montage=%s"),
+		*GetName(), *StaticEnum<EBoarArchetype>()->GetNameStringByValue(static_cast<int64>(BoarArchetype)), Trigger,
+		World ? World->GetTimeSeconds() : 0.0, *StateText, GetVelocity().Size2D(), Move ? Move->MaxWalkSpeed : 0.0f,
+		bIsEscaping ? 1 : 0, *EscapePhaseName(EscapeTurnPhase), Move && Move->bOrientRotationToMovement ? 1 : 0,
+		ReadAnimNumber(AnimInstance, TEXT("Speed")), ReadAnimNumber(AnimInstance, TEXT("NormalizedSpeed")),
 		ReadAnimNumber(AnimInstance, TEXT("LocomotionBlendX")), ReadAnimNumber(AnimInstance, TEXT("LocomotionPlayRate")),
 		ReadAnimNumber(AnimInstance, TEXT("LocomotionMode")), ReadAnimNumber(AnimInstance, TEXT("bIsCharging")),
 		ReadAnimNumber(AnimInstance, TEXT("bIsTired")), *MontageText);
@@ -1303,6 +1328,7 @@ void ABoarBase::SetEscapeTurnPhase(EBoarEscapeTurnPhase NewPhase)
 	if (bChanged)
 	{
 		OnEscapeTurnPhaseChanged(EscapeTurnPhase, GetEscapeTurnDirection());
+		LogAnimDebugEvent(TEXT("phase"));
 	}
 }
 
@@ -1342,7 +1368,8 @@ void ABoarBase::OnEscapeTurnPhaseChanged_Implementation(EBoarEscapeTurnPhase New
 		break;
 	case EBoarEscapeTurnPhase::Brace:
 		// 減速を飛ばして踏ん張りから始めた場合は、踏ん張りの位置から再生する。
-		if (EscapeBraceMontage && !AnimInstance->Montage_IsPlaying(EscapeBraceMontage))
+		// 最終フレームで保持中（再生は終わっているがweightは残る）のMontageも「再生中」として扱い、二重に再生し直さない。
+		if (EscapeBraceMontage && !AnimInstance->Montage_IsActive(EscapeBraceMontage))
 			AnimInstance->Montage_Play(EscapeBraceMontage, 1.0f, EMontagePlayReturnType::MontageLength,
 				FMath::Min(ActiveSettings.EscapeTurn.DecelerateDuration, EscapeBraceMontage->GetPlayLength()));
 		break;
@@ -1356,9 +1383,12 @@ void ABoarBase::OnEscapeTurnPhaseChanged_Implementation(EBoarEscapeTurnPhase New
 		break;
 	default:
 		// 加速・通常走行へ戻ったら、自分が再生したMontageだけを止めて既存のLocomotionへ戻す。
+		// 踏ん張りMontageは自動Blend Out無効のため、再生し終えると再生停止（Montage_IsPlaying=false）のまま
+		// weight 1で最終フレームを保持し続ける。IsPlayingで判定すると止められず、DefaultSlotがLocomotionを上書きしたまま
+		// 足が止まって滑走していた（AKI-172）。保持中も含めて止めるためIsActive（Blend Out中でない）で判定する。
 		for (UAnimMontage* Montage : {EscapeBraceMontage.Get(), EscapeTurnLeftMontage.Get(), EscapeTurnRightMontage.Get()})
 		{
-			if (Montage != nullptr && AnimInstance->Montage_IsPlaying(Montage))
+			if (Montage != nullptr && AnimInstance->Montage_IsActive(Montage))
 				AnimInstance->Montage_Stop(EscapeTurnBlendOutTime, Montage);
 		}
 		break;
