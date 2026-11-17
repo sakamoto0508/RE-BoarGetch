@@ -1,8 +1,5 @@
 """逃走中の切り返し（AKI-152）。ゲーム側 ABoarBase の EscapeTurnPhase に対応する。
-A_Boar_PivotBrace   : 減速→踏ん張り→停止（0.6秒、単発。ABPは最終フレームで保持）。
-                      DataAsset Normal.EscapeTurn の Decelerate 0.25 + Brace 0.2 + Hold 0.15 秒に合わせた長さ。
-                      0.00-0.25 前脚を前へ突っ張って滑り、腰を落として体重を後ろへ → 0.25-0.45 止まり切って体が揺れる →
-                      0.45-0.60 低い姿勢で構えたまま静止。
+A_Boar_PivotBrace   : build_brake.py へ移動（AKI-172）。
 A_Boar_PivotTurn_R  : その場で右（上から見て時計回り）へ旋回するループ（0.8秒 / 2歩周期）。
 A_Boar_PivotTurn_L  : 同じく左。
   旋回そのものはゲーム側でActorを回す（PivotTurnRateDegreesPerSecond = 150度/秒）。アニメは足踏みだけで、
@@ -25,38 +22,7 @@ def finish(b, name, N, rep, frames, views=('side', 'q34', 'top')):
     bpy.ops.wm.save_as_mainfile(filepath=ROOT + 'Blend/' + name + '.blend')
 
 
-# ---------------- PivotBrace ----------------
-NB = 36
-KB = [0.0, 0.08, 0.18, 0.25, 0.32, 0.40, 0.48, 0.6]
-
-
-def brace_body(t):
-    shake = math.sin(6.283 * 9 * (t - 0.25)) * bump(t, 0.25, 0.30, 0.42)
-    return dict(
-        dy=keys(t, list(zip(KB, [0.0, 0.015, 0.035, 0.045, 0.05, 0.045, 0.04, 0.04]))),
-        dz=keys(t, list(zip(KB, [0.0, -0.008, -0.022, -0.032, -0.036, -0.032, -0.03, -0.03]))) + 0.002 * shake,
-        pitch=keys(t, list(zip(KB, [0.0, -2.0, -4.0, -4.5, -3.0, -2.0, -1.5, -1.5]))),
-        roll=1.2 * shake,
-        chest=keys(t, list(zip(KB, [0.0, -2.0, -3.5, -3.0, -1.5, -1.0, -0.5, -0.5]))),
-        head=keys(t, list(zip(KB, [0.0, -10.0, -16.0, -14.0, -6.0, -2.0, 0.0, 0.0]))) + 3.0 * shake,
-        head_roll=2.0 * shake,
-        tail=keys(t, list(zip(KB, [0.0, 18.0, 30.0, 32.0, 24.0, 20.0, 18.0, 18.0]))),
-        tail_wag=10.0 * shake,
-    )
-
-
-brace_steps = {
-    # 前脚：前へ突っ張ったまま地面を擦って止まる
-    'FL': Steps([(0.02, 0.10, (0.03, -0.07), 0.035, 'step'), (0.10, 0.26, (0.035, -0.10), 0.0, 'drag')]),
-    'FR': Steps([(0.05, 0.13, (0.03, -0.07), 0.035, 'step'), (0.13, 0.26, (0.035, -0.10), 0.0, 'drag')]),
-    # 後脚：腰を落として少し後ろ・外へ開く
-    'HL': Steps([(0.12, 0.22, (0.025, 0.03), 0.03, 'step')]),
-    'HR': Steps([(0.16, 0.26, (0.025, 0.03), 0.03, 'step')]),
-}
-reset()
-b = Boar()
-rep = build_oneshot(b, 'A_Boar_PivotBrace', NB, brace_body, brace_steps)
-finish(b, 'A_Boar_PivotBrace', NB, rep, [0, 5, 10, 15, 20, 25, 30, 36], views=('side', 'q34'))
+# PivotBraceはAKI-172で build_brake.py へ移した（急ブレーキ・踏ん張り・ひねり旋回・蹴り出しを1か所で管理する）。
 
 
 # ---------------- PivotTurn（ループ） ----------------

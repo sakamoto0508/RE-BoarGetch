@@ -23,6 +23,7 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "HAL/IConsoleManager.h"
 #include "Components/StateTreeComponent.h"
+#include "Algo/Find.h"
 #include "Engine/Engine.h"
 #include "REBoarGetch.h"
 
@@ -1176,7 +1177,7 @@ float ABoarBase::GetEscapeTurnRateDegreesPerSecond() const
 	switch (EscapeTurnPhase)
 	{
 	case EBoarEscapeTurnPhase::StartTurn: return ActiveSettings.EscapeTurn.StartTurnRateDegreesPerSecond;
-	case EBoarEscapeTurnPhase::Brace:
+	case EBoarEscapeTurnPhase::Brace: return ActiveSettings.EscapeTurn.bHoldHeadingDuringBrace ? 0.0f : EscapePivotTurnRate;
 	case EBoarEscapeTurnPhase::Hold: return EscapePivotTurnRate;
 	default: return 0.0f;
 	}
@@ -1186,6 +1187,7 @@ void ABoarBase::ResetEscapeMotion()
 {
 	const bool bWasActive = EscapeTurnPhase != EBoarEscapeTurnPhase::None;
 	RestoreOrientRotation();
+	PreviousEscapeTurnPhase = EscapeTurnPhase;
 	EscapeTurnPhase = EBoarEscapeTurnPhase::None;
 	EscapeTurnPhaseElapsed = 0.0f;
 	EscapeTurnSign = 0.0f;
@@ -1248,8 +1250,9 @@ void ABoarBase::TickEscapeTurn(float DeltaSeconds)
 		}
 		break;
 	case EBoarEscapeTurnPhase::Brace:
-		// 踏ん張りながら切り返し先へ向きを変える（その場旋回の段階は無い）。
-		StepEscapeRotation(EscapePivotTurnRate, DeltaSeconds);
+		// 前脚を突っ張って止まる間は向きを変えない（bHoldHeadingDuringBrace）。無効時は踏ん張りながら向きを変える。
+		if (!Settings.bHoldHeadingDuringBrace)
+			StepEscapeRotation(EscapePivotTurnRate, DeltaSeconds);
 		if (EscapeTurnPhaseElapsed >= FMath::Min(Settings.BraceDuration, Settings.PivotStopDuration))
 			SetEscapeTurnPhase(EBoarEscapeTurnPhase::Hold);
 		break;
@@ -1302,6 +1305,8 @@ void ABoarBase::SetEscapeTurnPhase(EBoarEscapeTurnPhase NewPhase)
 	if (bChanged && IsEscapeTurnDebugEnabled())
 		LogEscapeTurn(FString::Printf(TEXT("Phase %s -> %s (%.2fs)"), *EscapePhaseName(EscapeTurnPhase),
 			*EscapePhaseName(NewPhase), EscapeTurnPhaseElapsed));
+	if (bChanged)
+		PreviousEscapeTurnPhase = EscapeTurnPhase;
 	EscapeTurnPhase = NewPhase;
 	EscapeTurnPhaseElapsed = 0.0f;
 	if (NewPhase == EBoarEscapeTurnPhase::Brace && EscapePivotStartTime >= 0.0 && EscapePivotHeldStartTime < 0.0)
@@ -1311,12 +1316,16 @@ void ABoarBase::SetEscapeTurnPhase(EBoarEscapeTurnPhase NewPhase)
 	}
 	if (NewPhase == EBoarEscapeTurnPhase::Brace)
 	{
-		// 踏ん張り＋停止の時間で、残りの角度を回り切る速度にする（再開時も残り角度から決め直す）。
+		// 旋回に使える時間で、残りの角度を回り切る速度にする（再開時も残り角度から決め直す）。
+		// 踏ん張り中に向きを変えない設定では、踏ん張りの後の停止時間だけで回る（停止時間・旋回を終える時刻は同じ）。
 		float RemainingYaw = FRotator::NormalizeAxis(EscapeTurnTargetYaw - GetActorRotation().Yaw) * EscapeTurnSign;
 		if (RemainingYaw < 0.0f)
 			RemainingYaw += 360.0f;
 		const FBoarEscapeTurnSettings& Settings = ActiveSettings.EscapeTurn;
-		EscapePivotTurnRate = RemainingYaw / FMath::Max(Settings.PivotStopDuration, 0.05f);
+		const float TurnTime = Settings.bHoldHeadingDuringBrace
+			? Settings.PivotStopDuration - FMath::Min(Settings.BraceDuration, Settings.PivotStopDuration)
+			: Settings.PivotStopDuration;
+		EscapePivotTurnRate = RemainingYaw / FMath::Max(TurnTime, 0.05f);
 	}
 	if (NewPhase == EBoarEscapeTurnPhase::None)
 	{
@@ -1341,28 +1350,41 @@ void ABoarBase::OnEscapeTurnPhaseChanged_Implementation(EBoarEscapeTurnPhase New
 	if (AnimInstance == nullptr)
 		return;
 
-	auto IsOwnMontage = [this](const UAnimMontage* Montage)
+	const UAnimMontage* OwnMontages[] = {EscapeBraceMontage.Get(), EscapeTurnLeftMontage.Get(), EscapeTurnRightMontage.Get(),
+		EscapePivotSwingLeftMontage.Get(), EscapePivotSwingRightMontage.Get(), EscapePushOffMontage.Get()};
+	auto IsOwnMontage = [&OwnMontages](const UAnimMontage* Montage)
 	{
-		return Montage != nullptr && (Montage == EscapeBraceMontage || Montage == EscapeTurnLeftMontage || Montage == EscapeTurnRightMontage);
+		return Montage != nullptr && Algo::Find(OwnMontages, Montage) != nullptr;
 	};
-	auto PlayTurnLoop = [&]()
+	// 旋回ループは、ループを作ったときの旋回速度（EscapeTurnAnimationRate）と実際の旋回速度の比で再生し、立脚の蹄を地面に止める。
+	auto PlayTurnLoop = [&](UAnimMontage* TurnMontage, float MinPlayRate)
 	{
-		UAnimMontage* TurnMontage = TurnDirection < 0.0f ? EscapeTurnLeftMontage : EscapeTurnRightMontage;
 		if (TurnMontage == nullptr)
-			return;
-		const float PlayRate = FMath::Clamp(GetEscapeTurnRateDegreesPerSecond() / EscapeTurnAnimationRate, 0.1f, EscapeTurnMaxPlayRate);
-		if (AnimInstance->Montage_Play(TurnMontage, PlayRate) > 0.0f)
+			return false;
+		const float PlayRate = FMath::Clamp(GetEscapeTurnRateDegreesPerSecond() / EscapeTurnAnimationRate, MinPlayRate, EscapeTurnMaxPlayRate);
+		if (AnimInstance->Montage_Play(TurnMontage, PlayRate) <= 0.0f)
+			return false;
+		// 旋回が終わるまで同じSectionを繰り返す。
+		const FName Section = TurnMontage->GetSectionName(0);
+		AnimInstance->Montage_SetNextSection(Section, Section, TurnMontage);
+		return true;
+	};
+	auto StopOwnMontages = [&](const UAnimMontage* Keep)
+	{
+		// 踏ん張りMontageは自動Blend Out無効のため、再生し終えると再生停止（Montage_IsPlaying=false）のまま
+		// weight 1で最終フレームを保持し続ける。保持中も含めて止めるためIsActive（Blend Out中でない）で判定する（AKI-172）。
+		for (const UAnimMontage* Montage : OwnMontages)
 		{
-			// 旋回が終わるまで同じSectionを繰り返す。
-			const FName Section = TurnMontage->GetSectionName(0);
-			AnimInstance->Montage_SetNextSection(Section, Section, TurnMontage);
+			if (Montage != nullptr && Montage != Keep && AnimInstance->Montage_IsActive(Montage))
+				AnimInstance->Montage_Stop(EscapeTurnBlendOutTime, Montage);
 		}
 	};
 
 	switch (NewPhase)
 	{
 	case EBoarEscapeTurnPhase::Decelerate:
-		// 減速〜踏ん張り〜停止を1本で再生し、最終フレームで保持する（Montage側で自動Blend Outを無効にしている）。
+		// 急ブレーキ〜踏ん張りを1本で再生し、最終フレームで保持する（Montage側で自動Blend Outを無効にしている）。
+		// 前脚の接地フレームのAnimNotifyが土煙を出す（Gameplayの切り返し判断とは結合しない）。
 		if (EscapeBraceMontage)
 			AnimInstance->Montage_Play(EscapeBraceMontage);
 		break;
@@ -1374,23 +1396,30 @@ void ABoarBase::OnEscapeTurnPhaseChanged_Implementation(EBoarEscapeTurnPhase New
 				FMath::Min(ActiveSettings.EscapeTurn.DecelerateDuration, EscapeBraceMontage->GetPlayLength()));
 		break;
 	case EBoarEscapeTurnPhase::Hold:
+		// 止まったまま旋回する間は、頭→肩→腰の順に旋回先へ向きながら脚を踏み替えるループへ移る。
+		// 未設定なら従来どおり踏ん張りの最終ポーズのまま回る。
+		PlayTurnLoop(TurnDirection < 0.0f ? EscapePivotSwingLeftMontage.Get() : EscapePivotSwingRightMontage.Get(), 0.3f);
 		break;
 	case EBoarEscapeTurnPhase::StartTurn:
 		// 発見リアクション等の別Montageが再生中なら上書きしない（旋回自体はGameplay側で進む）。
 		if (UAnimMontage* Current = AnimInstance->GetCurrentActiveMontage(); Current != nullptr && !IsOwnMontage(Current))
 			break;
-		PlayTurnLoop();
+		PlayTurnLoop(TurnDirection < 0.0f ? EscapeTurnLeftMontage.Get() : EscapeTurnRightMontage.Get(), 0.1f);
+		break;
+	case EBoarEscapeTurnPhase::Accelerate:
+		// 切り返しの旋回を終えて走り出すときは、後脚で地面を蹴るMontageを1回再生してからLocomotionへ戻る（自動Blend Out）。
+		// Montage_Playが同じSlotの旋回ループを再生中のBlend時間で置き換える。逃走開始の旋回の後は加速の始まり方が違うので使わない。
+		if (PreviousEscapeTurnPhase == EBoarEscapeTurnPhase::Hold && EscapePushOffMontage != nullptr
+			&& AnimInstance->Montage_Play(EscapePushOffMontage) > 0.0f)
+		{
+			StopOwnMontages(EscapePushOffMontage);
+			break;
+		}
+		StopOwnMontages(nullptr);
 		break;
 	default:
-		// 加速・通常走行へ戻ったら、自分が再生したMontageだけを止めて既存のLocomotionへ戻す。
-		// 踏ん張りMontageは自動Blend Out無効のため、再生し終えると再生停止（Montage_IsPlaying=false）のまま
-		// weight 1で最終フレームを保持し続ける。IsPlayingで判定すると止められず、DefaultSlotがLocomotionを上書きしたまま
-		// 足が止まって滑走していた（AKI-172）。保持中も含めて止めるためIsActive（Blend Out中でない）で判定する。
-		for (UAnimMontage* Montage : {EscapeBraceMontage.Get(), EscapeTurnLeftMontage.Get(), EscapeTurnRightMontage.Get()})
-		{
-			if (Montage != nullptr && AnimInstance->Montage_IsActive(Montage))
-				AnimInstance->Montage_Stop(EscapeTurnBlendOutTime, Montage);
-		}
+		// 通常走行へ戻った・中断（捕獲・逃走終了）では、自分が再生したMontageだけを止めて既存のLocomotionへ戻す。
+		StopOwnMontages(nullptr);
 		break;
 	}
 }

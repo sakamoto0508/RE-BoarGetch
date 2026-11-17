@@ -67,7 +67,7 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	/**
 	 * 切り返しで止まっている時間（捕獲の隙）です（AKI-172）。減速して止まってから走り出すまでの秒数で、
 	 * この間に踏ん張りながら切り返し先へ向きを変えます（180°なら 180÷この秒数 °/秒で回ります）。
-	 * 長くすると捕まえやすく、向き変えもゆっくりになります。踏ん張りのMontageが終わった後は最後のポーズで止まったままです。
+	 * 長くすると捕まえやすく、向き変えもゆっくりになります。踏ん張りの後はEscapePivotSwing Montage（BP）で脚を踏み替えながら回ります。
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.05", Units = "Seconds"))
 	float PivotStopDuration = 1.0f;
@@ -75,6 +75,14 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	/** 止まっている時間のうち、最初の踏ん張りの部分の秒数です（ログ・段階表示用。PivotStopDurationより短くします）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
 	float BraceDuration = 0.2f;
+
+	/**
+	 * 有効時は踏ん張り（BraceDuration）の間は向きを変えず、残りの停止時間（PivotStopDuration−BraceDuration）で旋回します（AKI-172）。
+	 * 踏ん張りの間は前脚を地面に突っ張った姿勢のため、ここで体ごと回すと前脚が地面を大きく滑って見えるためです。
+	 * 停止時間・旋回を終える時刻（捕獲の隙）は変わりません。無効にすると従来どおり停止中ずっと等速で旋回します。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot")
+	bool bHoldHeadingDuringBrace = true;
 
 	/** 切り返し後の加速時間です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))

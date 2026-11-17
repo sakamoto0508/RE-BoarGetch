@@ -440,6 +440,20 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapeTurnRightMontage;
 
+	/**
+	 * 切り返しで止まったまま旋回する間（Hold）のループMontageです（左右、AKI-172）。頭→肩→腰の順に旋回先へ向きながら脚を踏み替えます。
+	 * EscapeTurnAnimationRateの旋回速度で足滑り0になるよう作り、実際の旋回速度との比で再生速度を合わせます。未設定なら踏ん張りの最終ポーズのまま回ります。
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> EscapePivotSwingLeftMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> EscapePivotSwingRightMontage;
+
+	/** 切り返しの旋回を終えて再加速を始めるときに1回再生する、後脚で地面を蹴るMontageです（自動Blend OutでLocomotionへ戻る、AKI-172）。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> EscapePushOffMontage;
+
 	/** 旋回ループを等速（再生速度1）で再生したときの旋回速度です。足滑りを抑えるため実際の旋回速度に再生速度を合わせます。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true", ClampMin = "1.0", Units = "DegreesPerSecond"))
 	float EscapeTurnAnimationRate = 150.0f;
@@ -455,6 +469,8 @@ private:
 	/** 現在の旋回・切り返しの段階です。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	EBoarEscapeTurnPhase EscapeTurnPhase = EBoarEscapeTurnPhase::None;
+	/** 直前の段階です（加速の開始が切り返しの後か、逃走開始の旋回の後かを見た目側で区別するため）。 */
+	EBoarEscapeTurnPhase PreviousEscapeTurnPhase = EBoarEscapeTurnPhase::None;
 	/** 現在の段階に入ってからの経過秒数です。 */
 	float EscapeTurnPhaseElapsed = 0.0f;
 	/** 旋回開始時に固定した目標Yawと回転方向（+1右 / -1左）です。旋回中に再抽選しません。 */
