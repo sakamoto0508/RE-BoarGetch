@@ -250,6 +250,12 @@ bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
 	return true;
 }
 
+bool UGadgetComponent::WouldSwitchChangeGadget(int32 SlotIndex) const
+{
+	// SwitchGadgetBySlotの早期returnと同じ条件を使い、両者の判定がずれないようにする。
+	return IsValidSlotIndex(SlotIndex) && !(CurrentGadgetSlotIndex == SlotIndex && IsValid(CurrentGadget));
+}
+
 TSubclassOf<AGadgetBase> UGadgetComponent::GetGadgetSlotClass(int32 SlotIndex) const
 {
 	return IsValidSlotIndex(SlotIndex) ? EquippedGadgetSlots[SlotIndex] : nullptr;

@@ -37,9 +37,36 @@ ABoarGameMode::ABoarGameMode()
 	DefaultPawnClass = ABoarPlayerCharacter::StaticClass();
 }
 
-void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar)
+void ABoarGameMode::HandleBoarCaptured(ABoarBase* Boar, bool bStartsNewCaptureUse)
 {
-	ConfirmCapture(Boar);
+	// 演出なしの捕獲は、この時点が捕獲成功イベント。
+	if (ConfirmCapture(Boar))
+		RecordCaptureOrder(Boar, bStartsNewCaptureUse);
+}
+
+void ABoarGameMode::RecordCaptureOrder(const ABoarBase* Boar, bool bStartsNewCaptureUse)
+{
+	if (!IsValid(Boar) || Boar->BoarUniqueId.IsNone())
+		return;
+	// 時刻・フレームではなく使用単位の通し番号を使う。Gadgetは使用ごとの最初の捕獲成功だけをtrueで通知するため
+	// （NetGadgetのbSuccessFeedbackPlayedThisUse）、同じ一振りの捕獲は判定窓の別フレームでも同じ番号になる。
+	if (bStartsNewCaptureUse || CaptureEventOrder == 0)
+		++CaptureEventOrder;
+	// 再捕獲は上書きで最新の使用番号へ更新する。
+	StageRunData.LastCaptureOrderByBoar.Add(Boar->BoarUniqueId, CaptureEventOrder);
+}
+
+void ABoarGameMode::SnapshotHousedBoars()
+{
+	if (StageRunData.bHousedSnapshotTaken)
+		return;
+	// 正本は各Cageの収容配列。演出中（確定待ち）・解放済み・逃走中・即解放の個体はここに含まれない。
+	TArray<FName> Ids;
+	for (TActorIterator<ACage> It(GetWorld()); It; ++It)
+		It->AppendHousedBoarUniqueIds(Ids);
+	Ids.Sort([](const FName A, const FName B) { return A.LexicalLess(B); });
+	StageRunData.HousedBoarUniqueIds = MoveTemp(Ids);
+	StageRunData.bHousedSnapshotTaken = true;
 }
 
 bool ABoarGameMode::ConfirmCapture(ABoarBase* Boar)
@@ -55,11 +82,15 @@ bool ABoarGameMode::ConfirmCapture(ABoarBase* Boar)
 	return true;
 }
 
-void ABoarGameMode::RegisterPendingCapture(ABoarBase* Boar)
+void ABoarGameMode::RegisterPendingCapture(ABoarBase* Boar, bool bStartsNewCaptureUse)
 {
 	if (!IsValid(Boar) || !Boar->IsCaptured() || !CanAdvanceStage() || HandledCapturedBoars.Contains(Boar))
 		return;
-	PendingCapturedBoars.Add(Boar);
+	// 演出ありの捕獲は、確定待ちに登録した時点が捕獲成功イベント（確定は演出後）。
+	bool bAlreadyPending = false;
+	PendingCapturedBoars.Add(Boar, &bAlreadyPending);
+	if (!bAlreadyPending)
+		RecordCaptureOrder(Boar, bStartsNewCaptureUse);
 }
 
 TArray<ABoarBase*> ABoarGameMode::CompletePendingCaptures(const TArray<TWeakObjectPtr<ABoarBase>>& Boars)
@@ -97,6 +128,7 @@ void ABoarGameMode::StartPlay()
 	bStartupAttempted = true;
 	StageRunData = FStageRunData();
 	StageRunData.StageId = StageConfig ? StageConfig->StageId : NAME_None;
+	CaptureEventOrder = 0;
 
 	// UEがActorへBeginPlayを配る前に必須依存を準備する。
 	// 各ActorのBeginPlay順ではなく、この処理の成否をGameplay開始の根拠にする。
@@ -276,6 +308,8 @@ void ABoarGameMode::ResolveStageEnd()
 	SetStageActorsStopped(true);
 	if (StageState == EBoarStageState::Cleared)
 	{
+		// 収容数とClear判定に使ったCageの状態から、登録対象を保存より先に確定する。
+		SnapshotHousedBoars();
 		RetryClearSave();
 		OnStageCleared();
 		// 勝利演出はClear専用です。完了時にComponentがCompleteStageEndPresentationを呼びます。

@@ -89,6 +89,8 @@ bool UBoarUIAuthoringLibrary::EnsureTextBlock(UObject* Object, FName WidgetName,
 		if (InsertIndex >= 0 && InsertIndex <= Parent->GetChildrenCount()) Parent->
 			InsertChildAt(InsertIndex, TextBlock);
 		else Parent->AddChild(TextBlock);
+		// 変数GUIDを登録する（未登録だとWidget Blueprintのコンパイルでensureが出る）。
+		WBP->OnVariableAdded(WidgetName);
 	}
 	TextBlock->Modify();
 	TextBlock->bIsVariable = true;

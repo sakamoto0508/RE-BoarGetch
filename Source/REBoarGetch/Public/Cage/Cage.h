@@ -78,6 +78,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Cage")
 	int32 GetCapturedBoarCount() const;
 
+	/** 現在収容中（GetCapturedBoarCountと同じ基準）の個体のBoarUniqueIdをOutへ追加します。IDの無い個体は除きます。 */
+	void AppendHousedBoarUniqueIds(TArray<FName>& Out) const;
+
 	/** 檻の現在HPを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Cage")
 	float GetHP() const { return CurrentHp; }

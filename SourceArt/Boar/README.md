@@ -24,4 +24,10 @@ Mesh・Skeletonは作り直さず、`UEExport/` にUEから書き出したIdle�
 - A_Boar_Trot 4.5m/s（BaseWalkSpeed 450）/ A_Boar_Run 6.75m/s（青の逃走 450×1.5）/ A_Boar_Charge 10m/s（ChargeSpeed 1000）
 - A_Boar_AttackTelegraph 1.0秒（ABPが予兆時間に合わせて再生速度を調整）
 - A_Boar_ChargeRecovery 1.0秒（後退 300cm/s・200cm に同期）
+- A_Boar_PivotTurn_L・R 0.6秒ループ（逃走開始の旋回用。旋回150度/秒で足滑り0。`build_pivot.py`、AKI-152）
+- Normalの切り返し（`build_brake.py`、AKI-172）。DataAsset Normal.EscapeTurn（減速0.25＋踏ん張り0.2＋停止旋回0.8＋加速0.5秒、逃走400cm/s）に合わせてある：
+  - A_Boar_PivotBrace 0.45秒：走りの姿勢から前脚を踏み出して突っ張る（FL 0.07秒・FR 0.095秒に接地＝土煙Notify）→ 0.25秒で停止して前のめり → 支持脚の上へ戻る
+  - A_Boar_PivotSwing_L・R 0.6秒ループ：停止旋回。頭→肩→腰の順に旋回先へ向き、Actor原点回りに150度/秒で足滑り0（ゲーム側が実際の旋回速度÷150の再生速度で再生）
+  - A_Boar_PivotPushOff 0.30秒：60cm/sから680cm/s²で加速する体に合わせて立脚を流し、後脚で蹴って走りへ戻る
+  - 土煙の粒子Mesh `SM_BoarDustPuff`（`build_dust_mesh.py`）
 - 60fps・インプレース（ルートモーションなし）。ループは最終フレーム＝先頭フレーム

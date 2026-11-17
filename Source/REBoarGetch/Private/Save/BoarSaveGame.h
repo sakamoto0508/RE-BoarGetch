@@ -21,9 +21,12 @@ public:
 	bool SetArchiveDisplays(const TArray<FName>& Ids);
 	/** 別枠展示中の個体はSwap。空欄も明示選択として保存します。 */
 	bool AssignArchiveDisplay(int32 Slot, FName Id);
-	/** 明示選択を優先し、未選択なら確定捕獲履歴から最新の展示枠数分を返します。 */
+	/** 明示選択を優先し、未選択なら最近捕獲順の先頭から展示枠数分を返します。 */
 	TArray<FName> ResolveArchiveDisplays() const;
-	/** 末尾が直近の確定捕獲です。古いセーブのSetから順序を推測しません。 */
+	/** 登録済み個体を最近捕獲順（新しい順）に返します。CapturedBoarHistoryにない旧セーブの個体は古い履歴としてID昇順で末尾に並べます。 */
+	TArray<FName> GetRecentCapturedBoarIds() const;
+	/** 最近捕獲順。末尾が直近で、位置がそのまま単調増加の順序です（Clear時に収容中だった個体だけ末尾へ移動）。
+	 *  同時捕獲はID降順で並べ、新しい順に読むとID昇順になります。古いセーブのSetから順序を推測しません。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly) TArray<FName> CapturedBoarHistory;
 	UPROPERTY(SaveGame, BlueprintReadOnly) TArray<FName> ArchiveDisplayBoarIds;
 	UPROPERTY(SaveGame, BlueprintReadOnly) bool bHasSavedArchiveDisplays = false;

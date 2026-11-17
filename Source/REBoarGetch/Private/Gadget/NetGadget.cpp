@@ -3,6 +3,7 @@
 #include "Gadget/NetGadget.h"
 
 #include "Boar/BoarBase.h"
+#include "Player/BoarPlayerCharacter.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
@@ -52,6 +53,11 @@ void ANetGadget::BeginCaptureWindow()
 {
 	if (CaptureCollision == nullptr)	
 		return;
+	// Notify以外の経路からも、中断済み（Stun・Downed・装備解除・Stage終了）の使用で判定窓を開かない。
+	// Playerが所有しない網（検証用の単体配置など）は従来どおり開ける。
+	if (const ABoarPlayerCharacter* Player = Cast<ABoarPlayerCharacter>(GetOwner()))
+		if (!Player->CanOpenNetCaptureWindow(this))
+			return;
 	// SphereCollisionを有効化。
 	CaptureCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	bCaptureWindowActive = true;

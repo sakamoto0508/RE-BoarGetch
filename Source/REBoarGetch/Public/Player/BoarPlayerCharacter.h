@@ -91,6 +91,7 @@ public:
 
 private:
 	friend class FBoarGameplayRegressionTest;
+	friend class FBoarNetStunInterruptTest;
 	bool bStageInitialized = false;
 
 protected:
@@ -146,7 +147,15 @@ public:
 	/** 装備変更・Stage終了から既存の中断経路を呼び出します。 */
 	void InterruptGadgetUse() { EndGadgetUse(true); }
 
-	/** 指定スロットのガジェットへ切替。 */
+	/**
+	 * 網の捕獲判定窓を今開いてよいかを返します。AnimNotifyとNetGadgetの両方から確認します。
+	 * GadgetBase::IsUsingはOneShotで開始直後にfalseへ戻るため使わず、Character側の使用状態で判断します。
+	 * @param Gadget 判定窓を開こうとしている網です。現在装備中のガジェットと一致する必要があります。
+	 * @param MontageInstanceID Notify元のMontage再生インスタンスです。不明ならINDEX_NONEを渡します。
+	 */
+	bool CanOpenNetCaptureWindow(const ANetGadget* Gadget, int32 MontageInstanceID = INDEX_NONE) const;
+
+	/** 指定スロットのガジェットへ切替（プレイ中のクイック切替）。Hold使用中は使用を終了してから切り替えます。 */
 	void SwitchGadgetSlot(int32 SlotIndex);
 
 	/** 捕獲開始。 */
@@ -255,7 +264,23 @@ private:
 	/** プレイヤーの現在行動状態を変更します。 */
 	void SetPlayerActionState(EPlayerActionState NewState);
 	
-	/** プレイヤーの行動入力を禁止する状態か確認します。 */
+	/**
+	 * Gadgetの使用状態に関係なく、すべての行動入力を止める状態か確認します（Stage停止・Stun・Downed）。
+	 * 操作ごとの許可判定は必ずこの条件を含みます。
+	 */
+	bool IsGameplayActionBlocked() const;
+
+	/** 移動・ジャンプ・ダッシュを受け付けられるか確認します。使用中は開始時に保存したCanMoveWhileUsingに従います。 */
+	bool CanUseMovementActions() const;
+
+	/**
+	 * プレイ中のクイックSlot切替を受け付けられるか確認します。
+	 * Hold使用中は終了してから切り替え、OneShot使用中（アミ等）は従来どおり拒否します。
+	 * Pause Menuの装備変更（UGadgetComponent::SetGadgetSlot）はこの判定を通りません。
+	 */
+	bool CanSwitchGadgetSlot() const;
+
+	/** Gadget使用開始などGadget使用中は受け付けない行動入力を禁止する状態か確認します。 */
 	bool IsActionLocked() const;
 
 	//-------------------------------------------------
@@ -399,6 +424,15 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimMontage> AirNetDropMontage;
 
+	/** 地上のガジェット使用でBP（OnGadgetUseStarted）が開始したMontageです。中断時に止める対象を限定します。 */
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimMontage> GadgetUseMontage;
+	/** GadgetUseMontageの再生インスタンスIDです。古いインスタンスのNotify・終了通知を今回の使用と区別します。 */
+	int32 GadgetUseMontageInstanceID = INDEX_NONE;
+
+	/** 今回の使用で開始した地上Montageだけを停止し、記録を消します。 */
+	void StopGadgetUseMontage();
+
 	//-------------------------------------------------
 	// Components
 	//-------------------------------------------------
@@ -487,6 +521,11 @@ private:
 	bool bHadMoveInput = false;
 	/** 現在使用しているガジェットの使用形式です。 */
 	EGadgetUseStyle CurrentGadgetUseStyle = EGadgetUseStyle::OneShot;
+	/**
+	 * 今回の使用が移動・ジャンプ・ダッシュを許可するかです。使用開始時にAGadgetBase::CanMoveWhileUsingから確定し、
+	 * 使用中に装備が入れ替わっても判定が変わらないようCharacter側へ保存します。空中アミでは常にfalseです。
+	 */
+	bool bGadgetUseAllowsMovement = false;
 	/** 現在のプレイヤー行動状態です。 */
 	EPlayerActionState CurrentActionState = EPlayerActionState::Idle;
 	/** スタン終了処理を実行するTimerの識別子です。 */

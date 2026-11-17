@@ -290,6 +290,27 @@ bool FBoarPendingCaptureTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("確定済みとして記録"), Mode->HandledCapturedBoars.Contains(First));
 	TestEqual(TEXT("同じ通知が重なっても二重確定しない"), Mode->CompletePendingCaptures(Batch).Num(), 0);
 
+	// AKI-45：最近捕獲順は使用単位（アミの一振り）。同じ使用の2体目以降はbStartsNewCaptureUse=falseで届く。
+	{
+		const TMap<FName, int32>& Orders = Mode->StageRunData.LastCaptureOrderByBoar;
+		ABoarBase* UseA = SpawnCaptured(TEXT("Order_A"));
+		ABoarBase* UseB = SpawnCaptured(TEXT("Order_B"));
+		ABoarBase* NextC = SpawnCaptured(TEXT("Order_C"));
+		if (!TestTrue(TEXT("捕獲順テスト用のBoar"), UseA && UseB && NextC)) return false;
+		Mode->RegisterPendingCapture(UseA, true);
+		// 同じ一振りの別フレーム相当（フレームに依存しない）。
+		Mode->RegisterPendingCapture(UseB, false);
+		TestEqual(TEXT("同じ一振りは同順位"), Orders.FindRef(TEXT("Order_B")), Orders.FindRef(TEXT("Order_A")));
+		Mode->RegisterPendingCapture(NextC, true);
+		TestTrue(TEXT("別の一振りは後の方が新しい"), Orders.FindRef(TEXT("Order_C")) > Orders.FindRef(TEXT("Order_A")));
+		// 再捕獲（確定待ちから外れた後に再び捕獲成功）では以前の順位を最新へ更新する。
+		Mode->DiscardPendingCapture(UseA);
+		Mode->RegisterPendingCapture(UseA, true);
+		TestTrue(TEXT("再捕獲で最新順へ更新"), Orders.FindRef(TEXT("Order_A")) > Orders.FindRef(TEXT("Order_C")));
+		for (ABoarBase* Boar : {UseA, UseB, NextC})
+			Mode->DiscardPendingCapture(Boar);
+	}
+
 	// 見た目だけの片付け（Level破棄・対象Destroy）は確定しない。
 	ABoarBase* Discarded = SpawnCaptured(TEXT("PendingTest_Discarded"));
 	if (!TestNotNull(TEXT("破棄用のBoar"), Discarded)) return false;

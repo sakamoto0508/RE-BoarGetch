@@ -68,6 +68,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName ClearTimeTextWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName NewBoarCountTextWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName SpecialCoinCountTextWidgetName;
+	/** 今回NEWになったBoarの名前一覧を表示するTextBlockの名前。確定済みRunのNewBoarUniqueIdsだけを表示し、Widgetでは再判定しません。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName NewBoarListTextWidgetName;
+	/** NEW一覧の1行。{Name}を図鑑名（StageConfigのEncyclopediaName。未設定ならBoarUniqueId）に置換します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Format") FText NewBoarEntryFormat = NSLOCTEXT("Result", "NewBoarEntry", "NEW  {Name}");
+	/** 今回NEWの個体がいないときのNEW一覧の文面。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Format") FText NewBoarListEmptyText = NSLOCTEXT("Result", "NewBoarEmpty", "今回の新規登録はありません");
+	/** クリアタイムの書式。{Minutes}（2桁）、{Seconds}（2桁）、{Hundredths}（2桁）を置換します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Format") FText ClearTimeFormat = NSLOCTEXT("Result", "ClearTime", "{Minutes}:{Seconds}.{Hundredths}");
+	/** 終了入力の受付開始と同時にループ再生する案内の点滅アニメ（任意）。 */
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "REBoarGetch|Result Reveal", meta = (BindWidgetAnimOptional))
+	TObjectPtr<class UWidgetAnimation> Anim_ContinueGuide;
 	virtual void NativeConstruct() override;
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
@@ -82,6 +93,8 @@ protected:
 
 private:
 	void ResolveWidgetReferences();
+	FText FormatClearTime(float Seconds) const;
+	FText BuildNewBoarList(const FStageRunData& Run) const;
 	FReply RequestDismiss();
 	void StartReveal();
 	void StartRevealStep(int32 Index);

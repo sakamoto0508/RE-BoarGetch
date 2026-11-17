@@ -221,6 +221,13 @@ int32 ACage::GetCapturedBoarCount() const
 	return Count;
 }
 
+void ACage::AppendHousedBoarUniqueIds(TArray<FName>& Out) const
+{
+	for (const ABoarBase* Boar : CapturedBoars)
+		if (IsValid(Boar) && Boar->IsCaptured() && !Boar->BoarUniqueId.IsNone())
+			Out.AddUnique(Boar->BoarUniqueId);
+}
+
 void ACage::NotifyHousedCountChanged()
 {
 	// 檻は自分の収容個体だけを保持し、全檻の合計とClear判定はGameModeへ委譲する。

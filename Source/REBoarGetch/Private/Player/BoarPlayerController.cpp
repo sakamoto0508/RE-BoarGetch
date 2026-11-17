@@ -9,6 +9,7 @@
 #include "Component/CapturePresentationComponent.h"
 #include "Component/StageClearPresentationComponent.h"
 #include "Component/GameOverPresentationComponent.h"
+#include "Component/BoarGameplayCameraComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Core/BoarGameMode.h"
 #include "Player/BoarPlayerCharacter.h"
@@ -33,6 +34,7 @@ ABoarPlayerController::ABoarPlayerController()
 	StageClearPresentation = CreateDefaultSubobject<UStageClearPresentationComponent>(TEXT("StageClearPresentation"));
 	GameOverPresentation = CreateDefaultSubobject<UGameOverPresentationComponent>(TEXT("GameOverPresentation"));
 	UIFlow = CreateDefaultSubobject<UBoarUIFlowComponent>(TEXT("UIFlow"));
+	GameplayCamera = CreateDefaultSubobject<UBoarGameplayCameraComponent>(TEXT("GameplayCamera"));
 }
 
 void ABoarPlayerController::BeginPlay()

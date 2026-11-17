@@ -23,7 +23,12 @@ public:
     AHubPortal();
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UBoxComponent> Trigger;
     UPROPERTY(EditAnywhere, Category="Portal") EHubPortalAction Action=EHubPortalAction::Travel;
+    /** 行き先（Action = Travel）。設定されていれば Destination より優先します。行き先の変更はこのDataAssetの Level で行います。 */
+    UPROPERTY(EditAnywhere, Category="Portal") TObjectPtr<class UBoarLevelDestination> DestinationAsset;
+    /** 旧来の直接指定。DestinationAsset が未設定のときだけ使います。 */
     UPROPERTY(EditAnywhere, Category="Portal") TSoftObjectPtr<UWorld> Destination;
+    /** Travel時に使う行き先（DestinationAsset優先、無ければDestination）を返します。 */
+    TSoftObjectPtr<UWorld> GetTravelDestination() const;
     UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<AActor>> TestVisualActors;
     /** Frame stays visible; only effect actors belong in TestVisualActors. */
     UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<AActor>> TestBarrierActors;
