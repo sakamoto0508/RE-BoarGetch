@@ -14,6 +14,7 @@
 #include "Core/BoarGameMode.h"
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Components/AudioComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -25,6 +26,9 @@
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Shakes/PerlinNoiseCameraShakePattern.h"
+
+static TAutoConsoleVariable<int32> CVarCaptureAudioLegacy(
+	TEXT("Boar.Capture.AudioLegacy"), 0, TEXT("Capture audio A/B: 0 uses V2 when configured, 1 uses legacy audio. Applied on the next capture."));
 
 UCaptureSuccessCameraShake::UCaptureSuccessCameraShake(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -153,6 +157,10 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 	}
 	else
 		++SameUseCaptureCount;
+	if (bSharedFeedback)
+		BeginCaptureAudio(Boar);
+	else if (!CaptureAudioTargets.IsEmpty())
+		CaptureAudioTargets.Add(Boar);
 	if (bSharedFeedback && !bSharedActive)
 	{
 		bSharedActive = true;
@@ -193,7 +201,8 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 		if (!bOrbitStarted && PC->PlayerCameraManager && CameraShake && !CameraShake->HasAnyClassFlags(CLASS_Abstract))
 			ActiveShake = PC->PlayerCameraManager->
 			                  StartCameraShake(CameraShake);
-		PlaySound(ImpactSound);
+		if (!bCaptureAudioV2)
+			PlaySound(ImpactSound);
 	}
 	else if (bSharedActive && SharedAge < HitStopDuration + SlowDuration)
 	{
@@ -221,6 +230,89 @@ void UCapturePresentationComponent::PlaySound(USoundBase* Sound, float Pitch)
 	if (Sound && GetWorld() && GetWorld()->GetGameInstance())
 		if (auto* Audio = GetWorld()->GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>())
 			Audio->PlaySoundEffect2D(this, Sound, 1.f, Pitch);
+}
+
+UAudioComponent* UCapturePresentationComponent::SpawnCaptureAudio(USoundBase* Sound, float Volume, float Pitch)
+{
+	if (UGameInstance* Instance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+		if (auto* Audio = Instance->GetSubsystem<UBoarAudioManagerSubsystem>())
+			return Audio->SpawnSoundEffect2D(this, Sound, Volume, Pitch);
+	return nullptr;
+}
+
+void UCapturePresentationComponent::BeginCaptureAudio(ABoarBase* Boar)
+{
+	StopCaptureAudio();
+	bCaptureAudioV2 = !CVarCaptureAudioLegacy.GetValueOnGameThread()
+		&& CaptureImpactV2 && CaptureSpiralV2 && CaptureConfirmV2 && CaptureMultiV2;
+	if (!bCaptureAudioV2)
+		return;
+
+	CaptureAudioTargets.Add(Boar);
+	CaptureAudioAge = 0.f;
+	CaptureImpactVoice = SpawnCaptureAudio(CaptureImpactV2, 1.f, FMath::FRandRange(.97f, 1.03f));
+	// 軌道が省略されても、同じ実時間で進む転送フェーズに追従する。
+	CaptureSpiralVoice = SpawnCaptureAudio(CaptureSpiralV2, .12f, .78f);
+	if (UAudioComponent* Voice = CaptureSpiralVoice.Get())
+	{
+		Voice->SetLowPassFilterEnabled(true);
+		Voice->SetLowPassFilterFrequency(450.f);
+	}
+}
+
+void UCapturePresentationComponent::UpdateCaptureAudio(float RealDelta)
+{
+	CaptureAudioAge += RealDelta;
+	UAudioComponent* Voice = CaptureSpiralVoice.Get();
+	if (!Voice)
+		return;
+
+	const float TeleportStart = GetTeleportStart();
+	const float CollapseStart = HitStopDuration + SlowDuration + CaptureDissolveDuration;
+	const float End = GetTotalDuration();
+	const float Rise = FMath::SmoothStep(0.f, 1.f, FMath::Clamp(
+		(CaptureAudioAge - TeleportStart) / FMath::Max(.001f, CollapseStart - TeleportStart), 0.f, 1.f));
+	const float Envelop = FMath::Clamp(CaptureAudioAge / FMath::Max(.001f, TeleportStart), 0.f, 1.f);
+	const float Collapse = FMath::SmoothStep(0.f, 1.f, FMath::Clamp(
+		(CaptureAudioAge - CollapseStart) / FMath::Max(.001f, End - CollapseStart), 0.f, 1.f));
+	Voice->SetPitchMultiplier(.78f + .12f * Envelop + .53f * Rise + .13f * Collapse);
+	Voice->SetLowPassFilterFrequency(450.f + 350.f * Envelop + 2600.f * Rise - 650.f * Collapse);
+	if (auto* Audio = GetWorld()->GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>())
+		Voice->SetVolumeMultiplier(Audio->GetMasterVolume() * Audio->GetSoundEffectVolume()
+			* (.12f + .23f * Envelop + .47f * Rise) * (1.f - Collapse));
+	if (CaptureAudioAge >= End)
+	{
+		Voice->Stop();
+		CaptureSpiralVoice.Reset();
+	}
+}
+
+void UCapturePresentationComponent::ConfirmCaptureAudio(const TArray<ABoarBase*>& Confirmed)
+{
+	if (CaptureAudioTargets.IsEmpty())
+		return;
+	if (!Confirmed.ContainsByPredicate([this](ABoarBase* Boar)
+		{ return CaptureAudioTargets.Contains(TWeakObjectPtr<ABoarBase>(Boar)); }))
+		return;
+
+	StopCaptureAudio();
+	CaptureConfirmVoice = SpawnCaptureAudio(
+		SameUseCaptureCount >= MultiCaptureThreshold ? CaptureMultiV2.Get() : CaptureConfirmV2.Get(), 1.f);
+}
+
+void UCapturePresentationComponent::StopCaptureAudio(bool bKeepConfirmedTail)
+{
+	const auto Stop = [](TWeakObjectPtr<UAudioComponent>& Voice)
+	{
+		if (UAudioComponent* Component = Voice.Get())
+			Component->Stop();
+		Voice.Reset();
+	};
+	Stop(CaptureImpactVoice);
+	Stop(CaptureSpiralVoice);
+	if (!bKeepConfirmedTail)
+		Stop(CaptureConfirmVoice);
+	CaptureAudioTargets.Reset();
 }
 
 void UCapturePresentationComponent::SpawnImpact(const FCaptureVisualTarget& T)
@@ -278,7 +370,8 @@ void UCapturePresentationComponent::ReleaseCameraEffect(bool bImmediate)
 void UCapturePresentationComponent::PlayMultiCaptureFeedback(const FVector& Source, ABoarBase* Boar)
 {
 	bMultiFeedbackPlayed = true;
-	PlaySound(MultiCaptureSound);
+	if (!bCaptureAudioV2)
+		PlaySound(MultiCaptureSound);
 	// 通常のEffectと重ねず入れ替える。同じフレームの複数Hitなら通常分は即座に消す。
 	if (bUsingACFEffect && MultiCaptureCameraEffect && !IsValid(FocusProxy))
 		PlayCameraEffect(MultiCaptureCameraEffect, Source, SharedAge < .05f);
@@ -757,6 +850,9 @@ void UCapturePresentationComponent::RestoreTarget(FCaptureVisualTarget& T, bool 
 
 void UCapturePresentationComponent::CancelPresentation(bool bCommitCaptures)
 {
+	const auto* Stage = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
+	// 最後の捕獲でClearになった場合も、確定済みの短い和音は自然に終える。
+	StopCaptureAudio(bCommitCaptures && Stage && Stage->GetStageState() == EBoarStageState::Cleared);
 	// 先に演出リストと周囲Boarの減速を片付け、Gameplayへの通知が再入しても同じ対象を確定しない。
 	// Clear・GameOver・Retry・Level破棄ではFocusカメラをカットで外し、次のカメラ（勝利カメラ等）へ持ち越さない。
 	ReleaseFocusCamera(true);
@@ -808,6 +904,8 @@ void UCapturePresentationComponent::OnTargetDestroyed(AActor* Actor)
 		}
 	if (Targets.IsEmpty())
 	{
+		if (!CaptureAudioTargets.IsEmpty())
+			StopCaptureAudio();
 		RestoreSharedState();
 		bSharedActive = false;
 	}
@@ -890,7 +988,8 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 	const float RealDelta = FMath::Max(0.f, float(Now - LastRealTime));
 	LastRealTime = Now;
 	// Orbitカメラと余韻VFXは捕獲確定の後も続くので、それらが残っている間も進める（Stage終了・中断で確実に止めるため）。
-	if (Targets.IsEmpty() && Receptions.IsEmpty() && Lingering.IsEmpty() && !ActiveFocus.IsValid() && !IsValid(FocusProxy))
+	if (Targets.IsEmpty() && Receptions.IsEmpty() && Lingering.IsEmpty() && !ActiveFocus.IsValid() && !IsValid(FocusProxy)
+		&& !CaptureConfirmVoice.IsValid())
 		return;
 	auto* Mode = World->GetAuthGameMode<ABoarGameMode>();
 	if (Mode && Mode->GetStageState() != EBoarStageState::Playing)
@@ -913,6 +1012,8 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 	// 実行順：共有演出 → 個別対象 → 共有状態の解放 → 捕獲確定 → Cage受信。順序は従来どおり。
 	if (bSharedActive)
 		UpdateSharedFeedback(RealDelta);
+	if (!CaptureAudioTargets.IsEmpty())
+		UpdateCaptureAudio(RealDelta);
 	TArray<TWeakObjectPtr<ABoarBase>> Finished;
 	UpdateTargets(RealDelta, Finished);
 	// Restore shared state (local slow, camera) before invoking gameplay: this call can trigger the existing clear sequence.
@@ -922,6 +1023,8 @@ void UCapturePresentationComponent::OnWorldTick(UWorld* World, ELevelTick TickTy
 		bSharedActive = false;
 	}
 	CommitFinishedCaptures(Mode, Finished);
+	if (Targets.IsEmpty() && !CaptureAudioTargets.IsEmpty())
+		StopCaptureAudio();
 	UpdateReceptions(RealDelta, Mode);
 	UpdateLingering(RealDelta);
 	UpdateFocusCamera(RealDelta);
@@ -944,12 +1047,14 @@ void UCapturePresentationComponent::UpdateSharedFeedback(float RealDelta)
 	const float DataStart = HitStopDuration + SlowDuration;
 	if (!bTransferSoundPlayed && SharedAge >= DataStart)
 	{
-		PlaySound(TransferStartSound);
+		if (!bCaptureAudioV2)
+			PlaySound(TransferStartSound);
 		bTransferSoundPlayed = true;
 	}
 	if (!bConfirmed && SharedAge >= GetTotalDuration())
 	{
-		PlaySound(CaptureSuccessSound, bMultiFeedbackPlayed ? MultiCaptureSuccessPitch : 1.f);
+		if (!bCaptureAudioV2)
+			PlaySound(CaptureSuccessSound, bMultiFeedbackPlayed ? MultiCaptureSuccessPitch : 1.f);
 		bConfirmed = true;
 	}
 	if (SharedAge >= FMath::Max(GetTotalDuration(), CameraDuration))
@@ -1058,6 +1163,7 @@ void UCapturePresentationComponent::CommitFinishedCaptures(ABoarGameMode* Mode,
 	if (!Self.IsValid()) 
 		return;
 	bCommittingCaptures = false;
+	ConfirmCaptureAudio(Confirmed);
 	for (ABoarBase* Boar : Confirmed)
 	{
 		const FVector* Before = CaptureLocations.Find(Boar);

@@ -23,7 +23,8 @@
 
 ABoarPlayerCharacter::ABoarPlayerCharacter()
 {
-	// Tickは空中アミ捕獲中の急降下制御だけに使う（非実行時は即return）。
+	// Tickはダッシュスタミナの消費・回復と、空中アミ捕獲中の急降下制御に使う。
+	// Pause中はTickしない（bTickEvenWhenPaused=false）ため、回復待ち時間も進まない。
 	PrimaryActorTick.bCanEverTick = true;
 
 	// 空中アミ捕獲のAnimation既定値。BP_PlayerCharacterのClass Defaultsで差し替え可能。
@@ -80,9 +81,23 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	GetCharacterMovement()->AirControl = AirControl;
 }
 
+void ABoarPlayerCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	// BP側でMaxStaminaを上書きしていても、開始時は満タンから始める。
+	// OnPossessがBeginPlayより先に来てもHUDが正しい初期値を受け取れるよう、ここで確定させる。
+	CurrentStamina = MaxStamina;
+	TimeSinceStaminaDrain = StaminaRegenDelay;
+	bDashExhausted = false;
+}
+
 void ABoarPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 購読済みの表示側へ初期値を確実に届ける。
+	BroadcastStaminaChanged(true);
 
 	// 接触判定のイベント登録。
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
@@ -125,6 +140,8 @@ bool ABoarPlayerCharacter::InitializeForPlay(const FBoarGadgetLoadoutContext& Co
 void ABoarPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	TickStamina(DeltaSeconds);
 
 	if (AirNetDropPhase != EAirNetDropPhase::None)
 	{
@@ -454,23 +471,139 @@ void ABoarPlayerCharacter::StartDash()
 {
 	if (!CanUseMovementActions())
 		return;
+	// Dash入力のStarted（押した瞬間）からだけ呼ばれる。スタミナ切れで拒否した入力は、
+	// 押し続けても再試行されないため、回復後も押し直しが必要になる。
+	if (!CanStartDash())
+		return;
 
 	bIsDashing = true;
-	if (UCharacterMovementComponent* Move = GetCharacterMovement())
-	{
-		Move->MaxWalkSpeed = DashSpeed;
-	}
+	ApplyGroundMoveSpeed();
 	UpdateGroundActionState(bHadMoveInput);
 }
 
 void ABoarPlayerCharacter::StopDash()
 {
 	bIsDashing = false;
+	ApplyGroundMoveSpeed();
+	UpdateGroundActionState(bHadMoveInput);
+}
+
+//-------------------------------------------------
+// Dash Stamina
+//-------------------------------------------------
+
+void ABoarPlayerCharacter::ApplyGroundMoveSpeed()
+{
+	// Player側でMaxWalkSpeedを書くのはDash状態の切替だけ（Stun/停止はDisableMovement、空中アミはGravity/AirControl）。
+	// スタミナの回復処理からは呼ばないため、他の状態が設定した移動値を回復のたびに上書きしない。
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
-		Move->MaxWalkSpeed = WalkSpeed;
+		Move->MaxWalkSpeed = bIsDashing ? DashSpeed : WalkSpeed;
 	}
+}
+
+bool ABoarPlayerCharacter::CanStartDash() const
+{
+	// 自発的に止めた場合は残量があれば再使用でき、枯渇した場合だけしきい値まで禁止する。
+	return !bDashExhausted && CurrentStamina > 0.0f;
+}
+
+bool ABoarPlayerCharacter::ShouldDrainDashStamina() const
+{
+	if (!bIsDashing || CurrentStamina <= 0.0f || bMenuOpen)
+		return false;
+	// Stun・Downed・Stage停止・移動不可のガジェット使用中は消費しない。
+	if (!CanUseMovementActions())
+		return false;
+
+	const UCharacterMovementComponent* Move = GetCharacterMovement();
+	if (Move == nullptr || !Move->IsMovingOnGround())
+		return false;
+
+	// 移動入力の有無はCMCが入力から作るAccelerationで判断する（入力なしの慣性移動では0）。
+	// IgnoreMoveInput中もAddMovementInputが無視されるため0になる。
+	const FVector InputAccel2D(Move->GetCurrentAcceleration().X, Move->GetCurrentAcceleration().Y, 0.0f);
+	if (InputAccel2D.IsNearlyZero())
+		return false;
+
+	// Walking中のVelocityは実際の移動量から求め直されるため、壁へ正面から押し付けている間はほぼ0になる。
+	const FVector Velocity2D(GetVelocity().X, GetVelocity().Y, 0.0f);
+	if (Velocity2D.SizeSquared() < FMath::Square(DashDrainMinSpeed))
+		return false;
+
+	// 入力と逆向きへ慣性で滑っているだけ（切り返し直後など）は、まだDash移動が成立していないとみなす。
+	return FVector::DotProduct(Velocity2D, InputAccel2D) > 0.0f;
+}
+
+void ABoarPlayerCharacter::TickStamina(float DeltaSeconds)
+{
+	if (DeltaSeconds <= 0.0f)
+		return;
+
+	if (ShouldDrainDashStamina())
+	{
+		// 消費・回復ともにDeltaSecondsで積算し、フレームレートに依存しない。
+		CurrentStamina = FMath::Max(0.0f, CurrentStamina - DashDrainPerSecond * DeltaSeconds);
+		TimeSinceStaminaDrain = 0.0f;
+		if (CurrentStamina <= 0.0f)
+		{
+			EndDashByExhaustion();
+		}
+	}
+	else
+	{
+		const UCharacterMovementComponent* Move = GetCharacterMovement();
+		// 既存仕様ではDash状態のままジャンプすると空中でもDash速度の上限が残る。
+		// 空中は消費しない代わりに、Dashの勢いを保っている間は回復待ちも進めない（Dashジャンプ連打で無償回復しない）。
+		const bool bCarryingDashInAir = bIsDashing && Move && Move->IsFalling() &&
+			FVector(GetVelocity().X, GetVelocity().Y, 0.0f).SizeSquared() > FMath::Square(WalkSpeed);
+		if (bCarryingDashInAir)
+		{
+			TimeSinceStaminaDrain = 0.0f;
+		}
+		else
+		{
+			// 回復開始の瞬間がフレームの途中でも、遅延を超えた分の時間だけ回復させる。
+			const float PrevElapsed = TimeSinceStaminaDrain;
+			TimeSinceStaminaDrain = PrevElapsed + DeltaSeconds;
+			const float RegenSeconds = FMath::Clamp(
+				TimeSinceStaminaDrain - FMath::Max(PrevElapsed, StaminaRegenDelay), 0.0f, DeltaSeconds);
+			if (RegenSeconds > 0.0f && CurrentStamina < MaxStamina)
+			{
+				CurrentStamina = FMath::Min(MaxStamina, CurrentStamina + StaminaRegenPerSecond * RegenSeconds);
+			}
+			// 長時間放置しても値が際限なく増えないよう、遅延を超えた状態のまま上限を設ける。
+			TimeSinceStaminaDrain = FMath::Min(TimeSinceStaminaDrain, StaminaRegenDelay + 1.0f);
+		}
+	}
+
+	// 枯渇後の禁止はしきい値まで回復したら解除する。Dashの再開はStartDash（押し直し）だけが行う。
+	if (bDashExhausted && CurrentStamina >= MaxStamina * DashRestartThresholdRatio)
+	{
+		bDashExhausted = false;
+	}
+
+	BroadcastStaminaChanged();
+}
+
+void ABoarPlayerCharacter::EndDashByExhaustion()
+{
+	bDashExhausted = true;
+	if (!bIsDashing)
+		return;
+	// 急停止させず、Shiftを離したときと同じDash→Walkの速度遷移（CMCの既定の減速）に任せる。
+	bIsDashing = false;
+	ApplyGroundMoveSpeed();
 	UpdateGroundActionState(bHadMoveInput);
+}
+
+void ABoarPlayerCharacter::BroadcastStaminaChanged(bool bForce)
+{
+	if (!bForce && CurrentStamina == LastBroadcastStamina && bDashExhausted == bLastBroadcastDashLocked)
+		return;
+	LastBroadcastStamina = CurrentStamina;
+	bLastBroadcastDashLocked = bDashExhausted;
+	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina, bDashExhausted);
 }
 
 // イノシシとの接触時に呼ばれる
@@ -586,8 +719,8 @@ void ABoarPlayerCharacter::EndStun()
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
 		Move->SetMovementMode(MOVE_Walking);
-		Move->MaxWalkSpeed = bIsDashing ? DashSpeed : WalkSpeed;
 	}
+	ApplyGroundMoveSpeed();
 	UpdateGroundActionState(bHadMoveInput);
 }
 

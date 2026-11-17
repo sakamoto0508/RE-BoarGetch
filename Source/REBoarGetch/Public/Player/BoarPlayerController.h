@@ -144,6 +144,10 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UHealthComponent> ObservedHealthComponent;
 
+	/** 現在スタミナ通知を購読中のCharacterです。Possess切り替え時の解除に使用します。 */
+	UPROPERTY(Transient)
+	TObjectPtr<ABoarPlayerCharacter> ObservedStaminaCharacter;
+
 	/** 現在購読中のGadget Componentです。Possess切り替え時の解除に使用します。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UGadgetComponent> ObservedGadgetComponent;
@@ -156,6 +160,9 @@ private:
 
 	/** HP通知の購読先を指定Characterへ付け替え、現在HPを即時反映します。 */
 	void BindPlayerHealth(ABoarPlayerCharacter* PlayerCharacter);
+
+	/** スタミナ通知の購読先を指定Characterへ付け替え、現在スタミナを即時反映します。 */
+	void BindPlayerStamina(ABoarPlayerCharacter* PlayerCharacter);
 
 	/** ガジェット通知の購読先を指定Characterへ付け替え、現在4スロットを即時反映します。 */
 	void BindPlayerGadgets(ABoarPlayerCharacter* PlayerCharacter);
@@ -171,6 +178,10 @@ private:
 	/** HP変更通知をHUDへ反映します。 */
 	UFUNCTION()
 	void HandleHealthChanged(float CurrentHealth, float MaxHealth);
+
+	/** スタミナ変更通知をHUDへ反映します。計算はCharacter側で完了しています。 */
+	UFUNCTION()
+	void HandleStaminaChanged(float CurrentStamina, float MaxStamina, bool bDashLocked);
 
 	/** ステージクリア時に表示するWidget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|UI")

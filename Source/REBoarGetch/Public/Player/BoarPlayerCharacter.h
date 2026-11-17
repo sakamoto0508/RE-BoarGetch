@@ -18,6 +18,12 @@ class ANetGadget;
 struct FBoarGadgetLoadoutContext;
 struct FHitResult;
 
+/**
+ * ダッシュ用スタミナの変更通知です。HUDなど表示側はこの値を表示するだけで、計算はCharacterが行います。
+ * @param bDashLocked スタミナ切れでDashを禁止中（再使用しきい値まで未回復）ならtrueです。
+ */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPlayerStaminaChanged, float, CurrentStamina, float, MaxStamina, bool, bDashLocked);
+
 /** 空中アミ捕獲（Air Net Drop）の進行段階です。AnimBPや演出側から参照できます。 */
 UENUM(BlueprintType)
 enum class EAirNetDropPhase : uint8
@@ -96,9 +102,11 @@ private:
 
 protected:
 
+	/** BP既定値（MaxStamina等）の適用後に、スタミナを最大値で初期化します。 */
+	virtual void PostInitializeComponents() override;
 	/** HPイベントと接触判定を登録し、ゲーム開始時の状態を初期化します。 */
 	virtual void BeginPlay() override;
-	/** 空中アミ捕獲中だけ急降下の速度制御と網のSwept判定を更新します。 */
+	/** ダッシュスタミナの消費・回復と、空中アミ捕獲中の急降下制御を更新します。 */
 	virtual void Tick(float DeltaSeconds) override;
 	/** 地上・上昇・落下への遷移に合わせてプレイヤー行動状態を更新します。 */
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
@@ -223,6 +231,30 @@ public:
 	/** 空中アミ捕獲を実行中かを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Player|Gadget|AirNetDrop")
 	bool IsAirNetDropActive() const { return AirNetDropPhase != EAirNetDropPhase::None; }
+
+	//-------------------------------------------------
+	// Dash Stamina
+	//-------------------------------------------------
+
+	/** スタミナの値またはDash禁止状態が変わったときに通知します。 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Stamina")
+	FOnPlayerStaminaChanged OnStaminaChanged;
+
+	/** 現在のスタミナです。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
+	float GetCurrentStamina() const { return CurrentStamina; }
+
+	/** スタミナの最大値です。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
+	float GetMaxStamina() const { return MaxStamina; }
+
+	/** スタミナ切れでDashを禁止中か（再使用しきい値まで未回復か）を返します。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
+	bool IsDashLockedByExhaustion() const { return bDashExhausted; }
+
+	/** Dash速度を適用中かを返します。Dash入力の押下状態ではありません。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
+	bool IsDashing() const { return bIsDashing; }
 
 private:
 	bool bMenuOpen = false;
@@ -482,6 +514,32 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float DashSpeed = 900.0f;
 
+	/** スタミナの最大値です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float MaxStamina = 100.0f;
+
+	/** 地上で実際にDash移動している間の消費量(/秒)です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float DashDrainPerSecond = 25.0f;
+
+	/** 回復開始後の回復量(/秒)です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float StaminaRegenPerSecond = 20.0f;
+
+	/** 最後に実際に消費してから回復を始めるまでの秒数です。Pause中は進みません。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float StaminaRegenDelay = 0.7f;
+
+	/** スタミナ切れ後、Dashを再使用できるようになる残量（最大値に対する割合）です。再使用にはDash入力の押し直しも必要です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+	float DashRestartThresholdRatio = 0.25f;
+
+	/**
+	 * 消費対象とみなす最低の水平速度(cm/s)です。壁に向かって押し付けているだけ・停止中は実速度がこれを下回り、消費しません。
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float DashDrainMinSpeed = 50.0f;
+
 	/** 被弾時のスタン秒数です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float StunDuration = 0.5f;
@@ -507,8 +565,34 @@ private:
 	float CameraArmLength = 350.0f;
 
 	// 一時状態フラグ。入力・被弾処理のガード条件として使う。
-	/** ダッシュ入力が有効で、現在ダッシュ速度を適用しているかを表します。 */
+	/**
+	 * 現在ダッシュ速度を適用しているかを表します（Dash入力の押下状態とは別）。
+	 * スタミナ切れではキーを押したままでもfalseへ戻り、押し直し（StartDash）以外では再びtrueになりません。
+	 */
 	bool bIsDashing = false;
+
+	/** 現在のスタミナです。PostInitializeComponentsでMaxStaminaに初期化します。 */
+	float CurrentStamina = 100.0f;
+	/** 最後に実際に消費してからの経過秒数です（Tickの経過時間で進むためPause中は止まります）。 */
+	float TimeSinceStaminaDrain = 0.0f;
+	/** スタミナ切れでDashを終了し、再使用しきい値まで回復していない状態です。 */
+	bool bDashExhausted = false;
+	/** 最後に通知した値です。変化したときだけOnStaminaChangedを発火します。 */
+	float LastBroadcastStamina = -1.0f;
+	bool bLastBroadcastDashLocked = false;
+
+	/** スタミナの消費・回復・枯渇判定を1フレーム分進めます。 */
+	void TickStamina(float DeltaSeconds);
+	/** 地上で移動入力があり、実際にDash移動が成立しているときだけtrueを返します。 */
+	bool ShouldDrainDashStamina() const;
+	/** スタミナ切れによる禁止中でなく、残量があればDashを開始できます。 */
+	bool CanStartDash() const;
+	/** スタミナ切れでDashを終了します。入力の押下状態は変えず、押し直すまで再開しません。 */
+	void EndDashByExhaustion();
+	/** Dash状態に応じたWalk/Dash速度をMaxWalkSpeedへ適用する唯一の経路です。 */
+	void ApplyGroundMoveSpeed();
+	/** 値または禁止状態が変化した場合（bForceなら常に）OnStaminaChangedを発火します。 */
+	void BroadcastStaminaChanged(bool bForce = false);
 	/** スタン中で移動やガジェット入力を受け付けない状態かを表します。 */
 	bool bIsStunned = false;
 	/** 接触ダメージを重複して受けない無敵時間中かを表します。 */

@@ -16,6 +16,7 @@ class USkeletalMeshComponent;
 class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
+class UAudioComponent;
 
 UCLASS(Abstract)
 class REBOARGETCH_API UCaptureSuccessCameraShake : public UCameraShakeBase
@@ -206,6 +207,20 @@ private:
  void StartCageReception(const FVector& Location);
  float GetTotalDuration() const;
  void PlaySound(USoundBase* Sound, float Pitch = 1.f);
+ void BeginCaptureAudio(ABoarBase* Boar);
+ void UpdateCaptureAudio(float RealDelta);
+ void ConfirmCaptureAudio(const TArray<ABoarBase*>& Confirmed);
+ void StopCaptureAudio(bool bKeepConfirmedTail = false);
+ UAudioComponent* SpawnCaptureAudio(USoundBase* Sound, float Volume, float Pitch = 1.f);
+
+ UPROPERTY(EditAnywhere, Category="Capture Presentation|Audio V2") TObjectPtr<USoundBase> CaptureImpactV2;
+ UPROPERTY(EditAnywhere, Category="Capture Presentation|Audio V2") TObjectPtr<USoundBase> CaptureSpiralV2;
+ UPROPERTY(EditAnywhere, Category="Capture Presentation|Audio V2") TObjectPtr<USoundBase> CaptureConfirmV2;
+ UPROPERTY(EditAnywhere, Category="Capture Presentation|Audio V2") TObjectPtr<USoundBase> CaptureMultiV2;
+ TWeakObjectPtr<UAudioComponent> CaptureImpactVoice, CaptureSpiralVoice, CaptureConfirmVoice;
+ TArray<TWeakObjectPtr<ABoarBase>> CaptureAudioTargets;
+ float CaptureAudioAge = 0.f;
+ bool bCaptureAudioV2 = false;
  void SpawnImpact(const FCaptureVisualTarget& Target);
  /** ACFが通常カメラを出していればCamera Effectを再生してtrue。出ていなければfalse（従来のFOV Punch Inを使う）。 */
  bool PlayCameraEffect(class UACFCameraEffectPreset* Preset, const FVector& Source, bool bReplaceImmediately);
