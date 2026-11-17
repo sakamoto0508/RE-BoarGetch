@@ -1,8 +1,10 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameFramework/Actor.h"
 #include "Camera/CameraShakeBase.h"
 #include "Effects/ACFCameraEffectTypes.h"
+#include "ACFCameraSequence.h"
 #include "CapturePresentationComponent.generated.h"
 
 class ABoarBase;
@@ -37,8 +39,11 @@ struct FCaptureVisualTarget
  UPROPERTY() TObjectPtr<UNiagaraComponent> VFX;
  /** データ化中に上昇するデータ粒子（DataFragmentVFX）。捕獲リングとは別に保持します。 */
  UPROPERTY() TObjectPtr<UNiagaraComponent> DataVFX;
+ /** 青白いテレポート（TeleportVFX）。データ化の少し前から転送完了まで、実時間で年齢を指定して進めます（AKI-164）。 */
+ UPROPERTY() TObjectPtr<UNiagaraComponent> TeleportVFX;
  bool bOriginalVisible = true;
  bool bDataStarted = false;
+ bool bTeleportStarted = false;
  /** RestoreTarget済み。復元は一度だけ行い、後から別処理が変えた見た目を戻さない。 */
  bool bRestored = false;
  FVector CaptureLocation = FVector::ZeroVector;
@@ -61,6 +66,29 @@ struct FCaptureSlowedBoar
  bool bMoveApplied = false;
  /** 他の処理がアニメーション倍率を変えたため、この演出では以後触らない。 */
  bool bAnimOwnershipLost = false;
+};
+
+/** 捕獲確定（対象の後片付け）の後も、余韻の光粒子だけを短く残すテレポートVFX（AKI-164）。 */
+USTRUCT()
+struct FCaptureLingeringVFX
+{
+ GENERATED_BODY()
+ UPROPERTY() TObjectPtr<UNiagaraComponent> VFX;
+ /** VFXの年齢（テレポート開始からの実時間）と、破棄する年齢。 */
+ float Age = 0.f;
+ float EndAge = 0.f;
+};
+
+/**
+ * 捕獲Orbitカメラの注視点（AKI-165）。Boarが非表示・破棄されても演出の終わりまで位置を保つ軽量な演出用Actor。
+ * Gameplayには一切関与しない（Collision・Tick・Replicationなし）。CapturePresentationComponentだけが生成・破棄する。
+ */
+UCLASS(NotBlueprintable, Transient)
+class REBOARGETCH_API ACaptureFocusProxy : public AActor
+{
+ GENERATED_BODY()
+public:
+ ACaptureFocusProxy();
 };
 
 USTRUCT()
@@ -127,6 +155,24 @@ public:
  // ---- ACFカメラ演出。ACFの通常カメラが出ている間だけ使い、出ていなければ従来のFOV Punch In（FollowCamera）へ戻します。 ----
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ToolTip="ACFカメラ使用中に、Net 1回につき1回再生するCamera Effect Preset（FOV Punch・捕獲地点から押し返す方向性のあるImpulse）。強さ・時間はPresetのLayerで調整します。ACFのRequestが無いときと未設定のときは、Camera Zoom AmountのFOV Punch Inを使います。")) TObjectPtr<class UACFCameraEffectPreset> CameraEffect;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera", meta=(ToolTip="1回のNetでMulti Capture Threshold体以上を捕獲したときだけ、通常のCamera Effectと入れ替えて再生する強めのPreset。未設定なら通常のPresetのままです。")) TObjectPtr<class UACFCameraEffectPreset> MultiCaptureCameraEffect;
+ // ---- 捕獲Focusカメラ（AKI-165）。ACFのCamera Sequenceで、命中した瞬間だけ短くBoarと網へ寄せてから通常のTPSカメラへ戻します。 ----
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ToolTip="ONなら、ACFの通常カメラが出ているときにNet 1回につき1回、捕獲Focusカメラ（Capture Focus Sequence）を再生します。ACFが無効・未要求のときは再生せず、従来のFOV Punch Inを使います。Playerの操作・入力は止めません。")) bool bUseFocusCamera = true;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ToolTip="捕獲カメラ演出（DA_CaptureCameraPresentation）。回転（Boarを中心に約360°公転しながら上昇）・揺れ（Camera Effect Layer）・壁際のCollision・時間とBlendを1つのDataAssetで調整します。設定されていればFocus Sequenceより優先し、捕獲のたびにこの内容からACFのSequenceを組み立てて再生します（PIE中の変更も次の捕獲から反映）。")) TObjectPtr<class UCaptureCameraPresentationData> CameraPresentation;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ToolTip="捕獲Orbitカメラ（CS_CaptureOrbit）。最初のShotのPreset（DA_CaptureOrbitShot）のSpiral Orbitで、捕獲したBoar（Focus Proxy）を中心にカメラが約360°公転しながら上昇し、ShotのDuration後にSequenceのReturn Blendで通常のTPSへ戻ります。回転角・半径・高さ・時間・Ease CurveはそのPresetで調整します。Net 1回につき1つだけ再生し、軌道が壁で塞がりすぎる場所では再生しません。")) TObjectPtr<class UACFCameraSequence> FocusSequence;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ToolTip="（現在は使用しません）Orbitは1回のNetにつき1つで、途中で入れ替えると視点が跳ぶため、複数体はBoar群の中心へ注視点を移すだけにしています（Focus On Group Center）。")) TObjectPtr<class UACFCameraSequence> MultiCaptureFocusSequence;
+ // ---- 青白いテレポート（AKI-164）。データ化（Dissolve）に合わせてBoarを光で包み、上方へ収束させて消します。 ----
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Teleport", meta=(ToolTip="転送の青白いテレポートNiagara（NS_CaptureTeleport）。Boarの足元に出し、Teleport Lead Time前からCapture Dissolve Duration＋Transfer Finish Durationの終わりまで実時間で進めます。長さはUser.TransferDurationとして渡すので、Niagara内の発生時間はその割合で決まります。粒子数・大きさ・速さ・寿命はSystemのUser Parameterで調整します。未設定なら出しません。")) TObjectPtr<UNiagaraSystem> TeleportVFX;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Teleport", meta=(ClampMin="0",ClampMax="0.6",Units="s", ToolTip="データ化（Dissolve）が始まる何秒前からテレポート光を出すか。Boarが螺旋の光に包まれてから消え始めます。捕獲確定・Cage収容の時刻は変わりません。")) float TeleportLeadTime = .3f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Teleport", meta=(ClampMin="0",ClampMax="2",Units="s", ToolTip="捕獲確定（Boar消失）の後、光柱が弱まり光粒子が上空へ抜けて消えるまで残す長さ（User.TailDuration）。Gameplayの時刻には影響しません。Clear・GameOver・Retry・中断では即座に消します。")) float TeleportTailDuration = .85f;
+ // ---- Orbitカメラの注視点と安全確認（AKI-165） ----
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ClampMin="0",ClampMax="1", ToolTip="注視点の高さ（Boarの足元=0、頭頂=1）。命中時のBoundsから計算し、Focus Proxyに保持します（Boarが消えても注視点は動きません）。")) float FocusHeightRatio = .5f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ToolTip="ONなら、同じNetで複数体を捕獲したとき、注視点を捕獲したBoar群の中心へ移します（Orbitは1つのまま。Spiral OrbitのFocus Damping Timeで滑らかに移動）。")) bool bFocusOnGroupCenter = true;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ClampMin="4",ClampMax="64", ToolTip="Orbit開始前に、螺旋の軌道上を何点調べて壁・地形を確認するか。")) int32 OrbitProbeSamples = 16;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ClampMin="0",ClampMax="1", ToolTip="調べた点のうち、この割合を超えて塞がっていたらOrbitを省略し、通常カメラ（＋Camera Effect）のままにします。塞がりが少ない場合はOrbitを再生し、ACFのCollisionが半径を縮めて壁の内側へ入らないようにします。")) float OrbitMaxBlockedFraction = .4f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ClampMin="0.1",ClampMax="1", ToolTip="注視点からカメラ位置までの距離のうち、この割合より手前で何かに当たる点を「塞がっている」とみなします。")) float OrbitMinClearanceRatio = .55f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Teleport", meta=(ToolTip="テレポート光の外周色（User.Color）。シアン～淡い青。")) FLinearColor TeleportColor = FLinearColor(.12f,.62f,1.f);
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Teleport", meta=(ToolTip="テレポート光の中心色（User.CoreColor）。白に近い青。強くしすぎると白飛びします。")) FLinearColor TeleportCoreColor = FLinearColor(.72f,.9f,1.f);
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Teleport", meta=(ClampMin="0.1",ClampMax="5", ToolTip="テレポート光の大きさの倍率。Boarの大きさ（User.Radius・User.Height）にこの倍率を掛けて渡します。")) float TeleportVFXScale = 1.f;
  // ---- 複数体捕獲 ----
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Multi Capture", meta=(ClampMin="2",ClampMax="10", ToolTip="1回のNetで何体以上捕獲したら複数体の強調（Multi Capture Sound・Multi Capture Camera Effect）を出すか。強調はNet 1回につき1回だけです。")) int32 MultiCaptureThreshold = 2;
  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Multi Capture", meta=(ToolTip="複数体捕獲になった瞬間に1回だけ鳴らす追加の効果音。未設定なら鳴らしません。")) TObjectPtr<USoundBase> MultiCaptureSound;
@@ -151,9 +197,11 @@ private:
  void ApplyFieldOfView(float FOV);
  void ReleaseCamera();
  void ReleaseCameraShake();
- void RestoreSharedState();
+ /** bForPause=trueのときはFocusカメラを残す（ACFはPause中に進まないので、再開後にそのまま続きを映す）。 */
+ void RestoreSharedState(bool bForPause = false);
  void ReportMissingVisualAssets() const;
- void RestoreTarget(FCaptureVisualTarget& Target);
+ /** bKeepTeleportTail=trueなら（正常確定・Boar消滅）テレポートVFXを余韻用にLingeringへ引き継ぐ。Cancelではfalse（即座に破棄）。 */
+ void RestoreTarget(FCaptureVisualTarget& Target, bool bKeepTeleportTail = false);
  void StartDataConversion(FCaptureVisualTarget& Target);
  void StartCageReception(const FVector& Location);
  float GetTotalDuration() const;
@@ -162,7 +210,28 @@ private:
  /** ACFが通常カメラを出していればCamera Effectを再生してtrue。出ていなければfalse（従来のFOV Punch Inを使う）。 */
  bool PlayCameraEffect(class UACFCameraEffectPreset* Preset, const FVector& Source, bool bReplaceImmediately);
  void ReleaseCameraEffect(bool bImmediate);
- void PlayMultiCaptureFeedback(const FVector& Source);
+ void PlayMultiCaptureFeedback(const FVector& Source, ABoarBase* Boar);
+ /** Focusカメラを再生する。再生中の自分のFocusは新しい再生の開始後に止める（Requestを二重に持たない）。 */
+ bool PlayFocusCamera(class UACFCameraSequence* Sequence, AActor* Target);
+ /** 今回再生するFocus Sequence。Camera Presentationがあればそこから組み立て、無ければFocus Sequence。 */
+ class UACFCameraSequence* ResolveFocusSequence();
+ /** 自分が再生したFocusだけを終え、Focus Proxyを破棄する。bCancel=trueならCancel Blend（カット）、falseならReturn Blendで戻す。何度呼んでも安全。 */
+ void ReleaseFocusCamera(bool bCancel);
+ /** 命中したBoarのBoundsから注視点を決め、Focus Proxyを作る（既にあれば移動のみ）。 */
+ AActor* PlaceFocusProxy(const FVector& FocusPoint);
+ FVector ComputeFocusPoint(const ABoarBase* Boar) const;
+ /** Sequenceの最初のShotにあるSpiral Orbit（無ければnull）。 */
+ const class UACFCameraNode_SpiralOrbit* FindSpiralOrbit(const class UACFCameraSequence* Sequence) const;
+ /** Orbitの開始角（ACFと同じ規則：Control RotationのYaw+180+Start Angle Offset）。 */
+ float ComputeOrbitStartYaw(const class UACFCameraNode_SpiralOrbit& Orbit, const FVector& Focus) const;
+ /** 螺旋の軌道上をSweepし、塞がっている割合がOrbit Max Blocked Fraction以下ならtrue。 */
+ bool IsOrbitFeasible(const class UACFCameraSequence* Sequence, const FVector& Focus, const ABoarBase* Boar) const;
+ /** Focusカメラの自然終了の検出とデバッグ表示（Boar.Capture.OrbitDebug）。 */
+ void UpdateFocusCamera(float RealDelta);
+ void UpdateLingering(float RealDelta);
+ void DestroyLingering();
+ void StartTeleport(FCaptureVisualTarget& Target);
+ float GetTeleportStart() const;
  class UACFCameraSubsystem* GetACFSubsystem() const;
  UFUNCTION() void OnTargetDestroyed(AActor* Actor);
  UPROPERTY(Transient) TArray<FCaptureVisualTarget> Targets;
@@ -182,6 +251,21 @@ private:
  FACFCameraEffectHandle ActiveCameraEffect;
  /** 共有演出のカメラをACF Effectで出しているか（trueならFollowCameraのFOVには触れない）。 */
  bool bUsingACFEffect = false;
+ /** 再生中の捕獲Focusカメラ（ACF Camera Sequence）。Net 1回につき最大1つ。 */
+ FACFCameraSequenceHandle ActiveFocus;
+ /** 再生中（または最後に再生した）Focus Sequence。Camera Presentationから組み立てた一時オブジェクトもここで保持する。 */
+ UPROPERTY(Transient) TObjectPtr<class UACFCameraSequence> ActiveFocusSequence;
+ /** Orbitの注視点（演出用Proxy）。Focusカメラの終了・Cancel・EndPlayで破棄する。 */
+ UPROPERTY(Transient) TObjectPtr<AActor> FocusProxy;
+ /** 現在のNet使用で捕獲したBoarの注視点（群の中心を求める）。 */
+ TArray<FVector> FocusPoints;
+ /** デバッグ：Orbit開始時の注視点・開始角・経過、実カメラが注視点の周りを回った累積角と高さ。 */
+ FVector OrbitFocusAtStart = FVector::ZeroVector;
+ float OrbitStartYaw = 0.f, OrbitRealAge = 0.f, OrbitActualDegrees = 0.f, OrbitPrevYaw = 0.f, OrbitMinHeight = 0.f, OrbitMaxHeight = 0.f;
+ bool bOrbitHasPrevYaw = false;
+ TArray<FVector> OrbitTrail;
+ /** 捕獲確定後に余韻を残すテレポートVFX。 */
+ UPROPERTY(Transient) TArray<FCaptureLingeringVFX> Lingering;
  /** 現在のNet使用で捕獲した数と、複数体の強調を出したか。 */
  int32 SameUseCaptureCount = 0;
  bool bMultiFeedbackPlayed = false;
