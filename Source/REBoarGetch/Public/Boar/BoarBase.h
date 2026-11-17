@@ -26,12 +26,10 @@ enum class EBoarEscapeTurnPhase : uint8
 	StartTurn,
 	/** 切り返しのため減速しています。 */
 	Decelerate,
-	/** 停止して踏ん張っています。 */
+	/** 停止して踏ん張りながら、切り返し先へ向きを変えています。 */
 	Brace,
-	/** 踏ん張った姿勢のまま止まっています。 */
+	/** 踏ん張った姿勢で止まったまま、切り返し先への向き変えを終えます（終わったら加速へ）。 */
 	Hold,
-	/** 停止したままゆっくり旋回しています。 */
-	Turn,
 	/** 逃走開始・切り返しの後に加速しています。 */
 	Accelerate,
 };
@@ -182,6 +180,12 @@ public:
 	/** 突進中に歩行不可面（プレイヤー・壁など）と接触したか返します。 */
 	bool HasChargeBlockingHit() const { return bChargeBlockingHit; }
 
+	/**
+	 * プレイヤーへの攻撃（突進）が当たる状態かを返します。予兆・後退・硬直・逃走・徘徊中の接触はダメージになりません。
+	 * プレイヤー側の接触処理（HandleBoarContact）がダメージ・スタンを与えるかの判定に使います。
+	 */
+	bool IsPlayerAttackHitActive() const { return bTrackingChargeHit; }
+
 	/** 突進の接触記録に使用します。ダメージ処理はプレイヤー側の既存接触処理が担当します。 */
 	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp,
 		bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse,
@@ -294,7 +298,7 @@ public:
 	/** 維持方向との差が切り返し角度以上か返します。障害物（NaturalObstacle）ではObstaclePivotAngleThresholdを使います。 */
 	bool NeedsEscapePivot(const FVector& EscapeDirection, EBoarEscapePivotReason Reason = EBoarEscapePivotReason::Reevaluate) const;
 	/**
-	 * 切り返し（減速→踏ん張り→停止旋回→加速）を始めます。角度不足・旋回中・連続切り返しの抑制中（再評価以外）はfalseです。
+	 * 切り返し（減速→踏ん張りながら旋回→停止→加速）を始めます。角度不足・旋回中・連続切り返しの抑制中（再評価以外）はfalseです。
 	 * bSkipDecelerate：到着直後の再入など、新しい経路が既に入っているときは減速を飛ばして踏ん張りから始めます。
 	 */
 	bool TryStartEscapePivot(const FVector& EscapeDirection, bool bSkipDecelerate = false,
@@ -429,7 +433,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapeBraceMontage;
 
-	/** その場旋回のループMontageです（左右）。逃走開始の素早い旋回にも再生速度を上げて使います。 */
+	/** 逃走開始の素早い旋回で再生するループMontageです（左右）。切り返しでは使いません（踏ん張りのMontageの間に旋回します）。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapeTurnLeftMontage;
 
@@ -469,6 +473,10 @@ private:
 	double LastEscapePivotTime = -1.0e9;
 	double LastEscapeExitTime = -1.0e9;
 	/** 今の逃走を始めた時刻と、逃走相手を見失った時刻です（逃げ切り判定。負の値は未設定）。 */
+	/** アニメ診断ログ（Boar.AI.AnimDebug）を0.2秒ごとに出すTimerです。 */
+	FTimerHandle AnimDebugTimerHandle;
+	void LogAnimDebug() const;
+
 	double EscapeSessionStartTime = -1.0;
 	double EscapeThreatLostTime = -1.0;
 	/**
@@ -483,7 +491,7 @@ private:
 	double LastEscapePivotEndTime = -1.0e9;
 	/** 直近の切り返しの理由です。 */
 	EBoarEscapePivotReason LastEscapePivotReason = EBoarEscapePivotReason::None;
-	/** 今回の切り返しの停止旋回速度です（PivotMinTurnDurationで角度に応じて落とす）。 */
+	/** 今回の切り返しの旋回速度です。踏ん張り（Brace）の開始時に、残り角度をBrace＋Holdの時間で回り切れる値に決めます。 */
 	float EscapePivotTurnRate = 0.0f;
 	/** 逃げている相手です（デバッグの距離表示用）。見失っても直前の相手を保持します。 */
 	TWeakObjectPtr<const AActor> EscapeThreat;

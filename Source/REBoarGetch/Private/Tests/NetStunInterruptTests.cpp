@@ -148,7 +148,9 @@ bool FBoarNetStunInterruptTest::RunTest(const FString& Parameters)
 	FireNotify(NotifyOn);
 	TestTrue(TEXT("Stun前は判定窓が開く"), Net->IsCaptureWindowActive());
 	const float HealthBefore = Player->GetHealthComponent()->GetCurrentHealth();
+	Boar->BeginChargeHitTracking();	// 被弾は突進中の接触だけ
 	Player->HandleBoarContact(Boar);
+	Boar->EndChargeHitTracking();
 	TestTrue(TEXT("実際の接触経路でダメージを受ける"), Player->GetHealthComponent()->GetCurrentHealth() < HealthBefore);
 	TestTrue(TEXT("実際の接触経路でStun"), Player->bIsStunned);
 	TestFalse(TEXT("Notify ON後のStunで判定窓を閉じる"), Net->IsCaptureWindowActive());

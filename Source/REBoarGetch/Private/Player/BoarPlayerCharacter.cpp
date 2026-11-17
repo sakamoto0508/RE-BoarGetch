@@ -506,6 +506,9 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 	const ABoarBase* Boar = Cast<ABoarBase>(OtherActor);
 	if (!IsValid(Boar) || Boar->IsCaptured())
 		return;
+	// 攻撃（突進）中のイノシシに当たったときだけ被弾する。逃走・徘徊中などにぶつかっただけではスタンしない。
+	if (!Boar->IsPlayerAttackHitActive())
+		return;
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
 		if (!Mode->CanAdvanceStage()) 
 			return;

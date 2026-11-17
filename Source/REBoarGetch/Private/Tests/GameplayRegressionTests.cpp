@@ -117,15 +117,23 @@ bool FBoarGameplayRegressionTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("地上Cooldown中は操作ロックを開始しない"), Player->bIsGadgetInUse);
 	TestTrue(TEXT("地上Cooldown中は移動速度を消さない"), Move->Velocity.Equals(FVector(123, 45, 0)));
 
-	// 同じBoarでも捕獲中は接触無害、解放後は通常のダメージ対象へ戻る。
+	// 攻撃（突進）中でないBoarとの接触は無害。
 	const float HealthBeforeContact = Player->GetHealthComponent()->GetCurrentHealth();
+	Boar->EndChargeHitTracking();
+	Player->HandleBoarContact(Boar);
+	TestEqual(TEXT("攻撃中でない接触ではHPを減らさない"), Player->GetHealthComponent()->GetCurrentHealth(), HealthBeforeContact);
+	TestFalse(TEXT("攻撃中でない接触ではStunを開始しない"), Player->bIsStunned);
+
+	// 同じBoarでも捕獲中は接触無害、解放後は攻撃（突進）中の接触でダメージ対象へ戻る。
+	Boar->BeginChargeHitTracking();
 	TestTrue(TEXT("接触検証Boarを捕獲"), Boar->CaptureComponent->Capture(nullptr));
 	Player->HandleBoarContact(Boar);
 	TestEqual(TEXT("捕獲中の接触ではHPを減らさない"), Player->GetHealthComponent()->GetCurrentHealth(), HealthBeforeContact);
 	TestFalse(TEXT("捕獲中の接触ではStunを開始しない"), Player->bIsStunned);
 	TestTrue(TEXT("接触検証Boarを解放"), Boar->CaptureComponent->Release());
 	Player->HandleBoarContact(Boar);
-	TestTrue(TEXT("解放後の接触はダメージを与える"), Player->GetHealthComponent()->GetCurrentHealth() < HealthBeforeContact);
+	TestTrue(TEXT("解放後の突進中の接触はダメージを与える"), Player->GetHealthComponent()->GetCurrentHealth() < HealthBeforeContact);
+	Boar->EndChargeHitTracking();
 	return true;
 }
 #endif

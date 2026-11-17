@@ -21,7 +21,7 @@ enum class EBoarArchetype : uint8
 };
 
 /**
- * 逃走開始の旋回と、逃走中の大きな切り返し（減速→踏ん張り→停止→ゆっくり旋回→加速）の調整値です（AKI-152）。
+ * 逃走開始の旋回と、逃走中の大きな切り返し（減速→踏ん張りながら旋回→停止→加速。その場旋回の段階は無い）の調整値です（AKI-152）。
  * 逃走方向はN秒間（DirectionCommitDuration）維持し、N秒ごとに認識中のプレイヤーから方向を再評価します（AKI-172）。
  * 逃走中に向きを変えるのは、逃走開始の旋回・切り返し・障害物復帰だけです。再評価で方向差がPivotAngleThreshold以上なら切り返し、未満なら向きを変えずに走り続けます。
  * 逃走は最短EscapeMinDuration秒続け、プレイヤーをEscapeLoseDuration秒認識できなくなったら（逃げ切ったら）終えます。
@@ -64,29 +64,17 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
 	float DecelerateDuration = 0.25f;
 
-	/** 停止して踏ん張る時間です。 */
+	/**
+	 * 切り返しで止まっている時間（捕獲の隙）です（AKI-172）。減速して止まってから走り出すまでの秒数で、
+	 * この間に踏ん張りながら切り返し先へ向きを変えます（180°なら 180÷この秒数 °/秒で回ります）。
+	 * 長くすると捕まえやすく、向き変えもゆっくりになります。踏ん張りのMontageが終わった後は最後のポーズで止まったままです。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.05", Units = "Seconds"))
+	float PivotStopDuration = 1.0f;
+
+	/** 止まっている時間のうち、最初の踏ん張りの部分の秒数です（ログ・段階表示用。PivotStopDurationより短くします）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
 	float BraceDuration = 0.2f;
-
-	/** 踏ん張りの後、旋回を始めるまで止まっている時間です。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
-	float HoldDuration = 0.15f;
-
-	/** 切り返しの旋回速度です。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "1.0", Units = "DegreesPerSecond"))
-	float PivotTurnRateDegreesPerSecond = 150.0f;
-
-	/**
-	 * 停止旋回の最短時間です（AKI-172）。角度が小さい切り返しでも、旋回速度をこの時間に収まるまで落とします（PivotTurnRateが上限）。
-	 * 停止時間（踏ん張り＋Hold＋旋回）がアミの入力から判定開始まで（約0.88秒）＋歩いて詰める時間より短いと、届く位置にいても間に合わないため。
-	 * 0で無効（常にPivotTurnRateDegreesPerSecond）です。PivotTurnMaxDurationより長くしないでください。
-	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
-	float PivotMinTurnDuration = 0.8f;
-
-	/** 旋回の最大時間です。超えたら残りの角度は走りながら合わせます。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
-	float PivotTurnMaxDuration = 1.5f;
 
 	/** 切り返し後の加速時間です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
