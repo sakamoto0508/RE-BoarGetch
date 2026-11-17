@@ -36,6 +36,17 @@ enum class EBoarEscapeTurnPhase : uint8
 	Accelerate,
 };
 
+/** 切り返し（BrakeAndPivot）を始めた理由です。処理は共通で、デバッグと調整の区別にだけ使います（AKI-152／AKI-172）。 */
+UENUM(BlueprintType)
+enum class EBoarEscapePivotReason : uint8
+{
+	None,
+	/** 方向維持時間（N秒）の終わりの再評価で、プレイヤーから離れる方向が維持方向と大きく違う（回り込まれた）。 */
+	Reevaluate,
+	/** 進路の先が障害物・NavMesh端で、到達可能な別方向へ大きく向きを変える。 */
+	NaturalObstacle,
+};
+
 UCLASS()
 class REBOARGETCH_API ABoarBase : public ACharacter
 {
@@ -227,19 +238,77 @@ public:
 	/** 現在の種別が逃走開始の旋回と大きな切り返しを使うか返します。 */
 	bool IsEscapeTurnEnabled() const { return ActiveSettings.EscapeTurn.bEnabled; }
 
+	/** 新しい逃走を始めるときに呼びます。逃走開始の旋回（必要なら）と加速を始め、方向維持は走り出してから始まります。 */
+	void BeginEscapeMotion(const FVector& EscapeDirection);
+
 	/**
-	 * 逃走Stateに入ったときに呼びます。直前まで逃走していた場合（継続）は切り返しを判定し、
-	 * そうでなければ逃走開始の旋回と加速を始めます。切り返しを始めた場合はtrueを返します。
+	 * 逃走Stateを別Stateへの遷移で抜けるときに呼びます（AKI-172）。速度・回転・Montageは通常の逃走終了と同じく元に戻し、
+	 * 逃走方向・方向維持の経過秒数・旋回の段階だけを控えて、同じ逃走へすぐ戻ったときに再開できるようにします。
+	 * StateTreeの停止（StopLogic）・捕獲・EndPlayでは呼ばず、SetEscaping(false)で完全に終えます。
 	 */
-	bool BeginEscapeMotion(const FVector& EscapeDirection);
+	void SuspendEscape();
 
-	/** 逃走中に逃走先を引き直してよいか返します（逃走開始・切り返し後の継続走行区間を過ぎ、旋回中でない）。 */
-	bool CanReplanEscape() const;
+	/**
+	 * 逃走中（EscapeTurn有効の種別）は、逃げ切るまで逃げている相手を認識し続けます（AKI-172）。
+	 * 最短EscapeMinDuration秒、かつ見失ってからEscapeLoseDuration秒は、視界外・記憶範囲外でもPerceivedPlayerに残します。
+	 * RefreshPerceptionTargetsの中で、通常の認識の後に呼びます。
+	 */
+	void UpdateEscapeThreatHold();
 
-	/** 向きとの差が切り返し角度以上なら切り返しを始めてtrueを返します。再発動間隔中はfalseです。 */
-	bool NeedsEscapePivot(const FVector& EscapeDirection) const;
-	/** bSkipDecelerate：到着直後の再入など、新しい経路が既に入っているときは減速を飛ばして踏ん張りから始めます。 */
-	bool TryStartEscapePivot(const FVector& EscapeDirection, bool bSkipDecelerate = false);
+	/**
+	 * 逃走Stateに再Enter（Changed）したとき、控えた逃走を再開できれば再開してtrueを返します（AKI-172）。
+	 * 再開の条件：別Stateへの遷移で抜けた（停止・捕獲・EndPlayで終えていない）、同じプレイヤーから逃げている、
+	 * 抜けてからContinueEscapeGraceDuration以内。再開時はプレイヤーの位置で方向を計算し直さず、
+	 * 逃走方向と方向維持の残り時間をそのまま引き継ぎます（別State中の時間は数えません）。
+	 * 旋回の途中で抜けていた場合は、固定済みの旋回先へ同じ段階の旋回を続けます。
+	 */
+	bool TryResumeEscape(const AActor* Threat);
+
+	/**
+	 * 維持している逃走方向（逃走の大方向）です。逃走開始・切り返し・障害物復帰・N秒ごとの再評価のときだけ更新し、
+	 * NavMesh経路の小さな曲がりやActorの向きの揺れでは変えません。切り返し角度の比較基準にも使います（AKI-152）。
+	 */
+	bool HasEscapeHeading() const { return bHasEscapeHeading; }
+	FVector GetEscapeHeading() const { return EscapeHeading; }
+	/** 維持方向を変えます。方向維持時間は変えません（新しい方向を確定するときはCommitEscapeHeadingを使います）。 */
+	void SetEscapeHeading(const FVector& Direction);
+	/**
+	 * 新しい逃走方向を確定し、方向維持時間（DirectionCommitDuration）をここから始め直します（AKI-172）。
+	 * 障害物復帰・再評価で止まらずに方向を変えたときに使います。切り返し・逃走開始では再加速の開始時に自動で始まります。
+	 */
+	void CommitEscapeHeading(const FVector& Direction, const TCHAR* DebugReason);
+	/** 切り返しの判定角度（度）です。基準は維持方向、無ければActorの正面です。 */
+	float GetEscapeReferenceYawDelta(const FVector& Direction) const;
+
+	/** 逃げている相手（認識中のプレイヤー）を設定します。Escape TaskのTickから渡します（距離のデバッグ表示用）。 */
+	void SetEscapeThreat(const AActor* Threat) { if (Threat != nullptr) EscapeThreat = Threat; }
+
+	/** 方向維持の経過秒数と、その間の移動距離（cm）です。始まっていないときは負の値です。 */
+	float GetEscapeCommitElapsed() const;
+	float GetEscapeCommitDistance() const;
+	/** 方向維持の残り秒数です。始まっていない（旋回中など）ときは負の値です。 */
+	float GetEscapeCommitRemaining() const;
+	/** 方向維持時間（N秒）を過ぎ、方向を再評価する時期か返します。旋回中・方向維持が始まっていないときはfalseです。 */
+	bool IsEscapeCommitExpired() const;
+
+	/** 維持方向との差が切り返し角度以上か返します。障害物（NaturalObstacle）ではObstaclePivotAngleThresholdを使います。 */
+	bool NeedsEscapePivot(const FVector& EscapeDirection, EBoarEscapePivotReason Reason = EBoarEscapePivotReason::Reevaluate) const;
+	/**
+	 * 切り返し（減速→踏ん張り→停止旋回→加速）を始めます。角度不足・旋回中・連続切り返しの抑制中（再評価以外）はfalseです。
+	 * bSkipDecelerate：到着直後の再入など、新しい経路が既に入っているときは減速を飛ばして踏ん張りから始めます。
+	 */
+	bool TryStartEscapePivot(const FVector& EscapeDirection, bool bSkipDecelerate = false,
+		EBoarEscapePivotReason Reason = EBoarEscapePivotReason::Reevaluate);
+
+	/** 直近の切り返しの理由です（AnimBP・デバッグ用）。 */
+	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
+	EBoarEscapePivotReason GetEscapePivotReason() const { return LastEscapePivotReason; }
+
+	/** 連続切り返しの抑制中か返します（前回の切り返し・逃走開始旋回を終えてからMinPivotInterval未満）。 */
+	bool IsEscapePivotCoolingDown() const;
+
+	/** 逃げている相手（プレイヤー）までの水平距離です。不明なら負の値です（デバッグ用）。 */
+	float GetEscapeThreatDistance() const;
 
 	/** 減速を終えて停止中（踏ん張り・旋回）か返します。保留中の逃走先はこの間に経路へ反映します。 */
 	bool IsEscapeMovementHeld() const;
@@ -260,6 +329,32 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
 	float GetEscapeTurnRateDegreesPerSecond() const;
 
+	/**
+	 * 同じ逃走が続いたままEscape Stateが再選択されたとき（逃走先に到着→Rootから再選択）に呼びます。
+	 * 逃走開始の旋回はやり直しません。旋回・切り返しの途中ならそのまま続け（減速中に到着した場合は踏ん張りへ進める）、trueを返します。
+	 * 旋回していなければ何もせずfalseを返します。次の逃走先と切り返しの判断はEscape Taskの共通判定が行います。
+	 */
+	bool ContinueEscapeMotion();
+
+	/** 切り返しを始められない理由です。始められるときはnullptrです（デバッグログ用）。 */
+	const TCHAR* GetEscapePivotRejectReason(const FVector& EscapeDirection,
+		EBoarEscapePivotReason Reason = EBoarEscapePivotReason::Reevaluate) const;
+
+	/** 逃走中の実効速度の上限（MaxWalkSpeed、cm/s）です。デバッグログ用。 */
+	float GetEscapeEffectiveMaxSpeed() const;
+
+	/** 直進区間・区間終了評価の設定値（DataAssetのEscapeTurn）です。 */
+	const FBoarEscapeTurnSettings& GetEscapeTurnSettings() const { return ActiveSettings.EscapeTurn; }
+
+	/** 現在の向きと方向の差（度、-180〜180）です。 */
+	float GetEscapeYawDelta(const FVector& Direction) const;
+
+	/** コンソール変数 Boar.AI.EscapeTurnDebug が有効か返します。 */
+	static bool IsEscapeTurnDebugEnabled();
+
+	/** 逃走・切り返しのデバッグログを出します。呼び出し側でIsEscapeTurnDebugEnabled()を確認してから文字列を作ってください。 */
+	void LogEscapeTurn(const FString& Message) const;
+
 	/** 旋回・切り返しの状態を中断し、移動速度と向き追従を元に戻します。 */
 	void ResetEscapeMotion();
 
@@ -275,9 +370,16 @@ protected:
 
 public:
 
-	/** DataAssetから適用された通常時の移動速度を返します。アニメーションの速度正規化に使用します。 */
-	UFUNCTION(BlueprintPure, Category = "Boar|Animation")
-	float GetBaseWalkSpeed() const { return ActiveSettings.BaseWalkSpeed; }
+	/**
+	 * アニメーションの速度正規化に使う基準速度を返します（ABP_NormalBoarが速度÷この値でBlendSpaceを選びます）。
+	 * DataAssetのAnimationReferenceSpeedが設定されていればそれを、無ければ通常時の移動速度（BaseWalkSpeed）を返します。
+	 * 関数名はABPのノード参照を保つため従来のままです。移動速度そのものはC++側でActiveSettings.BaseWalkSpeedを使います。
+	 */
+	UFUNCTION(BlueprintPure, Category = "Boar|Animation", meta = (DisplayName = "Get Animation Reference Speed"))
+	float GetBaseWalkSpeed() const
+	{
+		return ActiveSettings.AnimationReferenceSpeed > 0.0f ? ActiveSettings.AnimationReferenceSpeed : ActiveSettings.BaseWalkSpeed;
+	}
 
 	/** 旧来の固定巡回ルートを返します。現在のランダムNavMesh巡回では未使用です。 */
 	UFUNCTION(BlueprintPure)
@@ -316,8 +418,8 @@ private:
 	/** 向き追従（bOrientRotationToMovement）を止める／元に戻します。 */
 	void HoldOrientRotation();
 	void RestoreOrientRotation();
-	/** 継続走行区間を今から始めます。 */
-	void StartEscapeCommit();
+	/** 方向維持（N秒）を今から始めます。bFromTurnEnd：逃走開始旋回・切り返しを終えて走り出した（連続切り返し抑制の基準にもする）。 */
+	void StartEscapeCommit(bool bFromTurnEnd);
 	/** 逃走中の速度倍率（減速・停止・加速）です。 */
 	float GetEscapeTurnSpeedScale() const;
 	/** スタミナか旋回のどちらかで毎フレーム更新が必要な間だけTickします。 */
@@ -360,12 +462,45 @@ private:
 	/** 向き追従を止める前の値です。 */
 	bool bSavedOrientRotationToMovement = true;
 	bool bOrientRotationHeld = false;
-	/** 継続走行区間の開始時刻と開始位置です。 */
+	/** 方向維持（N秒）の開始時刻と開始位置です。旋回中は-1です。 */
 	double EscapeCommitStartTime = -1.0;
 	FVector EscapeCommitStartLocation = FVector::ZeroVector;
 	/** 前回の切り返し開始時刻と、前回逃走Stateを抜けた時刻です。 */
 	double LastEscapePivotTime = -1.0e9;
 	double LastEscapeExitTime = -1.0e9;
+	/** 今の逃走を始めた時刻と、逃走相手を見失った時刻です（逃げ切り判定。負の値は未設定）。 */
+	double EscapeSessionStartTime = -1.0;
+	double EscapeThreatLostTime = -1.0;
+	/**
+	 * SuspendEscapeで控えた逃走です（AKI-172）。再開できるか（bEscapeSuspended）、逃走方向、方向維持の経過秒数（旋回中は負）、
+	 * 抜けたときの旋回段階です。ResetEscapeMotion（捕獲・EndPlay・逃走終了）で破棄します。
+	 */
+	bool bEscapeSuspended = false;
+	FVector SuspendedEscapeHeading = FVector::ForwardVector;
+	float SuspendedEscapeCommitElapsed = -1.0f;
+	EBoarEscapeTurnPhase SuspendedEscapeTurnPhase = EBoarEscapeTurnPhase::None;
+	/** 前回の切り返し・逃走開始旋回を終えて再加速を始めた時刻です。連続切り返しの抑制（MinPivotInterval）の基準です。 */
+	double LastEscapePivotEndTime = -1.0e9;
+	/** 直近の切り返しの理由です。 */
+	EBoarEscapePivotReason LastEscapePivotReason = EBoarEscapePivotReason::None;
+	/** 今回の切り返しの停止旋回速度です（PivotMinTurnDurationで角度に応じて落とす）。 */
+	float EscapePivotTurnRate = 0.0f;
+	/** 逃げている相手です（デバッグの距離表示用）。見失っても直前の相手を保持します。 */
+	TWeakObjectPtr<const AActor> EscapeThreat;
+	/** デバッグ：今回の切り返しの開始時刻、開始時と最接近時のプレイヤー距離です（捕獲チャンスが届く距離だったかの検証用）。 */
+	double EscapePivotStartTime = -1.0;
+	float EscapePivotStartThreatDistance = -1.0f;
+	float EscapePivotMinThreatDistance = -1.0f;
+	/** デバッグ：今回の切り返しで「止まってから」の経過秒数の計測開始時刻（踏ん張り開始）です。 */
+	double EscapePivotHeldStartTime = -1.0;
+	/** 逃走中の向き追従の旋回速度を、通常走行用（RunTurnRate）と通常歩行用（TurnRate）で切り替えます。 */
+	void ApplyEscapeRotationRate();
+	/** 維持している逃走方向（水平の単位ベクトル）です。ResetEscapeMotionで消します。 */
+	FVector EscapeHeading = FVector::ForwardVector;
+	bool bHasEscapeHeading = false;
+	/** デバッグ用：逃走開始の旋回と切り返しの発動回数です。 */
+	int32 EscapeStartTurnCount = 0;
+	int32 EscapePivotCount = 0;
 
 	/**
 	 * 捕獲状態を管理するコンポーネントです。

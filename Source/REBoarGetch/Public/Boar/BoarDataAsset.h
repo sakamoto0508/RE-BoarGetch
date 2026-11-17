@@ -22,6 +22,9 @@ enum class EBoarArchetype : uint8
 
 /**
  * 逃走開始の旋回と、逃走中の大きな切り返し（減速→踏ん張り→停止→ゆっくり旋回→加速）の調整値です（AKI-152）。
+ * 逃走方向はN秒間（DirectionCommitDuration）維持し、N秒ごとに認識中のプレイヤーから方向を再評価します（AKI-172）。
+ * 逃走中に向きを変えるのは、逃走開始の旋回・切り返し・障害物復帰だけです。再評価で方向差がPivotAngleThreshold以上なら切り返し、未満なら向きを変えずに走り続けます。
+ * 逃走は最短EscapeMinDuration秒続け、プレイヤーをEscapeLoseDuration秒認識できなくなったら（逃げ切ったら）終えます。
  * bEnabledがfalseの種別は従来どおりCharacterMovementの向き追従だけで逃走します。
  */
 USTRUCT(BlueprintType)
@@ -49,7 +52,11 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Start", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float StartInitialSpeedRatio = 0.3f;
 
-	/** 逃走先の方向と現在の向きの差がこの角度以上のときだけ切り返しにします。未満は止まらず走りながら曲がります。 */
+	/**
+	 * 大きな方向転換と判定する角度です。方向維持時間（DirectionCommitDuration）の終わりの再評価で、
+	 * プレイヤーから離れる新しい方向と維持方向の差がこの角度以上なら切り返します。未満なら向きを変えず、今の方向へ走り続けます（走りながら曲がらない）。
+	 * 障害物ではObstaclePivotAngleThresholdを使います。比較候補：70〜90°（AKI-172）。
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", ClampMax = "180.0", Units = "Degrees"))
 	float PivotAngleThreshold = 100.0f;
 
@@ -69,6 +76,14 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "1.0", Units = "DegreesPerSecond"))
 	float PivotTurnRateDegreesPerSecond = 150.0f;
 
+	/**
+	 * 停止旋回の最短時間です（AKI-172）。角度が小さい切り返しでも、旋回速度をこの時間に収まるまで落とします（PivotTurnRateが上限）。
+	 * 停止時間（踏ん張り＋Hold＋旋回）がアミの入力から判定開始まで（約0.88秒）＋歩いて詰める時間より短いと、届く位置にいても間に合わないため。
+	 * 0で無効（常にPivotTurnRateDegreesPerSecond）です。PivotTurnMaxDurationより長くしないでください。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float PivotMinTurnDuration = 0.8f;
+
 	/** 旋回の最大時間です。超えたら残りの角度は走りながら合わせます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
 	float PivotTurnMaxDuration = 1.5f;
@@ -81,21 +96,78 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float PivotInitialSpeedRatio = 0.15f;
 
-	/** 前回の切り返し開始から、次の切り返しを許可するまでの秒数（再発動間隔）です。 */
+	/**
+	 * 切り返し（または逃走開始の旋回）を終えて再加速を始めてから、障害物・再入による切り返しを許可するまでの秒数です。
+	 * 壁際で停止旋回を繰り返さないための抑制で、抑制中の障害物回避は止まらず走りながら曲がります。
+	 * 方向維持時間の終わりの再評価（Reevaluate）は、切り返し後に必ずDirectionCommitDuration走ってから行うため対象外です。
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", Units = "Seconds"))
-	float MinPivotInterval = 2.0f;
+	float MinPivotInterval = 1.2f;
 
-	/** 逃走開始・切り返し後に、方向を変えずに走り続ける最低時間です。時間と距離の両方を満たすまで逃走先を引き直しません。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Commit", meta = (ClampMin = "0.0", Units = "Seconds"))
-	float CommitMinDuration = 1.2f;
+	/**
+	 * 障害物・NavMesh端で直進できないときの方向転換（NaturalPivot/Obstacle）を、停止旋回にする最小角度です。
+	 * これ未満の曲がりは止まらず走りながら曲がります（小さな障害物回避）。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", ClampMax = "180.0", Units = "Degrees"))
+	float ObstaclePivotAngleThreshold = 70.0f;
 
-	/** 逃走開始・切り返し後に、方向を変えずに走り続ける最低距離です。 */
+	/**
+	 * 逃走方向の維持時間（N秒、AKI-172）です。逃走開始・切り返し・障害物復帰・再評価で方向を確定してからこの秒数は、
+	 * プレイヤーが横や背後へ動いても逃走方向を引き直しません（NavMeshに沿う±20°の小さな修正と障害物復帰だけ行います）。
+	 * 経過したら認識中のプレイヤーの位置から方向を再評価します。経過しても必ず止まるわけではありません。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Commit", meta = (ClampMin = "0.1", Units = "Seconds"))
+	float DirectionCommitDuration = 1.2f;
+
+	/**
+	 * 維持方向へ逃走先を延長する1区間の長さです（NavMeshの経路を引く単位）。
+	 * 逃走先の手前（SegmentEndCheckDistance）で同じ方向へ次の区間を延長し、直進できなければ障害物復帰へ移ります。方向の判断には使いません。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Commit", meta = (ClampMin = "100.0", Units = "Centimeters"))
+	float RunSegmentDistance = 500.0f;
+
+	/**
+	 * 逃走先までの残り距離がこれ以下になったら、次の区間への延長（直進できなければ障害物復帰）を行います。
+	 * 減速（DecelerateDuration）で止まり切れる距離より長くします。
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Commit", meta = (ClampMin = "0.0", Units = "Centimeters"))
-	float CommitMinDistance = 400.0f;
+	float SegmentEndCheckDistance = 300.0f;
 
-	/** 逃走Stateを抜けてからこの秒数以内に再び逃走へ入った場合は、逃走開始ではなく逃走の継続として扱います。 */
+	/**
+	 * 逃走Stateを別Stateへの遷移で抜けてから、同じ逃走として再開できる最大秒数です（AKI-172）。
+	 * 再開には「停止・捕獲で終えていない」「同じプレイヤーから逃げている」も必要です。再開時は逃走方向と方向維持の残り時間を引き継ぎ、
+	 * 方向を計算し直しません。超えた場合・条件を満たさない場合は新しい逃走として開始します。
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Commit", meta = (ClampMin = "0.0", Units = "Seconds"))
 	float ContinueEscapeGraceDuration = 0.5f;
+
+	/**
+	 * 通常の逃走走行中（切り返し・逃走開始の旋回以外）の向き追従の最大旋回速度です。小さいほど直進的に見えます。
+	 * 0以下ならMovementのTurnRateDegreesPerSecond（通常歩行と同じ）を使います。逃走を終えると通常値へ戻します。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Run", meta = (ClampMin = "0.0", Units = "DegreesPerSecond"))
+	float RunTurnRateDegreesPerSecond = 180.0f;
+
+	/**
+	 * 逃走を続ける最短の時間です（AKI-172）。逃げ始めてからこの秒数は、プレイヤーを見失っても逃走を終えません。
+	 * 逃走と徘徊を短い間隔で繰り返さないためのものです。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Session", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float EscapeMinDuration = 3.0f;
+
+	/**
+	 * 逃げ切ったと判定するまでの時間です（AKI-172）。逃走中、プレイヤーを認識できない状態（視界外かつThreatMemoryRange外）が
+	 * この秒数続いたら逃げ切りとして逃走を終え、徘徊へ戻ります。それまでは見失っても同じ相手から逃げ続けます。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Session", meta = (ClampMin = "0.0", Units = "Seconds"))
+	float EscapeLoseDuration = 2.0f;
+
+	/**
+	 * 進めなくなったとき（Stuck）、プレイヤーがこの距離以内にいれば障害物ではなくプレイヤーに阻まれたとみなします（AKI-172）。
+	 * その場合は障害物復帰の走行旋回をせず、離れる方向との差がPivotAngleThreshold以上なら切り返します。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Session", meta = (ClampMin = "0.0", Units = "Centimeters"))
+	float PlayerBlockDistance = 250.0f;
 };
 
 /** イノシシ1種分のAI・スタミナ・移動設定です。 */
@@ -226,6 +298,14 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 	/** 通常時に使用する歩行速度です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))
 	float BaseWalkSpeed = 450.0f;
+
+	/**
+	 * アニメーションの速度正規化に使う基準速度です（ABPのBlendSpace X=1.0＝小走りが足滑りなく見える速度）。
+	 * Boarの歩き・小走り・走りアニメは約450cm/sを基準に作られているため、移動速度（BaseWalkSpeed）とは分けて持ちます。
+	 * 0以下ならBaseWalkSpeedを使います（従来の挙動）。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0", Units = "CentimetersPerSecond"))
+	float AnimationReferenceSpeed = 0.0f;
 
 	/** 逃走State中に通常速度へ掛ける倍率です。1.0なら徘徊と同じ速度で逃走します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.1"))
