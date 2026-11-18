@@ -3,6 +3,7 @@
 #include "ACFTransitionTypes.h"
 #include "Stage/BoarLevelTransitionLibrary.h"
 #include "Stage/HubPortal.h"
+#include "Stage/StageEntrance.h"
 #include "Blueprint/UserWidget.h"
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
@@ -30,6 +31,10 @@ bool FLevelTransitionStyleTest::RunTest(const FString& Parameters)
 	const AHubPortal* Portal = GetDefault<AHubPortal>();
 	TestFalse(TEXT("Portal uses the project setting by default"), Portal->bOverrideTransition);
 	TestEqual(TEXT("Portal override starts at ACF 12"), static_cast<int32>(Portal->Transition.Effect), 12);
+
+	const AStageEntrance* Entrance = GetDefault<AStageEntrance>();
+	TestFalse(TEXT("Stage entrance uses the project setting by default"), Entrance->bOverrideTransition);
+	TestEqual(TEXT("Stage entrance override starts at ACF 30"), static_cast<int32>(Entrance->Transition.Effect), 30);
 
 	// タイトルのStartは、演出つきの関数でL_Lobbyを開く（素のOpenLevelは残さない）。
 	const UBlueprint* Title = LoadObject<UBlueprint>(nullptr, TEXT("/Game/BP/Widget/WBP_Title.WBP_Title"));

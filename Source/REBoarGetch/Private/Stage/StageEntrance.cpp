@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Stage/StageConfig.h"
 #include "Stage/BoarLevelTransitionLibrary.h"
+#include "Misc/PackageName.h"
 #include "UI/BoarLobbyWidget.h"
 #include "BoarGameInstance.h"
 #include "Player/BoarPlayerController.h"
@@ -16,6 +17,8 @@ AStageEntrance::AStageEntrance()
 {
 	// StageEntranceはOverlapイベントだけで動作するためTickを使用しない。
 	PrimaryActorTick.bCanEverTick = false;
+	// 個別に上書きするときの初期値（Project Settingsの既定と同じ30）。
+	Transition.Effect = EACFTransitionEffect::WireframeConversion;
 
 	// Transformの基点と、Pawnだけを検知するQuery OnlyのBoxを構築する。
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
@@ -197,7 +200,11 @@ void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfi
 	{
 		LobbyWidget->SetIsEnabled(false);
 	}
-	UBoarLevelTransitionLibrary::OpenLevelBySoftObjectPtrWithTransition(this, RequestedStageConfig->Level, EBoarLevelTransitionStyle::StageDeparture);
+	const FBoarLevelTransitionEntry& Effect = bOverrideTransition
+		? Transition
+		: GetDefault<UBoarLevelTransitionSettings>()->GetEntry(EBoarLevelTransitionStyle::StageDeparture);
+	UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(
+		this, FName(*FPackageName::ObjectPathToPackageName(RequestedStageConfig->Level.ToString())), Effect);
 }
 
 void AStageEntrance::HandleStageSelectionClosed()

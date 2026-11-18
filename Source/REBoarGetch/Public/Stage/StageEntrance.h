@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Stage/BoarLevelTransitionLibrary.h"
 #include "StageEntrance.generated.h"
 
 class UBoxComponent;
@@ -29,6 +30,10 @@ public:
     bool CanInteract(const class APlayerController* Controller) const;
     void Interact(class APlayerController* Controller);
     UPROPERTY(EditAnywhere, Category="Interaction") bool bRequiresInteraction=true;
+	/** オンにすると、この入口から出発するときだけ Transition の演出を使います。オフのときは Project Settings > Game > Boar Level Transitions の Stage Departure。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="REBoarGetch|Stage|Transition", meta=(InlineEditConditionToggle)) bool bOverrideTransition=false;
+	/** この入口からステージへ出発するときの演出（Effect、または長さ・色まで調整したPreset）。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="REBoarGetch|Stage|Transition", meta=(EditCondition="bOverrideTransition")) FBoarLevelTransitionEntry Transition;
 
 protected:
 	/** @brief Level終了時にWidgetと入力状態を後始末します。 */
