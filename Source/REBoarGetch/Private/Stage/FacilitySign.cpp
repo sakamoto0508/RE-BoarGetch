@@ -116,6 +116,11 @@ void AFacilitySign::OnConstruction(const FTransform& Transform)
 	ApplyLayout(Shown, false);
 }
 
+void AFacilitySign::SetDisplayText(const FText& NewTitle, bool bDimmed)
+{
+	ApplyLayout(NewTitle, bDimmed);
+}
+
 void AFacilitySign::ApplyLayout(const FText& NewTitle, bool bDimmed)
 {
 	ShownTitle = NewTitle;
@@ -250,8 +255,28 @@ void AFacilitySign::SetNear(bool bNear)
 
 void AFacilitySign::SetHighlight(bool bOn)
 {
+	UMaterialInterface* Material = bOn ? HighlightOnMaterial : HighlightOffMaterial;
 	for (AActor* Actor : HighlightActors)
-		SetMeshMaterial(Actor, bOn ? HighlightOnMaterial : HighlightOffMaterial);
+		SetMeshMaterial(Actor, Material);
+	if (Material)
+		for (UPrimitiveComponent* Part : HighlightComponents)
+			if (Part)
+				Part->SetMaterial(0, Material);
+}
+
+void AFacilitySign::BindSpecimenSource(ABoarArchiveDisplay* Source, const TArray<UPrimitiveComponent*>& Highlights)
+{
+	if (SpecimenSource && SpecimenSource != Source)
+		SpecimenSource->OnDisplayRefreshed.RemoveDynamic(this, &AFacilitySign::RefreshSpecimen);
+	SpecimenSource = Source;
+	HighlightComponents.Reset();
+	for (UPrimitiveComponent* Part : Highlights)
+		HighlightComponents.Add(Part);
+	if (!SpecimenSource)
+		return;
+	// 名札のBeginPlayより前でも後でも、展示更新の通知を1回だけ購読する。
+	SpecimenSource->OnDisplayRefreshed.AddUniqueDynamic(this, &AFacilitySign::RefreshSpecimen);
+	RefreshSpecimen();
 }
 
 void AFacilitySign::RefreshSpecimen()

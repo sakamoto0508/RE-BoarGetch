@@ -30,6 +30,7 @@ bool FLevelTransitionStyleTest::RunTest(const FString& Parameters)
 	// ポータルは既定でProject SettingsのPortalを使い、個別に上書きするときの初期値は12。
 	const AHubPortal* Portal = GetDefault<AHubPortal>();
 	TestFalse(TEXT("Portal uses the project setting by default"), Portal->bOverrideTransition);
+	TestEqual(TEXT("Portal reads the Portal entry by default"), static_cast<int32>(Portal->TransitionStyle), static_cast<int32>(EBoarLevelTransitionStyle::Portal));
 	TestEqual(TEXT("Portal override starts at ACF 12"), static_cast<int32>(Portal->Transition.Effect), 12);
 
 	const AStageEntrance* Entrance = GetDefault<AStageEntrance>();

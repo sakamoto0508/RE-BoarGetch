@@ -4,6 +4,8 @@
 #include "Stage/BoarLevelTransitionLibrary.h"
 #include "HubPortal.generated.h"
 class UBoxComponent;
+class ASkeletalMeshActor;
+class UMaterialInterface;
 UENUM(BlueprintType)
 enum class EHubPortalAction : uint8 { Travel, Loadout, Archive, GadgetTest };
 /** Gadget Labの看板1枚分の設定。表示するGadgetはGadgetIdで解決し、配列の順番やGadgetCatalogの並びに依存しません。 */
@@ -24,15 +26,20 @@ public:
     AHubPortal();
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UBoxComponent> Trigger;
     UPROPERTY(EditAnywhere, Category="Portal") EHubPortalAction Action=EHubPortalAction::Travel;
-    /** 行き先（Action = Travel）。設定されていれば Destination より優先します。行き先の変更はこのDataAssetの Level で行います。 */
-    UPROPERTY(EditAnywhere, Category="Portal") TObjectPtr<class UBoarLevelDestination> DestinationAsset;
-    /** 旧来の直接指定。DestinationAsset が未設定のときだけ使います。 */
+    /** 固定入口ではクラス既定の Destination を使います。旧配置は従来の優先順を維持します。 */
+    UPROPERTY(EditDefaultsOnly, Category="Portal") bool bUseClassDestination=false;
+    /** 旧配置互換。クラス既定の遷移先を使わない場合だけ、Destination より優先します。 */
+    UPROPERTY(EditAnywhere, Category="Portal", meta=(EditCondition="!bUseClassDestination"))
+    TObjectPtr<class UBoarLevelDestination> DestinationAsset;
+    /** 固定入口の遷移先。bUseClassDestination が有効なら Class Defaults の値を使用します。 */
     UPROPERTY(EditAnywhere, Category="Portal") TSoftObjectPtr<UWorld> Destination;
-    /** オンにすると、このポータルだけ Transition の演出を使います。オフのときは Project Settings > Game > Boar Level Transitions の Portal。 */
+    /** 使う演出の種類。Project Settings > Game > Boar Level Transitions の同じ名前の項目の演出になります（ロビーへ戻るポータルは Return To Lobby など）。 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Portal|Transition") EBoarLevelTransitionStyle TransitionStyle=EBoarLevelTransitionStyle::Portal;
+    /** オンにすると、このポータルだけ Transition の演出を使います（TransitionStyle より優先）。 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Portal|Transition", meta=(InlineEditConditionToggle)) bool bOverrideTransition=false;
     /** このポータルで遷移するときの演出（Effect、または長さ・色まで調整したPreset）。 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Portal|Transition", meta=(EditCondition="bOverrideTransition")) FBoarLevelTransitionEntry Transition;
-    /** Travel時に使う行き先（DestinationAsset優先、無ければDestination）を返します。 */
+    /** 固定入口はクラス既定値、旧配置は DataAsset → 直接指定の順に解決します。 */
     TSoftObjectPtr<UWorld> GetTravelDestination() const;
     UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<AActor>> TestVisualActors;
     /** Frame stays visible; only effect actors belong in TestVisualActors. */
@@ -43,6 +50,10 @@ public:
     UPROPERTY(EditInstanceOnly, Category="Portal") TObjectPtr<class ATextRenderActor> TestLabel;
     /** GadgetTest用の看板一覧。READY / LOCKEDと表示名を、各要素のGadgetIdから解決して表示します。 */
     UPROPERTY(EditInstanceOnly, Category="Portal", meta=(TitleProperty="GadgetId")) TArray<FGadgetCollectionLabel> GadgetLabels;
+    /** 試用対象を表示する専用BP。PortalTestPreview タグの Child Actor Component を使用します。 */
+    UPROPERTY(EditDefaultsOnly, Category="Portal|Test Preview")
+    TMap<FName, TSubclassOf<ASkeletalMeshActor>> TestPreviewClasses;
+    UPROPERTY(EditDefaultsOnly, Category="Portal|Test Preview") TObjectPtr<UMaterialInterface> TestPreviewMaterial;
     /** 看板設定の不正（ID未設定・未登録ID・Label未設定・IDやLabelの重複）を列挙します。GIが無い場合は未登録IDを判定しません。 */
     static TArray<FString> FindGadgetLabelProblems(const TArray<FGadgetCollectionLabel>& Labels, const class UBoarGameInstance* GI);
 #if WITH_EDITOR
@@ -54,6 +65,7 @@ protected:
 private:
     friend class FBoarHubPortalGadgetLabelTest;
     UFUNCTION() void RefreshTestTarget();
+    void RefreshTestPreview(FName GadgetId);
     bool bTravelRequested=false;
     void Activate(class ABoarPlayerController* Controller);
     UFUNCTION() void Enter(UPrimitiveComponent* Component,AActor* Other,UPrimitiveComponent* OtherComponent,int32 BodyIndex,bool bSweep,const FHitResult& Hit);

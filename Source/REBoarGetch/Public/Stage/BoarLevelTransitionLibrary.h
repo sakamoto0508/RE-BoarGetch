@@ -18,7 +18,7 @@ enum class EBoarLevelTransitionStyle : uint8
 	Menu,
 	/** ロビーのステージ選択からステージへ出発するとき。 */
 	StageDeparture,
-	/** ステージ（Result / GameOver / Pause）からロビーへ戻るとき。 */
+	/** ステージ（Result / GameOver / Pause）や施設のポータルからロビーへ戻るとき。 */
 	ReturnToLobby
 };
 

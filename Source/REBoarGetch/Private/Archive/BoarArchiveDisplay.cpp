@@ -6,6 +6,8 @@
 #include "Boar/BoarBase.h"
 #include "Stage/StageConfig.h"
 #include "Core/BoarGameInstance.h"
+#include "Components/ChildActorComponent.h"
+#include "Stage/FacilitySign.h"
 
 ABoarArchiveDisplay::ABoarArchiveDisplay()
 {
@@ -51,6 +53,14 @@ void ABoarArchiveDisplay::OnConstruction(const FTransform& Transform)
 void ABoarArchiveDisplay::BeginPlay()
 {
 	Super::BeginPlay();
+	// BPが所有する名札（Child Actor）へ、この展示と発光リング（ArchiveSpecimenRingタグ）を渡す。
+	TArray<UPrimitiveComponent*> Rings;
+	for (UPrimitiveComponent* Part : TInlineComponentArray<UPrimitiveComponent*>(this))
+		if (Part->ComponentHasTag(TEXT("ArchiveSpecimenRing")))
+			Rings.Add(Part);
+	for (UChildActorComponent* Child : TInlineComponentArray<UChildActorComponent*>(this))
+		if (auto* Sign = Cast<AFacilitySign>(Child->GetChildActor()))
+			Sign->BindSpecimenSource(this, Rings);
 	if (auto* GI = GetGameInstance<UBoarGameInstance>())GI->OnArchiveDisplaysChanged.AddUniqueDynamic(
 		this, &ABoarArchiveDisplay::RefreshDisplay);
 	RefreshDisplay();

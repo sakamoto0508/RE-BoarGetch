@@ -55,6 +55,46 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
 	static int32 RetargetFunctionCalls(UObject* Blueprint, FName OldFunctionName, UClass* NewOwnerClass, FName NewFunctionName);
 
+	/**
+	 * 配置済みActorを、その子クラス（BPなど）のActorへ置き換えます。名前・ラベル・フォルダ・Transform・アタッチ・
+	 * 編集済みのプロパティ（コンポーネントを含む）を引き継ぎ、同じLevelの他のActorやLevel Blueprintからの参照も新しいActorへ付け替えます。
+	 * 置き換えた結果（失敗・付け替えた参照の数）を文字列で返します。
+	 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")
+	static FString ReplaceActorsWithSubclass(const TArray<AActor*>& Actors, TSubclassOf<AActor> NewClass);
+
+	/**
+	 * Level上の部品ActorをBlueprintのComponentとして取り込みます（Levelの部品は削除しません）。
+	 * 位置はPivot（そのBPの配置Actor）からの相対Transformに変換します。bAsChildActorsがfalseなら各部品のRoot Componentを複製し、
+	 * trueならChild Actor Componentとして取り込みます。作成したComponent名を返します。
+	 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")
+	static TArray<FName> AbsorbActorsIntoBlueprint(UBlueprint* Blueprint, AActor* Pivot, const TArray<AActor*>& Parts, bool bAsChildActors);
+
+	/** BPのSCSに空のScene Component（RootName）をRootとして作り、既存のSCS Componentをすべてその直下へ付け直します（相対Transformは維持）。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")
+	static bool RebuildBlueprintSceneRoot(UBlueprint* Blueprint, FName RootName);
+
+	/**
+	 * DescribeEditablePropertiesの出力（Prefix.Property=Value の行）から、BPへComponentを1つ復元します。
+	 * ParentName（SCS）の下に付け、相対Transformは引数の値を使います。
+	 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")
+	static bool RestoreBlueprintComponentFromDescription(UBlueprint* Blueprint, FName ParentName, TSubclassOf<USceneComponent> ComponentClass,
+	                                                     FName ComponentName, const FString& Description, const FString& Prefix, FTransform Relative);
+
+	/** Blueprintの指定Component（SCS）のComponent Tagsに、Tagを追加します。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")
+	static bool AddBlueprintComponentTag(UBlueprint* Blueprint, FName ComponentName, FName Tag);
+
+	/** 同じLevel内（Level Blueprintを含む）でTargetsを参照しているObjectを列挙します（削除前の確認用）。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")
+	static FString FindActorReferencers(const TArray<AActor*>& Targets);
+
+	/** Actorとそのコンポーネントの編集可能なプロパティをテキストで返します（置き換え前後の比較用）。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")
+	static FString DescribeEditableProperties(AActor* Actor);
+
 	/** CanvasPanelSlot上のWidgetの位置・サイズ・AutoSizeを設定します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
 	static bool SetCanvasSlotLayout(UObject* WidgetBlueprint, FName WidgetName, FVector2D Position, FVector2D Size, bool bAutoSize);

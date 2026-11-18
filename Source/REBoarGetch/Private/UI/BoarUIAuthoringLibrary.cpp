@@ -12,6 +12,13 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "K2Node_CallFunction.h"
+#include "Engine/LevelScriptBlueprint.h"
+#include "Serialization/ArchiveReplaceObjectRef.h"
+#include "Serialization/FindReferencersArchive.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Engine/SCS_Node.h"
+#include "UObject/UObjectHash.h"
 #include "MovieScene.h"
 #include "Sections/MovieSceneFloatSection.h"
 #include "Tracks/MovieSceneFloatTrack.h"
@@ -275,6 +282,292 @@ int32 UBoarUIAuthoringLibrary::RetargetFunctionCalls(UObject* Object, FName OldF
 	if (Count > 0)
 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
 	return Count;
+}
+
+FString UBoarUIAuthoringLibrary::ReplaceActorsWithSubclass(const TArray<AActor*>& Actors, TSubclassOf<AActor> NewClass)
+{
+	FString Out;
+	TMap<UObject*, UObject*> Replaced;
+	TSet<ULevel*> Levels;
+	for (AActor* Old : Actors)
+	{
+		if (!Old || !NewClass || !NewClass->IsChildOf(Old->GetClass()) || NewClass == Old->GetClass())
+		{
+			Out += FString::Printf(TEXT("skip %s (class %s)\n"), *GetNameSafe(Old), Old ? *Old->GetClass()->GetName() : TEXT("-"));
+			continue;
+		}
+		UWorld* World = Old->GetWorld();
+		const FName Name = Old->GetFName();
+		const FString Label = Old->GetActorLabel();
+		const FName Folder = Old->GetFolderPath();
+		const FTransform Transform = Old->GetActorTransform();
+		AActor* Parent = Old->GetAttachParentActor();
+		const FName ParentSocket = Old->GetAttachParentSocketName();
+		TArray<AActor*> Children;
+		Old->GetAttachedActors(Children, true, false);
+
+		// 新しいActorに元の名前を使わせるため、古い方を先に改名する。
+		Old->Modify();
+		Old->Rename(*MakeUniqueObjectName(Old->GetOuter(), Old->GetClass(), *(Name.ToString() + TEXT("_REPLACED"))).ToString(),
+		            nullptr, REN_DontCreateRedirectors | REN_DoNotDirty | REN_NonTransactional);
+		FActorSpawnParameters Params;
+		Params.Name = Name;
+		Params.OverrideLevel = Old->GetLevel();
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AActor* New = World->SpawnActor(NewClass, &Transform, Params);
+		if (!New)
+		{
+			Old->Rename(*Name.ToString(), nullptr, REN_DontCreateRedirectors | REN_DoNotDirty | REN_NonTransactional);
+			Out += FString::Printf(TEXT("spawn failed %s\n"), *Name.ToString());
+			continue;
+		}
+		// エディタの「Replace Selected Actors with」と同じく、関連クラス間でプロパティとコンポーネントを写す。
+		New->UnregisterAllComponents();
+		UEngine::FCopyPropertiesForUnrelatedObjectsParams CopyParams;
+		CopyParams.bNotifyObjectReplacement = true;
+		UEngine::CopyPropertiesForUnrelatedObjects(Old, New, CopyParams);
+		New->RegisterAllComponents();
+		New->SetActorTransform(Transform);
+		New->SetActorLabel(Label);
+		New->SetFolderPath(Folder);
+		if (Parent)
+			New->AttachToActor(Parent, FAttachmentTransformRules::KeepWorldTransform, ParentSocket);
+		for (AActor* Child : Children)
+			if (Child)
+				Child->AttachToActor(New, FAttachmentTransformRules::KeepWorldTransform, Child->GetAttachParentSocketName());
+		New->PostEditMove(true);
+		New->MarkPackageDirty();
+		Replaced.Add(Old, New);
+		Levels.Add(New->GetLevel());
+		Out += FString::Printf(TEXT("replaced %s -> %s\n"), *Name.ToString(), *NewClass->GetName());
+	}
+
+	// 同じLevelの他のActor・Level Blueprintからの参照を新しいActorへ付け替える。
+	int32 RefCount = 0;
+	for (ULevel* Level : Levels)
+	{
+		TArray<UObject*> Referencers;
+		for (AActor* Actor : Level->Actors)
+			if (Actor && !Replaced.Contains(Actor))
+				Referencers.Add(Actor);
+		if (ULevelScriptBlueprint* LSB = Level->GetLevelScriptBlueprint(true))
+		{
+			for (const TPair<UObject*, UObject*>& Pair : Replaced)
+				FBlueprintEditorUtils::ReplaceAllActorRefrences(LSB, Cast<AActor>(Pair.Key), Cast<AActor>(Pair.Value));
+		}
+		for (UObject* Referencer : Referencers)
+		{
+			FArchiveReplaceObjectRef<UObject> Ar(Referencer, Replaced, EArchiveReplaceObjectFlags::IgnoreOuterRef | EArchiveReplaceObjectFlags::IgnoreArchetypeRef);
+			if (Ar.GetCount() > 0)
+			{
+				Referencer->MarkPackageDirty();
+				RefCount += Ar.GetCount();
+				Out += FString::Printf(TEXT("ref %s x%d\n"), *Referencer->GetName(), static_cast<int32>(Ar.GetCount()));
+			}
+		}
+	}
+	for (const TPair<UObject*, UObject*>& Pair : Replaced)
+	{
+		AActor* Old = Cast<AActor>(Pair.Key);
+		Old->GetWorld()->EditorDestroyActor(Old, true);
+	}
+	Out += FString::Printf(TEXT("references updated: %d\n"), RefCount);
+	return Out;
+}
+
+TArray<FName> UBoarUIAuthoringLibrary::AbsorbActorsIntoBlueprint(UBlueprint* Blueprint, AActor* Pivot, const TArray<AActor*>& Parts, bool bAsChildActors)
+{
+	TArray<FName> Created;
+	USimpleConstructionScript* SCS = Blueprint ? Blueprint->SimpleConstructionScript : nullptr;
+	if (!SCS || !Pivot)
+		return Created;
+	const FTransform PivotTransform = Pivot->GetActorTransform();
+	const auto MakeName = [SCS](const FString& Label)
+	{
+		FString Base = Label;
+		for (TCHAR& C : Base)
+			if (!FChar::IsAlnum(C) && C != TEXT('_'))
+				C = TEXT('_');
+		FName Name(*Base);
+		for (int32 Suffix = 1; SCS->FindSCSNode(Name); ++Suffix)
+			Name = FName(*FString::Printf(TEXT("%s_%d"), *Base, Suffix));
+		return Name;
+	};
+	for (AActor* Part : Parts)
+	{
+		USceneComponent* PartRoot = Part ? Part->GetRootComponent() : nullptr;
+		if (!PartRoot)
+			continue;
+		const FTransform Relative = PartRoot->GetComponentTransform().GetRelativeTransform(PivotTransform);
+		TArray<USCS_Node*> Before = SCS->GetAllNodes();
+		if (bAsChildActors)
+		{
+			FKismetEditorUtilities::FAddActorsToBlueprintParams Params;
+			Params.bReplaceActors = false;
+			Params.bDeferCompilation = true;
+			Params.RelativeToInstance = Pivot;
+			FKismetEditorUtilities::AddActorsToBlueprint(Blueprint, {Part}, Params);
+		}
+		else
+		{
+			TArray<USCS_Node*> OutNodes;
+			FKismetEditorUtilities::FAddComponentsToBlueprintParams Params;
+			Params.OutNodes = &OutNodes;
+			// BP側のScene Root（SCS）があればその下へ付ける。無ければ親クラスのRootへ付く。
+			for (USCS_Node* Root : SCS->GetRootNodes())
+				if (Root->ComponentTemplate && Root->ComponentTemplate->IsA<USceneComponent>())
+				{
+					Params.OptionalNewRootNode = Root;
+					break;
+				}
+			FKismetEditorUtilities::AddComponentsToBlueprint(Blueprint, {PartRoot}, Params);
+		}
+		for (USCS_Node* Node : SCS->GetAllNodes())
+		{
+			if (Before.Contains(Node))
+				continue;
+			// どちらの経路でも、配置Actorからの相対Transformに揃える（ワールド座標のまま入るのを防ぐ）。
+			if (auto* Template = Cast<USceneComponent>(Node->ComponentTemplate))
+			{
+				Template->SetRelativeLocation_Direct(Relative.GetLocation());
+				Template->SetRelativeRotation_Direct(Relative.Rotator());
+				Template->SetRelativeScale3D_Direct(Relative.GetScale3D());
+			}
+			Node->SetVariableName(MakeName(Part->GetActorLabel()));
+			Created.Add(Node->GetVariableName());
+		}
+	}
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+	FKismetEditorUtilities::CompileBlueprint(Blueprint);
+	return Created;
+}
+
+bool UBoarUIAuthoringLibrary::RebuildBlueprintSceneRoot(UBlueprint* Blueprint, FName RootName)
+{
+	USimpleConstructionScript* SCS = Blueprint ? Blueprint->SimpleConstructionScript : nullptr;
+	if (!SCS || SCS->FindSCSNode(RootName))
+		return false;
+	TArray<USCS_Node*> Nodes = SCS->GetAllNodes();
+	for (USCS_Node* Node : Nodes)
+	{
+		// 親子を一旦すべて外す（ネイティブ親名での参照も解除）。
+		if (USCS_Node* Parent = SCS->FindParentNode(Node))
+			Parent->RemoveChildNode(Node, false);
+		else
+			SCS->RemoveNode(Node, false);
+		Node->bIsParentComponentNative = false;
+		Node->ParentComponentOrVariableName = NAME_None;
+		Node->ParentComponentOwnerClassName = NAME_None;
+	}
+	USCS_Node* Root = SCS->CreateNode(USceneComponent::StaticClass(), RootName);
+	SCS->AddNode(Root);
+	for (USCS_Node* Node : Nodes)
+		if (Node != SCS->GetDefaultSceneRootNode())
+			Root->AddChildNode(Node, false);
+	SCS->ValidateSceneRootNodes();
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+	FKismetEditorUtilities::CompileBlueprint(Blueprint);
+	return true;
+}
+
+bool UBoarUIAuthoringLibrary::RestoreBlueprintComponentFromDescription(UBlueprint* Blueprint, FName ParentName, TSubclassOf<USceneComponent> ComponentClass,
+                                                                       FName ComponentName, const FString& Description, const FString& Prefix, FTransform Relative)
+{
+	USimpleConstructionScript* SCS = Blueprint ? Blueprint->SimpleConstructionScript : nullptr;
+	USCS_Node* Parent = SCS ? SCS->FindSCSNode(ParentName) : nullptr;
+	if (!Parent || !ComponentClass || SCS->FindSCSNode(ComponentName))
+		return false;
+	USCS_Node* Node = SCS->CreateNode(ComponentClass, ComponentName);
+	USceneComponent* Template = CastChecked<USceneComponent>(Node->ComponentTemplate);
+	TArray<FString> Lines;
+	Description.ParseIntoArrayLines(Lines);
+	const FString Head = Prefix + TEXT(".");
+	static const TSet<FName> Skip = {TEXT("AttachParent"), TEXT("RelativeLocation"), TEXT("RelativeRotation"), TEXT("RelativeScale3D")};
+	for (const FString& Line : Lines)
+	{
+		FString Key, Value;
+		if (!Line.StartsWith(Head) || !Line.Mid(Head.Len()).Split(TEXT("="), &Key, &Value))
+			continue;
+		FProperty* Property = ComponentClass->FindPropertyByName(FName(*Key));
+		if (!Property || Skip.Contains(Property->GetFName()))
+			continue;
+		Property->ImportText_InContainer(*Value, Template, Template, PPF_None);
+	}
+	Template->SetRelativeLocation_Direct(Relative.GetLocation());
+	Template->SetRelativeRotation_Direct(Relative.Rotator());
+	Template->SetRelativeScale3D_Direct(Relative.GetScale3D());
+	Parent->AddChildNode(Node);
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+	FKismetEditorUtilities::CompileBlueprint(Blueprint);
+	return true;
+}
+
+bool UBoarUIAuthoringLibrary::AddBlueprintComponentTag(UBlueprint* Blueprint, FName ComponentName, FName Tag)
+{
+	USCS_Node* Node = Blueprint && Blueprint->SimpleConstructionScript ? Blueprint->SimpleConstructionScript->FindSCSNode(ComponentName) : nullptr;
+	if (!Node || !Node->ComponentTemplate)
+		return false;
+	Node->ComponentTemplate->Modify();
+	Node->ComponentTemplate->ComponentTags.AddUnique(Tag);
+	FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+	return true;
+}
+
+FString UBoarUIAuthoringLibrary::FindActorReferencers(const TArray<AActor*>& Targets)
+{
+	TArray<UObject*> TargetObjects;
+	for (AActor* Actor : Targets)
+		if (Actor)
+		{
+			TargetObjects.Add(Actor);
+			for (UActorComponent* Component : Actor->GetComponents())
+				TargetObjects.Add(Component);
+		}
+	if (TargetObjects.IsEmpty())
+		return TEXT("");
+	FString Out;
+	UPackage* Package = Targets[0]->GetPackage();
+	ForEachObjectWithPackage(Package, [&](UObject* Object)
+	{
+		// 対象自身とその内部（Component等）からの参照は数えない。
+		for (const UObject* Outer = Object; Outer; Outer = Outer->GetOuter())
+			if (TargetObjects.Contains(Outer))
+				return true;
+		FFindReferencersArchive Finder(Object, TargetObjects);
+		TMap<UObject*, int32> Counts;
+		Finder.GetReferenceCounts(Counts);
+		for (const TPair<UObject*, int32>& Pair : Counts)
+			if (Pair.Value > 0)
+				Out += FString::Printf(TEXT("%s -> %s x%d\n"), *Object->GetPathName(), *Pair.Key->GetName(), Pair.Value);
+		return true;
+	});
+	return Out;
+}
+
+FString UBoarUIAuthoringLibrary::DescribeEditableProperties(AActor* Actor)
+{
+	if (!Actor)
+		return TEXT("null");
+	FString Out = FString::Printf(TEXT("label=%s folder=%s transform=%s attach=%s\n"), *Actor->GetActorLabel(), *Actor->GetFolderPath().ToString(),
+	                              *Actor->GetActorTransform().ToString(), *GetNameSafe(Actor->GetAttachParentActor()));
+	TArray<UObject*> Objects = {Actor};
+	TArray<UActorComponent*> Components;
+	Actor->GetComponents(Components);
+	Components.Sort([](const UActorComponent& A, const UActorComponent& B) { return A.GetName() < B.GetName(); });
+	for (UActorComponent* Component : Components)
+		Objects.Add(Component);
+	for (UObject* Object : Objects)
+	{
+		for (TFieldIterator<FProperty> It(Object->GetClass()); It; ++It)
+		{
+			if (!It->HasAnyPropertyFlags(CPF_Edit) || It->HasAnyPropertyFlags(CPF_Transient))
+				continue;
+			FString Value;
+			It->ExportTextItem_InContainer(Value, Object, nullptr, nullptr, PPF_None);
+			Out += FString::Printf(TEXT("%s.%s=%s\n"), Object == Actor ? TEXT("Actor") : *Object->GetName(), *It->GetName(), *Value);
+		}
+	}
+	return Out;
 }
 
 FString UBoarUIAuthoringLibrary::ClearBlueprintGraphs(UObject* Object)

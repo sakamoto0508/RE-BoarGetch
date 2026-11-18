@@ -9,6 +9,7 @@ class UMaterialInterface;
 class AHubPortal;
 class ABoarArchiveDisplay;
 class ATextRenderActor;
+class UPrimitiveComponent;
 
 /** 表示階層。文字サイズ・発光量・余白はこの階層から決まり、個別に調整しません（値はFFacilitySignStyle）。 */
 UENUM(BlueprintType)
@@ -45,6 +46,10 @@ class REBOARGETCH_API AFacilitySign : public AActor
 public:
     AFacilitySign();
     virtual void OnConstruction(const FTransform& Transform) override;
+    /** 設備が所有する名札の表示を、元データの更新通知から反映します。 */
+    void SetDisplayText(const FText& NewTitle, bool bDimmed);
+    /** 展示設備が所有する名札として、展示元と状態表示用の部品（リング等）を設定します。 */
+    void BindSpecimenSource(ABoarArchiveDisplay* Source, const TArray<UPrimitiveComponent*>& Highlights);
 
     UPROPERTY(VisibleAnywhere) TObjectPtr<USceneComponent> SceneRoot;
     /** 背面パネル。Mesh・Materialは変更可能。大きさは文字幅から自動計算します。 */
@@ -70,6 +75,8 @@ public:
     UPROPERTY(EditInstanceOnly, Category="Sign|State") bool bShowOnlyWhenNear=false;
     /** 状態に応じてMaterialを切り替える床ライン・リング等。 */
     UPROPERTY(EditInstanceOnly, Category="Sign|State") TArray<TObjectPtr<AActor>> HighlightActors;
+    /** 所有元の設備から渡された、Materialを切り替える部品（BindSpecimenSourceで設定）。 */
+    UPROPERTY(Transient) TArray<TObjectPtr<UPrimitiveComponent>> HighlightComponents;
     UPROPERTY(EditAnywhere, Category="Sign|State") TObjectPtr<UMaterialInterface> HighlightOnMaterial;
     UPROPERTY(EditAnywhere, Category="Sign|State") TObjectPtr<UMaterialInterface> HighlightOffMaterial;
 

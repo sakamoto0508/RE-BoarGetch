@@ -1,5 +1,8 @@
 #include "Stage/HubPortal.h"
 #include "Components/BoxComponent.h"
+#include "Components/ChildActorComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Player/BoarPlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
@@ -9,12 +12,31 @@
 #include "Gadget/GadgetBase.h"
 #include "GadgetDataAsset.h"
 #include "Engine/TextRenderActor.h"
+#include "Animation/SkeletalMeshActor.h"
 #include "Components/TextRenderComponent.h"
 #include "Stage/BoarLevelDestination.h"
 #include "Stage/BoarLevelTransitionLibrary.h"
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
 #endif
+
+namespace
+{
+	const FName TestVisualTag(TEXT("PortalTestVisual"));
+	const FName TestBarrierTag(TEXT("PortalTestBarrier"));
+	const FName TestLabelTag(TEXT("PortalTestLabel"));
+	const FName TestPreviewTag(TEXT("PortalTestPreview"));
+
+	FString GetTravelPackage(const TSoftObjectPtr<UWorld>& Destination)
+	{
+		return UWorld::RemovePIEPrefix(Destination.ToSoftObjectPath().GetLongPackageName());
+	}
+
+	bool HasTravelMap(const FString& PackageName)
+	{
+		return !PackageName.IsEmpty() && FPackageName::DoesPackageExist(PackageName);
+	}
+}
 
 AHubPortal::AHubPortal()
 {
@@ -57,10 +79,11 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 	}
 	// PIE rewrites soft references to visited worlds. Validate and travel using
 	// the on-disk package, never the transient UEDPIE_<instance>_ package.
-	const FString PackageName = UWorld::RemovePIEPrefix(TravelDestination.ToSoftObjectPath().GetLongPackageName());
-	if (TravelDestination.IsNull() || !FPackageName::DoesPackageExist(PackageName))
+	const FString PackageName = GetTravelPackage(TravelDestination);
+	if (!HasTravelMap(PackageName))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[HubPortal] Missing destination: %s"), *TravelDestination.ToString());
+		UE_LOG(LogTemp, Error, TEXT("[HubPortal] %s: invalid Level destination '%s'"),
+		       *GetActorNameOrLabel(), *TravelDestination.ToString());
 		return;
 	}
 	bTravelRequested = true;
@@ -69,12 +92,15 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 			GI->ClearTestGadget();
 	const FBoarLevelTransitionEntry& Effect = bOverrideTransition
 		? Transition
-		: GetDefault<UBoarLevelTransitionSettings>()->GetEntry(EBoarLevelTransitionStyle::Portal);
+		: GetDefault<UBoarLevelTransitionSettings>()->GetEntry(TransitionStyle);
 	UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(this, FName(*PackageName), Effect);
 }
 
 TSoftObjectPtr<UWorld> AHubPortal::GetTravelDestination() const
 {
+	const AHubPortal* Defaults = GetClass()->GetDefaultObject<AHubPortal>();
+	if (Defaults->bUseClassDestination)
+		return Defaults->Destination;
 	return DestinationAsset ? DestinationAsset->Level : Destination;
 }
 
@@ -137,8 +163,11 @@ void AHubPortal::RefreshTestTarget()
 	const bool bShow = GI && GI->IsInGadgetLab() && !GI->GetSelectedTestGadget().IsNone() && GI->IsGadgetUnlocked(
 		GI->GetSelectedTestGadget());
 	SetActorHiddenInGame(false);
-	const bool bHasLevel = bShow && !GI->GetSelectedTestLevel().IsNull();
-	Trigger->SetCollisionEnabled(bHasLevel ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	const TSoftObjectPtr<UWorld> TestLevel = bShow ? GI->GetSelectedTestLevel() : TSoftObjectPtr<UWorld>();
+	const bool bHasLevel = bShow && HasTravelMap(GetTravelPackage(TestLevel));
+	if (bShow && !TestLevel.IsNull() && !bHasLevel)
+		UE_LOG(LogTemp, Warning, TEXT("[HubPortal] %s: invalid Gadget Test Level '%s'"),
+		       *GetActorNameOrLabel(), *TestLevel.ToString());
 	for (const auto& A : TestVisualActors)
 		if (A)A->SetActorHiddenInGame(!bHasLevel);
 	for (const auto& A : TestBarrierActors)
@@ -147,17 +176,53 @@ void AHubPortal::RefreshTestTarget()
 			A->SetActorHiddenInGame(bHasLevel);
 			A->SetActorEnableCollision(!bHasLevel);
 		}
+	const auto Class = GI ? GI->FindGadgetClass(GI->GetSelectedTestGadget()) : nullptr;
+	const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
+	const FText LabelText = Def
+		? FText::Format(NSLOCTEXT("HubPortal", "TestTarget", "TEST : {0}{1}"), Def->DisplayName,
+		                bHasLevel ? FText::GetEmpty()
+		                          : NSLOCTEXT("HubPortal", "TestLevelMissing", " - Level未登録"))
+		: NSLOCTEXT("HubPortal", "SelectTestTarget", "SELECT GADGET TO TEST");
 	if (TestLabel)
 	{
 		TestLabel->SetActorHiddenInGame(false);
-		const auto Class = GI ? GI->FindGadgetClass(GI->GetSelectedTestGadget()) : nullptr;
-		const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
-		TestLabel->GetTextRender()->SetText(Def
-			                                    ? FText::Format(FText::FromString(TEXT("TEST : {0}{1}")),
-			                                                    Def->DisplayName,
-			                                                    FText::FromString(
-				                                                    bHasLevel ? TEXT("") : TEXT(" - Level未登録")))
-			                                    : FText::FromString(TEXT("SELECT GADGET TO TEST")));
+		TestLabel->GetTextRender()->SetText(LabelText);
+	}
+	for (UPrimitiveComponent* Part : TInlineComponentArray<UPrimitiveComponent*>(this))
+	{
+		if (Part->ComponentHasTag(TestVisualTag))
+			Part->SetHiddenInGame(!bHasLevel);
+		if (Part->ComponentHasTag(TestBarrierTag))
+		{
+			Part->SetHiddenInGame(bHasLevel);
+			Part->SetCollisionEnabled(bHasLevel ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryAndPhysics);
+		}
+		if (Part->ComponentHasTag(TestLabelTag))
+			if (auto* Label = Cast<UTextRenderComponent>(Part))
+				Label->SetText(LabelText);
+	}
+	// Enable the overlap only after the barrier has been opened.
+	RefreshTestPreview(bShow ? GI->GetSelectedTestGadget() : NAME_None);
+	Trigger->SetCollisionEnabled(bHasLevel ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+}
+
+void AHubPortal::RefreshTestPreview(FName GadgetId)
+{
+	const TSubclassOf<ASkeletalMeshActor>* PreviewClass = TestPreviewClasses.Find(GadgetId);
+	for (UChildActorComponent* Component : TInlineComponentArray<UChildActorComponent*>(this))
+	{
+		if (!Component->ComponentHasTag(TestPreviewTag))
+			continue;
+		Component->SetChildActorClass(PreviewClass ? PreviewClass->Get() : nullptr);
+		if (auto* Preview = Cast<ASkeletalMeshActor>(Component->GetChildActor()))
+		{
+			Preview->SetActorEnableCollision(false);
+			USkeletalMeshComponent* Mesh = Preview->GetSkeletalMeshComponent();
+			Mesh->SetCastShadow(false);
+			if (TestPreviewMaterial)
+				for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
+					Mesh->SetMaterial(Slot, TestPreviewMaterial);
+		}
 	}
 }
 
@@ -206,9 +271,11 @@ EDataValidationResult AHubPortal::IsDataValid(FDataValidationContext& Context) c
 		Context.AddError(FText::FromString(FString::Printf(TEXT("%s GadgetLabels: %s"), *GetActorNameOrLabel(), *Problem)));
 		Result = EDataValidationResult::Invalid;
 	}
-	if (Action == EHubPortalAction::Travel && GetTravelDestination().IsNull())
+	const AHubPortal* Defaults = GetClass()->GetDefaultObject<AHubPortal>();
+	if (Action == EHubPortalAction::Travel && (!IsTemplate() || Defaults->bUseClassDestination)
+		&& !HasTravelMap(GetTravelPackage(GetTravelDestination())))
 	{
-		Context.AddError(FText::FromString(FString::Printf(TEXT("%s: 行き先が未設定です（DestinationAsset、またはそのLevel）"), *GetActorNameOrLabel())));
+		Context.AddError(FText::FromString(FString::Printf(TEXT("%s: 有効な遷移先 Level が設定されていません"), *GetActorNameOrLabel())));
 		Result = EDataValidationResult::Invalid;
 	}
 	return Result;
