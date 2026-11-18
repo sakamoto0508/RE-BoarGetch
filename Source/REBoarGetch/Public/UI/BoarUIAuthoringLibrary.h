@@ -40,9 +40,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
 	static bool RemoveWidget(UObject* WidgetBlueprint, FName WidgetName);
 
+	/** Event Graph・関数グラフのノード名を列挙します（削除はしません）。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static FString DescribeBlueprintGraphs(UObject* Blueprint);
+
 	/** Event Graphの全ノードとユーザー関数グラフを削除し、削除したノード・関数を列挙して返します（処理をC++へ移した画面用）。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
 	static FString ClearBlueprintGraphs(UObject* Blueprint);
+
+	/**
+	 * 関数呼び出しノード（OldFunctionName）の呼び出し先をNewOwnerClass::NewFunctionNameへ差し替えます。
+	 * 同じ名前のピンは接続と既定値を保ちます。差し替えたノードの数を返します。
+	 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static int32 RetargetFunctionCalls(UObject* Blueprint, FName OldFunctionName, UClass* NewOwnerClass, FName NewFunctionName);
 
 	/** CanvasPanelSlot上のWidgetの位置・サイズ・AutoSizeを設定します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
@@ -63,6 +74,21 @@ public:
 	static bool RequestVerificationScreenshot(const FString& AbsolutePngPath, bool bShowUI);
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Editor|Verification")
 	static bool IsVerificationScreenshotPending();
+	/** フォントファイル（TTF/OTF）からFontFaceアセットを作成または更新します（Import Factoryを使わないのでヘッドレスでも動きます）。保存は呼び出し側。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static class UFontFace* EnsureFontFaceFromFile(const FString& PackagePath, const FString& FontFilePath);
+	/** 取り込み済みFontFaceから、Runtimeキャッシュの複合Font（Typeface名ごと）を作成または更新します。保存は呼び出し側で行います。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static class UFont* EnsureCompositeFont(const FString& PackagePath, const TArray<FName>& TypefaceNames, const TArray<class UFontFace*>& Faces);
+	/** 検証用：Widget中央へ左クリック（押下→離す）をSlateへ送ります。実際のヒットテスト経由で届くかを確認できます。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Verification")
+	static bool SimulateLeftClickOnWidget(UWidget* Widget);
+	/** 検証用：Widget中央付近でマウスを動かす入力をSlateへ送ります（ボタンは押しません）。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Verification")
+	static bool SimulateMouseMoveOverWidget(UWidget* Widget);
+	/** 検証用：キーの押下→離すをSlateへ送ります（フォーカス経路・PreviewKeyDownを通ります）。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Verification")
+	static bool SimulateKeyPress(FKey Key);
 	/** 検証用：次回PIEを指定サイズの独立ウィンドウで開きます（設定ファイルには保存しません）。RestorePIEWindowで元に戻します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Verification")
 	static void UsePIENewWindow(int32 Width, int32 Height);

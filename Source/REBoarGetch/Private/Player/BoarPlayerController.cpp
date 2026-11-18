@@ -23,6 +23,7 @@
 #include "Core/BoarFacilityGameMode.h"
 #include "Stage/HubPortal.h"
 #include "Stage/StageEntrance.h"
+#include "Stage/BoarLevelTransitionLibrary.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -523,7 +524,7 @@ void ABoarPlayerController::ReturnToLobby()
 		ResultWidget->SetIsEnabled(false);
 	}
 
-	UGameplayStatics::OpenLevelBySoftObjectPtr(this, Destination);
+	UBoarLevelTransitionLibrary::OpenLevelBySoftObjectPtrWithTransition(this, Destination, EBoarLevelTransitionStyle::ReturnToLobby);
 }
 
 TSoftObjectPtr<UWorld> ABoarPlayerController::ResolveLobbyLevel(const TSoftObjectPtr<UWorld>& Configured,
@@ -619,7 +620,7 @@ void ABoarPlayerController::RetryStage()
 		return;
 	bLevelTransitionRequested = true;
 	// Map再読込でHP・檻・Boar・Timerを初期化し、GameInstanceの保存済み装備は維持します。
-	UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this, true)));
+	UBoarLevelTransitionLibrary::OpenLevelWithTransition(this, FName(*UGameplayStatics::GetCurrentLevelName(this, true)), EBoarLevelTransitionStyle::Menu);
 }
 
 void ABoarPlayerController::HandleStageInitializationFailed(const FText& Reason)
@@ -938,4 +939,11 @@ void ABoarPlayerController::CloseFacilityMenuInput()
 bool ABoarPlayerController::IsPauseMenuOpen() const
 {
 	return UIFlow && UIFlow->IsPauseMenuOpen();
+}
+
+// ゲーム入力の機器だけを記録し、処理は通常どおり親へ渡します（Gameplayの入力挙動は変えません）。
+bool ABoarPlayerController::InputKey(const FInputKeyEventArgs& Params)
+{
+	bLastInputGamepad = Params.Key.IsGamepadKey();
+	return Super::InputKey(Params);
 }

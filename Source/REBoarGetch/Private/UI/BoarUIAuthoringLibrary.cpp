@@ -11,6 +11,7 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "K2Node_CallFunction.h"
 #include "MovieScene.h"
 #include "Sections/MovieSceneFloatSection.h"
 #include "Tracks/MovieSceneFloatTrack.h"
@@ -23,6 +24,11 @@
 #include "Settings/LevelEditorPlaySettings.h"
 #include "Editor.h"
 #include "PlayInEditorDataTypes.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Engine/Font.h"
+#include "Engine/FontFace.h"
+#include "Misc/FileHelper.h"
+#include "UObject/Package.h"
 
 namespace
 {
@@ -134,6 +140,81 @@ UWidget* UBoarUIAuthoringLibrary::EnsureWidget(UObject* Object, TSubclassOf<UWid
 	return Widget;
 }
 
+bool UBoarUIAuthoringLibrary::SimulateLeftClickOnWidget(UWidget* Widget)
+{
+	if (!Widget || !FSlateApplication::IsInitialized()) return false;
+	const FGeometry& G = Widget->GetCachedGeometry();
+	const FVector2D Pos = G.LocalToAbsolute(G.GetLocalSize() * .5f);
+	FSlateApplication& App = FSlateApplication::Get();
+	const TSet<FKey> Pressed{EKeys::LeftMouseButton};
+	const FPointerEvent Down(App.GetUserIndexForMouse(), FSlateApplication::CursorPointerIndex, Pos, Pos, Pressed,
+	                         EKeys::LeftMouseButton, 0.f, FModifierKeysState());
+	const bool bHandled = App.ProcessMouseButtonDownEvent(nullptr, Down);
+	const FPointerEvent Up(App.GetUserIndexForMouse(), FSlateApplication::CursorPointerIndex, Pos, Pos, TSet<FKey>(),
+	                       EKeys::LeftMouseButton, 0.f, FModifierKeysState());
+	App.ProcessMouseButtonUpEvent(Up);
+	return bHandled;
+}
+
+UFontFace* UBoarUIAuthoringLibrary::EnsureFontFaceFromFile(const FString& PackagePath, const FString& FontFilePath)
+{
+	TArray<uint8> Data;
+	if (PackagePath.IsEmpty() || !FFileHelper::LoadFileToArray(Data, *FontFilePath) || Data.IsEmpty()) return nullptr;
+	UPackage* Package = CreatePackage(*PackagePath);
+	const FString AssetName = FPackageName::GetLongPackageAssetName(PackagePath);
+	UFontFace* Face = FindObject<UFontFace>(Package, *AssetName);
+	if (!Face) Face = NewObject<UFontFace>(Package, *AssetName, RF_Public | RF_Standalone | RF_Transactional);
+	Face->Modify();
+	Face->InitializeFromBulkData(FontFilePath, EFontHinting::Default, Data.GetData(), Data.Num());
+	Face->MarkPackageDirty();
+	return Face;
+}
+
+UFont* UBoarUIAuthoringLibrary::EnsureCompositeFont(const FString& PackagePath, const TArray<FName>& TypefaceNames,
+                                                   const TArray<UFontFace*>& Faces)
+{
+	if (PackagePath.IsEmpty() || TypefaceNames.Num() != Faces.Num() || Faces.IsEmpty()) return nullptr;
+	UPackage* Package = CreatePackage(*PackagePath);
+	const FName AssetName(*FPackageName::GetLongPackageAssetName(PackagePath));
+	UFont* Font = FindObject<UFont>(Package, *AssetName.ToString());
+	if (!Font) Font = NewObject<UFont>(Package, AssetName, RF_Public | RF_Standalone | RF_Transactional);
+	Font->Modify();
+	Font->FontCacheType = EFontCacheType::Runtime;
+	FCompositeFont& Composite = Font->GetMutableInternalCompositeFont();
+	Composite.DefaultTypeface.Fonts.Reset();
+	for (int32 I = 0; I < Faces.Num(); ++I)
+	{
+		if (!Faces[I]) continue;
+		FTypefaceEntry& Entry = Composite.DefaultTypeface.Fonts.AddDefaulted_GetRef();
+		Entry.Name = TypefaceNames[I];
+		Entry.Font = FFontData(Faces[I]);
+	}
+	Font->PostEditChange();
+	Font->MarkPackageDirty();
+	return Font;
+}
+
+bool UBoarUIAuthoringLibrary::SimulateMouseMoveOverWidget(UWidget* Widget)
+{
+	if (!Widget || !FSlateApplication::IsInitialized()) return false;
+	const FGeometry& G = Widget->GetCachedGeometry();
+	const FVector2D From = G.LocalToAbsolute(G.GetLocalSize() * .5f);
+	const FVector2D To = From + FVector2D(24.f, 12.f);
+	FSlateApplication& App = FSlateApplication::Get();
+	const FPointerEvent Move(App.GetUserIndexForMouse(), FSlateApplication::CursorPointerIndex, To, From, TSet<FKey>(), EKeys::Invalid, 0.f, FModifierKeysState());
+	return App.ProcessMouseMoveEvent(Move);
+}
+
+bool UBoarUIAuthoringLibrary::SimulateKeyPress(FKey Key)
+{
+	if (!Key.IsValid() || !FSlateApplication::IsInitialized()) return false;
+	FSlateApplication& App = FSlateApplication::Get();
+	const FKeyEvent Event(Key, FModifierKeysState(), App.GetUserIndexForKeyboard(), false, 0, 0);
+	const bool bHandled = App.ProcessKeyDownEvent(Event);
+	App.ProcessKeyUpEvent(Event);
+	return bHandled;
+}
+
 bool UBoarUIAuthoringLibrary::RemoveWidget(UObject* Object, FName WidgetName)
 {
 	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
@@ -151,6 +232,49 @@ bool UBoarUIAuthoringLibrary::RemoveWidget(UObject* Object, FName WidgetName)
 	}
 	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
 	return true;
+}
+
+FString UBoarUIAuthoringLibrary::DescribeBlueprintGraphs(UObject* Object)
+{
+	UBlueprint* BP = Cast<UBlueprint>(Object);
+	if (!BP) return TEXT("not a blueprint");
+	FString Out;
+	TArray<UEdGraph*> Graphs = BP->UbergraphPages;
+	Graphs.Append(BP->FunctionGraphs);
+	for (UEdGraph* Graph : Graphs)
+		if (Graph)
+			for (UEdGraphNode* Node : Graph->Nodes)
+				if (Node) Out += FString::Printf(TEXT("%s: %s\n"), *Graph->GetName(), *Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+	return Out;
+}
+
+int32 UBoarUIAuthoringLibrary::RetargetFunctionCalls(UObject* Object, FName OldFunctionName, UClass* NewOwnerClass, FName NewFunctionName)
+{
+	UBlueprint* BP = Cast<UBlueprint>(Object);
+	UFunction* NewFunction = NewOwnerClass ? NewOwnerClass->FindFunctionByName(NewFunctionName) : nullptr;
+	if (!BP || !NewFunction)
+		return 0;
+	TArray<UEdGraph*> Graphs = BP->UbergraphPages;
+	Graphs.Append(BP->FunctionGraphs);
+	int32 Count = 0;
+	for (UEdGraph* Graph : Graphs)
+	{
+		if (!Graph) continue;
+		for (UEdGraphNode* Node : Graph->Nodes)
+		{
+			UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
+			if (!Call || Call->FunctionReference.GetMemberName() != OldFunctionName)
+				continue;
+			Call->Modify();
+			Call->SetFromFunction(NewFunction);
+			// ReconstructNodeは同じ名前のピンの接続と既定値を新しいピンへ移します。
+			Call->ReconstructNode();
+			++Count;
+		}
+	}
+	if (Count > 0)
+		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+	return Count;
 }
 
 FString UBoarUIAuthoringLibrary::ClearBlueprintGraphs(UObject* Object)
@@ -230,9 +354,12 @@ bool UBoarUIAuthoringLibrary::EnsureBlinkAnimation(UObject* Object, FName Animat
 	UWidget* Target = WBP && WBP->WidgetTree ? WBP->WidgetTree->FindWidget(WidgetName) : nullptr;
 	if (!Target || AnimationName.IsNone() || Period <= 0.f) return false;
 	WBP->Modify();
+	// 作り直しでは変数名が登録済みなので、新規のときだけOnVariableAddedを呼びます（二重登録のensure回避）。
+	bool bReplaced = false;
 	for (int32 I = WBP->Animations.Num() - 1; I >= 0; --I)
 		if (WBP->Animations[I] && WBP->Animations[I]->GetFName() == AnimationName)
 		{
+			bReplaced = true;
 			UWidgetAnimation* Old = WBP->Animations[I];
 			WBP->Animations.RemoveAt(I);
 			Old->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
@@ -264,7 +391,7 @@ bool UBoarUIAuthoringLibrary::EnsureBlinkAnimation(UObject* Object, FName Animat
 	Alpha.AddConstantKey(ToFrame(Scene, FMath::Clamp(OnDuration, 0.f, Period)), OffOpacity);
 
 	WBP->Animations.Add(Animation);
-	WBP->OnVariableAdded(AnimationName);
+	if (!bReplaced) WBP->OnVariableAdded(AnimationName);
 	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
 	return true;
 }
@@ -277,9 +404,12 @@ bool UBoarUIAuthoringLibrary::EnsureRevealAnimation(UObject* Object, FName Anima
 		0.f) return false;
 	WBP->Modify();
 	// 同名アニメは作り直し、再実行しても同じ結果になるようにします。
+	// 作り直しでは変数名が登録済みなので、新規のときだけOnVariableAddedを呼びます（二重登録のensure回避）。
+	bool bReplaced = false;
 	for (int32 I = WBP->Animations.Num() - 1; I >= 0; --I)
 		if (WBP->Animations[I] && WBP->Animations[I]->GetFName() == AnimationName)
 		{
+			bReplaced = true;
 			UWidgetAnimation* Old = WBP->Animations[I];
 			WBP->Animations.RemoveAt(I);
 			Old->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
@@ -330,6 +460,7 @@ bool UBoarUIAuthoringLibrary::EnsureRevealAnimation(UObject* Object, FName Anima
 	OffsetY.AddCubicKey(End, 0.f);
 
 	WBP->Animations.Add(Animation);
+	if (!bReplaced) WBP->OnVariableAdded(AnimationName);
 	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
 	return true;
 }

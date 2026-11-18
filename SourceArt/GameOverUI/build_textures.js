@@ -18,52 +18,26 @@ const page = (w, h, body) => `<!doctype html><html><head><meta charset="utf-8">$
 <style>html,body{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;background:transparent}</style>
 </head><body>${body}</body></html>`;
 
-// ---- Button frames (visual 720x100, 36px glow padding) ----
-const BW = 720, BH = 100, P = 36, TW = BW + P * 2, TH = BH + P * 2, C = 18;
+// ---- Button frames (visual 600x96, 24px glow padding). Selected = amber edge + soft glow only (no chevrons/ticks). ----
+const BW = 600, BH = 96, P = 24, TW = BW + P * 2, TH = BH + P * 2, C = 16;
 const poly = (x, y, w, h, c) =>
   `${x + c},${y} ${x + w - c},${y} ${x + w},${y + c} ${x + w},${y + h - c} ${x + w - c},${y + h} ${x + c},${y + h} ${x},${y + h - c} ${x},${y + c}`;
 
 function button(selected) {
-  const edge = selected ? '#ffc933' : '#3cd2f5';
-  const glow = selected ? '#ffae00' : '#1fb8e6';
-  const fillTop = selected ? 'rgba(46,40,10,0.78)' : 'rgba(10,34,58,0.74)';
-  const fillBot = selected ? 'rgba(14,20,18,0.82)' : 'rgba(4,16,32,0.80)';
-  const sw = selected ? 3.5 : 2;
+  const edge = selected ? '#ffc933' : 'rgba(60,210,245,0.7)';
+  const fillTop = selected ? 'rgba(52,42,10,0.86)' : 'rgba(10,30,54,0.80)';
+  const fillBot = selected ? 'rgba(26,22,8,0.86)' : 'rgba(5,17,34,0.82)';
+  const sw = selected ? 3 : 1.5;
   const outer = poly(P, P, BW, BH, C);
-  const inner = poly(P + 7, P + 7, BW - 14, BH - 14, C - 5);
-  const glowStd = selected ? 9 : 4;
-  const glowOp = selected ? 1 : 0.55;
-  const ticks = selected ? `
-    <polygon points="${P + 34},${P - 7} ${P + 150},${P - 7} ${P + 144},${P - 2} ${P + 40},${P - 2}" fill="${edge}" filter="url(#g)"/>
-    <polygon points="${P + BW - 150},${P + BH + 2} ${P + BW - 34},${P + BH + 2} ${P + BW - 40},${P + BH + 7} ${P + BW - 144},${P + BH + 7}" fill="${edge}" filter="url(#g)"/>
-    <g fill="${edge}" opacity="0.9">
-      <polygon points="${P - 22},${P + 34} ${P - 14},${P + 34} ${P - 6},${P + 50} ${P - 14},${P + 66} ${P - 22},${P + 66} ${P - 14},${P + 50}"/>
-    </g>
-    <g fill="${edge}" opacity="0.9">
-      <polygon points="${P + BW + 22},${P + 34} ${P + BW + 14},${P + 34} ${P + BW + 6},${P + 50} ${P + BW + 14},${P + 66} ${P + BW + 22},${P + 66} ${P + BW + 14},${P + 50}"/>
-    </g>` : `
-    <polygon points="${P + 30},${P - 4} ${P + 110},${P - 4} ${P + 106},${P} ${P + 34},${P}" fill="${edge}" opacity="0.9"/>
-    <polygon points="${P + BW - 110},${P + BH} ${P + BW - 30},${P + BH} ${P + BW - 34},${P + BH + 4} ${P + BW - 106},${P + BH + 4}" fill="${edge}" opacity="0.9"/>`;
   return page(TW, TH, `<svg width="${TW}" height="${TH}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fillTop}"/><stop offset="1" stop-color="${fillBot}"/></linearGradient>
-    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="1.3" fill="rgba(255,255,255,0.035)"/></pattern>
-    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0V24M0 24H24" stroke="${edge}" stroke-opacity="0.07" stroke-width="1" fill="none"/></pattern>
-    <filter id="g" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="${glowStd}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="soft"><feGaussianBlur stdDeviation="${selected ? 14 : 8}"/></filter>
-    <clipPath id="clip"><polygon points="${outer}"/></clipPath>
+    <filter id="soft" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="9"/></filter>
   </defs>
-  <polygon points="${outer}" fill="none" stroke="${glow}" stroke-width="${selected ? 10 : 6}" opacity="${selected ? 0.55 : 0.22}" filter="url(#soft)"/>
+  ${selected ? `<polygon points="${outer}" fill="none" stroke="#ffaa00" stroke-width="10" opacity="0.42" filter="url(#soft)"/>` : ''}
   <polygon points="${outer}" fill="url(#f)"/>
-  <g clip-path="url(#clip)">
-    <rect x="0" y="0" width="${TW}" height="${TH}" fill="url(#grid)"/>
-    <rect x="0" y="0" width="${TW}" height="${TH}" fill="url(#scan)"/>
-    <rect x="${P}" y="${P}" width="${BW}" height="${BH * 0.45}" fill="rgba(255,255,255,${selected ? 0.05 : 0.04})"/>
-    ${selected ? `<polygon points="${outer}" fill="none" stroke="${glow}" stroke-width="22" opacity="0.28" filter="url(#soft)"/>` : ''}
-  </g>
-  <polygon points="${inner}" fill="none" stroke="${edge}" stroke-width="1" opacity="${selected ? 0.45 : 0.3}"/>
-  <polygon points="${outer}" fill="none" stroke="${edge}" stroke-width="${sw}" opacity="${glowOp}" filter="url(#g)"/>
-  ${ticks}
+  <rect x="${P + 18}" y="${P + sw}" width="${BW - 36}" height="1" fill="${selected ? 'rgba(255,230,150,0.35)' : 'rgba(60,210,245,0.18)'}"/>
+  <polygon points="${outer}" fill="none" stroke="${edge}" stroke-width="${sw}"/>
 </svg>`);
 }
 
@@ -80,47 +54,27 @@ const homeIcon = iconPage(`
   <path d="M64 18 L112 60 L100 60 L100 108 L74 108 L74 80 L54 80 L54 108 L28 108 L28 60 L16 60 Z" stroke="none"/>
   <rect x="86" y="24" width="12" height="22" stroke="none"/>`);
 
-// ---- Title (GAME OVER, red warning plate + stripes) ----
-const TTW = 1400, TTH = 300;
+// ---- Title (GAME OVER): white core + red rim, low glow, slim plate, one stripe per side ----
+const TTW = 1240, TTH = 240, TCX = 620, TCY = 120;
 const title = page(TTW, TTH, `
 <style>
-  .wrap{position:absolute;inset:0}
-  .t{position:absolute;left:0;right:0;top:88px;text-align:center;font-family:'Dela Gothic One','Arial Black',sans-serif;
-     font-size:112px;line-height:1;letter-spacing:4px;transform:skewX(-12deg);}
-  .glow{color:transparent;-webkit-text-stroke:10px rgba(255,30,50,.55);filter:blur(14px)}
-  .edge{color:transparent;-webkit-text-stroke:6px #4a0612}
-  .fill{background:linear-gradient(180deg,#fff6f4 0%,#ffd0d3 45%,#ff7d8a 62%,#ffb0b6 100%);-webkit-background-clip:text;color:transparent;
-        filter:drop-shadow(0 0 6px rgba(255,60,80,.9)) drop-shadow(0 0 22px rgba(255,20,40,.7))}
-  .scan{position:absolute;left:0;right:0;top:88px;height:120px;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,transparent 2px 5px);
-        -webkit-mask:linear-gradient(#000,#000);mix-blend-mode:multiply;pointer-events:none}
+  .t{position:absolute;left:0;width:${TTW}px;top:${TCY - 56}px;text-align:center;font-family:'Dela Gothic One','Arial Black',sans-serif;
+     font-size:108px;line-height:1;letter-spacing:6px;transform:skewX(-12deg)}
+  .rim{color:transparent;-webkit-text-stroke:7px #6e0714}
+  .fill{background:linear-gradient(180deg,#ffffff 0%,#ffe1e3 42%,#ff6f7c 58%,#ff3d4f 100%);-webkit-background-clip:text;color:transparent;
+        filter:drop-shadow(0 0 3px rgba(255,50,70,.85)) drop-shadow(0 0 12px rgba(255,20,40,.40))}
 </style>
-<svg class="wrap" width="${TTW}" height="${TTH}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(70,6,18,0.78)"/><stop offset="1" stop-color="rgba(20,4,12,0.70)"/></linearGradient>
-    <linearGradient id="fadeL" x1="0" x2="1"><stop offset="0" stop-color="#ff2a3c" stop-opacity="0"/><stop offset=".25" stop-color="#ff2a3c"/><stop offset=".75" stop-color="#ff2a3c"/><stop offset="1" stop-color="#ff2a3c" stop-opacity="0"/></linearGradient>
-    <filter id="g" x="-10%" y="-200%" width="120%" height="500%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="big"><feGaussianBlur stdDeviation="24"/></filter>
-  </defs>
-  <ellipse cx="700" cy="150" rx="520" ry="90" fill="rgba(255,20,40,0.22)" filter="url(#big)"/>
-  <polygon points="270,62 1190,62 1140,238 220,238" fill="url(#plate)"/>
-  <polygon points="270,62 1190,62 1140,238 220,238" fill="none" stroke="rgba(255,60,80,0.35)" stroke-width="1.5"/>
-  <polygon points="290,54 1200,54 1196,62 286,62" fill="url(#fadeL)" filter="url(#g)"/>
-  <polygon points="214,238 1124,238 1120,246 210,246" fill="url(#fadeL)" filter="url(#g)"/>
-  <g fill="#ff2a3c" filter="url(#g)">
-    <polygon points="196,96 226,96 196,204 166,204"/>
-    <polygon points="152,112 174,112 148,204 126,204" opacity=".8"/>
-    <polygon points="114,128 130,128 110,204 94,204" opacity=".6"/>
-    <polygon points="1204,96 1234,96 1204,204 1174,204"/>
-    <polygon points="1250,96 1272,96 1246,188 1224,188" opacity=".8"/>
-    <polygon points="1288,96 1304,96 1284,172 1268,172" opacity=".6"/>
-  </g>
-  <g fill="#ff5a6a" opacity=".9">
-    <rect x="300" y="72" width="44" height="4"/><rect x="1060" y="224" width="44" height="4"/>
-  </g>
+<svg style="position:absolute;left:0;top:0" width="${TTW}" height="${TTH}" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(60,4,14,.72)"/><stop offset="1" stop-color="rgba(18,3,10,.66)"/></linearGradient>
+    <linearGradient id="ln" x1="0" x2="1"><stop offset="0" stop-color="#ff2a3c" stop-opacity="0"/><stop offset=".2" stop-color="#ff2a3c"/><stop offset=".8" stop-color="#ff2a3c"/><stop offset="1" stop-color="#ff2a3c" stop-opacity="0"/></linearGradient>
+    <filter id="g" x="-10%" y="-300%" width="120%" height="700%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <polygon points="${TCX - 470},${TCY - 74} ${TCX + 510},${TCY - 74} ${TCX + 470},${TCY + 74} ${TCX - 510},${TCY + 74}" fill="url(#pl)"/>
+  <rect x="${TCX - 470}" y="${TCY - 79}" width="980" height="3" fill="url(#ln)" filter="url(#g)"/>
+  <rect x="${TCX - 510}" y="${TCY + 76}" width="980" height="3" fill="url(#ln)" filter="url(#g)"/>
+  <polygon points="${TCX - 548},${TCY - 44} ${TCX - 526},${TCY - 44} ${TCX - 552},${TCY + 44} ${TCX - 574},${TCY + 44}" fill="#ff2a3c" opacity=".9"/>
+  <polygon points="${TCX + 574},${TCY - 44} ${TCX + 552},${TCY - 44} ${TCX + 526},${TCY + 44} ${TCX + 548},${TCY + 44}" fill="#ff2a3c" opacity=".9"/>
 </svg>
-<div class="t glow">GAME OVER</div>
-<div class="t edge">GAME OVER</div>
-<div class="t fill">GAME OVER</div>
+<div class="t rim">GAME OVER</div><div class="t fill">GAME OVER</div>
 `);
 
 // ---- Full-screen overlay: soft vignette (stretched) and a CRT/grid tile (tiled) ----

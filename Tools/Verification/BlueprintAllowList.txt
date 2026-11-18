@@ -2,6 +2,8 @@
 /Game/BP/Widget/WBP_StageSelectEntry.WBP_StageSelectEntry
 /Game/BP/Widget/WBP_Settings.WBP_Settings
 /Game/BP/Widget/WBP_Result.WBP_Result
+/Game/BP/Widget/WBP_ResultBoarCard.WBP_ResultBoarCard
+/Game/BP/Widget/WBP_StageClearBanner.WBP_StageClearBanner
 /Game/BP/Widget/WBP_PlayerHUD.WBP_PlayerHUD
 /Game/BP/Widget/WBP_PauseMenu.WBP_PauseMenu
 /Game/BP/Widget/WBP_LobbyStageSelect.WBP_LobbyStageSelect

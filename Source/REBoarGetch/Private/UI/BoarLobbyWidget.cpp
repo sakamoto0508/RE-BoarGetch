@@ -158,6 +158,12 @@ void UBoarLobbyWidget::RefreshSelectedStage()
 	if (StartStageButton) StartStageButton->SetIsEnabled(Data.bCanStart);
 	if (StageStatus) StageStatus->SetText(Data.Status);
 	if (StageProgress) StageProgress->SetText(Data.Progress);
+	auto Ratio = [](int32 Found, int32 Total) { return FText::Format(NSLOCTEXT("StageSelect", "Ratio", "{0} / {1}"), Found, Total); };
+	if (auto* Coin = ResolveLobbyWidget<UTextBlock>(WidgetTree, CoinProgressTextWidgetName))
+		Coin->SetText(Data.bValid && Data.bUnlocked ? Ratio(Data.CoinsFound, Data.CoinsTotal) : FText::FromString(TEXT("—")));
+	if (auto* Book = ResolveLobbyWidget<UTextBlock>(WidgetTree, EncyclopediaProgressTextWidgetName))
+		Book->SetText(Data.bValid && Data.bUnlocked ? Ratio(Data.BoarsFound, Data.BoarsTotal) : FText::FromString(TEXT("—")));
+	RefreshStatusBadge(Data.bValid && Data.bUnlocked && Data.bCleared);
 	if (bUseCarousel) RefreshCarousel();
 }
 
@@ -253,6 +259,7 @@ void UBoarLobbyWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
 	if (bUseCarousel && Presenter && Presenter->IsTransitionPending()) AnimateCarousel(DeltaTime);
+	if (IsVisible()) UpdateActionHighlight();
 	// 表示の次のTickでフォーカスを設定し、生成直後のWidgetへの設定を避けます。
 	if (bInitialFocusPending && IsVisible())
 	{
@@ -274,6 +281,16 @@ FReply UBoarLobbyWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const
 		if (!Event.IsRepeat()) NextStage();
 		return FReply::Handled();
 	}
+	if (ConfirmKeys.Contains(Event.GetKey()))
+	{
+		// 戻るボタンにフォーカスがあれば戻る、それ以外は開始します。
+		if (!Event.IsRepeat())
+		{
+			if (CancelButton && CancelButton->HasAnyUserFocus()) HandleCancelClicked();
+			else if (StartStageButton && StartStageButton->GetIsEnabled()) HandleStartStageClicked();
+		}
+		return FReply::Handled();
+	}
 	if (CancelKeys.Contains(Event.GetKey()))
 	{
 		if (!Event.IsRepeat()) HandleCancelClicked();
@@ -282,7 +299,44 @@ FReply UBoarLobbyWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const
 	return Super::NativeOnPreviewKeyDown(Geometry, Event);
 }
 
-void UBoarLobbyWidget::ShowTravelError(const FText& Message) { if (StageStatus) StageStatus->SetText(Message); }
+void UBoarLobbyWidget::ShowTravelError(const FText& Message)
+{
+	if (StageStatus) StageStatus->SetText(Message);
+	// 遷移エラーはCLEAR表示より優先して見せます。
+	RefreshStatusBadge(false);
+}
+
+// クリア済みならCLEAR表示、それ以外（未クリア・LOCKED・エラー文）は状態テキストを同じ位置に出します。
+void UBoarLobbyWidget::RefreshStatusBadge(bool bCleared)
+{
+	UWidget* Badge = ResolveLobbyWidget<UWidget>(WidgetTree, ClearBadgeWidgetName);
+	if (!Badge) return;
+	Badge->SetVisibility(bCleared ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	if (StageStatus) StageStatus->SetVisibility(bCleared ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+}
+
+// フォーカス中の開始／戻るボタンの枠を選択テクスチャにします。ホバーし始めたボタンへはフォーカスも移します。
+void UBoarLobbyWidget::UpdateActionHighlight()
+{
+	if (!ButtonSelectedTexture || !ButtonNormalTexture) return;
+	UButton* Buttons[2] = {StartStageButton, CancelButton};
+	bool* Hovered[2] = {&bStartHovered, &bCancelHovered};
+	int32 Active = INDEX_NONE;
+	for (int32 I = 0; I < 2; ++I)
+	{
+		if (!Buttons[I]) continue;
+		const bool bHover = Buttons[I]->IsHovered();
+		if (bHover && !*Hovered[I] && Buttons[I]->GetIsEnabled()) Buttons[I]->SetKeyboardFocus();
+		*Hovered[I] = bHover;
+		if (Buttons[I]->HasAnyUserFocus()) Active = I;
+	}
+	if (Active == HighlightedAction) return;
+	HighlightedAction = Active;
+	UImage* Frames[2] = {ResolveLobbyWidget<UImage>(WidgetTree, StartButtonFrameImageName),
+	                     ResolveLobbyWidget<UImage>(WidgetTree, CancelButtonFrameImageName)};
+	for (int32 I = 0; I < 2; ++I)
+		if (Frames[I]) Frames[I]->SetBrushFromTexture(I == Active ? ButtonSelectedTexture.Get() : ButtonNormalTexture.Get(), false);
+}
 
 void UBoarLobbyWidget::RefreshCarousel()
 {
@@ -306,7 +360,7 @@ void UBoarLobbyWidget::RefreshCarousel()
 		Card->SetVisibility(Stage.bValid ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 		Card->SetRenderTranslation(FVector2D::ZeroVector);
 		Card->SetRenderScale(FVector2D(I == 1 ? 1.f : .72f));
-		Card->SetRenderOpacity(I == 1 ? 1.f : I == 0 ? .58f : .38f);
+		Card->SetRenderOpacity(I == 1 ? 1.f : I == 0 ? PreviousCardOpacity : NextCardOpacity);
 		const bool bUnlocked = Stage.bUnlocked;
 		if (auto* Label = ResolveLobbyWidget<UTextBlock>(WidgetTree, FName(*(Prefix + TEXT("Label")))))
 			Label->SetText(!Stage.bValid
@@ -399,12 +453,12 @@ void UBoarLobbyWidget::AnimateCarousel(float DeltaTime)
 	for (int32 I = 0; I < 3; ++I)
 		if (auto* Card = WidgetTree->FindWidget(Names[I]))
 		{
-			Card->SetRenderTranslation(FVector2D(-SlideDirection * 470.f * A, 0));
+			Card->SetRenderTranslation(FVector2D(-SlideDirection * CarouselSpacing * A, 0));
 			const float From = I == 1 ? 1.f : .72f;
 			const float To = I - SlideDirection == 1 ? 1.f : .72f;
 			Card->SetRenderScale(FVector2D(FMath::Lerp(From, To, A)));
-			Card->SetRenderOpacity(FMath::Lerp(I == 1 ? 1.f : I == 0 ? .58f : .38f,
-			                                   I - SlideDirection == 1 ? 1.f : .38f, A));
+			Card->SetRenderOpacity(FMath::Lerp(I == 1 ? 1.f : I == 0 ? PreviousCardOpacity : NextCardOpacity,
+			                                   I - SlideDirection == 1 ? 1.f : NextCardOpacity, A));
 		}
 	if (T >= 1.f)
 	{

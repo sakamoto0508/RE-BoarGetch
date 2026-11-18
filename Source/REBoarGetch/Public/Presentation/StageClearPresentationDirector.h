@@ -93,6 +93,12 @@ public:
 	/** 分解時にプレイヤーと網から舞い上がるデータ粒子。粒子数・サイズ・速度・揺らぎ・出現遅延はこのNiagara Systemで調整します。未設定なら粒子を出さずに演出を続けます。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX") TObjectPtr<UNiagaraSystem> DataFragmentVFX;
 
+	// ---- UI ----
+	/** 勝利ポーズ開始（PlayVictoryMontage）で出す「STAGE CLEAR!」バナー（WBP_StageClearBanner）。未設定なら出しません。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|UI") TSubclassOf<class UBoarStageClearBannerWidget> BannerWidgetClass;
+	/** 暗転開始時にバナーを消す時間（秒）。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|UI", meta = (ClampMin = "0")) float BannerFadeOutTime = .35f;
+
 	AStageClearPresentationDirector();
 protected:
 	virtual void BeginPlay() override;
@@ -108,6 +114,8 @@ private:
 	void DestroyParticles();
 	void RestoreVisuals();
 	void RestoreCamera();
+	void ShowBanner();
+	void HideBanner(float Duration);
 
 	bool bVictoryShot = false, bMontagePlaying = false, bMontageHeld = false, bFallbackJump = false, bSingleNodePlayback = false;
 	bool bGlowing = false, bDissolving = false, bDissolveFinished = false, bRetreating = false;
@@ -128,4 +136,5 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> DataMID;
 	/** DataFragmentVFXの生成物。自動破棄せず、DestroyParticles()でだけ破棄します。 */
 	UPROPERTY(Transient) TObjectPtr<UNiagaraComponent> FragmentComponent;
+	UPROPERTY(Transient) TObjectPtr<class UBoarStageClearBannerWidget> BannerWidget;
 };

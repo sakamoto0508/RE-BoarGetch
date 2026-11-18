@@ -26,13 +26,17 @@ public class REBoarGetch : ModuleRules
 			"Niagara",
 			"EngineCameras",
 			// 通常TPSカメラ（UBoarGameplayCameraComponent）と演出のACF連携で使用します。
-			"ActionCameraFramework"
+			"ActionCameraFramework",
+			// Level遷移の演出（UBoarLevelTransitionLibrary）で使用します。
+			"ActionCameraFrameworkTransitions",
+			// 遷移の演出の設定（UBoarLevelTransitionSettings）で使用します。
+			"DeveloperSettings"
 		});
 
 		// Editor専用の自動化関数（UBoarUIAuthoringLibrary）だけが使用します。
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMGEditor", "MovieScene", "MovieSceneTracks" });
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMGEditor", "BlueprintGraph","MovieScene", "MovieSceneTracks" });
 		}
 
 		PublicIncludePaths.AddRange(new string[] {

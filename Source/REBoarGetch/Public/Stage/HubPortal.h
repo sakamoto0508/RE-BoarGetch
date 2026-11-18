@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Stage/BoarLevelTransitionLibrary.h"
 #include "HubPortal.generated.h"
 class UBoxComponent;
 UENUM(BlueprintType)
@@ -27,6 +28,10 @@ public:
     UPROPERTY(EditAnywhere, Category="Portal") TObjectPtr<class UBoarLevelDestination> DestinationAsset;
     /** 旧来の直接指定。DestinationAsset が未設定のときだけ使います。 */
     UPROPERTY(EditAnywhere, Category="Portal") TSoftObjectPtr<UWorld> Destination;
+    /** オンにすると、このポータルだけ Transition の演出を使います。オフのときは Project Settings > Game > Boar Level Transitions の Portal。 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Portal|Transition", meta=(InlineEditConditionToggle)) bool bOverrideTransition=false;
+    /** このポータルで遷移するときの演出（Effect、または長さ・色まで調整したPreset）。 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Portal|Transition", meta=(EditCondition="bOverrideTransition")) FBoarLevelTransitionEntry Transition;
     /** Travel時に使う行き先（DestinationAsset優先、無ければDestination）を返します。 */
     TSoftObjectPtr<UWorld> GetTravelDestination() const;
     UPROPERTY(EditInstanceOnly, Category="Portal") TArray<TObjectPtr<AActor>> TestVisualActors;

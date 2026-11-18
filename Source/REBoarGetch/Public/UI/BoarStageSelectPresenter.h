@@ -21,6 +21,8 @@ struct FBoarStageSelectViewData
 	FText Status;
 	FText Progress;
 	int32 TargetCaptureCount = 0;
+	// 特別コインと図鑑（捕獲済み個体）の取得数／総数。Progressと同じ集計を個別表示用に分けて持ちます。
+	int32 CoinsFound = 0, CoinsTotal = 0, BoarsFound = 0, BoarsTotal = 0;
 	bool bValid = false;
 	bool bUnlocked = false;
 	bool bCleared = false;

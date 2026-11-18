@@ -17,6 +17,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Player/BoarPlayerController.h"
+#include "UI/BoarStageClearBannerWidget.h"
 
 AStageClearPresentationDirector::AStageClearPresentationDirector()
 {
@@ -194,6 +195,7 @@ void AStageClearPresentationDirector::PlayVictoryMontage()
 	const float Length = (Anim && VictoryMontage) ? Anim->Montage_Play(VictoryMontage, MontagePlayRate) : 0.f;
 	bMontagePlaying = Length > 0.f;
 	bFallbackJump = !bMontagePlaying;
+	ShowBanner();
 	if (bFallbackJump)
 		UE_LOG(LogTemp, Warning, TEXT("[StageClear] Victory montage unavailable; using fallback hop."));
 }
@@ -442,6 +444,7 @@ void AStageClearPresentationDirector::DestroyParticles()
 
 void AStageClearPresentationDirector::BeginScreenFadeOut(float Duration)
 {
+	HideBanner(BannerFadeOutTime);
 	if (bDissolving && !bDissolveFinished) 
 		FinishDissolve();
 	DestroyParticles();
@@ -524,6 +527,26 @@ void AStageClearPresentationDirector::RestoreVisuals()
 			Anim->Montage_Stop(.1f, VictoryMontage);
 	}
 	DestroyParticles();
+	HideBanner(0.f);
+}
+
+// 勝利の瞬間に「STAGE CLEAR!」バナーを出します（HUDはBeginVictoryShotで非表示済み）。
+void AStageClearPresentationDirector::ShowBanner()
+{
+	if (BannerWidget || !BannerWidgetClass) return;
+	if (APlayerController* PC = GetPresentationController())
+	{
+		BannerWidget = CreateWidget<UBoarStageClearBannerWidget>(PC, BannerWidgetClass);
+		if (BannerWidget) BannerWidget->AddToViewport(50);
+	}
+}
+
+void AStageClearPresentationDirector::HideBanner(float Duration)
+{
+	if (!BannerWidget) return;
+	if (Duration > 0.f) BannerWidget->HideBanner(Duration);
+	else BannerWidget->RemoveFromParent();
+	BannerWidget = nullptr;
 }
 
 void AStageClearPresentationDirector::RestoreCamera()

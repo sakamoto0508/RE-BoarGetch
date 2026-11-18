@@ -58,6 +58,21 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> PreviousStageKeys = { EKeys::Left, EKeys::Gamepad_DPad_Left, EKeys::Gamepad_LeftShoulder };
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> NextStageKeys = { EKeys::Right, EKeys::Gamepad_DPad_Right, EKeys::Gamepad_RightShoulder };
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> CancelKeys = { EKeys::Escape, EKeys::Gamepad_FaceButton_Right };
+	/** 決定キー（フォーカス中のボタンを実行。戻るボタン以外なら開始）。空ならSlate標準の決定（Enter・パッド下ボタン）だけを使います。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> ConfirmKeys;
+	/** カルーセルの隣カードまでの距離（px）と、隣カードの不透明度（前／次）。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0")) float CarouselSpacing = 470.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0", ClampMax = "1")) float PreviousCardOpacity = .58f;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0", ClampMax = "1")) float NextCardOpacity = .38f;
+	/** 特別コイン・図鑑登録の「取得数 / 総数」を表示するTextBlockと、クリア済みのときだけ出すCLEAR表示。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName CoinProgressTextWidgetName;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName EncyclopediaProgressTextWidgetName;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName ClearBadgeWidgetName;
+	/** 開始／戻るボタン背面の枠Image。フォーカス中の方を選択テクスチャにします。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName StartButtonFrameImageName;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName CancelButtonFrameImageName;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") TObjectPtr<class UTexture2D> ButtonSelectedTexture;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") TObjectPtr<class UTexture2D> ButtonNormalTexture;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName StageListWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName StageStatusWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName StageProgressWidgetName;
@@ -119,6 +134,10 @@ private:
 	UFUNCTION() void FocusEncyclopedia();
 	UPROPERTY(Transient) TObjectPtr<UButton> EncyclopediaButton;
 	void ResolveWidgetReferences();
+	void UpdateActionHighlight();
+	void RefreshStatusBadge(bool bCleared);
+	bool bStartHovered = false, bCancelHovered = false;
+	int32 HighlightedAction = INDEX_NONE - 1;
 
 	UFUNCTION()
 	void HandleStartStageClicked();

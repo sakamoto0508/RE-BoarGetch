@@ -68,6 +68,27 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName ClearTimeTextWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName NewBoarCountTextWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName SpecialCoinCountTextWidgetName;
+	/** 表示時に、Clear演出の黒フェードを戻して背後のステージをうっすら見せます（背景の暗さ・ぼかしはWBP側）。0以下なら戻しません。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Reveal", meta = (ClampMin = "0")) float WorldFadeInTime = .6f;
+	/** 順表示の各ステップ（STAGE CLEAR見出し→捕獲数→特別コイン）で出すWidget名。Text_StageClear等のTextBlockが無いステップで、開始時に隠しアニメ無しならフェードします。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Reveal")
+	TArray<FName> RevealStepWidgetNames = { TEXT("HeaderGroup"), TEXT("CaptureRow"), TEXT("DetailRows") };
+	/** 新規登録ボアのカード（UBoarResultBoarCard）の名前。今回NEWの個体を先頭から埋め、余りは未登録スロット表示にします。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References")
+	TArray<FName> BoarCardWidgetNames = { TEXT("BoarCard0"), TEXT("BoarCard1"), TEXT("BoarCard2") };
+	/** 特別コインの「+」と数値。取得0枚は通常色、1枚以上は強調色にします（アンバーは報酬だけに使う）。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName CoinPlusTextWidgetName = TEXT("CoinPlus");
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Format") FLinearColor CoinEarnedColor = FLinearColor(1.f, .58f, .033f, 1.f);
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Format") FLinearColor CoinZeroColor = FLinearColor(.72f, .83f, .9f, 1.f);
+	/** 今回NEWが無いときにカードの代わりに出すTextBlock（文面はNewBoarListEmptyText）。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName NewBoarEmptyTextWidgetName = TEXT("NewBoarEmptyText");
+	/** 終了案内：コントローラー用（PlayStation式）とキーボード・マウス用。最後に使った入力機器の方だけを表示します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName PadGuideWidgetName = TEXT("PadGuide");
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName KeyboardGuideWidgetName = TEXT("KeyboardGuide");
+	/** ステージ表示名（StageConfigのDisplayName）を表示するTextBlockの名前。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName StageNameTextWidgetName = TEXT("StageNameText");
+	/** カード番号の書式。{Number}をStageConfig内の個体順（001〜）に置換します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Format") FText BoarCardNumberFormat = NSLOCTEXT("Result", "CardNumber", "No.{Number}");
 	/** 今回NEWになったBoarの名前一覧を表示するTextBlockの名前。確定済みRunのNewBoarUniqueIdsだけを表示し、Widgetでは再判定しません。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References") FName NewBoarListTextWidgetName;
 	/** NEW一覧の1行。{Name}を図鑑名（StageConfigのEncyclopediaName。未設定ならBoarUniqueId）に置換します。 */
@@ -82,6 +103,7 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual FReply NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
 	/** WBP内で現在の捕獲数を表示するTextBlockの名前を指定します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Result Widget References")
@@ -95,6 +117,14 @@ private:
 	void ResolveWidgetReferences();
 	FText FormatClearTime(float Seconds) const;
 	FText BuildNewBoarList(const FStageRunData& Run) const;
+	/** Runと同じStageIdのStageConfig（無ければnull）。 */
+	const class UStageConfig* FindRunStage(const FStageRunData& Run) const;
+	void FillBoarCards(const FStageRunData& Run) const;
+	/** 入力機器に合わせて終了案内を切り替えます（同じ機器なら何もしません）。 */
+	void SetGuideDevice(bool bGamepad);
+	int32 GuideDevice = INDEX_NONE;
+	/** ステップIの表示対象（Text_*があればそれ、無ければRevealStepWidgetNames[I]）。 */
+	UWidget* GetRevealStepWidget(int32 Index) const;
 	FReply RequestDismiss();
 	void StartReveal();
 	void StartRevealStep(int32 Index);

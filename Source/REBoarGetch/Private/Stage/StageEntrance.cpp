@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Stage/StageConfig.h"
+#include "Stage/BoarLevelTransitionLibrary.h"
 #include "UI/BoarLobbyWidget.h"
 #include "BoarGameInstance.h"
 #include "Player/BoarPlayerController.h"
@@ -196,7 +197,7 @@ void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfi
 	{
 		LobbyWidget->SetIsEnabled(false);
 	}
-	UGameplayStatics::OpenLevelBySoftObjectPtr(this, RequestedStageConfig->Level);
+	UBoarLevelTransitionLibrary::OpenLevelBySoftObjectPtrWithTransition(this, RequestedStageConfig->Level, EBoarLevelTransitionStyle::StageDeparture);
 }
 
 void AStageEntrance::HandleStageSelectionClosed()

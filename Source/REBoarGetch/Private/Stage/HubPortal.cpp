@@ -11,6 +11,7 @@
 #include "Engine/TextRenderActor.h"
 #include "Components/TextRenderComponent.h"
 #include "Stage/BoarLevelDestination.h"
+#include "Stage/BoarLevelTransitionLibrary.h"
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
 #endif
@@ -26,6 +27,7 @@ AHubPortal::AHubPortal()
 	Trigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	Trigger->SetCanEverAffectNavigation(false);
 	Trigger->OnComponentBeginOverlap.AddDynamic(this, &AHubPortal::Enter);
+	Transition.Effect = EACFTransitionEffect::DigitalGlitch;
 }
 
 void AHubPortal::Enter(UPrimitiveComponent*, AActor* Other, UPrimitiveComponent*, int32, bool, const FHitResult&)
@@ -65,7 +67,10 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 	if (bClearTestTargetOnTravel)
 		if (auto* GI = GetGameInstance<UBoarGameInstance>())
 			GI->ClearTestGadget();
-	UGameplayStatics::OpenLevel(this, FName(*PackageName));
+	const FBoarLevelTransitionEntry& Effect = bOverrideTransition
+		? Transition
+		: GetDefault<UBoarLevelTransitionSettings>()->GetEntry(EBoarLevelTransitionStyle::Portal);
+	UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(this, FName(*PackageName), Effect);
 }
 
 TSoftObjectPtr<UWorld> AHubPortal::GetTravelDestination() const

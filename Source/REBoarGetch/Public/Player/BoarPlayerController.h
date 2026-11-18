@@ -35,6 +35,7 @@ UCLASS()
 class REBOARGETCH_API ABoarPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+	bool bLastInputGamepad = false;
 
 public:
 	ABoarPlayerController();
@@ -49,6 +50,11 @@ public:
 	/** 通常TPSカメラのACF Requestを所有します（ACF無効・Preset未設定ならSpringArmカメラのまま）。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
 	TObjectPtr<class UBoarGameplayCameraComponent> GameplayCamera;
+	/** 最後のキー入力がゲームパッドだったか。UIの操作表記（PlayStation式／キーボード）の切り替えにだけ使い、入力処理は変えません。 */
+	UFUNCTION(BlueprintPure, Category = "Input") bool WasLastInputGamepad() const { return bLastInputGamepad; }
+	/** UI側（UI Only入力中のWidget）で受けた入力機器を記録します。 */
+	void NotifyInputDevice(bool bGamepad) { bLastInputGamepad = bGamepad; }
+	virtual bool InputKey(const FInputKeyEventArgs& Params) override;
 	/** 勝利演出中に通常HUDを隠します。 */
 	void SetPlayerHUDHidden(bool bHideHUD);
 	/** GameOver演出中に通常HUDをフェードアウトします（1で元に戻ります）。 */

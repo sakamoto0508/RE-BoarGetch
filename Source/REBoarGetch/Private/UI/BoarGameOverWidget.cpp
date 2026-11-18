@@ -139,6 +139,17 @@ void UBoarGameOverWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 	}
 }
 
+FReply UBoarGameOverWidget::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	if (ConfirmKeys.Contains(InKeyEvent.GetKey()))
+	{
+		if (!InKeyEvent.IsRepeat()) SelectedChoice == 1 ? RequestLobby() : RequestRetry();
+		return FReply::Handled();
+	}
+	if (IgnoredKeys.Contains(InKeyEvent.GetKey())) return FReply::Handled();
+	return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
+}
+
 // 再表示や画面破棄で古いボタン通知が残らないよう解除します。
 void UBoarGameOverWidget::NativeDestruct()
 {

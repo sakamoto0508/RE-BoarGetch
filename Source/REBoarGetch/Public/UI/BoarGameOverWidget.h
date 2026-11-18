@@ -29,6 +29,11 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+	/** 決定キー（PlayStation式の○＝右ボタン）。選択中の項目を実行します。Enter・クリックはSlate標準のまま使えます。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Input") TArray<FKey> ConfirmKeys = { EKeys::Gamepad_FaceButton_Right };
+	/** この画面では使わないキー（PlayStation式の×＝下ボタン）。Slate標準の決定として扱われないよう消費します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "Input") TArray<FKey> IgnoredKeys = { EKeys::Gamepad_FaceButton_Bottom };
 	/** 固定名BindWidgetを使わず、Class Defaultsからボタン名を指定します。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Widget References") FName RetryButtonWidgetName;
 	UPROPERTY(EditDefaultsOnly, Category = "Widget References") FName LobbyButtonWidgetName;

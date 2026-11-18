@@ -99,6 +99,10 @@ FBoarStageSelectViewData UBoarStageSelectPresenter::GetStage(int32 Index) const
 	int32 CoinsFound = 0, BoarsFound = 0;
 	for (FName Id : Coins) if (Save && Save->SpecialCoinIds.Contains(Id)) ++CoinsFound;
 	for (FName Id : Boars) if (Save && Save->CapturedBoarUniqueIds.Contains(Id)) ++BoarsFound;
+	Data.CoinsFound = CoinsFound;
+	Data.CoinsTotal = Coins.Num();
+	Data.BoarsFound = BoarsFound;
+	Data.BoarsTotal = Boars.Num();
 	const FText BoarProgress = Boars.IsEmpty()
 		                           ? NSLOCTEXT("StageSelect", "NoIndividuals", "個体データ未登録")
 		                           : FText::Format(
