@@ -111,6 +111,11 @@ void UBoarHUDWidget::UpdateCaptureCount(int32 CurrentCount, int32 TargetCount)
 // 受け取ったHPを整数表示へ丸めます。ダメージ計算やHPの更新はゲームプレイ側が担当します。
 void UBoarHUDWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 {
+	if (UProgressBar* HealthBar = Cast<UProgressBar>(GetWidgetFromName(TEXT("HealthMeter"))))
+	{
+		HealthBar->SetPercent(MaxHealth > 0.f ? FMath::Clamp(CurrentHealth / MaxHealth, 0.f, 1.f) : 0.f);
+	}
+
 	if (CurrentHealthText)
 	{
 		CurrentHealthText->SetText(FText::AsNumber(FMath::RoundToInt(CurrentHealth)));

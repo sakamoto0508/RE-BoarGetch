@@ -29,7 +29,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Preview") float OrthoWidth = 1250.f;
 	/** 静止画を一度撮影し、以降は同じRenderTargetを返します。 */
 	UTextureRenderTarget2D* CreatePreview();
+	virtual void Tick(float DeltaSeconds) override;
+	/** シェーダーやテクスチャの準備待ちとして、生成後に撮り直しを続ける最短時間（秒）。 */
+	UPROPERTY(EditDefaultsOnly, Category="Preview") float RecaptureDuration = 1.5f;
 private:
+	float RecaptureRemaining = 0.f;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<USceneCaptureComponent2D> Capture;
 	UPROPERTY(Transient) TObjectPtr<UTextureRenderTarget2D> Target;
 };

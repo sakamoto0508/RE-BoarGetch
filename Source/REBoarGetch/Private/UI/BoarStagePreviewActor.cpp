@@ -2,10 +2,14 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "ShaderCompiler.h"
 
 ABoarStagePreviewActor::ABoarStagePreviewActor()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// 生成直後はシェーダー/テクスチャが未準備の場合があるため、短時間だけTickで撮り直します。
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.bTickEvenWhenPaused = true;
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("Root")));
 	Capture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("Capture"));
 	Capture->SetupAttachment(GetRootComponent());
@@ -44,6 +48,8 @@ UTextureRenderTarget2D* ABoarStagePreviewActor::CreatePreview()
 		Mesh->SetVisibleInSceneCaptureOnly(true);
 		if (Part.Material) Mesh->SetMaterial(0, Part.Material);
 		Mesh->RegisterComponent();
+		// 画面外に置くため通常のストリーミングでは低解像度のままになりやすく、先読みを要求します。
+		Mesh->PrestreamTextures(RecaptureDuration + 1.f, false);
 		Capture->ShowOnlyComponent(Mesh);
 		++ValidParts;
 	}
@@ -54,6 +60,28 @@ UTextureRenderTarget2D* ABoarStagePreviewActor::CreatePreview()
 	Target->UpdateResourceImmediate(true);
 	Capture->TextureTarget = Target;
 	Capture->OrthoWidth = OrthoWidth;
-	Capture->CaptureScene(); // 静止モデルなのでプレビュー作成時だけ撮影します。
+	Capture->CaptureScene();
+	// 生成と同じフレームの撮影はデフォルトマテリアルで写ることがあるため、準備完了まで撮り直します。
+	RecaptureRemaining = RecaptureDuration;
+	SetActorTickEnabled(true);
 	return Target;
+}
+
+void ABoarStagePreviewActor::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (!Target)
+	{
+		SetActorTickEnabled(false);
+		return;
+	}
+	Capture->CaptureScene();
+	RecaptureRemaining -= DeltaSeconds;
+	bool bStillCompiling = false;
+#if WITH_EDITOR
+	// PIEではシェーダーが非同期コンパイル中だとデフォルトマテリアルで描画されるため、完了まで待ちます。
+	bStillCompiling = GShaderCompilingManager && GShaderCompilingManager->IsCompiling();
+#endif
+	// 静止モデルなので、準備が整った後は撮影を止めます。
+	if (RecaptureRemaining <= 0.f && !bStillCompiling) SetActorTickEnabled(false);
 }

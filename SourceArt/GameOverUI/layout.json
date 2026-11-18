@@ -1,0 +1,14 @@
+{
+  "title": { "w": 1400, "h": 300, "y": -230 },
+  "button": { "w": 720, "h": 100 },
+  "frame": { "w": 792, "h": 172 },
+  "retry": { "y": 70, "label": "リトライ", "icon": "T_GameOver_IconRetry" },
+  "lobby": { "y": 210, "label": "ロビーへ戻る", "icon": "T_GameOver_IconHome" },
+  "icon": 60,
+  "iconLeft": 64,
+  "labelGap": 40,
+  "fontSize": 40,
+  "blurPx": 2,
+  "tint": 0.06,
+  "crtOpacity": 1.0
+}

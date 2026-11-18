@@ -134,6 +134,52 @@ UWidget* UBoarUIAuthoringLibrary::EnsureWidget(UObject* Object, TSubclassOf<UWid
 	return Widget;
 }
 
+bool UBoarUIAuthoringLibrary::RemoveWidget(UObject* Object, FName WidgetName)
+{
+	UWidgetBlueprint* WBP = Cast<UWidgetBlueprint>(Object);
+	UWidget* Widget = WBP && WBP->WidgetTree ? WBP->WidgetTree->FindWidget(WidgetName) : nullptr;
+	if (!Widget || Widget == WBP->WidgetTree->RootWidget) return false;
+	WBP->Modify();
+	// 子孫も変数としてBPに登録されているので、まとめて名前を解放します。
+	TArray<UWidget*> Removed{Widget};
+	UWidgetTree::GetChildWidgets(Widget, Removed);
+	WBP->WidgetTree->RemoveWidget(Widget);
+	for (UWidget* Child : Removed)
+	{
+		WBP->OnVariableRemoved(Child->GetFName());
+		Child->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
+	}
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
+	return true;
+}
+
+FString UBoarUIAuthoringLibrary::ClearBlueprintGraphs(UObject* Object)
+{
+	UBlueprint* BP = Cast<UBlueprint>(Object);
+	if (!BP) return TEXT("not a blueprint");
+	FString Out;
+	BP->Modify();
+	for (UEdGraph* Graph : BP->UbergraphPages)
+	{
+		if (!Graph) continue;
+		for (UEdGraphNode* Node : TArray<UEdGraphNode*>(Graph->Nodes))
+		{
+			if (!Node) continue;
+			Out += FString::Printf(TEXT("%s: %s\n"), *Graph->GetName(),
+			                       *Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+			FBlueprintEditorUtils::RemoveNode(BP, Node, true);
+		}
+	}
+	for (UEdGraph* Graph : TArray<UEdGraph*>(BP->FunctionGraphs))
+	{
+		if (!Graph) continue;
+		Out += FString::Printf(TEXT("function %s\n"), *Graph->GetName());
+		FBlueprintEditorUtils::RemoveGraph(BP, Graph, EGraphRemoveFlags::Recompile);
+	}
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+	return Out;
+}
+
 bool UBoarUIAuthoringLibrary::ConfigureTextBlockStyle(UObject* Object, FName WidgetName, const FText& Text,
                                                       int32 FontSize, FName Typeface,
                                                       FLinearColor Color, int32 OutlineSize, FLinearColor OutlineColor,

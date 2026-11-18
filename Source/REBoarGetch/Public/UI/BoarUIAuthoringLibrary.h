@@ -36,6 +36,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
 	static UWidget* EnsureWidget(UObject* WidgetBlueprint, TSubclassOf<UWidget> WidgetClass, FName WidgetName, FName ParentPanelName, bool bIsVariable);
 
+	/** 指定Widgetを子ごとWidget Treeから取り除きます。Rootは取り除けません。見つからなければfalse。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static bool RemoveWidget(UObject* WidgetBlueprint, FName WidgetName);
+
+	/** Event Graphの全ノードとユーザー関数グラフを削除し、削除したノード・関数を列挙して返します（処理をC++へ移した画面用）。 */
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
+	static FString ClearBlueprintGraphs(UObject* Blueprint);
+
 	/** CanvasPanelSlot上のWidgetの位置・サイズ・AutoSizeを設定します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|UI")
 	static bool SetCanvasSlotLayout(UObject* WidgetBlueprint, FName WidgetName, FVector2D Position, FVector2D Size, bool bAutoSize);
