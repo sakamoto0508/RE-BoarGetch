@@ -18,37 +18,53 @@ struct RETRORENDER_API FRetroRenderParameters
 	GENERATED_BODY()
 
 	// --- Screen (post process) ---
-	// 0 = smooth, 1 = sample once per virtual pixel.
+	/** 仮想ピクセル化の強さです。0 は元の映像、1 は仮想ピクセル単位で色をサンプリングします。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1)) float Pixelation = 0.f;
-	// 0 = square pixels: columns follow the viewport aspect (240 rows -> 427 cols on 16:9, 320 on 4:3).
+	/** 仮想画面の横方向のピクセル数です。0 では縦解像度と画面比率から計算します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1920)) float PixelResolutionX = 0.f;
+	/** 仮想画面の縦方向のピクセル数です。小さいほど画面のドットが粗くなります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=60, ClampMax=1080)) float PixelResolutionY = 240.f;
-	// 1 = round rows so every virtual pixel covers the same whole number of screen pixels (1080p/240 -> 270 rows).
+	/** オン側にすると、仮想ピクセルが画面上で整数倍の大きさになるよう解像度を調整します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1)) float IntegerScale = 1.f;
+	/** 量子化で残すRGB各チャンネルの階調数です。Color Quantization が強いほど差が見えます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=2, ClampMax=256)) float ColorLevels = 256.f;
-	// Blend between the original and the quantised colour.
+	/** 色の階調を削る量です。0 は元の色、1 は Color Levels に従う量子化色です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1)) float ColorQuantization = 0.f;
+	/** 階調の境目に加えるディザ模様の強さです。0 は無効です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1)) float DitheringStrength = 0.f;
-	// 4 = Bayer 4x4 (PS1 hardware), 8 = Bayer 8x8.
+	/** ディザ模様の行列サイズです。4 は Bayer 4×4、8 は Bayer 8×8 です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=4, ClampMax=8)) float DitherMatrixSize = 4.f;
+	/** 色の鮮やかさです。1 は基準、0 はモノクロです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen") float Saturation = 1.f;
+	/** 明暗差の倍率です。1 は基準で、大きいほど明暗差が強まります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen") float Contrast = 1.f;
+	/** 映像の明るさの倍率です。1 は基準です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen") float Brightness = 1.f;
 	// 0 = one sample per virtual pixel (crisp, aliased), 1 = average of 4 samples inside it (stable, no sparkle).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1)) float PixelFilter = 0.f;
 	// N64 style 3-point filter between virtual pixels.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Screen", meta=(ClampMin=0, ClampMax=1)) float SoftSampling = 0.f;
+	/** 距離フォグが画面にかかる強さです。0 は無効です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Fog", meta=(ClampMin=0, ClampMax=1)) float FogStrength = 0.f;
+	/** 距離フォグがかかり始める距離（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Fog") float FogStart = 1500.f;
+	/** 距離フォグの濃さが最大に達する距離（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Fog") float FogEnd = 9000.f;
+	/** 距離フォグで混ぜる色です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Fog") FLinearColor FogColor = FLinearColor(.72f, .84f, .95f);
 
 	// --- CRT display layer (can be overlaid on any preset) ---
+	/** CRTの走査線の濃さです。0 は無効です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CRT", meta=(ClampMin=0, ClampMax=1)) float ScanlineStrength = 0.f;
+	/** CRTのRGB蛍光体マスクの強さです。0 は無効です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CRT", meta=(ClampMin=0, ClampMax=1)) float PhosphorMask = 0.f;
+	/** CRT画面の湾曲の強さです。0 は平面です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CRT", meta=(ClampMin=0, ClampMax=0.2)) float CRTCurvature = 0.f;
+	/** CRTのRGBチャンネル間の色ずれの強さです。0 は無効です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CRT", meta=(ClampMin=0, ClampMax=4)) float ChromaticAberration = 0.f;
+	/** 色が周囲の画素へにじむ強さです。0 は無効です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CRT", meta=(ClampMin=0, ClampMax=3)) float ColorBleed = 0.f;
+	/** 画面の周辺を暗くする強さです。0 は無効です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="CRT", meta=(ClampMin=0, ClampMax=1)) float VignetteStrength = 0.f;
 
 	// --- Geometry (Material Parameter Collection, read by patched surface materials) ---
@@ -56,6 +72,7 @@ struct RETRORENDER_API FRetroRenderParameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Geometry", meta=(ClampMin=0, ClampMax=1)) float VertexSnapStrength = 0.f;
 	// 0 on X = follow the viewport aspect from SnapResolutionY.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Geometry", meta=(ClampMin=0, ClampMax=1920)) float SnapResolutionX = 160.f;
+	/** 頂点をスナップする仮想グリッドの縦方向の解像度です。小さいほど頂点のガタつきが大きくなります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Geometry", meta=(ClampMin=16, ClampMax=1080)) float SnapResolutionY = 120.f;
 	// Objects with a larger bounds radius (cm) fade out of snapping/affine. Huge 2-triangle ground or wall
 	// boxes would otherwise tilt by tens of cm and expose coplanar geometry underneath. 0 = no limit.
@@ -104,12 +121,12 @@ RETRORENDER_API FRetroRenderParameters MakeDefaultRetroPreset(ERetroRenderPreset
 // Copies the CRT display layer (scanlines, mask, curvature, bleed, vignette) from Source.
 RETRORENDER_API void ApplyRetroCRTLayer(FRetroRenderParameters& Target, const FRetroRenderParameters& Source);
 
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, meta = (ToolTip = "画面のドット感・色・頂点の揺れ・CRT表現を描画プリセットごとに設定します。"))
 class RETRORENDER_API URetroRenderPresetData : public UDataAsset
 {
 	GENERATED_BODY()
 public:
 	URetroRenderPresetData();
-	// Indexed by ERetroRenderPreset (OFF, PS1, N64, PS2, CRT).
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Retro", EditFixedSize) TArray<FRetroRenderParameters> Presets;
+	/** 描画プリセットの設定です。配列の順番は OFF、PS1、N64、PS2、CRT です。変更したいプリセットの要素を開いて調整します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presets (描画プリセット)", EditFixedSize) TArray<FRetroRenderParameters> Presets;
 };

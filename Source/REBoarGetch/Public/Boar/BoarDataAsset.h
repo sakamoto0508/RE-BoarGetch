@@ -324,7 +324,7 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 	FBoarEscapeTurnSettings EscapeTurn;
 };
 
-/** イノシシ種別ごとの調整値をまとめるDataAssetです。 */
+/** イノシシ種別ごとに、行動の優先度、索敵、攻撃、スタミナ、移動と逃走時の旋回を調整します。 */
 UCLASS(BlueprintType)
 class REBOARGETCH_API UBoarDataAsset : public UPrimaryDataAsset
 {
@@ -340,7 +340,7 @@ public:
 	static const FBoarArchetypeSettings& GetDefaultSettings(EBoarArchetype Archetype);
 
 private:
-	/** イノシシ種別をキーとしてAI・戦闘・移動設定を保持します。 */
+	/** 調整したい種別を開き、その種別の行動・戦闘・移動設定を変更します。未登録の種別にはコード上の既定値が使われます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boar", meta = (AllowPrivateAccess = "true"))
 	TMap<EBoarArchetype, FBoarArchetypeSettings> ArchetypeSettings;
 };

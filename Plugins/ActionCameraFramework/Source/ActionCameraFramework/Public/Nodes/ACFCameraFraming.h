@@ -17,9 +17,11 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraScreenComposition
 {
 	GENERATED_BODY()
 
+	/** 画面内で被写体を置く位置です。(0, 0) は画面中央、X が +0.5 で右端、Y が +0.5 で上端です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Composition", meta = (UIMin = "-0.5", UIMax = "0.5"))
 	FVector2D ScreenPosition = FVector2D::ZeroVector;
 
+	/** 被写体が動いても補正しない領域の幅と高さです。1 は画面全体の幅または高さに相当します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Composition", meta = (ClampMin = "0.0", ClampMax = "2.0"))
 	FVector2D DeadZoneSize = FVector2D(0.1f, 0.1f);
 

@@ -41,33 +41,38 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEffectContext
  * effect ends). The stack applies the envelope, weight, scale, attenuation and intensity curve to
  * the raw output and composes all active layers per channel (see EACFCameraEffectBlendMode).
  */
-UCLASS(Abstract, EditInlineNew, DefaultToInstanced, CollapseCategories, BlueprintType)
+UCLASS(Abstract, EditInlineNew, DefaultToInstanced, DontCollapseCategories, BlueprintType)
 class ACTIONCAMERAFRAMEWORK_API UACFCameraEffect : public UObject
 {
 	GENERATED_BODY()
 
 public:
+	/** このレイヤーを再生に含めるかどうかです。オフにすると他のレイヤーとの違いを確認できます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
 	bool bEnabled = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
+	/** 再生開始時の立ち上がり、最大強度の維持、終了時の減衰を設定します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Timing")
 	FACFCameraEffectEnvelope Envelope;
 
 	/** Overrides are applied in ascending priority (the highest ends on top). Additive layers ignore it. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
 	int32 Priority = 0;
 
+	/** このレイヤーの強さの倍率です。1 は設定どおり、0.5 は半分、0 は効果なしです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect", meta = (ClampMin = "0.0"))
 	float Weight = 1.f;
 
+	/** 他のカメラ効果との合成方法です。Additive は加算、Override は上書き、Multiply は乗算です。処理対象は効果の種類によって異なります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
 	EACFCameraEffectBlendMode BlendMode = EACFCameraEffectBlendMode::Additive;
 
 	/** Optional strength over time (seconds since start -> multiplier). Multiplies the envelope. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Timing")
 	TObjectPtr<UCurveFloat> IntensityCurve = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
+	/** 発生源から遠いカメラほどエフェクトを弱める距離設定です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attenuation")
 	FACFCameraEffectAttenuation DistanceAttenuation;
 
 	virtual const UScriptStruct* GetRuntimeStateType() const { return nullptr; }
@@ -95,13 +100,14 @@ public:
  * Reusable camera effect (Cinemachine impulse / noise profile equivalent): one or more layers played
  * together and stopped together through one handle, e.g. "heavy landing" = Impulse + Shake + FOV punch.
  */
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, meta = (ToolTip = "被弾や着地などで、一緒に再生する揺れ・押し戻し・画角変化を設定します。"))
 class ACTIONCAMERAFRAMEWORK_API UACFCameraEffectPreset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Effect")
+	/** 同時に開始するカメラ効果です。例えば、被弾時の押し戻しと揺れを組み合わせられます。 */
+	UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Layers (効果レイヤー)")
 	TArray<TObjectPtr<UACFCameraEffect>> Layers;
 
 #if WITH_EDITOR

@@ -59,6 +59,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEffectEnvelope
 {
 	GENERATED_BODY()
 
+	/** 効果が最大強度に達するまでの秒数です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Envelope", meta = (ClampMin = "0.0", Units = s))
 	float Attack = 0.02f;
 
@@ -66,9 +67,11 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEffectEnvelope
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Envelope", meta = (Units = s))
 	float Sustain = 0.f;
 
+	/** 効果が終了するとき、強度が0になるまでの秒数です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Envelope", meta = (ClampMin = "0.0", Units = s))
 	float Release = 0.25f;
 
+	/** 立ち上がりと減衰に使う補間の形です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Envelope")
 	EACFCameraEnvelopeShape Shape = EACFCameraEnvelopeShape::Smooth;
 
@@ -89,6 +92,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraEffectAttenuation
 {
 	GENERATED_BODY()
 
+	/** 発生源からの距離に応じて効果を弱めるかどうかです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attenuation", meta = (InlineEditConditionToggle))
 	bool bEnabled = false;
 

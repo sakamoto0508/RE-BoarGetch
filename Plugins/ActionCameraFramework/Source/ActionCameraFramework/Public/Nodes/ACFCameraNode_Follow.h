@@ -17,9 +17,11 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_Follow : public UACFCameraNode
 	GENERATED_BODY()
 
 public:
+	/** 追従対象からカメラまでのオフセット（cm）です。基準軸は Offset Space で選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Follow")
 	FVector Offset = FVector(-300.f, 0.f, 150.f);
 
+	/** オフセットの基準です。Target Local は対象の回転に追従し、World はワールド軸に固定します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Follow")
 	EACFCameraOffsetSpace OffsetSpace = EACFCameraOffsetSpace::TargetLocal;
 

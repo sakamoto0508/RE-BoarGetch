@@ -11,6 +11,7 @@ class UCurveFloat;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
 class UMeshComponent;
+class UPostProcessComponent;
 class USpringArmComponent;
 
 /** ガジェット発光の減衰中に一時的に変更したMeshの元Overlayです。 */
@@ -56,6 +57,13 @@ public:
 	/** GameOver UI表示中に残す警告ラインの強さを設定します。 */
 	UFUNCTION(BlueprintCallable, Category = "GameOver Presentation") void SetWarningAlphaForUI(float Alpha = .35f);
 
+	/**
+	 * カメラ（Post Process）のビネット＋減光・彩度低下をFadeInTime秒かけて掛けます。
+	 * 既定では演出開始からCameraDarkenDelay秒後に自動で始まります（BPから早めに呼ぶことも可能）。
+	 * RetroRenderのPost Process（Priority 1000）より上のUnbound Post Processで重ね、Directorの破棄（Retry・Level遷移）で必ず外れます。
+	 */
+	UFUNCTION(BlueprintCallable, Category = "GameOver Presentation") void BeginCameraDarken(float FadeInTime = -1.f);
+
 	/** GameOver UI表示時に呼ばれます（敗北ジングルなど）。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "GameOver Presentation") void OnGameOverUIShown();
 
@@ -83,6 +91,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning", meta = (ToolTip = "装備に掛ける発光Overlay（GlowAmount / GlowColor）。演出専用MIDを作り元Materialは変更しません。")) TObjectPtr<UMaterialInterface> GadgetGlowMaterial;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning") FLinearColor GadgetGlowColor = FLinearColor(.02f, .8f, 1.f);
 
+	// ---- Camera Darken（視界が暗くなる演出） ----
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera Darken") bool bCameraDarken = true;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera Darken", meta = (ClampMin = "0", Units = "s", ToolTip = "演出開始から自動で暗くし始めるまでの秒数（被弾の衝撃波・ヒットストップを見せてから）。負なら自動開始しません。")) float CameraDarkenDelay = .25f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera Darken", meta = (ClampMin = "0.01", Units = "s")) float CameraDarkenFadeIn = 1.2f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera Darken", meta = (ClampMin = "0", ClampMax = "3", ToolTip = "Post ProcessのVignette Intensity（UE既定0.4）。")) float CameraVignetteIntensity = 1.4f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera Darken", meta = (ToolTip = "画面全体に掛ける色（1で変化なし）。少し青みのある減光。")) FLinearColor CameraDarkenTint = FLinearColor(.58f, .6f, .7f);
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera Darken", meta = (ClampMin = "0", ClampMax = "1", ToolTip = "彩度（1で変化なし）。")) float CameraDarkenSaturation = .6f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera Darken", meta = (ToolTip = "RetroRender（1000）より上にします。")) float CameraDarkenPriority = 2000.f;
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	virtual void TickPresentation(float Dt) override;
@@ -96,6 +113,7 @@ private:
 	void UpdateKnockback(float Dt);
 	void UpdateEffects(float Dt);
 	void RestoreGadgetGlow();
+	void UpdateCameraDarken(float Dt);
 
 	// Effect widget values
 	float FlashPeak = 0.f, FlashDuration = .24f, FlashAge = 0.f;
@@ -129,4 +147,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UBoarGameOverEffectWidget> EffectWidget;
 	/** EffectWidgetを生成できないと判明済み。毎フレーム同じErrorを出さないために使います。 */
 	bool bEffectWidgetUnavailable = false;
+	// Camera Darken
+	UPROPERTY(Transient) TObjectPtr<UPostProcessComponent> DarkenPostProcess;
+	bool bDarkenStarted = false; float DarkenAge = 0.f, DarkenFade = 1.2f;
 };

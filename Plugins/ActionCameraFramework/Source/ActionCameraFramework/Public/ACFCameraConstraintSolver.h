@@ -15,6 +15,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraDeoccluderSettings
 {
 	GENERATED_BODY()
 
+	/** オンにすると、障害物で隠れた対象が見えるカメラ位置を探します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deoccluder")
 	bool bEnabled = false;
 
@@ -45,9 +46,11 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraDeoccluderSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deoccluder", meta = (EditCondition = "bEnabled", ClampMin = "0.0", ClampMax = "120.0", Units = deg))
 	float MaxYawOffset = 50.f;
 
+	/** 遮蔽物を避けるために上方向へ回り込む最大角度（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deoccluder", meta = (EditCondition = "bEnabled", ClampMin = "0.0", ClampMax = "60.0", Units = deg))
 	float MaxPitchOffset = 25.f;
 
+	/** 遮蔽物の手前までカメラを寄せられる、元の距離に対する割合です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deoccluder", meta = (EditCondition = "bEnabled", ClampMin = "0.0", ClampMax = "0.95"))
 	float MaxPullIn = 0.6f;
 
@@ -55,6 +58,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraDeoccluderSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deoccluder", meta = (EditCondition = "bEnabled", ClampMin = "0.0", Units = s))
 	float CorrectionDampingTime = 0.3f;
 
+	/** 遮蔽物が解消したあと、元の構図へ戻るときの時定数（秒）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deoccluder", meta = (EditCondition = "bEnabled", ClampMin = "0.0", Units = s))
 	float ReturnDampingTime = 0.7f;
 
@@ -72,6 +76,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraFramingRecoverySettings
 {
 	GENERATED_BODY()
 
+	/** オンにすると、壁判定でカメラが寄ったあとに画角を広げて構図を補います。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Framing Recovery")
 	bool bEnabled = false;
 
@@ -87,12 +92,15 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraFramingRecoverySettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Framing Recovery", meta = (EditCondition = "bEnabled"))
 	bool bKeepPlayerOnScreen = true;
 
+	/** 画面外に出たプレイヤーを収めるためにカメラを回せる最大角度（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Framing Recovery", meta = (EditCondition = "bEnabled", ClampMin = "0.0", ClampMax = "60.0", Units = deg))
 	float MaxPlayerRotation = 20.f;
 
+	/** 画角を広げるときの時定数（秒）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Framing Recovery", meta = (EditCondition = "bEnabled", ClampMin = "0.0", Units = s))
 	float WidenDampingTime = 0.1f;
 
+	/** 画角を元へ狭めるときの時定数（秒）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Framing Recovery", meta = (EditCondition = "bEnabled", ClampMin = "0.0", Units = s))
 	float NarrowDampingTime = 0.6f;
 };

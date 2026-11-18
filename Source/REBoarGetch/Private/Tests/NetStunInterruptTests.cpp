@@ -148,6 +148,8 @@ bool FBoarNetStunInterruptTest::RunTest(const FString& Parameters)
 	FireNotify(NotifyOn);
 	TestTrue(TEXT("Stun前は判定窓が開く"), Net->IsCaptureWindowActive());
 	const float HealthBefore = Player->GetHealthComponent()->GetCurrentHealth();
+	// AKI-163: Stun解除（起き上がり）直後は短い無敵が続く。ここでは解除直後の再被弾ではなく接触経路の中断を検証する。
+	Player->bIsInvincible = false;
 	Boar->BeginChargeHitTracking();	// 被弾は突進中の接触だけ
 	Player->HandleBoarContact(Boar);
 	Boar->EndChargeHitTracking();

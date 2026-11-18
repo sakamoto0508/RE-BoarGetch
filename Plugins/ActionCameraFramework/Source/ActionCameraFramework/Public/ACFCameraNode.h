@@ -186,13 +186,13 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraNodeContext
  * pose produced by the previous one. The first node receives the upstream UE camera pose.
  * Nodes must not advance their state when DeltaTime <= 0 (frame guard contract).
  */
-UCLASS(Abstract, EditInlineNew, DefaultToInstanced, CollapseCategories, BlueprintType)
+UCLASS(Abstract, EditInlineNew, DefaultToInstanced, DontCollapseCategories, BlueprintType)
 class ACTIONCAMERAFRAMEWORK_API UACFCameraNode : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	/** Disabled nodes are skipped (handy while tuning a preset). */
+	/** このノードを評価するかどうかです。オフにすると設定を保持したまま効果を比較できます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Node")
 	bool bEnabled = true;
 

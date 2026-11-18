@@ -11,6 +11,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraFramingSubjectSettings
 {
 	GENERATED_BODY()
 
+	/** この対象をグループ構図の計算に含めるかどうかです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Subject")
 	bool bInclude = false;
 
@@ -18,9 +19,11 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraFramingSubjectSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Subject", meta = (EditCondition = "bInclude"))
 	FVector Offset = FVector::ZeroVector;
 
+	/** この対象がグループの中心と収める範囲に与える重みです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Subject", meta = (EditCondition = "bInclude", ClampMin = "0.0", UIMax = "4.0"))
 	float Weight = 1.f;
 
+	/** 画面内に収める対象の半径（cm）です。大きいほど対象の周囲に余白を取ります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Subject", meta = (EditCondition = "bInclude", ClampMin = "0.0", Units = cm))
 	float Radius = 60.f;
 };

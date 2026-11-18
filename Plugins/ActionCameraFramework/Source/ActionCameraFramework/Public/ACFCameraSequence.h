@@ -133,12 +133,15 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraShotEffect
 {
 	GENERATED_BODY()
 
+	/** ショット開始時に再生するカメラ効果プリセットです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
 	TObjectPtr<UACFCameraEffectPreset> Preset = nullptr;
 
+	/** このショットから再生する効果全体の倍率です。1 は設定どおり、0 は効果なしです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect", meta = (ClampMin = "0.0"))
 	float Scale = 1.f;
 
+	/** 効果をショット終了時、シーケンス終了時、効果自身の終了時のどこまで再生するかを選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
 	EACFCameraShotEffectLifetime Lifetime = EACFCameraShotEffectLifetime::Shot;
 };
@@ -153,6 +156,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraShotTargets
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Targets")
 	EACFCameraShotRole Follow = EACFCameraShotRole::Attacker;
 
+	/** 追従対象に指定するソケット名です。None はActorの位置を使用します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Targets")
 	FName FollowSocket;
 
@@ -160,16 +164,19 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraShotTargets
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Targets")
 	EACFCameraShotRole LookAt = EACFCameraShotRole::Target;
 
+	/** 注視対象に指定するソケット名です。None はActorの位置を使用します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Targets")
 	FName LookAtSocket;
 
-	/** Target Group members (Group Framing). Weight 0 = not in the group. */
+	/** 構図に収める対象としてカウントする Attacker の重みです。0 はグループに追加しません。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Targets", meta = (ClampMin = "0.0"))
 	float AttackerGroupWeight = 0.f;
 
+	/** 構図に収める対象としてカウントする Target の重みです。0 はグループに追加しません。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Targets", meta = (ClampMin = "0.0"))
 	float TargetGroupWeight = 0.f;
 
+	/** グループ構図で各対象を収めるときに見込む半径（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Targets", meta = (ClampMin = "0.0", Units = cm))
 	float GroupRadius = 80.f;
 };
@@ -219,32 +226,36 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraShot
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
 	TObjectPtr<UACFCameraPreset> Preset = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
+	/** ショットを終了する条件です。Duration は設定秒数で進み、Wait For Event はイベントかタイムアウトで進みます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timing")
 	EACFCameraShotAdvanceMode AdvanceMode = EACFCameraShotAdvanceMode::Duration;
 
 	/** Seconds of sequence time (Duration mode) / safety timeout (Wait For Event, 0 = none). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot", meta = (ClampMin = "0.0", Units = s))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timing", meta = (ClampMin = "0.0", Units = s))
 	float Duration = 1.f;
 
 	/** Transition INTO this shot (Cut or blend from the previous shot / the gameplay camera for the first shot). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timing")
 	FACFCameraBlendSettings BlendIn;
 
 	/** Added to the playback priority (lets one shot sit above / below the others, e.g. under a boss intro). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
 	int32 PriorityOffset = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
+	/** 追従と注視に使うActorの役割、ソケット、グループ構図の重みを指定します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Targets")
 	FACFCameraShotTargets Targets;
 
 	/** Collision node's Deoccluder for this shot (if the preset has one). Off keeps a staged composition untouched. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
 	bool bEnableDeoccluder = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
+	/** 壁際などで構図を作れない場合に、別プリセットを再生するかショットを飛ばすかを設定します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
 	FACFCameraShotFallback Fallback;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
+	/** ショット開始と同時に再生するカメラ効果です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TArray<FACFCameraShotEffect> Effects;
 
 	FACFCameraShot()
@@ -257,42 +268,45 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraShot
  * Data asset: an ordered list of shots plus how the playback starts / ends. Shared and immutable at runtime; every
  * playback keeps its own state (FACFCameraSequencePlayback), so several local players can play it at once.
  */
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, meta = (ToolTip = "複数のカメラショットを順に再生する演出です。各ショットの構図、再生時間、カメラ効果を設定します。"))
 class ACTIONCAMERAFRAMEWORK_API UACFCameraSequence : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sequence")
+	/** 配列の上から順に再生します。要素の Name を付けると、一覧や Jump To Shot でショットを識別できます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shots (ショット一覧)", meta = (TitleProperty = "Name"))
 	TArray<FACFCameraShot> Shots;
 
-	/** Request priority of the shots (+ each shot's offset). High so gameplay cameras (lock-on ...) are overridden. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sequence")
+	/** カメラリクエストの基準優先度です。各ショットの Priority Offset を加え、優先度の高いリクエストが表示されます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback (再生制御)")
 	int32 Priority = 1000;
 
-	/** Back to the previous camera (lock-on, gameplay camera or UE camera) after the last shot / Finish. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sequence")
+	/** 最後のショットを終えたときや Finish を呼んだときに、元のカメラへ戻るブレンドです。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Return (元のカメラに戻る)")
 	FACFCameraBlendSettings ReturnBlend;
 
-	/** Back to the previous camera on Cancel (default: cut). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sequence")
+	/** Cancel で途中終了したときに、元のカメラへ戻るブレンドです。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Return (元のカメラに戻る)")
 	FACFCameraBlendSettings CancelBlend;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sequence")
+	/** 優先度の高いカメラに画面を譲った間、再生を進めるか、時間を止めるか、終了するかを選びます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback (再生制御)")
 	EACFCameraSequenceInterruptPolicy InterruptPolicy = EACFCameraSequenceInterruptPolicy::Continue;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sequence")
+	/** 攻撃側・被攻撃側のActorが破棄されたときの処理です。Finish は Return Blend、Cancel は Cancel Blend でカメラを戻します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback (再生制御)")
 	EACFCameraSequenceActorLostPolicy ActorLostPolicy = EACFCameraSequenceActorLostPolicy::Finish;
 
 	/**
 	 * Multiply sequence time by the attacker's Custom Time Dilation (hit-stop on the attacker also freezes the camera
 	 * timing, like its montage).
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sequence")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback (再生制御)")
 	bool bUseAttackerTimeDilation = true;
 
 	/** Attacker / target never push the camera (added to the shots' Collision Ignored Actors). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sequence")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback (再生制御)")
 	bool bCollisionIgnoresRoleActors = true;
 
 	UACFCameraSequence()

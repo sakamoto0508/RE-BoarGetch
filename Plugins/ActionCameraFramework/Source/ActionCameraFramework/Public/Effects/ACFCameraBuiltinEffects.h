@@ -17,12 +17,15 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraEffect_Punch : public UACFCameraEffect
 public:
 	UACFCameraEffect_Punch();
 
+	/** カメラ位置に加えるオフセット（cm）です。軸は Space で選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Punch")
 	FVector Location = FVector(-30.f, 0.f, 0.f);
 
+	/** パンチの位置オフセットをカメラ軸またはワールド軸で指定します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Punch")
 	EACFCameraEffectSpace Space = EACFCameraEffectSpace::Camera;
 
+	/** カメラの向きに加える回転量（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Punch")
 	FRotator Rotation = FRotator::ZeroRotator;
 
@@ -57,6 +60,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recoil", meta = (Units = cm))
 	float KickBack = 12.f;
 
+	/** 反動でカメラが上向きに跳ねる角度（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recoil", meta = (Units = cm))
 	float KickUp = 2.f;
 
@@ -68,6 +72,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recoil", meta = (ClampMin = "0.0", Units = deg))
 	float YawSpread = 0.8f;
 
+	/** 再生ごとに選ぶランダムなロール角の最大幅です。実際の角度はこの値の負から正の範囲です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recoil", meta = (ClampMin = "0.0", Units = deg))
 	float RollSpread = 1.f;
 
@@ -111,15 +116,19 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraEffect_Impulse : public UACFCameraEffe
 public:
 	UACFCameraEffect_Impulse();
 
+	/** 衝撃がカメラを押す方向の決め方です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse")
 	EACFCameraImpulseDirection DirectionMode = EACFCameraImpulseDirection::AwayFromSource;
 
+	/** 方向を固定する場合に使用するベクトルです。基準軸は Space で選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse")
 	FVector FixedDirection = FVector(0.f, 0.f, -1.f);
 
+	/** 固定方向を指定する座標系です。World はワールド軸、Camera はカメラ軸です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse")
 	EACFCameraEffectSpace Space = EACFCameraEffectSpace::World;
 
+	/** 衝撃でカメラを移動させる振幅（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse", meta = (Units = cm))
 	float Amplitude = 25.f;
 
@@ -164,12 +173,15 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraEffect_Shake : public UACFCameraEffect
 public:
 	UACFCameraEffect_Shake();
 
+	/** 再生する UE Camera Shake のクラスです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shake")
 	TSubclassOf<UCameraShakeBase> ShakeClass;
 
+	/** UE Camera Shake に渡す強度倍率です。1 はクラスの設定どおりです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shake", meta = (ClampMin = "0.0"))
 	float ShakeScale = 1.f;
 
+	/** 揺れをカメラとワールドのどちらの座標系で再生するかを選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shake")
 	ECameraShakePlaySpace PlaySpace = ECameraShakePlaySpace::CameraLocal;
 
@@ -209,6 +221,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speed FOV", meta = (ClampMin = "0.0"))
 	float MinSpeed = 300.f;
 
+	/** 画角の変化が最大に達する速度（cm/s）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speed FOV", meta = (ClampMin = "0.0"))
 	float MaxSpeed = 1200.f;
 
@@ -220,6 +233,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speed FOV", meta = (Units = deg))
 	float MinFOV = 30.f;
 
+	/** 速度連動の効果を適用したあとの水平画角の上限（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speed FOV", meta = (Units = deg))
 	float MaxFOV = 110.f;
 
@@ -227,9 +241,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speed FOV", meta = (ClampMin = "0.0", Units = s))
 	float RiseTime = 0.25f;
 
+	/** 減速で画角を狭めるときの時定数（秒）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speed FOV", meta = (ClampMin = "0.0", Units = s))
 	float FallTime = 0.5f;
 
+	/** オンにするとジャンプや落下の上下速度を画角補正の計算から外します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speed FOV")
 	bool bIgnoreVerticalSpeed = true;
 
@@ -257,6 +273,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Roll")
 	float RollPerLateralSpeed = 0.006f;
 
+	/** この効果でカメラが傾く最大角度（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Roll", meta = (ClampMin = "0.0", Units = deg))
 	float MaxRoll = 6.f;
 
@@ -264,6 +281,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Roll", meta = (ClampMin = "0.0", Units = s))
 	float ResponseTime = 0.2f;
 
+	/** 傾きが小さくなるときの時定数（秒）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Roll", meta = (ClampMin = "0.0", Units = s))
 	float ReturnTime = 0.4f;
 

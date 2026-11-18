@@ -73,69 +73,75 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_SpiralOrbit : public UACFCameraNo
 
 public:
 	/** Offset added to the focus target location (world space). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Focus")
 	FVector FocusOffset = FVector::ZeroVector;
 
 	/** Damping of the focus point when the focus target moves (0 = rigid). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (ClampMin = "0.0", UIMax = "1.0", Units = s))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Focus", meta = (ClampMin = "0.0", UIMax = "1.0", Units = s))
 	float FocusDampingTime = 0.12f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit")
+	/** 公転を開始する水平角の基準です。Control Rotation は操作方向、Follow Target は中心から見た追従対象の方向、World は固定のワールド角です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit")
 	EACFCameraSpiralStart StartMode = EACFCameraSpiralStart::ControlRotation;
 
 	/** Added to the start yaw (degrees). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (Units = deg))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (Units = deg))
 	float StartAngleOffset = 0.f;
 
-	/** Total orbit angle (360 = one full turn around the focus). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (ClampMin = "0.0", UIMax = "720.0", Units = deg))
+	/** 螺旋全体で公転する角度（度）です。360で1周、180で半周です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "0.0", UIMax = "720.0", Units = deg))
 	float RotationDegrees = 360.f;
 
 	/** +1 = counter-clockwise seen from above, -1 = clockwise. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (ClampMin = "-1", ClampMax = "1"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "-1", ClampMax = "1"))
 	int32 Direction = 1;
 
-	/** Seconds (camera time) for the whole spiral. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (ClampMin = "0.05", UIMax = "5.0", Units = s))
+	/** 螺旋の開始から終了までの秒数です。同じ回転角で短くすると速く回ります。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "0.05", UIMax = "5.0", Units = s))
 	float Duration = 1.6f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (ClampMin = "10.0", Units = cm))
+	/** 公転開始時の中心からの水平距離（cm）です。大きいほど引きの画から始まります。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Path", meta = (ClampMin = "10.0", Units = cm))
 	float RadiusStart = 300.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (ClampMin = "10.0", Units = cm))
+	/** 公転終了時の中心からの水平距離（cm）です。開始値より大きくすると公転しながら引きます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Path", meta = (ClampMin = "10.0", Units = cm))
 	float RadiusEnd = 340.f;
 
 	/** Camera height above the focus at the start (may be negative = slightly below the subject). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (Units = cm))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Path", meta = (Units = cm))
 	float HeightStart = 10.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (Units = cm))
+	/** 公転終了時の中心からの高さ（cm）です。開始値より大きくすると公転しながら上昇します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Path", meta = (Units = cm))
 	float HeightEnd = 260.f;
 
 	/** Angle progress over normalized time (0..1 -> 0..1). Empty = ease in-out (Angle Ease Exponent). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Curves")
 	TObjectPtr<UCurveFloat> AngleCurve = nullptr;
 
 	/** Exponent of the built-in ease in-out of the angle when Angle Curve is empty (1 = constant speed). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (ClampMin = "1.0", UIMax = "4.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Curves", meta = (ClampMin = "1.0", UIMax = "4.0"))
 	float AngleEaseExponent = 1.6f;
 
 	/** Height progress over normalized time (0..1 -> 0..1). Empty = smooth step. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Curves")
 	TObjectPtr<UCurveFloat> HeightCurve = nullptr;
 
 	/** Radius progress over normalized time (0..1 -> 0..1). Empty = linear. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Curves")
 	TObjectPtr<UCurveFloat> RadiusCurve = nullptr;
 
 	/** The camera looks at Focus + this (e.g. slightly above the subject's centre). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Focus")
 	FVector LookAtOffset = FVector::ZeroVector;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (InlineEditConditionToggle))
+	/** オンにすると公転中の画角に下の Field Of View を使います。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lens", meta = (InlineEditConditionToggle))
 	bool bOverrideFieldOfView = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spiral Orbit", meta = (EditCondition = "bOverrideFieldOfView", UIMin = "5.0", UIMax = "170", ClampMin = "0.001", ClampMax = "360.0", Units = deg))
+	/** 公転中の水平画角（度）です。大きいほど広い範囲が映ります。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lens", meta = (EditCondition = "bOverrideFieldOfView", UIMin = "5.0", UIMax = "170", ClampMin = "0.001", ClampMax = "360.0", Units = deg))
 	float FieldOfView = 70.f;
 
 	virtual EACFCameraNodeStage GetStage() const override { return EACFCameraNodeStage::Body; }

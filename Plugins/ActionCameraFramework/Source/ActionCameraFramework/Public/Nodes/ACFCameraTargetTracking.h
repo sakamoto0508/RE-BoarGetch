@@ -41,9 +41,11 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraPositionDamping
 {
 	GENERATED_BODY()
 
+	/** 各軸の追従の時定数（秒）です。0 は即時追従し、大きいほどゆっくり追従します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damping", meta = (ClampMin = "0.0", UIMax = "2.0"))
 	FVector Time = FVector::ZeroVector;
 
+	/** XYZ の追従をどの座標軸で計算するかを選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damping")
 	EACFCameraDampingSpace Space = EACFCameraDampingSpace::World;
 
@@ -63,7 +65,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraLookaheadSettings
 {
 	GENERATED_BODY()
 
-	/** Seconds ahead to predict (0 = off). */
+	/** 各軸の追従の時定数（秒）です。0 は即時追従し、大きいほどゆっくり追従します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lookahead", meta = (ClampMin = "0.0", UIMax = "1.0", Units = s))
 	float Time = 0.f;
 
@@ -94,6 +96,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraTargetMotionSettings
 {
 	GENERATED_BODY()
 
+	/** 追従・注視する対象を取得できなくなったときの処理です。Hold Last Known は最後の位置を使用します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target")
 	EACFCameraTargetLostBehavior LostBehavior = EACFCameraTargetLostBehavior::HoldLastKnown;
 
@@ -105,6 +108,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraTargetMotionSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target", meta = (ClampMin = "0.0", Units = cm))
 	float TeleportDistance = 1000.f;
 
+	/** 対象の移動から将来の位置を予測し、カメラの追従・注視を先回りさせる設定です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target")
 	FACFCameraLookaheadSettings Lookahead;
 };

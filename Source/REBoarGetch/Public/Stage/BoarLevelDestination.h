@@ -15,7 +15,7 @@ class REBOARGETCH_API UBoarLevelDestination : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
-	/** 遷移先のLevel。 */
+	/** このアセットを参照する全ポータルの移動先マップです。差し替えると共通の行き先が切り替わります。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Destination")
 	TSoftObjectPtr<UWorld> Level;
 

@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/PostProcessComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Curves/CurveFloat.h"
 #include "Engine/World.h"
@@ -459,6 +460,46 @@ void AGameOverPresentationDirector::TickPresentation(float Dt)
 		UpdateCamera(Dt);
 	
 	UpdateEffects(Dt);
+	UpdateCameraDarken(Dt);
+}
+
+void AGameOverPresentationDirector::BeginCameraDarken(float FadeInTime)
+{
+	if (bDarkenStarted)
+		return;
+	bDarkenStarted = true;
+	DarkenAge = 0.f;
+	DarkenFade = FMath::Max(.01f, FadeInTime > 0.f ? FadeInTime : CameraDarkenFadeIn);
+	// カメラ（どのViewTargetでも）に効くUnbound Post Process。SpringArm演出・ACFどちらのカメラでも同じ見え方になる。
+	DarkenPostProcess = NewObject<UPostProcessComponent>(this, NAME_None, RF_Transient);
+	DarkenPostProcess->bUnbound = true;
+	DarkenPostProcess->Priority = CameraDarkenPriority;
+	DarkenPostProcess->BlendWeight = 0.f;
+	FPostProcessSettings& S = DarkenPostProcess->Settings;
+	S.bOverride_VignetteIntensity = true;
+	S.VignetteIntensity = CameraVignetteIntensity;
+	S.bOverride_SceneColorTint = true;
+	S.SceneColorTint = CameraDarkenTint;
+	S.bOverride_ColorSaturation = true;
+	S.ColorSaturation = FVector4(CameraDarkenSaturation, CameraDarkenSaturation, CameraDarkenSaturation, 1.f);
+	DarkenPostProcess->RegisterComponent();
+}
+
+void AGameOverPresentationDirector::UpdateCameraDarken(float Dt)
+{
+	if (!bCameraDarken)
+		return;
+	if (!bDarkenStarted)
+	{
+		if (CameraDarkenDelay >= 0.f && GetPresentationAge() >= CameraDarkenDelay)
+			BeginCameraDarken();
+		return;
+	}
+	if (!DarkenPostProcess)
+		return;
+	DarkenAge += Dt;
+	// 視界がゆっくり狭まって暗くなる（Ease In-Out）。GameOver UI表示中もこの暗さを保つ。
+	DarkenPostProcess->BlendWeight = FMath::SmoothStep(0.f, 1.f, DarkenAge / DarkenFade);
 }
 
 void AGameOverPresentationDirector::EndPlay(const EEndPlayReason::Type Reason)
@@ -492,5 +533,12 @@ void AGameOverPresentationDirector::EndPlay(const EEndPlayReason::Type Reason)
 	if (EffectWidget)
 		EffectWidget->RemoveFromParent();
 	EffectWidget = nullptr;
+	// Retry・Level遷移で暗転を残さない。
+	if (DarkenPostProcess)
+	{
+		DarkenPostProcess->BlendWeight = 0.f;
+		DarkenPostProcess->DestroyComponent();
+		DarkenPostProcess = nullptr;
+	}
 	Super::EndPlay(Reason);
 }

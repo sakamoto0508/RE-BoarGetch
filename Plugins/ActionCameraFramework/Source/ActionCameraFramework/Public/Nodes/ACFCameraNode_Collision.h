@@ -43,37 +43,40 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_Collision : public UACFCameraNode
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision", meta = (ClampMin = "0.0", Units = cm))
+	/** 壁や地面を調べる球の半径（cm）です。大きくするとカメラが障害物から離れやすくなります。0 は線で調べます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Probe", meta = (ClampMin = "0.0", Units = cm))
 	float ProbeRadius = 12.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision")
+	/** 障害物として扱うトレースチャンネルです。Camera を使う場合、対象メッシュの Camera 応答を Block にします。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Probe")
 	TEnumAsByte<ECollisionChannel> ProbeChannel = ECC_Camera;
 
-	/** The camera never gets closer to the pivot than this (unless the desired camera is closer). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision", meta = (ClampMin = "0.0", Units = cm))
+	/** 障害物で押し込まれる際に、公転中心から保つ最小距離（cm）です。元のカメラ位置がそれより近い場合は元の距離を優先します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Probe", meta = (ClampMin = "0.0", Units = cm))
 	float MinDistance = 20.f;
 
-	/** Smoothing when an obstacle pushes the camera in. 0 = instant (recommended: no wall clipping). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision", meta = (ClampMin = "0.0", UIMax = "0.5", Units = s))
+	/** 壁が迫ったときにカメラを手前へ寄せる時定数（秒）です。0 は即座に寄せます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damping", meta = (ClampMin = "0.0", UIMax = "0.5", Units = s))
 	float PullInDampingTime = 0.f;
 
-	/** Smoothing when the obstacle is gone and the camera moves back to its desired distance. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision", meta = (ClampMin = "0.0", UIMax = "2.0", Units = s))
+	/** 障害物がなくなりカメラが本来の距離に戻るときの時定数（秒）です。大きいほどゆっくり離れます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damping", meta = (ClampMin = "0.0", UIMax = "2.0", Units = s))
 	float ReturnDampingTime = 0.35f;
 
 	/** Ignore the actor that owns the pivot (the follow target), so the character never blocks its own camera. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ignored Actors")
 	bool bIgnorePivotActor = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision")
+	/** オンにすると注視対象のActorを壁判定から外します。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ignored Actors")
 	bool bIgnoreLookAtTargetActor = false;
 
 	/** Ignore the pawn controlled by this player (and its attached actors). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ignored Actors")
 	bool bIgnoreControlledPawn = true;
 
 	/** Sweep origin when the rig publishes no pivot (e.g. Fixed Pose only): follow target + this offset. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Collision")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Probe")
 	FVector FallbackOriginOffset = FVector(0.f, 0.f, 60.f);
 
 	/**

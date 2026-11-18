@@ -34,15 +34,19 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_RotationComposer : public UACFCam
 	GENERATED_BODY()
 
 public:
+	/** 画面上の構図に収める注視対象の取得元です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rotation Composer")
 	EACFCameraLookAtSource TargetSource = EACFCameraLookAtSource::LookAtTarget;
 
+	/** 対象から構図の基準点までのオフセット（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rotation Composer")
 	FVector TargetOffset = FVector::ZeroVector;
 
+	/** Target Offset をワールド軸と対象のローカル軸のどちらで指定するかを選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rotation Composer")
 	EACFCameraOffsetSpace OffsetSpace = EACFCameraOffsetSpace::World;
 
+	/** 画面内の目標位置と、対象がそこから動いたときに補正を始める範囲です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rotation Composer")
 	FACFCameraScreenComposition Composition;
 
@@ -87,15 +91,19 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_PositionComposer : public UACFCam
 	GENERATED_BODY()
 
 public:
+	/** 対象から構図の基準点までのオフセット（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position Composer")
 	FVector TargetOffset = FVector::ZeroVector;
 
+	/** Target Offset をワールド軸と対象のローカル軸のどちらで指定するかを選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position Composer")
 	EACFCameraOffsetSpace OffsetSpace = EACFCameraOffsetSpace::World;
 
+	/** カメラから対象までの目標距離（cm）です。大きいほど引きの画になります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position Composer", meta = (ClampMin = "1.0", Units = cm))
 	float CameraDistance = 800.f;
 
+	/** 画面内の目標位置と、対象がそこから動いたときに補正を始める範囲です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position Composer")
 	FACFCameraScreenComposition Composition;
 
