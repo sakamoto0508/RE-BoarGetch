@@ -30,6 +30,7 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_LookAt : public UACFCameraNode
 	GENERATED_BODY()
 
 public:
+	/** どの対象を注視するかを選びます。Look At Target はリクエストの注視対象、Follow Target は追従対象です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Look At")
 	EACFCameraLookAtSource TargetSource = EACFCameraLookAtSource::LookAtTarget;
 
@@ -37,6 +38,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Look At")
 	FVector TargetOffset = FVector::ZeroVector;
 
+	/** Target Offset の基準です。World はワールド軸、Target Local は対象の回転に合わせた軸です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Look At")
 	EACFCameraOffsetSpace OffsetSpace = EACFCameraOffsetSpace::World;
 
@@ -44,6 +46,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Look At", meta = (ClampMin = "0.0", UIMax = "2.0", Units = s))
 	float DampingTime = 0.f;
 
+	/** 注視対象の消失、テレポート、移動方向の先読みを調整します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Look At")
 	FACFCameraTargetMotionSettings TargetMotion;
 

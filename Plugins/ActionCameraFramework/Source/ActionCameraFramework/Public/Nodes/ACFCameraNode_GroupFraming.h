@@ -73,9 +73,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Subjects")
 	FACFCameraFramingSubjectSettings LookAtTargetSubject;
 
+	/** 複数の被写体を画面に収めるため、距離と画角のどちらをどう補正するかを選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Framing")
 	EACFCameraGroupFramingMode Mode = EACFCameraGroupFramingMode::DistanceThenFieldOfView;
 
+	/** 被写体が枠から出るときだけ補正するか、枠を満たすようにも補正するかを選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Framing")
 	EACFCameraGroupFramingPolicy Policy = EACFCameraGroupFramingPolicy::KeepInside;
 
@@ -95,9 +97,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Framing", meta = (ClampMin = "0.0", Units = cm))
 	float NearClearance = 30.f;
 
+	/** グループ構図で使用する水平画角の下限（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Framing", meta = (ClampMin = "5.0", ClampMax = "170.0", Units = deg))
 	float MinFieldOfView = 30.f;
 
+	/** グループ構図で使用する水平画角の上限（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Framing", meta = (ClampMin = "5.0", ClampMax = "170.0", Units = deg))
 	float MaxFieldOfView = 100.f;
 

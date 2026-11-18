@@ -91,6 +91,23 @@ void UBoarAudioManagerSubsystem::PlaySoundEffect2D(
 		FMath::Max(0.01f, PitchMultiplier));
 }
 
+UAudioComponent* UBoarAudioManagerSubsystem::SpawnSoundEffect2D(
+	UObject* WorldContextObject, USoundBase* Sound, float VolumeMultiplier, float PitchMultiplier)
+{
+	if (!WorldContextObject || !Sound)
+		return nullptr;
+
+	UAudioComponent* Component = UGameplayStatics::CreateSound2D(
+		WorldContextObject, Sound, MasterVolume * SoundEffectVolume * FMath::Max(0.f, VolumeMultiplier),
+		FMath::Max(.01f, PitchMultiplier));
+	if (Component)
+	{
+		Component->bIsUISound = false;
+		Component->Play();
+	}
+	return Component;
+}
+
 void UBoarAudioManagerSubsystem::PlaySoundEffectAtLocation(
 	UObject* WorldContextObject,
 	USoundBase* Sound,

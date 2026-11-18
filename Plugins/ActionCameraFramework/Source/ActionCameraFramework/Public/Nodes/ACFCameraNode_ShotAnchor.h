@@ -57,9 +57,11 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_ShotAnchor : public UACFCameraNod
 	GENERATED_BODY()
 
 public:
+	/** カメラを置く基準点を、追従対象、注視対象、両者の中間から選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shot Anchor")
 	EACFCameraShotAnchorPoint AnchorPoint = EACFCameraShotAnchorPoint::Between;
 
+	/** Anchor Point が Between のときの基準点です。0 は追従対象、1 は注視対象、0.5 は中央です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shot Anchor", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "AnchorPoint == EACFCameraShotAnchorPoint::Between"))
 	float BetweenAlpha = 0.5f;
 
@@ -67,6 +69,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shot Anchor")
 	FVector AnchorOffset = FVector(0.f, 0.f, 80.f);
 
+	/** カメラ位置のオフセットを測る軸を選びます。Line Of Action は追従対象から注視対象に向かう軸です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shot Anchor")
 	EACFCameraShotAnchorBasis Basis = EACFCameraShotAnchorBasis::LineOfAction;
 
@@ -86,9 +89,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shot Anchor")
 	bool bAimAtAnchor = true;
 
+	/** オンにすると下の Field Of View を使用します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shot Anchor", meta = (InlineEditConditionToggle))
 	bool bOverrideFieldOfView = true;
 
+	/** このショットの水平画角（度）です。大きいほど広い範囲が映ります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shot Anchor", meta = (EditCondition = "bOverrideFieldOfView", UIMin = "5.0", UIMax = "170", ClampMin = "0.001", ClampMax = "360.0", Units = deg))
 	float FieldOfView = 60.f;
 

@@ -8,6 +8,7 @@
 #include "Component/HealthComponent.h"
 #include "Component/GadgetComponent.h"
 #include "Component/CaptureComponent.h"
+#include "Component/PlayerHitReactionComponent.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -23,7 +24,8 @@
 
 ABoarPlayerCharacter::ABoarPlayerCharacter()
 {
-	// Tickは空中アミ捕獲中の急降下制御だけに使う（非実行時は即return）。
+	// Tickはダッシュスタミナの消費・回復と、空中アミ捕獲中の急降下制御に使う。
+	// Pause中はTickしない（bTickEvenWhenPaused=false）ため、回復待ち時間も進まない。
 	PrimaryActorTick.bCanEverTick = true;
 
 	// 空中アミ捕獲のAnimation既定値。BP_PlayerCharacterのClass Defaultsで差し替え可能。
@@ -51,6 +53,8 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 	GadgetComponent = CreateDefaultSubobject<UGadgetComponent>(TEXT("GadgetComponent"));
 	CaptureComponent = CreateDefaultSubobject<UCaptureComponent>(TEXT("CaptureComponent"));
+	// 被弾・Stunの演出はGameplay結果のEventを受けて再生する（AKI-163）。
+	HitReactionComponent = CreateDefaultSubobject<UPlayerHitReactionComponent>(TEXT("HitReactionComponent"));
 
 	/// TPS移動の基本設定
 	bUseControllerRotationPitch = false;
@@ -80,9 +84,23 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	GetCharacterMovement()->AirControl = AirControl;
 }
 
+void ABoarPlayerCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	// BP側でMaxStaminaを上書きしていても、開始時は満タンから始める。
+	// OnPossessがBeginPlayより先に来てもHUDが正しい初期値を受け取れるよう、ここで確定させる。
+	CurrentStamina = MaxStamina;
+	TimeSinceStaminaDrain = StaminaRegenDelay;
+	bDashExhausted = false;
+}
+
 void ABoarPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 購読済みの表示側へ初期値を確実に届ける。
+	BroadcastStaminaChanged(true);
 
 	// 接触判定のイベント登録。
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
@@ -125,6 +143,8 @@ bool ABoarPlayerCharacter::InitializeForPlay(const FBoarGadgetLoadoutContext& Co
 void ABoarPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	TickStamina(DeltaSeconds);
 
 	if (AirNetDropPhase != EAirNetDropPhase::None)
 	{
@@ -454,23 +474,139 @@ void ABoarPlayerCharacter::StartDash()
 {
 	if (!CanUseMovementActions())
 		return;
+	// Dash入力のStarted（押した瞬間）からだけ呼ばれる。スタミナ切れで拒否した入力は、
+	// 押し続けても再試行されないため、回復後も押し直しが必要になる。
+	if (!CanStartDash())
+		return;
 
 	bIsDashing = true;
-	if (UCharacterMovementComponent* Move = GetCharacterMovement())
-	{
-		Move->MaxWalkSpeed = DashSpeed;
-	}
+	ApplyGroundMoveSpeed();
 	UpdateGroundActionState(bHadMoveInput);
 }
 
 void ABoarPlayerCharacter::StopDash()
 {
 	bIsDashing = false;
+	ApplyGroundMoveSpeed();
+	UpdateGroundActionState(bHadMoveInput);
+}
+
+//-------------------------------------------------
+// Dash Stamina
+//-------------------------------------------------
+
+void ABoarPlayerCharacter::ApplyGroundMoveSpeed()
+{
+	// Player側でMaxWalkSpeedを書くのはDash状態の切替だけ（Stunは入力拒否とノックバック、Stage停止はDisableMovement、空中アミはGravity/AirControl）。
+	// スタミナの回復処理からは呼ばないため、他の状態が設定した移動値を回復のたびに上書きしない。
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
-		Move->MaxWalkSpeed = WalkSpeed;
+		Move->MaxWalkSpeed = bIsDashing ? DashSpeed : WalkSpeed;
 	}
+}
+
+bool ABoarPlayerCharacter::CanStartDash() const
+{
+	// 自発的に止めた場合は残量があれば再使用でき、枯渇した場合だけしきい値まで禁止する。
+	return !bDashExhausted && CurrentStamina > 0.0f;
+}
+
+bool ABoarPlayerCharacter::ShouldDrainDashStamina() const
+{
+	if (!bIsDashing || CurrentStamina <= 0.0f || bMenuOpen)
+		return false;
+	// Stun・Downed・Stage停止・移動不可のガジェット使用中は消費しない。
+	if (!CanUseMovementActions())
+		return false;
+
+	const UCharacterMovementComponent* Move = GetCharacterMovement();
+	if (Move == nullptr || !Move->IsMovingOnGround())
+		return false;
+
+	// 移動入力の有無はCMCが入力から作るAccelerationで判断する（入力なしの慣性移動では0）。
+	// IgnoreMoveInput中もAddMovementInputが無視されるため0になる。
+	const FVector InputAccel2D(Move->GetCurrentAcceleration().X, Move->GetCurrentAcceleration().Y, 0.0f);
+	if (InputAccel2D.IsNearlyZero())
+		return false;
+
+	// Walking中のVelocityは実際の移動量から求め直されるため、壁へ正面から押し付けている間はほぼ0になる。
+	const FVector Velocity2D(GetVelocity().X, GetVelocity().Y, 0.0f);
+	if (Velocity2D.SizeSquared() < FMath::Square(DashDrainMinSpeed))
+		return false;
+
+	// 入力と逆向きへ慣性で滑っているだけ（切り返し直後など）は、まだDash移動が成立していないとみなす。
+	return FVector::DotProduct(Velocity2D, InputAccel2D) > 0.0f;
+}
+
+void ABoarPlayerCharacter::TickStamina(float DeltaSeconds)
+{
+	if (DeltaSeconds <= 0.0f)
+		return;
+
+	if (ShouldDrainDashStamina())
+	{
+		// 消費・回復ともにDeltaSecondsで積算し、フレームレートに依存しない。
+		CurrentStamina = FMath::Max(0.0f, CurrentStamina - DashDrainPerSecond * DeltaSeconds);
+		TimeSinceStaminaDrain = 0.0f;
+		if (CurrentStamina <= 0.0f)
+		{
+			EndDashByExhaustion();
+		}
+	}
+	else
+	{
+		const UCharacterMovementComponent* Move = GetCharacterMovement();
+		// 既存仕様ではDash状態のままジャンプすると空中でもDash速度の上限が残る。
+		// 空中は消費しない代わりに、Dashの勢いを保っている間は回復待ちも進めない（Dashジャンプ連打で無償回復しない）。
+		const bool bCarryingDashInAir = bIsDashing && Move && Move->IsFalling() &&
+			FVector(GetVelocity().X, GetVelocity().Y, 0.0f).SizeSquared() > FMath::Square(WalkSpeed);
+		if (bCarryingDashInAir)
+		{
+			TimeSinceStaminaDrain = 0.0f;
+		}
+		else
+		{
+			// 回復開始の瞬間がフレームの途中でも、遅延を超えた分の時間だけ回復させる。
+			const float PrevElapsed = TimeSinceStaminaDrain;
+			TimeSinceStaminaDrain = PrevElapsed + DeltaSeconds;
+			const float RegenSeconds = FMath::Clamp(
+				TimeSinceStaminaDrain - FMath::Max(PrevElapsed, StaminaRegenDelay), 0.0f, DeltaSeconds);
+			if (RegenSeconds > 0.0f && CurrentStamina < MaxStamina)
+			{
+				CurrentStamina = FMath::Min(MaxStamina, CurrentStamina + StaminaRegenPerSecond * RegenSeconds);
+			}
+			// 長時間放置しても値が際限なく増えないよう、遅延を超えた状態のまま上限を設ける。
+			TimeSinceStaminaDrain = FMath::Min(TimeSinceStaminaDrain, StaminaRegenDelay + 1.0f);
+		}
+	}
+
+	// 枯渇後の禁止はしきい値まで回復したら解除する。Dashの再開はStartDash（押し直し）だけが行う。
+	if (bDashExhausted && CurrentStamina >= MaxStamina * DashRestartThresholdRatio)
+	{
+		bDashExhausted = false;
+	}
+
+	BroadcastStaminaChanged();
+}
+
+void ABoarPlayerCharacter::EndDashByExhaustion()
+{
+	bDashExhausted = true;
+	if (!bIsDashing)
+		return;
+	// 急停止させず、Shiftを離したときと同じDash→Walkの速度遷移（CMCの既定の減速）に任せる。
+	bIsDashing = false;
+	ApplyGroundMoveSpeed();
 	UpdateGroundActionState(bHadMoveInput);
+}
+
+void ABoarPlayerCharacter::BroadcastStaminaChanged(bool bForce)
+{
+	if (!bForce && CurrentStamina == LastBroadcastStamina && bDashExhausted == bLastBroadcastDashLocked)
+		return;
+	LastBroadcastStamina = CurrentStamina;
+	bLastBroadcastDashLocked = bDashExhausted;
+	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina, bDashExhausted);
 }
 
 // イノシシとの接触時に呼ばれる
@@ -513,22 +649,44 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 		if (!Mode->CanAdvanceStage()) 
 			return;
 
+	// 命中情報は被弾が成立する前の位置・移動状態から確定する（Gadget中断やノックバックで変わる前）。
+	FBoarPlayerHitInfo HitInfo;
+	HitInfo.Attacker = OtherActor;
+	HitInfo.AttackerLocation = OtherActor->GetActorLocation();
+	FVector Away = GetActorLocation() - HitInfo.AttackerLocation;
+	Away.Z = 0.0;
+	HitInfo.HitDirection = Away.IsNearlyZero() ? -GetActorForwardVector().GetSafeNormal2D() : Away.GetSafeNormal();
+	const UCapsuleComponent* Capsule = GetCapsuleComponent();
+	const float Radius = Capsule ? Capsule->GetScaledCapsuleRadius() : 34.0f;
+	const float HalfHeight = Capsule ? Capsule->GetScaledCapsuleHalfHeight() : 88.0f;
+	// 攻撃側を向いたCapsule表面の、胴（中心より少し上）の高さを命中位置とする。
+	HitInfo.HitLocation = GetActorLocation() - HitInfo.HitDirection * Radius + FVector(0.0, 0.0, HalfHeight * 0.15);
+	HitInfo.bAirborne = GetCharacterMovement() && GetCharacterMovement()->IsFalling();
+
 	// ダメージを受けてスタン状態にする
 	HealthComponent->TakeDamage(ContactDamage);
 	// HP0ではStunを開始せず、GameOver演出のダウンアニメがStun状態で上書きされないようにする。
+	// カメラ・フラッシュ・SEはGameOver演出（AGameOverPresentationDirector）に任せ、
+	// 最後の一撃が見えるよう衝撃波と頭上の星だけを被弾演出側で出す（bLethal）。
 	if (HealthComponent->IsDead())
 	{
 		EnterDowned();
+		HitInfo.bLethal = true;
+		OnPlayerHitReceived.Broadcast(HitInfo);
 		return;
 	}
-	BeginStun();
 
-	// 多段ヒットを防ぐため、被弾後に短い無敵を付与する。
+	// 多段ヒットを防ぐため、被弾後に短い無敵を付与する。Stun中は別途bIsStunnedで被弾を受け付けない。
 	bIsInvincible = true;
 	// 以前の無敵終了Timerが残っている場合は、新しい被弾時間を基準に再設定する。
 	GetWorldTimerManager().ClearTimer(InvincibleTimerHandle);
 	GetWorldTimerManager().SetTimer(InvincibleTimerHandle, this, &ABoarPlayerCharacter::EndInvincible,
-	                                InvincibleDuration, false);
+	                                FMath::Max(InvincibleDuration, KINDA_SMALL_NUMBER), false);
+
+	// Gameplayの結果（ダメージ成立・Stun開始）を確定してから演出へ通知する。
+	// 演出側の失敗・欠落はこの後のStun進行に影響しない。
+	BeginStun(HitInfo);
+	OnPlayerHitReceived.Broadcast(HitInfo);
 }
 
 void ABoarPlayerCharacter::OnDeath()
@@ -542,53 +700,180 @@ void ABoarPlayerCharacter::OnDeath()
 
 void ABoarPlayerCharacter::BeginStun()
 {
+	FBoarPlayerHitInfo HitInfo;
+	HitInfo.HitLocation = GetActorLocation();
+	HitInfo.bAirborne = GetCharacterMovement() && GetCharacterMovement()->IsFalling();
+	BeginStun(HitInfo);
+}
+
+void ABoarPlayerCharacter::BeginStun(const FBoarPlayerHitInfo& HitInfo)
+{
+	if (bIsDowned)
+		return;
+	const bool bWasStunned = bIsStunned;
 	bIsStunned = true;
 	SetPlayerActionState(EPlayerActionState::Stun);
-	// ガジェット使用中に被弾した場合はMontageや捕獲判定を中断扱いで終了する。
+	// ガジェット使用中に被弾した場合はMontageや捕獲判定を中断扱いで終了する（空中アミの重力・AirControlもここで戻る）。
 	EndGadgetUse(true);
 	StopDash();
+	// 押しっぱなしのJump入力がスタン解除後に勝手にジャンプとして残らないようにする。
+	StopJumping();
+	// このフレームまでに積まれた移動入力を捨て、Stun中の加速に使わせない。
+	ConsumeMovementInputVector();
+	bHadMoveInput = false;
 
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
-		// スタン中は移動入力を受けても動かないようにする。
-		Move->StopMovementImmediately();
-		Move->DisableMovement();
+		// 連続Stunで2回目以降に保存し直すと、Stun中に固定したfalseを本来の値として覚えてしまう。
+		if (!bWasStunned)
+			bStunSavedOrientRotationToMovement = Move->bOrientRotationToMovement;
+		// ノックバックの速度方向へ振り向かないよう、Stun中は向きを固定する。
+		Move->bOrientRotationToMovement = false;
+
+		const FVector Push = HitInfo.HitDirection.GetSafeNormal2D();
+		if (bFaceAttackerOnStun && !Push.IsNearlyZero())
+		{
+			// 攻撃してきた方向を向き、後方へ倒れるリアクションで攻撃方向が伝わるようにする。
+			SetActorRotation(FRotator(0.0, (-Push).Rotation().Yaw, 0.0));
+		}
+
+		if (Move->IsFalling())
+		{
+			// 空中では静止させず、落下を続けたまま攻撃方向へ流す（着地後にしりもちへ進む）。
+			Move->Velocity.X = Push.X * StunAirborneKnockbackSpeed;
+			Move->Velocity.Y = Push.Y * StunAirborneKnockbackSpeed;
+		}
+		else
+		{
+			// 地上では一度止めてから攻撃方向へ短く押し出す。入力はないため、通常の地上減速で自然に止まる。
+			Move->StopMovementImmediately();
+			if (Move->IsMovingOnGround())
+				Move->Velocity = Push * StunKnockbackSpeed;
+		}
 	}
 
 	// 連続してスタン処理が呼ばれた場合に備え、以前のTimerを破棄してから新しく設定する。
 	GetWorldTimerManager().ClearTimer(StunTimerHandle);
-	GetWorldTimerManager().SetTimer(StunTimerHandle, this, &ABoarPlayerCharacter::EndStun, StunDuration, false);
+	GetWorldTimerManager().ClearTimer(StunAirborneWaitTimerHandle);
+	const UCharacterMovementComponent* Move = GetCharacterMovement();
+	bStunAwaitingLanding = Move && Move->IsFalling();
+
+	// 開始通知は残り時間の計測（OnStunRecoveryStarted）より先に送る。
+	OnStunStarted.Broadcast(HitInfo);
+	if (!bIsStunned)
+		return; // 通知先が同期的にダウン等で打ち切った場合
+
+	if (bStunAwaitingLanding)
+	{
+		// 着地を待つ。落ち続けても上限でスタン時間の計測へ進み、操作不能が残り続けないようにする。
+		if (StunAirborneMaxWait > 0.0f)
+			GetWorldTimerManager().SetTimer(StunAirborneWaitTimerHandle, this, &ABoarPlayerCharacter::StartStunRecovery,
+			                                StunAirborneMaxWait, false);
+		else
+			StartStunRecovery();
+	}
+	else
+	{
+		StartStunRecovery();
+	}
+}
+
+void ABoarPlayerCharacter::StartStunRecovery()
+{
+	GetWorldTimerManager().ClearTimer(StunAirborneWaitTimerHandle);
+	bStunAwaitingLanding = false;
+	if (!bIsStunned || bIsDowned)
+		return;
+
+	GetWorldTimerManager().ClearTimer(StunTimerHandle);
+	OnStunRecoveryStarted.Broadcast(StunDuration);
+	if (!bIsStunned)
+		return;
+	// SetTimerは0秒で何もしないため、0秒設定は即時終了として扱う。
+	if (StunDuration > 0.0f)
+		GetWorldTimerManager().SetTimer(StunTimerHandle, this, &ABoarPlayerCharacter::EndStun, StunDuration, false);
+	else
+		EndStun();
+}
+
+void ABoarPlayerCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	if (!bIsStunned || !bStunAwaitingLanding)
+		return;
+	// 空中被弾の着地：横滑りしたまま座り込まないよう止めてから、しりもち→起き上がりの時間を数え始める。
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		Move->StopMovementImmediately();
+	StartStunRecovery();
+}
+
+void ABoarPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// Retry・Level遷移・破棄でStunが中断されても、演出側が頭上VFX等を確実に片付けられるよう終了を通知する。
+	FinishStun(true);
+	if (UWorld* World = GetWorld())
+		World->GetTimerManager().ClearTimer(InvincibleTimerHandle);
+	Super::EndPlay(EndPlayReason);
 }
 
 void ABoarPlayerCharacter::EnterDowned()
 {
-	if (bIsDowned) 
+	if (bIsDowned)
 		return;
 	bIsDowned = true;
-	// 既に開始していたStunのTimerで通常状態へ戻らないようにする。
-	GetWorldTimerManager().ClearTimer(StunTimerHandle);
-	bIsStunned = false;
+	// 既に開始していたStunのTimerで通常状態へ戻らないようにし、頭上VFX等の演出も中断扱いで終える。
+	FinishStun(true);
 	EndGadgetUse(true);
 	StopDash();
-	if (UCharacterMovementComponent* Move = GetCharacterMovement()) 
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 		Move->StopMovementImmediately();
 	SetPlayerActionState(EPlayerActionState::Down);
 }
 
 void ABoarPlayerCharacter::EndStun()
 {
+	FinishStun(false);
+}
+
+void ABoarPlayerCharacter::FinishStun(bool bInterrupted)
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(StunTimerHandle);
+		World->GetTimerManager().ClearTimer(StunAirborneWaitTimerHandle);
+	}
+	bStunAwaitingLanding = false;
+	const bool bWasStunned = bIsStunned;
 	bIsStunned = false;
-	if (bIsDowned) 
+	if (!bWasStunned)
+		return;
+
+	// Stunが変更したのは向きの自動追従だけ。移動モード・IgnoreMoveInput等の他の所有者のロックには触れない。
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		Move->bOrientRotationToMovement = bStunSavedOrientRotationToMovement;
+
+	OnStunEnded.Broadcast(bInterrupted);
+
+	if (bInterrupted || bIsDowned || !GetWorld())
 		return;
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage()) 
+		if (!Mode->CanAdvanceStage())
 			return;
-	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+
+	// 起き上がった直後の再被弾を防ぐ。被弾から数えた無敵がまだ長く残っていれば、そちらを優先する。
+	FTimerManager& Timers = GetWorldTimerManager();
+	const float Remaining = Timers.IsTimerActive(InvincibleTimerHandle) ? Timers.GetTimerRemaining(InvincibleTimerHandle) : 0.0f;
+	if (PostStunInvincibleDuration > Remaining)
 	{
-		Move->SetMovementMode(MOVE_Walking);
-		Move->MaxWalkSpeed = bIsDashing ? DashSpeed : WalkSpeed;
+		bIsInvincible = true;
+		Timers.SetTimer(InvincibleTimerHandle, this, &ABoarPlayerCharacter::EndInvincible, PostStunInvincibleDuration, false);
 	}
-	UpdateGroundActionState(bHadMoveInput);
+
+	ApplyGroundMoveSpeed();
+	if (GetCharacterMovement() && GetCharacterMovement()->IsFalling())
+		SetPlayerActionState(JumpCurrentCount >= 2 ? EPlayerActionState::DoubleJump : EPlayerActionState::Fall);
+	else
+		UpdateGroundActionState(bHadMoveInput);
 }
 
 void ABoarPlayerCharacter::EndInvincible()

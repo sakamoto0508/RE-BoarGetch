@@ -66,6 +66,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player")
 	FACFCameraPositionDamping PivotDamping = FACFCameraPositionDamping::Uniform(0.1f, EACFCameraDampingSpace::CameraYaw);
 
+	/** ロックオン中のターゲットの消失、テレポート、移動の先読みを設定します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player")
 	FACFCameraTargetMotionSettings TargetMotion;
 
@@ -95,9 +96,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ElevationPitchScale = 0.5f;
 
+	/** ロックオン中に許可する最小 Pitch（度）です。負の方向に下げると、より強く見下ろせます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "-89.0", ClampMax = "89.0", Units = deg))
 	float PitchMin = -55.f;
 
+	/** ロックオン中に許可する最大 Pitch（度）です。正の方向に上げると、より強く見上げられます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "-89.0", ClampMax = "89.0", Units = deg))
 	float PitchMax = 30.f;
 
@@ -114,9 +117,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Range", meta = (ClampMin = "0.0", Units = cm))
 	float FarRange = 2000.f;
 
+	/** ロック対象が近いときのカメラアームの長さ（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Range", meta = (ClampMin = "0.0", Units = cm))
 	float NearArmLength = 450.f;
 
+	/** ロック対象が遠いときのカメラアームの長さ（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Range", meta = (ClampMin = "0.0", Units = cm))
 	float FarArmLength = 350.f;
 
@@ -124,9 +129,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Range", meta = (InlineEditConditionToggle))
 	bool bAdjustFieldOfView = false;
 
+	/** ロック対象が近いときの水平画角（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Range", meta = (EditCondition = "bAdjustFieldOfView", ClampMin = "5.0", ClampMax = "170.0", Units = deg))
 	float NearFieldOfView = 90.f;
 
+	/** ロック対象が遠いときの水平画角（度）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Range", meta = (EditCondition = "bAdjustFieldOfView", ClampMin = "5.0", ClampMax = "170.0", Units = deg))
 	float FarFieldOfView = 75.f;
 

@@ -19,6 +19,7 @@
 #include "Nodes/ACFCameraNode_LookAt.h"
 #include "Nodes/ACFCameraNode_OrbitalFollow.h"
 #include "Nodes/ACFCameraNode_ShotAnchor.h"
+#include "Nodes/ACFCameraNode_SpiralOrbit.h"
 #include "UObject/UnrealType.h"
 
 #define LOCTEXT_NAMESPACE "ACFCameraPresetValidation"
@@ -531,7 +532,8 @@ namespace ACFPresetValidationPrivate
 	bool PlacesCameraAroundTarget(const UACFCameraNode& Node)
 	{
 		return Node.IsA<UACFCameraNode_Follow>() || Node.IsA<UACFCameraNode_OrbitalFollow>() || Node.IsA<UACFCameraNode_LockOn>()
-			|| Node.IsA<UACFCameraNode_PositionComposer>() || Node.IsA<UACFCameraNode_ShotAnchor>();
+			|| Node.IsA<UACFCameraNode_PositionComposer>() || Node.IsA<UACFCameraNode_ShotAnchor>()
+			|| Node.IsA<UACFCameraNode_SpiralOrbit>();
 	}
 
 	struct FIndexedNode

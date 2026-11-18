@@ -77,17 +77,15 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraBlendSettings
 {
 	GENERATED_BODY()
 
+	/** 切り替え中の補間方法です。Cut は即時切り替え、Ease In Out は開始と終了をゆるやかにします。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blend")
 	EACFCameraBlendCurve Curve = EACFCameraBlendCurve::EaseInOut;
 
-	/**
-	 * Live keeps evaluating the outgoing camera. A blend that interrupts another blend always starts
-	 * from a snapshot of the pose currently on screen, whatever this setting says (no pop).
-	 */
+	/** 切り替え元の扱いです。Live は切り替え元のカメラも更新し続けます。進行中のブレンドへ割り込む場合は、画面に出ている姿勢から開始します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blend", meta = (EditCondition = "Curve != EACFCameraBlendCurve::Cut"))
 	EACFCameraBlendSource Source = EACFCameraBlendSource::Live;
 
-	/** Seconds. 0 behaves like a cut. */
+	/** 切り替えにかかる秒数です。長いほどゆっくり移行します。0 は即時切り替えです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blend", meta = (ClampMin = "0.0", Units = s, EditCondition = "Curve != EACFCameraBlendCurve::Cut"))
 	float Duration = 0.5f;
 
@@ -95,6 +93,7 @@ struct ACTIONCAMERAFRAMEWORK_API FACFCameraBlendSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blend", meta = (ClampMin = "0.1", EditCondition = "Curve == EACFCameraBlendCurve::EaseIn || Curve == EACFCameraBlendCurve::EaseOut || Curve == EACFCameraBlendCurve::EaseInOut"))
 	float Exponent = 2.f;
 
+	/** Curve が Custom のときに使用します。横軸は正規化した経過時間、縦軸は新しいカメラへの補間割合です。両方とも0〜1です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blend", meta = (EditCondition = "Curve == EACFCameraBlendCurve::Custom"))
 	TObjectPtr<UCurveFloat> CustomCurve = nullptr;
 

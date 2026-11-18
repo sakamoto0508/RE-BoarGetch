@@ -106,10 +106,11 @@ class ACTIONCAMERAFRAMEWORK_API UACFCameraNode_OrbitalFollow : public UACFCamera
 
 public:
 	// --- Pivot ---------------------------------------------------------------------------------
-	/** Orbit centre relative to the follow target (e.g. head height). */
+	/** 追従対象から公転中心までのオフセット（cm）です。Zを上げると公転の中心が高くなります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pivot")
 	FVector PivotOffset = FVector(0.f, 0.f, 60.f);
 
+	/** Pivot Offset の基準です。World はワールド軸、Target Local は対象の向きに合わせた軸です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pivot")
 	EACFCameraOffsetSpace PivotOffsetSpace = EACFCameraOffsetSpace::World;
 
@@ -117,21 +118,24 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pivot")
 	FACFCameraPositionDamping PivotDamping = FACFCameraPositionDamping::Uniform(0.f, EACFCameraDampingSpace::CameraYaw);
 
+	/** 追従対象を見失ったときの処理、テレポートの判定、進行方向の先読みを設定します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pivot")
 	FACFCameraTargetMotionSettings TargetMotion;
 
 	// --- Orbit ---------------------------------------------------------------------------------
+	/** 公転中心からカメラまでの基準距離（cm）です。大きくすると引きの画になります。Rings 使用時は Pitch 0° の距離です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "0.0", Units = cm))
 	float Distance = 400.f;
 
-	/** Offset in orbit space after the arm (X back/forward, Y = shoulder side, Z = up). */
+	/** 公転するカメラの軸に沿った追加オフセット（cm）です。X は前後、Y は肩越しの左右、Z は上下です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit")
 	FVector ShoulderOffset = FVector::ZeroVector;
 
-	/** Pitch limits in degrees (negative = camera above the target looking down). */
+	/** 見下ろし側の Pitch 上限（度）です。小さい値ほど上から見下ろせます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "-89.0", ClampMax = "89.0", Units = deg))
 	float PitchMin = -70.f;
 
+	/** 見上げ側の Pitch 上限（度）です。大きい値ほど下から見上げられます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (ClampMin = "-89.0", ClampMax = "89.0", Units = deg))
 	float PitchMax = 60.f;
 
@@ -139,9 +143,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (InlineEditConditionToggle))
 	bool bUseRings = false;
 
+	/** Rings 使用時の見下ろし端（Pitch Min）での距離（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (EditCondition = "bUseRings", ClampMin = "0.0", Units = cm))
 	float TopDistance = 500.f;
 
+	/** Rings 使用時の見上げ端（Pitch Max）での距離（cm）です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orbit", meta = (EditCondition = "bUseRings", ClampMin = "0.0", Units = cm))
 	float BottomDistance = 250.f;
 
@@ -158,6 +164,7 @@ public:
 	FVector2D RotationDamping = FVector2D::ZeroVector;
 
 	// --- Input ---------------------------------------------------------------------------------
+	/** 公転角の入力元です。Camera Input はACF入力、Control Rotation はプレイヤーコントローラーの回転、None は手動入力なしです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	EACFCameraOrbitInputSource InputSource = EACFCameraOrbitInputSource::CameraInput;
 
@@ -165,6 +172,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (EditCondition = "InputSource == EACFCameraOrbitInputSource::CameraInput"))
 	FVector2D Sensitivity = FVector2D(1.f, 1.f);
 
+	/** Camera Input を使用するとき、左右の入力方向を反転します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (EditCondition = "InputSource == EACFCameraOrbitInputSource::CameraInput"))
 	bool bInvertYaw = false;
 
@@ -181,12 +189,15 @@ public:
 	bool bInputRateIgnoresTimeDilation = false;
 
 	// --- Initial / idle ------------------------------------------------------------------------
+	/** 有効化時のカメラ角を、対象の背後、コントローラー、直前のカメラ、固定角のどれから決めるかを選びます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Initial")
 	EACFCameraOrbitInitialRotation InitialRotation = EACFCameraOrbitInitialRotation::BehindTarget;
 
+	/** Fixed ではワールドの水平角、Behind Target では対象の向きからの水平オフセット（度）です。正面へ戻るときのオフセットにも使います。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Initial", meta = (Units = deg))
 	float InitialYaw = 0.f;
 
+	/** Fixed または Behind Target で使う初期の上下角（度）です。負の値で見下ろします。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Initial", meta = (Units = deg))
 	float InitialPitch = -15.f;
 
@@ -202,6 +213,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle", meta = (EditCondition = "bRecenterWhenIdle || bEnableMovementAssistance", ClampMin = "0.01", Units = s))
 	float RecenterTime = 0.5f;
 
+	/** 自動復帰時に左右角に加え、上下角も Initial Pitch へ戻します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Idle", meta = (EditCondition = "bRecenterWhenIdle || bEnableMovementAssistance"))
 	bool bRecenterPitch = true;
 

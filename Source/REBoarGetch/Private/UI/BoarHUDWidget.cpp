@@ -2,7 +2,13 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Image.h"
+#include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Camera/PlayerCameraManager.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
 #include "Gadget/GadgetBase.h"
 #include "Component/GadgetComponent.h"
 #include "Gadget/GadgetDataAsset.h"
@@ -33,6 +39,14 @@ void UBoarHUDWidget::ResolveWidgetReferences()
 	TargetCountText = ResolveHUDTextBlock(WidgetTree, TargetCountTextWidgetName);
 	CurrentHealthText = ResolveHUDTextBlock(WidgetTree, CurrentHealthTextWidgetName);
 	MaxHealthText = ResolveHUDTextBlock(WidgetTree, MaxHealthTextWidgetName);
+	StaminaBarWidget = WidgetTree && !StaminaBarWidgetName.IsNone()
+		             ? Cast<UProgressBar>(WidgetTree->FindWidget(StaminaBarWidgetName))
+		             : nullptr;
+	if (StaminaBarWidget)
+	{
+		// 最初の通知と位置計算が済むまで、画面左上などに一瞬表示されないようにする。
+		StaminaBarWidget->SetRenderOpacity(0.0f);
+	}
 
 	GadgetIconWidgets.Reset();
 	GadgetSelectionWidgets.Reset();
@@ -106,4 +120,89 @@ void UBoarHUDWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 	{
 		MaxHealthText->SetText(FText::AsNumber(FMath::RoundToInt(MaxHealth)));
 	}
+}
+
+// 割合と色だけを決めます。消費・回復の計算や禁止判定はCharacterが担当します。
+void UBoarHUDWidget::UpdateStamina(float CurrentStamina, float MaxStamina, bool bDashLocked)
+{
+	const float Ratio = MaxStamina > 0.0f ? FMath::Clamp(CurrentStamina / MaxStamina, 0.0f, 1.0f) : 0.0f;
+	const bool bFull = Ratio >= 1.0f;
+	if (!bFull)
+	{
+		// 減り始めた・回復中の間は表示を続け、満タンに戻ってから非表示までの待ち時間を数え直す。
+		StaminaFullElapsed = 0.0f;
+	}
+	bStaminaFull = bFull;
+	bStaminaLocked = bDashLocked;
+
+	if (StaminaBarWidget)
+	{
+		StaminaBarWidget->SetPercent(Ratio);
+		StaminaBarWidget->SetFillColorAndOpacity(bDashLocked
+			                                         ? StaminaExhaustedColor
+			                                         : (Ratio < StaminaLowRatio ? StaminaLowColor : StaminaNormalColor));
+	}
+}
+
+void UBoarHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	if (!StaminaBarWidget)
+		return;
+
+	if (bStaminaFull)
+	{
+		StaminaFullElapsed += InDeltaTime;
+	}
+	// 満タンで一定時間たったら隠し、Dashで減り始めたらすぐ表示する。
+	const bool bWantVisible = !bStaminaFull || StaminaHideDelayWhenFull < 0.0f ||
+		StaminaFullElapsed < StaminaHideDelayWhenFull;
+	// プレイヤーが画面外・カメラの後ろにいる場合は表示しない。
+	const bool bOnScreen = UpdateStaminaGaugePosition();
+
+	const float TargetOpacity = (bWantVisible && bOnScreen) ? 1.0f : 0.0f;
+	StaminaGaugeOpacity = FMath::FInterpConstantTo(StaminaGaugeOpacity, TargetOpacity, InDeltaTime, StaminaFadeSpeed);
+	if (!bOnScreen)
+	{
+		StaminaGaugeOpacity = 0.0f;
+	}
+
+	// スタミナ切れ（再使用しきい値まで回復していない）間は点滅させ、Dashできないことを示す。
+	float Blink = 1.0f;
+	if (bStaminaLocked && StaminaExhaustedBlinkRate > 0.0f)
+	{
+		StaminaBlinkTime += InDeltaTime;
+		Blink = 0.55f + 0.45f * (0.5f + 0.5f * FMath::Cos(StaminaBlinkTime * StaminaExhaustedBlinkRate * UE_TWO_PI));
+	}
+	else
+	{
+		StaminaBlinkTime = 0.0f;
+	}
+	StaminaBarWidget->SetRenderOpacity(StaminaGaugeOpacity * Blink);
+}
+
+bool UBoarHUDWidget::UpdateStaminaGaugePosition()
+{
+	APlayerController* PC = GetOwningPlayer();
+	const APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+	UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(StaminaBarWidget->Slot);
+	if (!Pawn || !CanvasSlot)
+		return false;
+
+	// カメラの右・上方向にずらしたワールド位置を投影し、キャラクターのすぐ横に置く。
+	const FRotator CameraRotation = PC->PlayerCameraManager
+		                                ? PC->PlayerCameraManager->GetCameraRotation()
+		                                : PC->GetControlRotation();
+	const FRotationMatrix CameraAxes(CameraRotation);
+	const FVector WorldLocation = Pawn->GetActorLocation() +
+		CameraAxes.GetUnitAxis(EAxis::Y) * StaminaGaugeWorldOffset.X +
+		FVector::UpVector * StaminaGaugeWorldOffset.Y;
+
+	FVector2D WidgetPosition;
+	if (!UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(PC, WorldLocation, WidgetPosition, true))
+		return false;
+
+	CanvasSlot->SetPosition(WidgetPosition);
+	return true;
 }

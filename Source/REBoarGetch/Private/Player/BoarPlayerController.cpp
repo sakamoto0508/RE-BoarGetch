@@ -106,6 +106,7 @@ void ABoarPlayerController::OnPossess(APawn* InPawn)
 	// HUDの監視対象を新しくPossessしたCharacterへ付け替える。
 	ABoarPlayerCharacter* PlayerCharacter = Cast<ABoarPlayerCharacter>(InPawn);
 	BindPlayerHealth(PlayerCharacter);
+	BindPlayerStamina(PlayerCharacter);
 	BindPlayerGadgets(PlayerCharacter);
 }
 
@@ -129,6 +130,14 @@ void ABoarPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			this,
 			&ABoarPlayerController::HandleHealthChanged);
 		ObservedHealthComponent = nullptr;
+	}
+
+	if (ObservedStaminaCharacter)
+	{
+		ObservedStaminaCharacter->OnStaminaChanged.RemoveDynamic(
+			this,
+			&ABoarPlayerController::HandleStaminaChanged);
+		ObservedStaminaCharacter = nullptr;
 	}
 
 	if (ObservedGadgetComponent)
@@ -275,7 +284,40 @@ void ABoarPlayerController::CreatePlayerHUD()
 
 	// HUDがOnPossessより後に生成された場合にも対応できるよう、現在のPawnへここでも接続する。
 	BindPlayerHealth(GetBoarCharacter());
+	BindPlayerStamina(GetBoarCharacter());
 	BindPlayerGadgets(GetBoarCharacter());
+}
+
+void ABoarPlayerController::BindPlayerStamina(ABoarPlayerCharacter* PlayerCharacter)
+{
+	if (ObservedStaminaCharacter != PlayerCharacter)
+	{
+		// 破棄済み/非PossessのCharacterからスタミナ変更を受け取らないよう購読解除する。
+		if (ObservedStaminaCharacter)
+		{
+			ObservedStaminaCharacter->OnStaminaChanged.RemoveDynamic(
+				this,
+				&ABoarPlayerController::HandleStaminaChanged);
+		}
+
+		ObservedStaminaCharacter = PlayerCharacter;
+		if (ObservedStaminaCharacter)
+		{
+			// AddUniqueDynamicでOnPossess/CreatePlayerHUDの二経路から呼ばれても重複登録しない。
+			ObservedStaminaCharacter->OnStaminaChanged.AddUniqueDynamic(
+				this,
+				&ABoarPlayerController::HandleStaminaChanged);
+		}
+	}
+
+	// HUDの作り直しやRetry直後でも古い表示を残さないよう、現在値を即時反映する。
+	if (ObservedStaminaCharacter)
+	{
+		HandleStaminaChanged(
+			ObservedStaminaCharacter->GetCurrentStamina(),
+			ObservedStaminaCharacter->GetMaxStamina(),
+			ObservedStaminaCharacter->IsDashLockedByExhaustion());
+	}
 }
 
 void ABoarPlayerController::BindPlayerGadgets(ABoarPlayerCharacter* PlayerCharacter)
@@ -382,6 +424,15 @@ void ABoarPlayerController::HandleHealthChanged(float CurrentHealth, float MaxHe
 	{
 		// HealthComponentのfloat値をそのままWidgetへ渡し、表示形式はWidget側へ任せる。
 		PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+	}
+}
+
+void ABoarPlayerController::HandleStaminaChanged(float CurrentStamina, float MaxStamina, bool bDashLocked)
+{
+	if (PlayerHUDWidget)
+	{
+		// 表示形式（割合・色・透明度）はWidget側へ任せる。
+		PlayerHUDWidget->UpdateStamina(CurrentStamina, MaxStamina, bDashLocked);
 	}
 }
 

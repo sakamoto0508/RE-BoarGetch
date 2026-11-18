@@ -91,10 +91,10 @@ public:
 	int32 TargetCaptureCount = 0;
 
 	/** 個体ごとの固定ID・Class・出現地点を設定します。1要素が1体。空なら自動生成しません。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn", meta = (TitleProperty = "BoarUniqueId"))
 	TArray<FBoarSpawnDefinition> BoarSpawnDefinitions;
 	/** コインごとの固定ID・配置地点。取得済みIDは再出現させません。生成にはGameModeのSpecialCoinClassも設定します。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Spawn", meta = (TitleProperty = "SpecialCoinId"))
 	TArray<FSpecialCoinDefinition> SpecialCoinDefinitions;
 	/** 指定Stageのクリア状態による解放条件。RequiredClearedStageIdがNoneなら初期解放。捕獲数・コイン数は条件に含めません。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Unlock")

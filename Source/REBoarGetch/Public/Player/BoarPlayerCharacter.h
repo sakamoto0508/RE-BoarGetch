@@ -8,6 +8,7 @@
 class UHealthComponent;
 class UGadgetComponent;
 class UCaptureComponent;
+class UPlayerHitReactionComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UPrimitiveComponent;
@@ -17,6 +18,61 @@ class ABoarBase;
 class ANetGadget;
 struct FBoarGadgetLoadoutContext;
 struct FHitResult;
+
+/**
+ * ダッシュ用スタミナの変更通知です。HUDなど表示側はこの値を表示するだけで、計算はCharacterが行います。
+ * @param bDashLocked スタミナ切れでDashを禁止中（再使用しきい値まで未回復）ならtrueです。
+ */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPlayerStaminaChanged, float, CurrentStamina, float, MaxStamina, bool, bDashLocked);
+
+/**
+ * ダメージが成立した被弾の情報です（AKI-163）。Gameplay側が確定した結果だけを演出側へ渡します。
+ * 無敵中・攻撃判定外・Stage停止中など、ダメージが成立しなかった接触では作られません。
+ */
+USTRUCT(BlueprintType)
+struct REBOARGETCH_API FBoarPlayerHitInfo
+{
+	GENERATED_BODY()
+
+	/** 攻撃してきたActorです（突進中のBoar）。テスト等で直接Stunした場合はnullptrです。 */
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Hit")
+	TObjectPtr<AActor> Attacker = nullptr;
+
+	/** 命中時の攻撃側の位置です。Camera Impulseの発生源に使います。 */
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Hit")
+	FVector AttackerLocation = FVector::ZeroVector;
+
+	/** プレイヤー側の命中位置です（攻撃側を向いたCapsule表面・胴の高さ）。衝撃波の中心に使います。 */
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Hit")
+	FVector HitLocation = FVector::ZeroVector;
+
+	/** 攻撃側からプレイヤーへ向かう水平方向（吹き飛ぶ向き）です。不明な場合はプレイヤーの後方です。 */
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Hit")
+	FVector HitDirection = FVector::ZeroVector;
+
+	/** 命中時に空中にいたかです。空中被弾は着地してからしりもち・起き上がりへ進みます。 */
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Hit")
+	bool bAirborne = false;
+
+	/** この命中でHP0になったか（GameOverのダウン）です。trueのときStunは始まらず、演出は衝撃波と頭上の星だけです（カメラ・SE等はGameOver演出側）。 */
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Hit")
+	bool bLethal = false;
+};
+
+/** ダメージが成立した被弾を通知します。命中インパクト演出用です。HP0のダウンでも通知します（HitInfo.bLethal = true）。 */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerHitReceived, const FBoarPlayerHitInfo&, HitInfo);
+/** Stunが始まったことを通知します（操作不能の開始）。頭上の状態表示用です。 */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStunStarted, const FBoarPlayerHitInfo&, HitInfo);
+/**
+ * Stunの残り時間の計測が始まったことを通知します。地上被弾では被弾直後、空中被弾では着地時です。
+ * @param RecoveryDuration この通知から操作が戻るまでの秒数（しりもち→起き上がりの尺）です。
+ */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStunRecoveryStarted, float, RecoveryDuration);
+/**
+ * Stunが終わったことを通知します。
+ * @param bInterrupted ダウン（HP0）・Actor破棄などで時間満了前に打ち切られた場合はtrueです。
+ */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStunEnded, bool, bInterrupted);
 
 /** 空中アミ捕獲（Air Net Drop）の進行段階です。AnimBPや演出側から参照できます。 */
 UENUM(BlueprintType)
@@ -92,16 +148,23 @@ public:
 private:
 	friend class FBoarGameplayRegressionTest;
 	friend class FBoarNetStunInterruptTest;
+	friend class FBoarPlayerStunLockTest;
 	bool bStageInitialized = false;
 
 protected:
 
+	/** BP既定値（MaxStamina等）の適用後に、スタミナを最大値で初期化します。 */
+	virtual void PostInitializeComponents() override;
 	/** HPイベントと接触判定を登録し、ゲーム開始時の状態を初期化します。 */
 	virtual void BeginPlay() override;
-	/** 空中アミ捕獲中だけ急降下の速度制御と網のSwept判定を更新します。 */
+	/** ダッシュスタミナの消費・回復と、空中アミ捕獲中の急降下制御を更新します。 */
 	virtual void Tick(float DeltaSeconds) override;
 	/** 地上・上昇・落下への遷移に合わせてプレイヤー行動状態を更新します。 */
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
+	/** 空中被弾のStunは着地してから残り時間の計測を始めます。 */
+	virtual void Landed(const FHitResult& Hit) override;
+	/** Level遷移・Retry・破棄でStunのTimerと状態を残さず、演出側へ終了を通知します。 */
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/** ガジェット使用開始時のアニメ通知入口です（AnimBP側で実装）。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Gadget")
@@ -202,6 +265,30 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player")
 	bool IsDowned() const { return bIsDowned; }
 
+	/** 被弾Stun中（操作不能）かを返します。移動・ダッシュ・ジャンプ・ガジェットの可否はこの状態を唯一の根拠にします。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stun")
+	bool IsStunned() const { return bIsStunned; }
+
+	/** 被弾演出を担当するComponentを取得します。 */
+	UFUNCTION(BlueprintPure, Category = "Player")
+	UPlayerHitReactionComponent* GetHitReactionComponent() const { return HitReactionComponent; }
+
+	/** ダメージが成立した被弾（HP0のダウンを除く）の通知です。演出はこの結果を受けて再生します。 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Stun")
+	FOnPlayerHitReceived OnPlayerHitReceived;
+
+	/** Stun（操作不能）の開始通知です。 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Stun")
+	FOnPlayerStunStarted OnStunStarted;
+
+	/** Stunの残り時間の計測開始通知です（地上被弾は即時、空中被弾は着地時）。 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Stun")
+	FOnPlayerStunRecoveryStarted OnStunRecoveryStarted;
+
+	/** Stunの終了通知です。中断（ダウン・破棄）でも必ず1回届きます。 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Stun")
+	FOnPlayerStunEnded OnStunEnded;
+
 	/** ガジェット使用中かを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Player|Gadget")
 	bool IsGadgetInUse() const
@@ -224,6 +311,30 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Gadget|AirNetDrop")
 	bool IsAirNetDropActive() const { return AirNetDropPhase != EAirNetDropPhase::None; }
 
+	//-------------------------------------------------
+	// Dash Stamina
+	//-------------------------------------------------
+
+	/** スタミナの値またはDash禁止状態が変わったときに通知します。 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Stamina")
+	FOnPlayerStaminaChanged OnStaminaChanged;
+
+	/** 現在のスタミナです。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
+	float GetCurrentStamina() const { return CurrentStamina; }
+
+	/** スタミナの最大値です。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
+	float GetMaxStamina() const { return MaxStamina; }
+
+	/** スタミナ切れでDashを禁止中か（再使用しきい値まで未回復か）を返します。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
+	bool IsDashLockedByExhaustion() const { return bDashExhausted; }
+
+	/** Dash速度を適用中かを返します。Dash入力の押下状態ではありません。 */
+	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
+	bool IsDashing() const { return bIsDashing; }
+
 private:
 	bool bMenuOpen = false;
 	/** 被弾判定用。イノシシ接触時にダメージ/スタン/無敵を開始します。 */
@@ -243,14 +354,29 @@ private:
 	UFUNCTION()
 	void OnDeath();
 
-	/** 移動停止を伴うスタン状態を開始します。 */
+	/**
+	 * 操作不能のスタン状態を開始します。
+	 * 入力はIsGameplayActionBlockedで一元的に拒否し、CharacterMovementは止めずに重力・ノックバック・着地を処理させます
+	 * （DisableMovementは空中で静止してしまい、Stage停止など他の所有者の移動停止と区別できないため使いません）。
+	 */
+	void BeginStun(const FBoarPlayerHitInfo& HitInfo);
+	/** 攻撃元のない直接のStun開始です（テスト・既存呼び出し用）。 */
 	void BeginStun();
+
+	/** Stunの残り時間（StunDuration）の計測を始めます。空中被弾では着地時、または着地待ちの上限で呼ばれます。 */
+	void StartStunRecovery();
 
 	/** HP0時にStunの代わりに呼び、行動を止めてダウン状態にします（ダウンアニメはGameOver演出が再生）。 */
 	void EnterDowned();
-	
-	/** スタン終了後に通常移動へ復帰します。 */
+
+	/** スタン時間の満了で通常移動へ復帰します。 */
 	void EndStun();
+
+	/**
+	 * Stunを終了します。正常終了・中断のどちらからも呼ばれ、何度呼んでも安全です。
+	 * 自分が変更した回転設定だけを戻し、Stage停止など他の所有者による移動停止・入力停止は解除しません。
+	 */
+	void FinishStun(bool bInterrupted);
 	
 	/** 被弾直後の無敵時間を終了します。 */
 	void EndInvincible();
@@ -449,6 +575,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCaptureComponent> CaptureComponent;
 
+	/** 被弾・Stunの演出（衝撃波・Hit Flash・SE・Camera・しりもちAnimation・頭上VFX）を担当するComponentです。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPlayerHitReactionComponent> HitReactionComponent;
+
 	/** 独自のカメラ制御用Component。（Aim・LockOnなどを担当） */
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
 	//TObjectPtr<UCameraComponent> CameraComponentEx;
@@ -482,13 +612,62 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float DashSpeed = 900.0f;
 
-	/** 被弾時のスタン秒数です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float StunDuration = 0.5f;
+	/** スタミナの最大値です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float MaxStamina = 100.0f;
 
-	/** 被弾後の無敵秒数です。 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	/** 地上で実際にDash移動している間の消費量(/秒)です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float DashDrainPerSecond = 25.0f;
+
+	/** 回復開始後の回復量(/秒)です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float StaminaRegenPerSecond = 20.0f;
+
+	/** 最後に実際に消費してから回復を始めるまでの秒数です。Pause中は進みません。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float StaminaRegenDelay = 0.7f;
+
+	/** スタミナ切れ後、Dashを再使用できるようになる残量（最大値に対する割合）です。再使用にはDash入力の押し直しも必要です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+	float DashRestartThresholdRatio = 0.25f;
+
+	/**
+	 * 消費対象とみなす最低の水平速度(cm/s)です。壁に向かって押し付けているだけ・停止中は実速度がこれを下回り、消費しません。
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float DashDrainMinSpeed = 50.0f;
+
+	/**
+	 * 被弾時のスタン秒数です（地上被弾は被弾から、空中被弾は着地から数えます）。
+	 * しりもち→起き上がりのAnimationはこの秒数に合わせて再生速度を変えるため、起き上がり完了と操作復帰が一致します。
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Stun",meta = (AllowPrivateAccess = "true", ClampMin = "0.0", Units = "s"))
+	float StunDuration = 1.6f;
+
+	/** 空中被弾で着地を待つ最大秒数です。高所・落下継続でもこの秒数を過ぎたらスタンの残り時間を数え始めます。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Stun",meta = (AllowPrivateAccess = "true", ClampMin = "0.0", Units = "s"))
+	float StunAirborneMaxWait = 1.5f;
+
+	/** 地上被弾で攻撃方向へ押し出す初速(cm/s)です。入力なしの通常の減速で止まります。0でその場に止まります。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Stun",meta = (AllowPrivateAccess = "true", ClampMin = "0.0", Units = "cm/s"))
+	float StunKnockbackSpeed = 380.0f;
+
+	/** 空中被弾で攻撃方向へ流す水平速度(cm/s)です。縦の速度（落下）はそのまま維持します。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Stun",meta = (AllowPrivateAccess = "true", ClampMin = "0.0", Units = "cm/s"))
+	float StunAirborneKnockbackSpeed = 220.0f;
+
+	/** 被弾時に攻撃してきた方向へ体を向けます。後ろへ倒れるリアクションで攻撃方向が伝わるようにします。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Stun",meta = (AllowPrivateAccess = "true"))
+	bool bFaceAttackerOnStun = true;
+
+	/** 被弾から数える無敵秒数の下限です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0", Units = "s"))
 	float InvincibleDuration = 1.0f;
+
+	/** スタン終了（起き上がり）後に続ける無敵秒数です。起き上がった瞬間の再被弾を防ぎます。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0", Units = "s"))
+	float PostStunInvincibleDuration = 0.6f;
 
 	/** 被弾時に減るHP量です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat",meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
@@ -507,8 +686,34 @@ private:
 	float CameraArmLength = 350.0f;
 
 	// 一時状態フラグ。入力・被弾処理のガード条件として使う。
-	/** ダッシュ入力が有効で、現在ダッシュ速度を適用しているかを表します。 */
+	/**
+	 * 現在ダッシュ速度を適用しているかを表します（Dash入力の押下状態とは別）。
+	 * スタミナ切れではキーを押したままでもfalseへ戻り、押し直し（StartDash）以外では再びtrueになりません。
+	 */
 	bool bIsDashing = false;
+
+	/** 現在のスタミナです。PostInitializeComponentsでMaxStaminaに初期化します。 */
+	float CurrentStamina = 100.0f;
+	/** 最後に実際に消費してからの経過秒数です（Tickの経過時間で進むためPause中は止まります）。 */
+	float TimeSinceStaminaDrain = 0.0f;
+	/** スタミナ切れでDashを終了し、再使用しきい値まで回復していない状態です。 */
+	bool bDashExhausted = false;
+	/** 最後に通知した値です。変化したときだけOnStaminaChangedを発火します。 */
+	float LastBroadcastStamina = -1.0f;
+	bool bLastBroadcastDashLocked = false;
+
+	/** スタミナの消費・回復・枯渇判定を1フレーム分進めます。 */
+	void TickStamina(float DeltaSeconds);
+	/** 地上で移動入力があり、実際にDash移動が成立しているときだけtrueを返します。 */
+	bool ShouldDrainDashStamina() const;
+	/** スタミナ切れによる禁止中でなく、残量があればDashを開始できます。 */
+	bool CanStartDash() const;
+	/** スタミナ切れでDashを終了します。入力の押下状態は変えず、押し直すまで再開しません。 */
+	void EndDashByExhaustion();
+	/** Dash状態に応じたWalk/Dash速度をMaxWalkSpeedへ適用する唯一の経路です。 */
+	void ApplyGroundMoveSpeed();
+	/** 値または禁止状態が変化した場合（bForceなら常に）OnStaminaChangedを発火します。 */
+	void BroadcastStaminaChanged(bool bForce = false);
 	/** スタン中で移動やガジェット入力を受け付けない状態かを表します。 */
 	bool bIsStunned = false;
 	/** 接触ダメージを重複して受けない無敵時間中かを表します。 */
@@ -530,6 +735,12 @@ private:
 	EPlayerActionState CurrentActionState = EPlayerActionState::Idle;
 	/** スタン終了処理を実行するTimerの識別子です。 */
 	FTimerHandle StunTimerHandle;
+	/** 空中被弾で着地を待つ上限のTimerです。 */
+	FTimerHandle StunAirborneWaitTimerHandle;
+	/** 空中被弾で、着地（残り時間の計測開始）を待っている間trueです。 */
+	bool bStunAwaitingLanding = false;
+	/** Stun開始前のbOrientRotationToMovementです。Stun中は向きを固定し、終了時にこの値へ戻します。 */
+	bool bStunSavedOrientRotationToMovement = true;
 	/** 無敵時間終了処理を実行するTimerの識別子です。 */
 	FTimerHandle InvincibleTimerHandle;
 };

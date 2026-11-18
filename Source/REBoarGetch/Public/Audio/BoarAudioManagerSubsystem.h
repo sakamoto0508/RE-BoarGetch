@@ -32,6 +32,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Audio", meta = (WorldContext = "WorldContextObject"))
 	void PlaySoundEffect2D(UObject* WorldContextObject, USoundBase* Sound, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);
 
+	/** 停止・Pause・音色更新が必要な演出用。再生の寿命は呼び出し側で管理する。 */
+	UAudioComponent* SpawnSoundEffect2D(UObject* WorldContextObject, USoundBase* Sound, float VolumeMultiplier, float PitchMultiplier);
+
 	/** @brief 指定したワールド位置から聞こえるSEを一度だけ再生します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Audio", meta = (WorldContext = "WorldContextObject"))
 	void PlaySoundEffectAtLocation(UObject* WorldContextObject, USoundBase* Sound, FVector Location, float VolumeMultiplier = 1.0f, float PitchMultiplier = 1.0f);

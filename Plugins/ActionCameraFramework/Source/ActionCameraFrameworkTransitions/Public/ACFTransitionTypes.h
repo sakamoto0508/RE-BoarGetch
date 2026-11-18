@@ -134,13 +134,15 @@ struct ACTIONCAMERAFRAMEWORKTRANSITIONS_API FACFTransitionSettings
 {
 	GENERATED_BODY()
 
+	/** フェード、ワイプなど画面を覆う演出の種類です。Look の値がどう効くかは選んだ演出によって異なります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Transition")
 	EACFTransitionEffect Effect = EACFTransitionEffect::BlackFade;
 
-	/** Seconds. 0 = jump to the end at once. */
+	/** このフェーズの再生時間（秒）です。0 は演出完了時の状態に即時切り替えます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Transition", meta = (ClampMin = "0", UIMin = "0", UIMax = "5"))
 	float Duration = 0.6f;
 
+	/** 進行具合の補間方法です。一定速度、加減速、カーブによる指定を選べます。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Transition")
 	EACFTransitionEasing Easing = EACFTransitionEasing::EaseInOut;
 
