@@ -30,16 +30,20 @@ namespace
 		FStartupWorld()
 		{
 			Instance = NewObject<UBoarGameInstance>(GEngine);
+
 			// Only read an isolated, non-existent slot. Startup must not write saves.
 			FindFProperty<FStrProperty>(UBoarGameInstance::StaticClass(), TEXT("SaveSlotName"))
 				->SetPropertyValue_InContainer(Instance, TEXT("REBoarGetch_Startup_") + FGuid::NewGuid().ToString());
+
 			Instance->InitializeStandalone();
 			World = Instance->GetWorld();
 		}
 
 		~FStartupWorld()
 		{
-			if (World->HasBegunPlay()) World->EndPlay(EEndPlayReason::Quit);
+			if (World->HasBegunPlay())
+				World->EndPlay(EEndPlayReason::Quit);
+
 			Instance->Shutdown();
 			World->DestroyWorld(false);
 			GEngine->DestroyWorldContext(World);
@@ -64,16 +68,21 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 		FStartupWorld Fixture;
 		auto* Mode = Fixture.CreateStage();
 		auto* Player = Fixture.World->SpawnActor<ABoarPlayerCharacter>();
-		if (!TestNotNull(TEXT("Player before BeginPlay"), Player)) return false;
+		if (!TestNotNull(TEXT("Player before BeginPlay"), Player))
+			return false;
+
 		TestTrue(TEXT("Preparation succeeds before UE BeginPlay"), Mode->PrepareStage());
 		TestFalse(TEXT("Preparation does not dispatch BeginPlay"), Player->HasActorBegunPlay());
 		TestTrue(TEXT("Health and loadout already ready before BeginPlay"), Player->IsReadyForPlay());
 		TestTrue(TEXT("Preparation can safely be repeated"), Mode->PrepareStage());
 	}
+
 	{
 		FStartupWorld Fixture;
 		auto* Mode = Fixture.CreateStage();
-		if (!TestNotNull(TEXT("Stage game mode"), Mode)) return false;
+		if (!TestNotNull(TEXT("Stage game mode"), Mode))
+			return false;
+
 		auto* Config = NewObject<UStageConfig>(Mode);
 		Config->StageId = TEXT("StartupTest");
 		Config->TargetCaptureCount = 1;
@@ -89,7 +98,9 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 		Point->SetActorLocation(FVector(500, 0, 100));
 		Fixture.World->SpawnActor<ACage>(FVector(1000, 0, 0), FRotator::ZeroRotator);
 		auto* Player = Fixture.World->SpawnActor<ABoarPlayerCharacter>();
-		if (!TestNotNull(TEXT("Placed player"), Player)) return false;
+		if (!TestNotNull(TEXT("Placed player"), Player))
+			return false;
+
 		TestFalse(TEXT("Player is not initialized by construction"), Player->IsReadyForPlay());
 		TestFalse(TEXT("Health awaits startup"), Player->GetHealthComponent()->IsHealthInitialized());
 		Fixture.World->BeginPlay();
@@ -103,28 +114,34 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 		TestTrue(
 			TEXT("開始演出の通知欠落を監視する"), Fixture.World->GetTimerManager().IsTimerActive(Mode->IntroductionTimeoutHandle));
 		int32 Count = 0;
+
 		for (TActorIterator<ABoarBase> It(Fixture.World); It; ++It)
 		{
 			++Count;
 			TestEqual(TEXT("Persistent identity supplied before play"), It->BoarUniqueId, Definition.BoarUniqueId);
 			TestTrue(TEXT("Normal BeginPlay dispatched after preparation"), It->HasActorBegunPlay());
 		}
+
 		TestEqual(TEXT("Configured boar created once"), Count, 1);
 		Mode->CompleteStageIntroduction();
 		TestFalse(TEXT("通常完了で開始演出の監視を解除"), Fixture.World->GetTimerManager().IsTimerActive(
-			          Mode->IntroductionTimeoutHandle));
+				Mode->IntroductionTimeoutHandle));
 		TestTrue(TEXT("Ready stage may start"), Mode->CanAdvanceStage());
 		auto* Health = Player->GetHealthComponent();
 		Health->TakeDamage(1.f);
 		const float DamagedHealth = Health->GetCurrentHealth();
 		TestTrue(TEXT("Repeated player initialization is safe"), Player->InitializeForPlay(
-			         BoarGadgetLoadoutInitializer::ResolveContext(Fixture.World)));
+				BoarGadgetLoadoutInitializer::ResolveContext(Fixture.World)));
 		TestEqual(TEXT("Repeated initialization does not heal"), Health->GetCurrentHealth(), DamagedHealth);
 		Mode->StartPlay();
 		Count = 0;
-		for (TActorIterator<ABoarBase> It(Fixture.World); It; ++It) ++Count;
+
+		for (TActorIterator<ABoarBase> It(Fixture.World); It; ++It)
+			++Count;
+
 		TestEqual(TEXT("Repeated StartPlay never respawns configured actors"), Count, 1);
 	}
+
 	{
 		FStartupWorld Fixture;
 		auto* Mode = Fixture.CreateStage();
@@ -136,6 +153,7 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 		TestFalse(TEXT("Introduction callback cannot bypass failure"), Mode->CanAdvanceStage());
 		TestFalse(TEXT("Failure reason is exposed"), Mode->GetInitializationError().IsEmpty());
 	}
+
 	{
 		FStartupWorld Fixture;
 		auto* Mode = Fixture.CreateStage();
@@ -153,6 +171,7 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 		TestFalse(TEXT("Missing spawn dependency blocks startup"), Mode->bStageInitializationComplete);
 		TestFalse(TEXT("Partial spawn does not enter gameplay"), Mode->CanAdvanceStage());
 	}
+
 	return true;
 }
 
@@ -165,13 +184,16 @@ bool FBoarStageEndRegressionTest::RunTest(const FString& Parameters)
 		FStartupWorld Fixture;
 		auto* Mode = Fixture.CreateStage();
 		auto* PC = Fixture.World->SpawnActor<ABoarPlayerController>();
-		if (!TestNotNull(TEXT("捕獲演出を持つController"), PC)) return false;
+		if (!TestNotNull(TEXT("捕獲演出を持つController"), PC))
+			return false;
+
 		PC->CapturePresentation->Receptions.AddDefaulted();
 		Mode->StageConfig = NewObject<UStageConfig>(Mode);
 		Mode->StageConfig->TargetCaptureCount = 1;
 		Mode->CapturedBoarCount = 1;
 		Mode->StageState = EBoarStageState::Playing;
 		Mode->bWaitForStageEndPresentation = true;
+
 		// 実セーブとUI生成を避け、勝敗と演出待機の制御だけを検証する。
 		Mode->bClearSaveSucceeded = true;
 		Mode->bEndUIShown = true;
@@ -183,14 +205,15 @@ bool FBoarStageEndRegressionTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("同フレーム死亡よりClearを優先"), Mode->StageState == EBoarStageState::Cleared);
 		TestFalse(TEXT("勝敗確定時に残った捕獲演出を解除"), PC->CapturePresentation->HasPendingCaptures());
 		TestTrue(TEXT("独自終了演出の待機に上限がある"), Fixture.World->GetTimerManager().IsTimerActive(
-			         Mode->EndPresentationTimeoutHandle));
+				Mode->EndPresentationTimeoutHandle));
 		Mode->HandleEndPresentationTimeout();
 		TestTrue(TEXT("終了通知欠落時にも演出待ちを抜ける"), Mode->bEndPresentationCompleted);
 		TestFalse(TEXT("終了後は監視を解除"), Fixture.World->GetTimerManager().IsTimerActive(
-			          Mode->EndPresentationTimeoutHandle));
+				Mode->EndPresentationTimeoutHandle));
 		Mode->HandleEndPresentationTimeout();
 		TestTrue(TEXT("重複Timeoutでも勝敗を維持"), Mode->StageState == EBoarStageState::Cleared);
 	}
+
 	{
 		FStartupWorld Fixture;
 		auto* Mode = Fixture.CreateStage();
@@ -205,6 +228,7 @@ bool FBoarStageEndRegressionTest::RunTest(const FString& Parameters)
 		Mode->CompleteStageIntroduction();
 		TestTrue(TEXT("遅延した開始完了で終了状態を戻さない"), Mode->StageState == EBoarStageState::GameOver);
 	}
+
 	return true;
 }
 
@@ -216,7 +240,9 @@ bool FBoarLoadoutInitializationFailureTest::RunTest(const FString& Parameters)
 	FStartupWorld Fixture;
 	Fixture.CreateStage();
 	auto* Player = Fixture.World->SpawnActor<ABoarPlayerCharacter>();
-	if (!TestNotNull(TEXT("Player"), Player)) return false;
+	if (!TestNotNull(TEXT("Player"), Player))
+		return false;
+
 	auto* Gadgets = Player->GetGadgetComponent();
 	const TArray<TSubclassOf<AGadgetBase>> InvalidSlots = {AGadgetBase::StaticClass(), nullptr, nullptr, nullptr};
 	TestFalse(
@@ -236,12 +262,16 @@ bool FBoarLoadoutInitializationFailureTest::RunTest(const FString& Parameters)
 	const auto PlayerClass = LoadClass<ABoarPlayerCharacter>(
 		nullptr, TEXT("/Game/BP/Player/BP_PlayerCharacter.BP_PlayerCharacter_C"));
 	const auto NetClass = LoadClass<AGadgetBase>(nullptr, TEXT("/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C"));
+
 	if (!TestNotNull(TEXT("Existing player Blueprint"), PlayerClass) ||
 		!TestNotNull(TEXT("Existing net Blueprint"), NetClass))
 		return false;
+
 	auto* BlueprintPlayer = Fixture.World->SpawnActor<ABoarPlayerCharacter>(
 		PlayerClass, FVector(500, 0, 100), FRotator::ZeroRotator);
-	if (!TestNotNull(TEXT("Existing player before BeginPlay"), BlueprintPlayer)) return false;
+	if (!TestNotNull(TEXT("Existing player before BeginPlay"), BlueprintPlayer))
+		return false;
+
 	FBoarGadgetLoadoutContext TestContext;
 	TestContext.bTemporary = true;
 	TestContext.TestGadgetClass = NetClass;
@@ -262,17 +292,23 @@ bool FBoarPendingCaptureTest::RunTest(const FString& Parameters)
 {
 	FStartupWorld Fixture;
 	auto* Mode = Fixture.CreateStage();
-	if (!TestNotNull(TEXT("Stage game mode"), Mode)) return false;
+	if (!TestNotNull(TEXT("Stage game mode"), Mode))
+		return false;
+
 	Mode->StageState = EBoarStageState::Playing;
 	FActorSpawnParameters Spawn;
 	Spawn.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	auto* Cage = Fixture.World->SpawnActor<ACage>(FVector(500, 0, 0), FRotator::ZeroRotator, Spawn);
-	if (!TestNotNull(TEXT("収容先のCage"), Cage)) return false;
+	if (!TestNotNull(TEXT("収容先のCage"), Cage))
+		return false;
+
 	Cage->InitializeForStage();
 	auto SpawnCaptured = [&](FName Id) -> ABoarBase*
 	{
 		auto* Boar = Fixture.World->SpawnActor<ABoarBase>(FVector::ZeroVector, FRotator::ZeroRotator, Spawn);
-		if (!Boar) return nullptr;
+		if (!Boar)
+			return nullptr;
+
 		Boar->BoarUniqueId = Id;
 		auto* Capture = Boar->FindComponentByClass<UCaptureComponent>();
 		return Capture && Capture->Capture(nullptr) ? Boar : nullptr;
@@ -280,7 +316,9 @@ bool FBoarPendingCaptureTest::RunTest(const FString& Parameters)
 
 	// 演出完了の通知で、確定待ちの捕獲が一度だけ確定する。
 	ABoarBase* First = SpawnCaptured(TEXT("PendingTest_First"));
-	if (!TestNotNull(TEXT("捕獲状態のBoar"), First)) return false;
+	if (!TestNotNull(TEXT("捕獲状態のBoar"), First))
+		return false;
+
 	Mode->RegisterPendingCapture(First);
 	TestTrue(TEXT("演出中は確定待ち"), Mode->IsCapturePending(First));
 	TestFalse(TEXT("演出中は未確定"), Mode->HandledCapturedBoars.Contains(First));
@@ -296,34 +334,43 @@ bool FBoarPendingCaptureTest::RunTest(const FString& Parameters)
 		ABoarBase* UseA = SpawnCaptured(TEXT("Order_A"));
 		ABoarBase* UseB = SpawnCaptured(TEXT("Order_B"));
 		ABoarBase* NextC = SpawnCaptured(TEXT("Order_C"));
-		if (!TestTrue(TEXT("捕獲順テスト用のBoar"), UseA && UseB && NextC)) return false;
+		if (!TestTrue(TEXT("捕獲順テスト用のBoar"), UseA && UseB && NextC))
+			return false;
+
 		Mode->RegisterPendingCapture(UseA, true);
+
 		// 同じ一振りの別フレーム相当（フレームに依存しない）。
 		Mode->RegisterPendingCapture(UseB, false);
 		TestEqual(TEXT("同じ一振りは同順位"), Orders.FindRef(TEXT("Order_B")), Orders.FindRef(TEXT("Order_A")));
 		Mode->RegisterPendingCapture(NextC, true);
 		TestTrue(TEXT("別の一振りは後の方が新しい"), Orders.FindRef(TEXT("Order_C")) > Orders.FindRef(TEXT("Order_A")));
+
 		// 再捕獲（確定待ちから外れた後に再び捕獲成功）では以前の順位を最新へ更新する。
 		Mode->DiscardPendingCapture(UseA);
 		Mode->RegisterPendingCapture(UseA, true);
 		TestTrue(TEXT("再捕獲で最新順へ更新"), Orders.FindRef(TEXT("Order_A")) > Orders.FindRef(TEXT("Order_C")));
+
 		for (ABoarBase* Boar : {UseA, UseB, NextC})
 			Mode->DiscardPendingCapture(Boar);
 	}
 
 	// 見た目だけの片付け（Level破棄・対象Destroy）は確定しない。
 	ABoarBase* Discarded = SpawnCaptured(TEXT("PendingTest_Discarded"));
-	if (!TestNotNull(TEXT("破棄用のBoar"), Discarded)) return false;
+	if (!TestNotNull(TEXT("破棄用のBoar"), Discarded))
+		return false;
+
 	Mode->RegisterPendingCapture(Discarded);
 	Mode->DiscardPendingCapture(Discarded);
 	TestFalse(TEXT("破棄で確定待ちから外れる"), Mode->IsCapturePending(Discarded));
 	TestEqual(TEXT("破棄後の完了通知では確定しない"),
-	          Mode->CompletePendingCaptures({TWeakObjectPtr<ABoarBase>(Discarded)}).Num(), 0);
+		Mode->CompletePendingCaptures({TWeakObjectPtr<ABoarBase>(Discarded)}).Num(), 0);
 	TestFalse(TEXT("破棄した捕獲は未確定のまま"), Mode->HandledCapturedBoars.Contains(Discarded));
 
 	// Clear要求後（Stage終了処理中）は確定せず、確定待ちにも残さない。
 	ABoarBase* Late = SpawnCaptured(TEXT("PendingTest_Late"));
-	if (!TestNotNull(TEXT("終了直前のBoar"), Late)) return false;
+	if (!TestNotNull(TEXT("終了直前のBoar"), Late))
+		return false;
+
 	Mode->RegisterPendingCapture(Late);
 	Mode->bStageClearRequested = true;
 	TestEqual(TEXT("Clear要求後は確定しない"), Mode->CompletePendingCaptures({TWeakObjectPtr<ABoarBase>(Late)}).Num(), 0);

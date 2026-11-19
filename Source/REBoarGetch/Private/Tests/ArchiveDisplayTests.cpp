@@ -12,8 +12,10 @@ namespace
 		Run.bResultFrozen = true;
 		Run.bHousedSnapshotTaken = true;
 		Run.HousedBoarUniqueIds = Ids;
+
 		for (int32 I = 0; I < Ids.Num(); ++I)
 			Run.LastCaptureOrderByBoar.Add(Ids[I], I + 1);
+
 		return Run;
 	}
 }
@@ -44,12 +46,16 @@ bool FArchiveDisplaysTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Empty middle slot persists"), Loaded->ResolveArchiveDisplays()[1], NAME_None);
 		TestEqual(TEXT("History persists"), Loaded->CapturedBoarHistory.Last(), FName(TEXT("B")));
 	}
+
 	TestTrue(TEXT("Assign an already displayed Boar swaps slots"), Save->AssignArchiveDisplay(2,TEXT("A")));
 	TestEqual(TEXT("Old active Boar moves to source slot"), Save->ResolveArchiveDisplays()[0], FName(TEXT("C")));
 	TestEqual(TEXT("Selected Boar moves to active slot"), Save->ResolveArchiveDisplays()[2], FName(TEXT("A")));
 	TestFalse(TEXT("Uncaptured assignment rejected"), Save->AssignArchiveDisplay(0,TEXT("X")));
 	TestFalse(TEXT("Invalid slot rejected"), Save->AssignArchiveDisplay(3,TEXT("A")));
-	for (int32 I = 0; I < 3; ++I)TestTrue(TEXT("Explicitly clear each slot"), Save->AssignArchiveDisplay(I, NAME_None));
+
+	for (int32 I = 0; I < 3; ++I)
+		TestTrue(TEXT("Explicitly clear each slot"), Save->AssignArchiveDisplay(I, NAME_None));
+
 	Save->MergeClearedRun(ClearedRun({TEXT("D")}));
 	TestTrue(
 		TEXT("Empty custom archive does not revert to default"),

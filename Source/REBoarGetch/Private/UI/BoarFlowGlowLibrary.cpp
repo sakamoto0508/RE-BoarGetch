@@ -9,9 +9,12 @@ namespace
 	UMaterialInstanceDynamic* FlowMaterial(UUserWidget* Owner)
 	{
 		UImage* Image = Owner && Owner->WidgetTree
-			                ? Cast<UImage>(Owner->WidgetTree->FindWidget(TEXT("FocusFrame")))
-			                : nullptr;
-		if (!Image) return nullptr;
+				? Cast<UImage>(Owner->WidgetTree->FindWidget(TEXT("FocusFrame")))
+				: nullptr;
+
+		if (!Image)
+			return nullptr;
+
 		Image->SetVisibility(ESlateVisibility::HitTestInvisible);
 		return Image->GetDynamicMaterial();
 	}
@@ -20,7 +23,8 @@ namespace
 // FocusFrameのMaterialへWidgetの寸法を渡し、表示サイズが変わったときだけ更新します。
 void UBoarFlowGlowLibrary::ResizeFlowFrame(UUserWidget* Owner, FVector2D LocalSize)
 {
-	if (LocalSize.X <= 0 || LocalSize.Y <= 0) return;
+	if (LocalSize.X <= 0 || LocalSize.Y <= 0)
+		return;
 	if (auto* MID = FlowMaterial(Owner))
 	{
 		// Tickから呼ばれても寸法変更時だけ書き込みます。流れる発光のアニメーションはMaterial側で行います。

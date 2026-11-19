@@ -11,11 +11,12 @@ bool FBoarCaptureDestinationTest::RunTest(const FString& Parameters)
 {
 	const auto Initialization =
 		UWorld::InitializationValues().AllowAudioPlayback(false).CreatePhysicsScene(false).CreateNavigation(false).
-		                               CreateAISystem(false);
+			CreateAISystem(false);
 	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true, ERHIFeatureLevel::Num,
-	                                    &Initialization);
+		&Initialization);
 	if (!TestNotNull(TEXT("Capture test world"), World))
 		return false;
+
 	TestNull(TEXT("No cage has no destination"), BoarCaptureResolution::FindDestination(World, FVector::ZeroVector));
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -38,12 +39,13 @@ bool FBoarCaptureDestinationTest::RunTest(const FString& Parameters)
 		Near->ApplyDamage(Near->GetMaxHP());
 		TestTrue(TEXT("Near cage destroyed via gameplay API"), Near->GetIsCageDestroyed());
 		TestTrue(TEXT("Healthy cage takes precedence over nearer destroyed cage"),
-		         BoarCaptureResolution::FindDestination(World, FVector::ZeroVector) == Far);
+			BoarCaptureResolution::FindDestination(World, FVector::ZeroVector) == Far);
 		Far->ApplyDamage(Far->GetMaxHP());
 		TestTrue(
 			TEXT("Nearest destroyed cage is fallback"),
 			BoarCaptureResolution::FindDestination(World, FVector::ZeroVector) == Near);
 	}
+
 	World->DestroyWorld(false);
 	return true;
 }

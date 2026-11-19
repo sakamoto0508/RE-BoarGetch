@@ -24,10 +24,11 @@ void UHealthComponent::BeginPlay()
 bool UHealthComponent::InitializeHealth()
 {
 	// 初期化の再実行を回復処理として使わない。明示的な回復・Resetとは責務を分ける。
-	if (bHealthInitialized) 
+	if (bHealthInitialized)
 		return true;
-	if (!FMath::IsFinite(MaxHealth) || MaxHealth <= 0.f) 
+	if (!FMath::IsFinite(MaxHealth) || MaxHealth <= 0.f)
 		return false;
+
 	ResetHealth();
 	return true;
 }
@@ -38,15 +39,15 @@ bool UHealthComponent::InitializeHealth()
 void UHealthComponent::TakeDamage(float DamageAmount)
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage()) 
+		if (!Mode->CanAdvanceStage())
 			return;
-	if (DamageAmount <= 0.0f || IsDead())	
+	if (DamageAmount <= 0.0f || IsDead())
 		return;
-	
+
 	CurrentHealth -= DamageAmount;
 	ClampAndBroadcastHealth();
 
-	if (IsDead())	
+	if (IsDead())
 		OnDeath.Broadcast();
 }
 
@@ -56,11 +57,11 @@ void UHealthComponent::TakeDamage(float DamageAmount)
 void UHealthComponent::Heal(float HealAmount)
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage()) 
+		if (!Mode->CanAdvanceStage())
 			return;
-	if (HealAmount <= 0.0f || IsDead())	
+	if (HealAmount <= 0.0f || IsDead())
 		return;
-	
+
 	CurrentHealth += HealAmount;
 	ClampAndBroadcastHealth();
 }

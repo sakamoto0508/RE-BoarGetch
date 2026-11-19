@@ -12,7 +12,7 @@ struct FStateTreeBoarSenseTask : public FStateTreeTaskCommonBase
 	GENERATED_BODY()
 
 	using FInstanceDataType = FBoarStateTreeInstanceData;
-	
+
 	/** 毎フレーム認識情報を更新するようタスクを初期化します。 */
 	FStateTreeBoarSenseTask()
 	{
@@ -25,14 +25,14 @@ struct FStateTreeBoarSenseTask : public FStateTreeTaskCommonBase
 	{
 		return FInstanceDataType::StaticStruct();
 	}
-	
+
 	/** プレイヤー・檻の認識情報を更新し、次に優先して行動する対象（プレイヤーまたは檻）を決定します。 */
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
 		const FStateTreeTransitionResult& Transition) const override;
-	
+
 	/** タスクの更新処理を行います。 */
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context,float DeltaTime) const override;
-	
+
 	/** プレイヤー・檻の認識情報を更新し、次に優先して行動する対象（プレイヤーまたは檻）を決定します。 */
 	EStateTreeRunStatus UpdateSense(FStateTreeExecutionContext& Context) const;
 

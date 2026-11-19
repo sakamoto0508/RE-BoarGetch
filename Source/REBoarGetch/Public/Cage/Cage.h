@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -11,20 +9,22 @@ class ABoarBase;
 class UBoxComponent;
 class USceneComponent;
 class UCageVisualComponent;
+class USoundBase;
+class USoundAttenuation;
 
-/** 
- * * 捕獲したイノシシを収容する檻を管理するActorです。 
- *   主に以下の処理を担当します。 
- *  ・捕獲されたイノシシの収容 
- *  ・収容されたイノシシの配置位置計算 
- *  ・檻のHP管理 
+/**
+ * * 捕獲したイノシシを収容する檻を管理するActorです。
+ *   主に以下の処理を担当します。
+ *  ・捕獲されたイノシシの収容
+ *  ・収容されたイノシシの配置位置計算
+ *  ・檻のHP管理
  *  ・檻の破壊と再出現
- *  ・檻の破壊時に収容中のイノシシを解放 
- *  ・HP変更、破壊、再出現イベントの通知 * 
+ *  ・檻の破壊時に収容中のイノシシを解放
+ *  ・HP変更、破壊、再出現イベントの通知 *
  *  檻は破壊時にActor自体をDestroyせず、
  *  一時的に非表示・Collision無効の状態にします。
- *  これにより、同じActorから一定時間後の再出現処理を実行できます。 
- * 
+ *  これにより、同じActorから一定時間後の再出現処理を実行できます。
+ *
  */
 UCLASS()
 class REBOARGETCH_API ACage : public AActor
@@ -95,10 +95,15 @@ public:
 	bool GetIsCageDestroyed() const { return bIsDestroyed; }
 
 private:
-	UPROPERTY(VisibleAnywhere,Category="Cage|Visual") TObjectPtr<UCageVisualComponent> Presentation;
+	UPROPERTY(VisibleAnywhere,Category="Cage|Visual")
+	TObjectPtr<UCageVisualComponent> Presentation;
+
 	bool bStageInitialized = false;
 	void NotifyHousedCountChanged();
-	UFUNCTION() void HandleHousedBoarDestroyed(AActor* Actor);
+
+	UFUNCTION()
+	void HandleHousedBoarDestroyed(AActor* Actor);
+
 	bool CanAdvance() const;
 	bool bStageStopped = false;
 	float SecondsSinceDamage = 0.0f;
@@ -169,4 +174,41 @@ private:
 
 	/** 破壊処理の多重実行を防ぐためのフラグです。 */
 	bool bIsDestroyed = false;
+
+	// ---- Audio（BoarAudioManagerSubsystem経由。未設定のSEは鳴らしません。Gameplayの判定には使いません） ----
+
+	/** Boarの攻撃が命中してHPが減ったとき、檻の位置で鳴らします。 */
+	UPROPERTY(EditAnywhere, Category = "Cage|Audio")
+	TObjectPtr<USoundBase> HitSound;
+
+	/** HPがWarningHpRatio以下へ下がった瞬間に2Dで鳴らす警告です（毎フレームではなく、しきい値をまたいだ時）。 */
+	UPROPERTY(EditAnywhere, Category = "Cage|Audio")
+	TObjectPtr<USoundBase> LowHpWarningSound;
+
+	UPROPERTY(EditAnywhere, Category = "Cage|Audio", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float WarningHpRatio = 0.3f;
+
+	/** 危険域のまま攻撃が続いた場合の再警告間隔（ゲーム時間）です。0なら危険域へ入った時の1回だけです。 */
+	UPROPERTY(EditAnywhere, Category = "Cage|Audio", meta = (ClampMin = "0.0", Units = "s"))
+	float WarningRepeatInterval = 6.0f;
+
+	/** 破壊が確定した瞬間に2Dで鳴らします（GameOverではありません）。 */
+	UPROPERTY(EditAnywhere, Category = "Cage|Audio")
+	TObjectPtr<USoundBase> DestroyedSound;
+
+	/** 破壊で収容中のBoarが1体以上解放されたとき、檻の位置で鳴らします。 */
+	UPROPERTY(EditAnywhere, Category = "Cage|Audio")
+	TObjectPtr<USoundBase> BoarReleasedSound;
+
+	/** 時間経過で復旧（HP全快）したときに2Dで鳴らします。 */
+	UPROPERTY(EditAnywhere, Category = "Cage|Audio")
+	TObjectPtr<USoundBase> RestoredSound;
+
+	/** 位置付きSE（Hit / BoarReleased）の距離減衰です。未設定ならProject SettingsのDefault World Attenuationです。 */
+	UPROPERTY(EditAnywhere, Category = "Cage|Audio")
+	TObjectPtr<USoundAttenuation> SoundAttenuation;
+
+	double LastWarningSoundTime = -1.0e9;
+
+	void PlayCageSound(USoundBase* Sound, bool bAs2D) const;
 };

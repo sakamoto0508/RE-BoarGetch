@@ -10,6 +10,7 @@ UCLASS()
 class REBOARGETCH_API UBoarSaveGame : public USaveGame
 {
 	GENERATED_BODY()
+
 public:
 	/** 保存前のスナップショットとの差分を確定します。ディスクへの書き込みは行いません。 */
 	void FreezeRunResult(FStageRunData& Run) const;
@@ -27,14 +28,33 @@ public:
 	TArray<FName> GetRecentCapturedBoarIds() const;
 	/** 最近捕獲順。末尾が直近で、位置がそのまま単調増加の順序です（Clear時に収容中だった個体だけ末尾へ移動）。
 	 *  同時捕獲はID降順で並べ、新しい順に読むとID昇順になります。古いセーブのSetから順序を推測しません。 */
-	UPROPERTY(SaveGame, BlueprintReadOnly) TArray<FName> CapturedBoarHistory;
-	UPROPERTY(SaveGame, BlueprintReadOnly) TArray<FName> ArchiveDisplayBoarIds;
-	UPROPERTY(SaveGame, BlueprintReadOnly) bool bHasSavedArchiveDisplays = false;
-	UPROPERTY(SaveGame, BlueprintReadOnly) TSet<FName> CapturedBoarUniqueIds;
-	UPROPERTY(SaveGame, BlueprintReadOnly) TSet<FName> SpecialCoinIds;
-	UPROPERTY(SaveGame, BlueprintReadOnly) TSet<FName> ClearedStageIds;
-	UPROPERTY(SaveGame, BlueprintReadOnly) TSet<FName> UnlockedGadgetIds;
-	UPROPERTY(SaveGame, BlueprintReadOnly) TArray<FName> GadgetLoadout;
-	UPROPERTY(SaveGame, BlueprintReadOnly) FName LastAttemptedStageId;
-	UPROPERTY(SaveGame, BlueprintReadOnly) bool bHasSavedLoadout = false;
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	TArray<FName> CapturedBoarHistory;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	TArray<FName> ArchiveDisplayBoarIds;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	bool bHasSavedArchiveDisplays = false;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	TSet<FName> CapturedBoarUniqueIds;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	TSet<FName> SpecialCoinIds;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	TSet<FName> ClearedStageIds;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	TSet<FName> UnlockedGadgetIds;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	TArray<FName> GadgetLoadout;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	FName LastAttemptedStageId;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	bool bHasSavedLoadout = false;
 };

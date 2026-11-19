@@ -9,11 +9,13 @@ void UBoarConfirmationWidget::NativeConstruct()
 	bDecisionSent = false;
 	YesButton = WidgetTree ? Cast<UButton>(WidgetTree->FindWidget(YesButtonName)) : nullptr;
 	NoButton = WidgetTree ? Cast<UButton>(WidgetTree->FindWidget(NoButtonName)) : nullptr;
+
 	if (YesButton)
 	{
 		YesButton->OnClicked.AddUniqueDynamic(this, &UBoarConfirmationWidget::Confirm);
 		YesButton->OnHovered.AddUniqueDynamic(this, &UBoarConfirmationWidget::FocusYes);
 	}
+
 	if (NoButton)
 	{
 		NoButton->OnClicked.AddUniqueDynamic(this, &UBoarConfirmationWidget::Cancel);
@@ -28,18 +30,23 @@ void UBoarConfirmationWidget::NativeDestruct()
 		YesButton->OnClicked.RemoveDynamic(this, &UBoarConfirmationWidget::Confirm);
 		YesButton->OnHovered.RemoveDynamic(this, &UBoarConfirmationWidget::FocusYes);
 	}
+
 	if (NoButton)
 	{
 		NoButton->OnClicked.RemoveDynamic(this, &UBoarConfirmationWidget::Cancel);
 		NoButton->OnHovered.RemoveDynamic(this, &UBoarConfirmationWidget::FocusNo);
 	}
+
 	Super::NativeDestruct();
 }
 
 void UBoarConfirmationWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
-	if (!bInitialFocusPending) return;
+
+	if (!bInitialFocusPending)
+		return;
+
 	bInitialFocusPending = false;
 	FocusInitialChoice();
 }
@@ -51,7 +58,9 @@ void UBoarConfirmationWidget::FocusNo() { if (NoButton) NoButton->SetKeyboardFoc
 // 一度だけ承認を通知します。連打や重複イベントで確認後の処理が複数回走るのを防ぎます。
 void UBoarConfirmationWidget::Confirm()
 {
-	if (bDecisionSent) return;
+	if (bDecisionSent)
+		return;
+
 	bDecisionSent = true;
 	OnDecision.Broadcast(true);
 }
@@ -59,7 +68,9 @@ void UBoarConfirmationWidget::Confirm()
 // 承認と共通の送信済みフラグを使い、否定側の決定も一度だけ通知します。
 void UBoarConfirmationWidget::Cancel()
 {
-	if (bDecisionSent) return;
+	if (bDecisionSent)
+		return;
+
 	bDecisionSent = true;
 	OnDecision.Broadcast(false);
 }

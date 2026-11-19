@@ -74,7 +74,9 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	// GUID slot isolates this fixture; only the notification checks write, and cleanup deletes it.
 	auto* Instance = NewObject<UBoarGameInstance>(GEngine);
 	auto* SlotProperty = FindFProperty<FStrProperty>(UBoarGameInstance::StaticClass(), TEXT("SaveSlotName"));
-	if (!TestNotNull(TEXT("Existing reflected save slot setting"), SlotProperty)) return false;
+	if (!TestNotNull(TEXT("Existing reflected save slot setting"), SlotProperty))
+		return false;
+
 	const FString Slot = TEXT("REBoarGetch_StageSelectTest_") + FGuid::NewGuid().ToString();
 	SlotProperty->SetPropertyValue_InContainer(Instance, Slot);
 	Instance->InitializeStandalone();
@@ -124,7 +126,7 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Cleared flag"), Data.bCleared);
 	TestEqual(TEXT("Clear status"), Data.Status.ToString(), FString(TEXT("CLEAR")));
 	TestEqual(TEXT("Deduplicated stage-local coin and boar progress"), Data.Progress.ToString(),
-	          FString(TEXT("特別コイン：1 / 2\n図鑑：1 / 2")));
+		FString(TEXT("特別コイン：1 / 2\n図鑑：1 / 2")));
 	TestTrue(TEXT("Empty entry display name uses stage ID"), Data.EntryLabel.ToString().StartsWith(TEXT("S1\n")));
 	TestTrue(TEXT("Detail display name retains original empty text"), Data.DisplayName.IsEmpty());
 	TestEqual(TEXT("Capture target kept independent of collection count"), Data.TargetCaptureCount, 4);
@@ -133,9 +135,9 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	Locked->Level.Reset();
 	TestNull(TEXT("Missing level blocks start"), Presenter->RequestStart());
 	TestEqual(TEXT("Missing level status takes priority"), Presenter->GetSelectedStage().Status.ToString(),
-	          FString(TEXT("出発先未登録")));
+		FString(TEXT("出発先未登録")));
 	TestEqual(TEXT("Legacy/no-individual stage progress"), Presenter->GetSelectedStage().Progress.ToString(),
-	          FString(TEXT("特別コイン：0 / 0\n図鑑：個体データ未登録")));
+		FString(TEXT("特別コイン：0 / 0\n図鑑：個体データ未登録")));
 	UGameplayStatics::SaveGameToMemory(Save, After);
 	TestTrue(TEXT("Selection and view-data reads leave save byte-identical"), Before == After);
 	TestTrue(TEXT("Presenter subscribed to model"), Instance->OnProgressChanged.IsBoundToObject(Presenter));

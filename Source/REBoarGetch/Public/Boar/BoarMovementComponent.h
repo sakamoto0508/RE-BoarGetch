@@ -20,7 +20,7 @@ public:
 	float GetPresentationTimeScale() const { return PresentationTimeScale; }
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
-	                           FActorComponentTickFunction* ThisTickFunction) override;
+		FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
 	float PresentationTimeScale = 1.f;

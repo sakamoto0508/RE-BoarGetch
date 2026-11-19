@@ -26,16 +26,30 @@ USTRUCT(BlueprintType)
 struct FFacilitySignStyle
 {
     GENERATED_BODY()
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1")) float TitleSize=14.f;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1")) float SubtitleSize=7.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1"))
+    float TitleSize=14.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1"))
+    float SubtitleSize=7.f;
+
     /** パネル外周の余白。タイトルとサブタイトルの行間もこの値から決まります。 */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0")) float Padding=12.f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0"))
+    float Padding=12.f;
+
     /** 文字面MaterialのIntensity（発光倍率）。 */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(ClampMin="0")) float Intensity=1.5f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(ClampMin="0"))
+    float Intensity=1.5f;
+
     /** パネルの厚み。 */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1")) float Depth=4.f;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly) FLinearColor TitleColor=FLinearColor(FColor(244, 248, 252));
-    UPROPERTY(EditAnywhere, BlueprintReadOnly) FLinearColor SubtitleColor=FLinearColor(FColor(64, 212, 240));
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1"))
+    float Depth=4.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FLinearColor TitleColor=FLinearColor(FColor(244, 248, 252));
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FLinearColor SubtitleColor=FLinearColor(FColor(64, 212, 240));
 };
 
 /** 施設内のWorld Space表示。文字は必ず背面パネルを媒体として持ち、空中に浮かせません。Gameplay状態は持たず、既存Actorを購読して表示だけを切り替えます。 */
@@ -43,6 +57,7 @@ UCLASS()
 class REBOARGETCH_API AFacilitySign : public AActor
 {
     GENERATED_BODY()
+
 public:
     AFacilitySign();
     virtual void OnConstruction(const FTransform& Transform) override;
@@ -51,46 +66,83 @@ public:
     /** 展示設備が所有する名札として、展示元と状態表示用の部品（リング等）を設定します。 */
     void BindSpecimenSource(ABoarArchiveDisplay* Source, const TArray<UPrimitiveComponent*>& Highlights);
 
-    UPROPERTY(VisibleAnywhere) TObjectPtr<USceneComponent> SceneRoot;
-    /** 背面パネル。Mesh・Materialは変更可能。大きさは文字幅から自動計算します。 */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign") TObjectPtr<UStaticMeshComponent> Panel;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign") TObjectPtr<UStaticMeshComponent> AccentLine;
-    /** 文字面。既定はWBP_FacilitySign（Widget Class）。書体・配置はそのWBPのDesignerで編集します。 */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign") TObjectPtr<UWidgetComponent> LabelWidget;
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<USceneComponent> SceneRoot;
 
-    UPROPERTY(EditAnywhere, Category="Sign") EFacilitySignTier Tier=EFacilitySignTier::FacilityLabel;
-    UPROPERTY(EditAnywhere, Category="Sign") FText Title;
-    UPROPERTY(EditAnywhere, Category="Sign") FText Subtitle;
+    /** 背面パネル。Mesh・Materialは変更可能。大きさは文字幅から自動計算します。 */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign")
+    TObjectPtr<UStaticMeshComponent> Panel;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign")
+    TObjectPtr<UStaticMeshComponent> AccentLine;
+
+    /** 文字面。既定はWBP_FacilitySign（Widget Class）。書体・配置はそのWBPのDesignerで編集します。 */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign")
+    TObjectPtr<UWidgetComponent> LabelWidget;
+
+    UPROPERTY(EditAnywhere, Category="Sign")
+    EFacilitySignTier Tier=EFacilitySignTier::FacilityLabel;
+
+    UPROPERTY(EditAnywhere, Category="Sign")
+    FText Title;
+
+    UPROPERTY(EditAnywhere, Category="Sign")
+    FText Subtitle;
+
     /** 0なら文字幅から自動計算します。幅を揃えたい名札などだけ指定します。 */
-    UPROPERTY(EditAnywhere, Category="Sign", meta=(Units="cm")) float FixedPanelWidth=0.f;
+    UPROPERTY(EditAnywhere, Category="Sign", meta=(Units="cm"))
+    float FixedPanelWidth=0.f;
 
     /** 文字面用。Widgetの描画結果（SlateUI）をIntensity倍で自発光させます。 */
-    UPROPERTY(EditAnywhere, Category="Sign|Style") TObjectPtr<UMaterialInterface> WidgetMaterial;
-    UPROPERTY(EditAnywhere, Category="Sign|Style") TObjectPtr<UMaterialInterface> PanelMaterial;
-    UPROPERTY(EditAnywhere, Category="Sign|Style") TObjectPtr<UMaterialInterface> AccentMaterial;
+    UPROPERTY(EditAnywhere, Category="Sign|Style")
+    TObjectPtr<UMaterialInterface> WidgetMaterial;
+
+    UPROPERTY(EditAnywhere, Category="Sign|Style")
+    TObjectPtr<UMaterialInterface> PanelMaterial;
+
+    UPROPERTY(EditAnywhere, Category="Sign|Style")
+    TObjectPtr<UMaterialInterface> AccentMaterial;
 
     /** 指定時、このPortal / TerminalのTriggerにローカルPlayerが入っている間を「接近中」とします。 */
-    UPROPERTY(EditInstanceOnly, Category="Sign|State") TObjectPtr<AHubPortal> ProximitySource;
+    UPROPERTY(EditInstanceOnly, Category="Sign|State")
+    TObjectPtr<AHubPortal> ProximitySource;
+
     /** 接近中だけ表示します。Prompt階層の既定です。 */
-    UPROPERTY(EditInstanceOnly, Category="Sign|State") bool bShowOnlyWhenNear=false;
+    UPROPERTY(EditInstanceOnly, Category="Sign|State")
+    bool bShowOnlyWhenNear=false;
+
     /** 状態に応じてMaterialを切り替える床ライン・リング等。 */
-    UPROPERTY(EditInstanceOnly, Category="Sign|State") TArray<TObjectPtr<AActor>> HighlightActors;
+    UPROPERTY(EditInstanceOnly, Category="Sign|State")
+    TArray<TObjectPtr<AActor>> HighlightActors;
+
     /** 所有元の設備から渡された、Materialを切り替える部品（BindSpecimenSourceで設定）。 */
-    UPROPERTY(Transient) TArray<TObjectPtr<UPrimitiveComponent>> HighlightComponents;
-    UPROPERTY(EditAnywhere, Category="Sign|State") TObjectPtr<UMaterialInterface> HighlightOnMaterial;
-    UPROPERTY(EditAnywhere, Category="Sign|State") TObjectPtr<UMaterialInterface> HighlightOffMaterial;
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UPrimitiveComponent>> HighlightComponents;
+
+    UPROPERTY(EditAnywhere, Category="Sign|State")
+    TObjectPtr<UMaterialInterface> HighlightOnMaterial;
+
+    UPROPERTY(EditAnywhere, Category="Sign|State")
+    TObjectPtr<UMaterialInterface> HighlightOffMaterial;
 
     /** 指定時、展示中個体の図鑑名をTitleへ表示します。空き枠はEmptyTitleを暗く表示します。 */
-    UPROPERTY(EditInstanceOnly, Category="Sign|Specimen") TObjectPtr<ABoarArchiveDisplay> SpecimenSource;
-    UPROPERTY(EditAnywhere, Category="Sign|Specimen") FText EmptyTitle;
-    UPROPERTY(EditAnywhere, Category="Sign|Specimen") FText UnnamedTitle;
+    UPROPERTY(EditInstanceOnly, Category="Sign|Specimen")
+    TObjectPtr<ABoarArchiveDisplay> SpecimenSource;
+
+    UPROPERTY(EditAnywhere, Category="Sign|Specimen")
+    FText EmptyTitle;
+
+    UPROPERTY(EditAnywhere, Category="Sign|Specimen")
+    FText UnnamedTitle;
 
     /** Gameplay側が文字を書き換える既存TextRenderActor。その文字をTitleとして表示し、元の文字は非表示にします。 */
-    UPROPERTY(EditInstanceOnly, Category="Sign|Mirror") TObjectPtr<ATextRenderActor> MirrorTextSource;
+    UPROPERTY(EditInstanceOnly, Category="Sign|Mirror")
+    TObjectPtr<ATextRenderActor> MirrorTextSource;
 
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+
 private:
     FText ShownTitle;
     bool bShownDimmed=false;
@@ -102,7 +154,13 @@ private:
     /** 文字面にWBP（非NativeのUFacilitySignWidget派生）が設定されているか。 */
     bool HasSignWidgetClass() const;
     void PollMirrorText();
-    UFUNCTION() void RefreshSpecimen();
-    UFUNCTION() void OnProximityBegin(UPrimitiveComponent* Component,AActor* Other,UPrimitiveComponent* OtherComponent,int32 BodyIndex,bool bSweep,const FHitResult& Hit);
-    UFUNCTION() void OnProximityEnd(UPrimitiveComponent* Component,AActor* Other,UPrimitiveComponent* OtherComponent,int32 BodyIndex);
+
+    UFUNCTION()
+    void RefreshSpecimen();
+
+    UFUNCTION()
+    void OnProximityBegin(UPrimitiveComponent* Component,AActor* Other,UPrimitiveComponent* OtherComponent,int32 BodyIndex,bool bSweep,const FHitResult& Hit);
+
+    UFUNCTION()
+    void OnProximityEnd(UPrimitiveComponent* Component,AActor* Other,UPrimitiveComponent* OtherComponent,int32 BodyIndex);
 };

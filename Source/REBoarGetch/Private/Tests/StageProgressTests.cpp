@@ -14,11 +14,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStageInputLockTest, "REBoarGetch.Spec.StageInp
 bool FStageInputLockTest::RunTest(const FString& Parameters)
 {
 	const auto Initialization = UWorld::InitializationValues().AllowAudioPlayback(false)
-	                                                          .CreatePhysicsScene(false).CreateNavigation(false).
-	                                                          CreateAISystem(false);
+		.CreatePhysicsScene(false).CreateNavigation(false).
+		CreateAISystem(false);
 	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true,
-	                                    ERHIFeatureLevel::Num, &Initialization);
-	if (!TestNotNull(TEXT("入力検証World"), World)) return false;
+		ERHIFeatureLevel::Num, &Initialization);
+	if (!TestNotNull(TEXT("入力検証World"), World))
+		return false;
+
 	ABoarPlayerController* PC = World->SpawnActor<ABoarPlayerController>();
 	if (TestNotNull(TEXT("Controller"), PC))
 	{
@@ -35,6 +37,7 @@ bool FStageInputLockTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("他責務の移動ロックを解除しない"), PC->IsMoveInputIgnored());
 		TestTrue(TEXT("他責務の視点ロックを解除しない"), PC->IsLookInputIgnored());
 	}
+
 	World->DestroyWorld(false);
 	return true;
 }
@@ -76,6 +79,7 @@ bool FRunProgressTest::RunTest(const FString& Parameters)
 	FStageRunData Run;
 	Run.StageId = TEXT("S1");
 	Run.CapturedBoarUniqueIds = {FName("S1_B01"), FName("S1_B02"), FName("S1_B02")};
+
 	// Clear時の収容個体（登録・NEWの共通入力）。
 	Run.HousedBoarUniqueIds = {FName("S1_B01"), FName("S1_B02")};
 	Run.bHousedSnapshotTaken = true;
@@ -95,11 +99,14 @@ bool FRunProgressTest::RunTest(const FString& Parameters)
 	Run = FStageRunData();
 	TestEqual(TEXT("挑戦破棄後も保存済み個体を保持"), Save->CapturedBoarUniqueIds.Num(), 2);
 	TestEqual(TEXT("挑戦破棄後も装備4枠を保持"), Save->GadgetLoadout.Num(), 4);
+
 	// 実ユーザーの保存スロットは使わず、メモリ上でUEのシリアライズを検証します。
 	TArray<uint8> Bytes;
 	TestTrue(TEXT("メモリ保存"), UGameplayStatics::SaveGameToMemory(Save, Bytes));
 	UBoarSaveGame* Restored = Cast<UBoarSaveGame>(UGameplayStatics::LoadGameFromMemory(Bytes));
-	if (!TestNotNull(TEXT("復元"), Restored)) return false;
+	if (!TestNotNull(TEXT("復元"), Restored))
+		return false;
+
 	TestEqual(TEXT("固定IDを復元"), Restored->CapturedBoarUniqueIds.Num(), 2);
 	TestTrue(TEXT("クリアStageを復元"), Restored->ClearedStageIds.Contains(TEXT("S1")));
 	TestTrue(TEXT("空スロットを保持"), Restored->GadgetLoadout[1].IsNone());

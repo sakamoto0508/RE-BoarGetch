@@ -12,8 +12,10 @@
 void UBoarLoadoutWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
 	if (!WidgetTree)
 		return;
+
 	SlotsPanel = Cast<UPanelWidget>(WidgetTree->FindWidget(SlotsPanelName));
 	CandidatesPanel = Cast<UPanelWidget>(WidgetTree->FindWidget(CandidatesPanelName));
 	DetailName = Cast<UTextBlock>(WidgetTree->FindWidget(DetailNameWidgetName));
@@ -27,6 +29,7 @@ void UBoarLoadoutWidget::NativeConstruct()
 		BackButton->OnClicked.AddUniqueDynamic(this, &UBoarLoadoutWidget::Close);
 		BackButton->OnHovered.AddUniqueDynamic(this, &UBoarLoadoutWidget::FocusBack);
 	}
+
 	Presenter = NewObject<UBoarLoadoutPresenter>(this);
 	const bool bReady = Presenter->Initialize(GetOwningPlayer(), bRequestedLabContext);
 	if (!bReady || !EntryClass || !SlotsPanel || !CandidatesPanel)
@@ -38,27 +41,34 @@ void UBoarLoadoutWidget::NativeConstruct()
 	SlotsPanel->ClearChildren();
 	SlotEntries.Reset();
 	LabModeEntries.Reset();
+
 	for (int32 Index = 0; Index < Presenter->GetSlotCount(); ++Index)
 	{
 		auto* Entry = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
 		if (!Entry)
 			continue;
+
 		Entry->OnChosen.AddUniqueDynamic(this, &UBoarLoadoutWidget::ChooseSlot);
 		Entry->OnFocused.AddUniqueDynamic(this, &UBoarLoadoutWidget::PreviewSlot);
 		SlotsPanel->AddChild(Entry);
 		SlotEntries.Add(Entry);
+
 		if (Presenter->IsLabContext())
 			Entry->UseCompactLabRow();
 	}
+
 	Presenter->OnSlotsChanged.AddUniqueDynamic(this, &UBoarLoadoutWidget::RefreshSlots);
+
 	if (Presenter->IsLabContext())
 	{
 		const TCHAR* Labels[] = {TEXT("装備を変更"), TEXT("ガジェットを解放"), TEXT("Test対象を選択")};
+
 		for (int32 I = 0; I < 3; ++I)
 		{
 			auto* E = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
 			if (!E)
 				continue;
+
 			SlotsPanel->AddChild(E);
 			E->Setup(I, FText::FromString(Labels[I]), I == 0);
 			E->UseCompactLabRow();
@@ -66,6 +76,7 @@ void UBoarLoadoutWidget::NativeConstruct()
 			LabModeEntries.Add(E);
 		}
 	}
+
 	Presenter->OnCandidatesChanged.AddUniqueDynamic(this, &UBoarLoadoutWidget::RebuildCandidates);
 	RefreshSlots();
 	RebuildCandidates();
@@ -83,12 +94,14 @@ void UBoarLoadoutWidget::NativeDestruct()
 		Presenter->Shutdown();
 		Presenter = nullptr;
 	}
+
 	Super::NativeDestruct();
 }
 
 void UBoarLoadoutWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
+
 	// World TimerはPause中に進まないため、最初のUI描画後に一度だけFocusを補います。
 	if (bInitialFocusPending)
 	{
@@ -109,6 +122,7 @@ void UBoarLoadoutWidget::RefreshSlots()
 {
 	if (!Presenter)
 		return;
+
 	for (int32 Index = 0; Index < SlotEntries.Num(); ++Index)
 	{
 		const auto Data = Presenter->GetSlot(Index);
@@ -120,15 +134,19 @@ void UBoarLoadoutWidget::RebuildCandidates()
 {
 	if (!Presenter || !CandidatesPanel || !EntryClass)
 		return;
+
 	CandidatesPanel->ClearChildren();
 	CandidateEntries.Reset();
 	Presenter->RebuildCatalog();
+
 	for (int32 Index = 0; Index < Presenter->GetCandidateCount(); ++Index)
 	{
 		auto* Entry = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), EntryClass);
 		CandidateEntries.Add(Entry);
+
 		if (!Entry)
 			continue;
+
 		const auto Data = Presenter->GetCandidate(Index);
 		Entry->Setup(Index, Data.Label, Data.bSelected);
 		Entry->OnChosen.AddUniqueDynamic(this, &UBoarLoadoutWidget::ChooseCandidate);
@@ -143,8 +161,10 @@ void UBoarLoadoutWidget::ChooseSlot(int32 Index)
 		return;
 	if (Presenter->IsLabContext() && Presenter->GetLabMode() != 0)
 		ChooseLabMode(0);
+
 	const int32 CandidateIndex = Presenter->ChooseSlot(Index);
 	RefreshSlots();
+
 	if (CandidateEntries.IsValidIndex(CandidateIndex) && CandidateEntries[CandidateIndex])
 		CandidateEntries[CandidateIndex]->FocusEntry();
 }
@@ -154,12 +174,16 @@ void UBoarLoadoutWidget::ChooseCandidate(int32 Index)
 {
 	if (!Presenter)
 		return;
+
 	const auto Result = Presenter->ChooseCandidate(Index);
 	if (Result.bRefreshCandidates)
 		RebuildCandidates();
+
 	if (Result.Status.IsEmpty())
 		return;
+
 	SetStatus(Result.Status, Result.bError);
+
 	if (Result.bFocusSlots)
 	{
 		RefreshSlots();
@@ -174,11 +198,15 @@ void UBoarLoadoutWidget::ChooseLabMode(int32 Index)
 {
 	if (!Presenter || !Presenter->ChooseLabMode(Index))
 		return;
+
 	const TCHAR* Labels[] = {TEXT("装備を変更"), TEXT("ガジェットを解放"), TEXT("Test対象を選択")};
+
 	for (int32 I = 0; I < LabModeEntries.Num(); ++I)
 		LabModeEntries[I]->Setup(I, FText::FromString(Labels[I]), I == Index);
+
 	RebuildCandidates();
 	SetStatus(Presenter->GetLabModeStatus());
+
 	if (CandidateEntries.Num() > 1 && CandidateEntries[1])
 		CandidateEntries[1]->FocusEntry();
 }
@@ -194,7 +222,9 @@ void UBoarLoadoutWidget::PreviewCandidate(int32 Index)
 {
 	if (!Presenter || Index < 0 || Index >= Presenter->GetCandidateCount())
 		return;
+
 	ShowDetails(Presenter->GetCandidate(Index));
+
 	if (auto* Scroll = Cast<UScrollBox>(CandidatesPanel))
 		if (CandidateEntries.IsValidIndex(Index) && CandidateEntries[Index])
 			Scroll->ScrollWidgetIntoView(CandidateEntries[Index]);
@@ -204,10 +234,13 @@ void UBoarLoadoutWidget::ShowDetails(const FBoarLoadoutEntryViewData& Data)
 {
 	if (DetailName)
 		DetailName->SetText(Data.Name);
+
 	if (DetailRole)
 		DetailRole->SetText(Data.Role);
+
 	if (DetailDescription)
 		DetailDescription->SetText(Data.Description);
+
 	if (DetailIcon)
 	{
 		DetailIcon->SetBrushFromTexture(Data.Icon);

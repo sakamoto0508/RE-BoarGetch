@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -96,7 +94,7 @@ protected:
 	/** 独自演出の通知欠落時に呼びます。BPは自身のカメラ・Widget等を解除できます。進行再開はC++が保証します。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStagePresentationTimedOut(bool bIntroduction);
-	/** Native recovery UI is also available if the stage cannot be prepared. */
+	/** ステージを準備できなかった場合でも、C++側の復帰用UIを使える。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStageInitializationFailed(const FText& Reason);
 
@@ -120,13 +118,16 @@ private:
 	void SnapshotHousedBoars();
 	/** 今回のRunの捕獲使用の通し番号（Run内だけで有効。保存しない）。 */
 	int32 CaptureEventOrder = 0;
-	/** Validate -> spawn -> initialize -> check readiness; BeginPlay follows this sequence. */
+	/** 検証 → Spawn → 初期化 → 準備完了の確認。BeginPlayはこの後に続く。 */
 	bool PrepareStage();
 	bool ValidateStageSetup();
 	bool InitializeStageActors();
 	bool FailInitialization(const FText& Reason);
 	bool bStartupAttempted = false;
-	UPROPERTY(Transient) FText InitializationError;
+
+	UPROPERTY(Transient)
+	FText InitializationError;
+
 	bool bStageInitializationComplete = false;
 	void HandleWorldTickEnd(UWorld* World, ELevelTick TickType, float DeltaSeconds);
 	void ResolveStageEnd();
@@ -134,7 +135,10 @@ private:
 	FDelegateHandle WorldTickEndHandle;
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))
 	EBoarStageState StageState = EBoarStageState::Preparing;
-	UPROPERTY(Transient) FStageRunData StageRunData;
+
+	UPROPERTY(Transient)
+	FStageRunData StageRunData;
+
 	/** 未確定の演出時間は固定せず、BPから完了通知を受けられます。未設定は従来どおり即開始します。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bWaitForStageIntroduction = false;

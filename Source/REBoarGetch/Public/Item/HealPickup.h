@@ -31,4 +31,8 @@ private:
 	/** 取得時に回復するHP量です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pickup", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float HealAmount = 1.0f;
+
+	/** 取得時に取得位置で鳴らすSEです。未設定なら無音です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pickup|Audio", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class USoundBase> PickupSound;
 };

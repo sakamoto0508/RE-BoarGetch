@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -13,18 +11,18 @@ enum class EGadgetUseStyle : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGadgetLoadoutChanged);
 
-/** 
- * プレイヤーが所持するガジェットを管理するComponentです。 
- * 主に以下の処理を担当します。 
- *  ・ガジェットの生成と装備 
- *  ・現在のガジェットの破棄 
- *  ・ガジェット使用の開始と終了 
+/**
+ * プレイヤーが所持するガジェットを管理するComponentです。
+ * 主に以下の処理を担当します。
+ *  ・ガジェットの生成と装備
+ *  ・現在のガジェットの破棄
+ *  ・ガジェット使用の開始と終了
  *  ・最大4つのガジェットスロットの管理
- *  ・指定スロットへの装備切り替え 
- *  ・ゲーム開始時の初期ガジェット装備 * 
+ *  ・指定スロットへの装備切り替え
+ *  ・ゲーム開始時の初期ガジェット装備 *
  *  ガジェットに関する処理をPlayerCharacterから分離することで、
- *  プレイヤー本体の責務が増えすぎないようにしています。 
- *  
+ *  プレイヤー本体の責務が増えすぎないようにしています。
+ *
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UGadgetComponent : public UActorComponent
@@ -34,7 +32,7 @@ class REBOARGETCH_API UGadgetComponent : public UActorComponent
 public:
 	/** Tickを使用しないガジェット管理Componentの初期状態を構築します。 */
 	UGadgetComponent();
-    /** Coordinator supplies resolved slots and persistence policy before first equip. */
+    /** 最初の装備より前に、初期化側が解決済みのスロットと保存方針を渡す。 */
     bool InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots, UBoarGadgetSubsystem* Progress, bool bTemporary);
     const TArray<TSubclassOf<AGadgetBase>>& GetDefaultGadgetSlots() const { return DefaultGadgetSlots; }
     bool IsLoadoutInitialized() const { return bStageInitialized; }
@@ -43,7 +41,9 @@ public:
 private:
 	bool bStageInitialized = false;
     bool bTemporaryLoadout = false;
-    UPROPERTY(Transient) TObjectPtr<UBoarGadgetSubsystem> GadgetProgress;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UBoarGadgetSubsystem> GadgetProgress;
 
 public:
 	/** スロット仕様値の唯一の取得元です。保存済み4枠の仕様は変更しません。 */
@@ -55,13 +55,13 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Gadget")
 	bool EquipGadget(TSubclassOf<AGadgetBase> GadgetClass);
-	
+
 	/**
 	 * 現在のガチャメカを外します。
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Gadget")
 	void UnequipGadget();
-	
+
 	/**
 	 * 現在装備中のガジェット使用を開始します。
 	 * Hold系はこの開始状態を維持します。
@@ -75,7 +75,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Gadget")
 	bool EndUseCurrentGadget();
-	
+
 	/**
 	 * ガチャメカを切り替えます。
 	 * 成功ならtrue,失敗ならfalseを返します。
@@ -106,7 +106,7 @@ public:
 	/** スロット内容または選択中スロットが変わったときに通知します。 */
 	UPROPERTY(BlueprintAssignable, Category = "Gadget")
 	FOnGadgetLoadoutChanged OnGadgetLoadoutChanged;
-	
+
 	/**
 	 * 現在のガチャメカを返します。
 	 * CurrentGadget を TObjectPtr で保持して、Getter を AGadgetBase で返すのは、所有と公開を分けるため。
@@ -128,7 +128,7 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	EGadgetUseStyle GetCurrentGadgetUseStyle() const;
-	
+
 private:
 	bool SaveCurrentLoadout();
 	bool bLastLoadoutSaveSuccessful = false;

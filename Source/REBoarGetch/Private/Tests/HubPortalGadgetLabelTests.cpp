@@ -20,9 +20,11 @@ bool FBoarHubPortalGadgetLabelTest::RunTest(const FString& Parameters)
 	const auto NetClass = LoadClass<AGadgetBase>(nullptr, TEXT("/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C"));
 	if (!TestNotNull(TEXT("Existing catalog gadget"), NetClass))
 		return false;
+
 	const auto* Definition = NetClass->GetDefaultObject<AGadgetBase>()->GetGadgetDefinition();
 	if (!TestNotNull(TEXT("Existing definition"), Definition))
 		return false;
+
 	const FName Id = Definition->GadgetId;
 	const FString DisplayName = Definition->DisplayName.ToString();
 	Instance->GadgetCatalog = {NetClass};
@@ -77,8 +79,9 @@ bool FBoarHubPortalGadgetLabelTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Label重複を検出"), Reports(TEXT("[3]"), TEXT("複数の要素")));
 		TestEqual(TEXT("報告件数"), Problems.Num(), 5);
 		TestFalse(TEXT("GIが無い場合は未登録IDを判定しない"),
-		          AHubPortal::FindGadgetLabelProblems({Entry(TEXT("Missing"), LabelB)}, nullptr).Num() > 0);
+			AHubPortal::FindGadgetLabelProblems({Entry(TEXT("Missing"), LabelB)}, nullptr).Num() > 0);
 	}
+
 	Instance->Shutdown();
 	World->DestroyWorld(false);
 	GEngine->DestroyWorldContext(World);

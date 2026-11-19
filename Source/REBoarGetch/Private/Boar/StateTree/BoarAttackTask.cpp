@@ -22,7 +22,6 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::EnterState(FStateTreeExecutionCont
 
 	if (Boar == nullptr)
 		return EStateTreeRunStatus::Failed;
-	
 
 	// 再利用されるインスタンスデータを攻撃開始時の予兆状態へ戻す。
 	InstanceData.Phase = EBoarChargeAttackPhase::Telegraph;
@@ -51,6 +50,7 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::EnterState(FStateTreeExecutionCont
 
 	Boar->OnAttackTelegraphStarted(
 		Boar->GetAttackTelegraphDuration(), Boar->GetAttackTelegraphPlayRate());
+	Boar->PlayAttackTelegraphSound();
 	return EStateTreeRunStatus::Running;
 }
 
@@ -75,7 +75,6 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::Tick(
 		// 予兆時間中はその場に留まり、終了時点の檻方向を突進方向として固定する。
 		if (InstanceData.PhaseElapsedTime < Boar->GetAttackTelegraphDuration())
 			return EStateTreeRunStatus::Running;
-		
 
 		InstanceData.Phase = EBoarChargeAttackPhase::Charge;
 		InstanceData.PhaseElapsedTime = 0.0f;
@@ -88,11 +87,14 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::Tick(
 		}
 
 		Boar->SetActorRotation(InstanceData.ChargeDirection.Rotation());
+
 		if (Movement)
 		{
 			Movement->MaxWalkSpeed = Boar->GetChargeSpeed();
 		}
+
 		Boar->OnChargeStarted();
+		Boar->PlayBoarSound(Boar->GetAudioSettings().ChargeStart);
 		return EStateTreeRunStatus::Running;
 
 	case EBoarChargeAttackPhase::Charge:
@@ -121,6 +123,7 @@ EStateTreeRunStatus FStateTreeBoarAttackTask::Tick(
 			Movement->StopMovementImmediately();
 			Movement->MaxWalkSpeed = Boar->GetAttackRetreatSpeed();
 		}
+
 		InstanceData.Phase = EBoarChargeAttackPhase::Retreat;
 		InstanceData.PhaseElapsedTime = 0.0f;
 		InstanceData.RetreatStartLocation = Boar->GetActorLocation();

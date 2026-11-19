@@ -18,6 +18,7 @@ UCLASS(Abstract, Blueprintable, NotPlaceable)
 class REBOARGETCH_API ABoarPresentationDirector : public AActor
 {
 	GENERATED_BODY()
+
 public:
 	ABoarPresentationDirector();
 
@@ -28,11 +29,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Presentation")
 	void FinishPresentation();
 
-	UFUNCTION(BlueprintPure, Category = "Presentation") bool IsPresentationFinished() const { return bFinished; }
-	UFUNCTION(BlueprintPure, Category = "Presentation") ABoarPlayerController* GetPresentationController() const;
-	UFUNCTION(BlueprintPure, Category = "Presentation") ABoarPlayerCharacter* GetPresentationPlayer() const;
+	UFUNCTION(BlueprintPure, Category = "Presentation")
+	bool IsPresentationFinished() const { return bFinished; }
+
+	UFUNCTION(BlueprintPure, Category = "Presentation")
+	ABoarPlayerController* GetPresentationController() const;
+
+	UFUNCTION(BlueprintPure, Category = "Presentation")
+	ABoarPlayerCharacter* GetPresentationPlayer() const;
+
 	/** 演出開始からの実時間（秒）。 */
-	UFUNCTION(BlueprintPure, Category = "Presentation") float GetPresentationAge() const { return Age; }
+	UFUNCTION(BlueprintPure, Category = "Presentation")
+	float GetPresentationAge() const { return Age; }
 
 	// ---- Audio（BoarAudioManagerSubsystem経由。音量設定は変更しません） ----
 	UFUNCTION(BlueprintCallable, Category = "Presentation|Audio", meta = (AdvancedDisplay = "Pitch"))

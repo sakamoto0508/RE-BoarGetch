@@ -81,7 +81,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")
 	static bool RestoreBlueprintComponentFromDescription(UBlueprint* Blueprint, FName ParentName, TSubclassOf<USceneComponent> ComponentClass,
-	                                                     FName ComponentName, const FString& Description, const FString& Prefix, FTransform Relative);
+		FName ComponentName, const FString& Description, const FString& Prefix, FTransform Relative);
 
 	/** Blueprintの指定Component（SCS）のComponent Tagsに、Tagを追加します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Editor|Level")

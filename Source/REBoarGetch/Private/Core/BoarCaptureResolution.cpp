@@ -10,18 +10,22 @@ ACage* BoarCaptureResolution::FindDestination(UWorld* World, const FVector& Capt
 {
 	if (!World)
 		return nullptr;
+
 	ACage* NearestHealthy = nullptr;
 	ACage* NearestDestroyed = nullptr;
+
 	for (TActorIterator<ACage> It(World); It; ++It)
 	{
 		ACage*& Candidate = It->GetIsCageDestroyed() ? NearestDestroyed : NearestHealthy;
 		const double Distance = FVector::DistSquared(CaptureLocation, It->GetActorLocation());
+
 		// 同距離だけは既存Actorのパス順で安定化します。永続IDには使用しません。
 		if (!Candidate || Distance < FVector::DistSquared(CaptureLocation, Candidate->GetActorLocation()) ||
 			(Distance == FVector::DistSquared(CaptureLocation, Candidate->GetActorLocation()) &&
 				It->GetPathName() < Candidate->GetPathName()))
 			Candidate = *It;
 	}
+
 	return NearestHealthy ? NearestHealthy : NearestDestroyed;
 }
 
@@ -31,20 +35,28 @@ void BoarCaptureResolution::Resolve(UWorld* World, ABoarBase* Boar, FStageRunDat
 {
 	if (!World || !IsValid(Boar))
 		return;
+
 	const FVector CaptureLocation = Boar->GetActorLocation();
 	ACage* Destination = FindDestination(World, CaptureLocation);
+
 	if (!Boar->BoarUniqueId.IsNone())
 		Run.CapturedBoarUniqueIds.AddUnique(Boar->BoarUniqueId);
 	else
-		UE_LOG(LogTemp, Warning, TEXT("[Stage] %s has no persistent BoarUniqueId."), *GetNameSafe(Boar));
+		UE_LOG(LogTemp, Warning, TEXT("[Stage] %s に永続的な BoarUniqueId がありません。"), *GetNameSafe(Boar));
+
 	if (ACage* Cage = Destination)
 		Cage->CollectBoar(Boar);
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Stage] No cage exists; captured boar is released."));
+		UE_LOG(LogTemp, Warning, TEXT("[Stage] 檻が無いため、捕獲したBoarを解放します。"));
 		Boar->ReleaseBoar();
 	}
+
 	// 檻へ移動した後の座標ではなく、捕獲地点にドロップします。
 	if (HealPickupClass && FMath::FRand() <= HealItemDropChance)
-		World->SpawnActor<AHealPickup>(HealPickupClass, CaptureLocation + FVector(0, 0, 40), FRotator::ZeroRotator);
+	{
+		// 地面へ埋まらないよう、捕獲地点から少し浮かせて出す（cm）。
+		constexpr float HealPickupSpawnHeight = 40.f;
+		World->SpawnActor<AHealPickup>(HealPickupClass, CaptureLocation + FVector(0, 0, HealPickupSpawnHeight), FRotator::ZeroRotator);
+	}
 }

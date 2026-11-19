@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -16,15 +14,15 @@ UCLASS()
 class REBOARGETCH_API ANetGadget : public AGadgetBase
 {
 	GENERATED_BODY()
+
 	/** 一振り中に処理した個体です。即解放されても同じ振りで再捕獲しません。 */
 	TSet<TWeakObjectPtr<class ABoarBase>> AttemptedBoarsThisUse;
 	bool bSuccessFeedbackPlayedThisUse = false;
 
 public:
-	// Sets default values for this actor's properties
 	/** 捕獲Collisionと網用Socketを設定します。 */
 	ANetGadget();
-	
+
 	/** ネットを使用します。 */
 	virtual void Use_Implementation(AActor* TargetActor) override;
 

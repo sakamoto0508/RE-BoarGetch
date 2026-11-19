@@ -18,11 +18,13 @@ void UBoarLoadoutEntry::NativeConstruct()
 	Label = WidgetTree ? Cast<UTextBlock>(WidgetTree->FindWidget(LabelName)) : nullptr;
 	SelectionImage = WidgetTree ? Cast<UImage>(WidgetTree->FindWidget(SelectionImageName)) : nullptr;
 	LockedIndicator = WidgetTree ? WidgetTree->FindWidget(LockedIndicatorWidgetName) : nullptr;
+
 	if (ActionButton)
 	{
 		ActionButton->OnClicked.AddUniqueDynamic(this, &UBoarLoadoutEntry::Choose);
 		ActionButton->OnHovered.AddUniqueDynamic(this, &UBoarLoadoutEntry::Hover);
 	}
+
 	Refresh();
 }
 
@@ -37,14 +39,18 @@ void UBoarLoadoutEntry::Setup(int32 InIndex, const FText& Text, bool bSelected)
 
 void UBoarLoadoutEntry::Refresh()
 {
-	if (ActionButton) ActionButton->SetIsEnabled(bEntryAvailable);
+	if (ActionButton)
+		ActionButton->SetIsEnabled(bEntryAvailable);
+
 	if (LockedIndicator) LockedIndicator->SetVisibility(bEntryAvailable
-		                                                    ? ESlateVisibility::Collapsed
-		                                                    : ESlateVisibility::HitTestInvisible);
-	if (Label) Label->SetText(EntryText);
+			? ESlateVisibility::Collapsed
+			: ESlateVisibility::HitTestInvisible);
+	if (Label)
+		Label->SetText(EntryText);
+
 	if (SelectionImage) SelectionImage->SetVisibility(bEntrySelected
-		                                                  ? ESlateVisibility::HitTestInvisible
-		                                                  : ESlateVisibility::Hidden);
+			? ESlateVisibility::HitTestInvisible
+			: ESlateVisibility::Hidden);
 }
 
 void UBoarLoadoutEntry::FocusEntry() { if (ActionButton) ActionButton->SetKeyboardFocus(); }

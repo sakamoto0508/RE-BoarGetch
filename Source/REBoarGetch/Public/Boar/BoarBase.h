@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -12,9 +10,10 @@
 class UCaptureComponent;
 class ACage;
 class APawn;
-class APatrolPath;
 class UAnimSequenceBase;
 class UAnimMontage;
+class UAudioComponent;
+class USoundBase;
 
 /** 逃走開始の旋回と、逃走中の大きな切り返しの段階です（AKI-152）。AnimBPはこれを読んで見た目を切り替えます。 */
 UENUM(BlueprintType)
@@ -66,9 +65,9 @@ public:
 	/** 捕獲Componentの状態を確定し、成功時だけGameModeへ捕獲後処理を通知します。 */
 	UFUNCTION(BlueprintCallable, Category = "Boar")
 	void Capture();
-	/** Net passes one shared-feedback flag per swing; success state is still owned by CaptureComponent. */
+	/** 網は1振りにつき1回だけ共有演出フラグを渡す。捕獲の成否はCaptureComponentが持つ。 */
 	bool CaptureWithFeedback(bool bSharedFeedback);
-	
+
 	/** 捕獲済み個体を解放し、到達可能なNavMesh地点まで歩かせてから通常AIへ戻します。 */
 	UFUNCTION(BlueprintCallable, Category = "Boar")
 	void ReleaseBoar();
@@ -373,6 +372,18 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
+	/** 種別のSE設定です（DataAssetのAudio）。足音はAnimNotify_BoarFootstepから参照します。 */
+	const FBoarArchetypeAudioSettings& GetAudioSettings() const { return ActiveSettings.Audio; }
+
+	/** Boarに追従する一回きりのSEを鳴らします。捕獲済み・Stage停止中・未設定なら鳴らしません。 */
+	void PlayBoarSound(USoundBase* Sound, float VolumeMultiplier = 1.0f, bool bAs2D = false);
+
+	/** 攻撃予兆（突進前のため・檻攻撃の予兆）開始の音です。StateTree TaskがOnAttackTelegraphStartedと同時に呼びます。 */
+	void PlayAttackTelegraphSound();
+
+	/** 疲労ループなど、このBoarが鳴らしている継続音を止めます（捕獲・Stage停止・EndPlay）。 */
+	void StopBoarLoopingSounds();
+
 
 	/**
 	 * アニメーションの速度正規化に使う基準速度を返します（ABP_NormalBoarが速度÷この値でBlendSpaceを選びます）。
@@ -384,10 +395,6 @@ public:
 	{
 		return ActiveSettings.AnimationReferenceSpeed > 0.0f ? ActiveSettings.AnimationReferenceSpeed : ActiveSettings.BaseWalkSpeed;
 	}
-
-	/** 旧来の固定巡回ルートを返します。現在のランダムNavMesh巡回では未使用です。 */
-	UFUNCTION(BlueprintPure)
-	APatrolPath* GetPatrolPath() const { return PatrolPath; }
 
 private:
 	friend class FBoarGameplayRegressionTest;
@@ -601,7 +608,11 @@ private:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Boar|AI", meta = (AllowPrivateAccess = "true"))
 	bool bIsEscaping = false;
 
-	/** 固定巡回を再導入する場合に使う予約参照です。現在のStateTree Patrol Taskからは未使用です。 */
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Boar|AI", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<APatrolPath> PatrolPath;
+	/** 疲労停止中のループ音です。 */
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> TiredLoopComponent;
+
+	/** 警戒音を「認識していない→認識した」の変化でだけ鳴らすための前回状態です。 */
+	bool bPlayerAwareForAudio = false;
+	double LastAlertSoundTime = -1.0e9;
 };

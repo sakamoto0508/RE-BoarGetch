@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Audio/BoarAudioTypes.h"
 #include "BoarDataAsset.generated.h"
 
 class UAnimSequenceBase;
@@ -322,6 +323,10 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 	/** 逃走開始の旋回と逃走中の大きな切り返しの設定です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	FBoarEscapeTurnSettings EscapeTurn;
+
+	/** 種別ごとのSE（警戒・逃走・予兆・突進・スタミナ・足音）です。未設定のSEは鳴らしません。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
+	FBoarArchetypeAudioSettings Audio;
 };
 
 /** イノシシ種別ごとに、行動の優先度、索敵、攻撃、スタミナ、移動と逃走時の旋回を調整します。 */

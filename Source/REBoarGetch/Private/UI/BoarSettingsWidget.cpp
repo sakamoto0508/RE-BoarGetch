@@ -25,17 +25,26 @@ void UBoarSettingsWidget::NativeConstruct()
 		EncyclopediaButton->OnClicked.AddUniqueDynamic(this, &UBoarSettingsWidget::OpenEncyclopedia);
 		EncyclopediaButton->OnHovered.AddUniqueDynamic(this, &UBoarSettingsWidget::FocusEncyclopedia);
 	}
+
 	for (USlider* Slider : {BGMSlider.Get(), SESlider.Get()})
 	{
-		if (!Slider) continue;
+		if (!Slider)
+			continue;
+
 		Slider->SetMinValue(0.0f);
 		Slider->SetMaxValue(1.0f);
 		Slider->SetStepSize(0.05f);
 		Slider->SetIsEnabled(Audio != nullptr);
 	}
+
 	RefreshValues();
-	if (BGMSlider) BGMSlider->OnValueChanged.AddUniqueDynamic(this, &UBoarSettingsWidget::ChangeBGM);
-	if (SESlider) SESlider->OnValueChanged.AddUniqueDynamic(this, &UBoarSettingsWidget::ChangeSE);
+
+	if (BGMSlider)
+		BGMSlider->OnValueChanged.AddUniqueDynamic(this, &UBoarSettingsWidget::ChangeBGM);
+
+	if (SESlider)
+		SESlider->OnValueChanged.AddUniqueDynamic(this, &UBoarSettingsWidget::ChangeSE);
+
 	if (BackButton)
 	{
 		BackButton->OnClicked.AddUniqueDynamic(this, &UBoarSettingsWidget::RequestClose);
@@ -50,13 +59,19 @@ void UBoarSettingsWidget::NativeDestruct()
 		EncyclopediaButton->OnClicked.RemoveDynamic(this, &UBoarSettingsWidget::OpenEncyclopedia);
 		EncyclopediaButton->OnHovered.RemoveDynamic(this, &UBoarSettingsWidget::FocusEncyclopedia);
 	}
-	if (BGMSlider) BGMSlider->OnValueChanged.RemoveDynamic(this, &UBoarSettingsWidget::ChangeBGM);
-	if (SESlider) SESlider->OnValueChanged.RemoveDynamic(this, &UBoarSettingsWidget::ChangeSE);
+
+	if (BGMSlider)
+		BGMSlider->OnValueChanged.RemoveDynamic(this, &UBoarSettingsWidget::ChangeBGM);
+
+	if (SESlider)
+		SESlider->OnValueChanged.RemoveDynamic(this, &UBoarSettingsWidget::ChangeSE);
+
 	if (BackButton)
 	{
 		BackButton->OnClicked.RemoveDynamic(this, &UBoarSettingsWidget::RequestClose);
 		BackButton->OnHovered.RemoveDynamic(this, &UBoarSettingsWidget::FocusBack);
 	}
+
 	Audio = nullptr;
 	Super::NativeDestruct();
 }
@@ -64,7 +79,10 @@ void UBoarSettingsWidget::NativeDestruct()
 void UBoarSettingsWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
-	if (!bInitialFocusPending) return;
+
+	if (!bInitialFocusPending)
+		return;
+
 	bInitialFocusPending = false;
 	FocusInitialChoice();
 }
@@ -73,44 +91,65 @@ void UBoarSettingsWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 void UBoarSettingsWidget::RefreshValues()
 {
 	TGuardValue<bool> Guard(bRefreshing, true);
+
 	if (!Audio)
 	{
-		if (BGMValueText) BGMValueText->SetText(FText::FromString(TEXT("—")));
-		if (SEValueText) SEValueText->SetText(FText::FromString(TEXT("—")));
+		if (BGMValueText)
+			BGMValueText->SetText(FText::FromString(TEXT("—")));
+
+		if (SEValueText)
+			SEValueText->SetText(FText::FromString(TEXT("—")));
+
 		return;
 	}
+
 	const float BGM = Audio->GetBGMVolume();
 	const float SE = Audio->GetSoundEffectVolume();
-	if (BGMSlider) BGMSlider->SetValue(BGM);
-	if (SESlider) SESlider->SetValue(SE);
-	if (BGMValueText) BGMValueText->SetText(FText::AsNumber(FMath::RoundToInt(BGM * 100.0f)));
-	if (SEValueText) SEValueText->SetText(FText::AsNumber(FMath::RoundToInt(SE * 100.0f)));
+
+	if (BGMSlider)
+		BGMSlider->SetValue(BGM);
+
+	if (SESlider)
+		SESlider->SetValue(SE);
+
+	if (BGMValueText)
+		BGMValueText->SetText(FText::AsNumber(FMath::RoundToInt(BGM * 100.0f)));
+
+	if (SEValueText)
+		SEValueText->SetText(FText::AsNumber(FMath::RoundToInt(SE * 100.0f)));
 }
 
 // ユーザー操作による有限値だけをAudioSubsystemへ渡し、反映された値を読み直します。
 void UBoarSettingsWidget::ChangeBGM(float Value)
 {
-	if (!Audio || bRefreshing || !FMath::IsFinite(Value)) return;
+	if (!Audio || bRefreshing || !FMath::IsFinite(Value))
+		return;
+
 	Audio->SetBGMVolume(Value);
 	RefreshValues();
 }
 
 void UBoarSettingsWidget::ChangeSE(float Value)
 {
-	if (!Audio || bRefreshing || !FMath::IsFinite(Value)) return;
+	if (!Audio || bRefreshing || !FMath::IsFinite(Value))
+		return;
+
 	Audio->SetSoundEffectVolume(Value);
 	RefreshValues();
 }
 
 void UBoarSettingsWidget::FocusInitialChoice()
 {
-	if (Audio && BGMSlider) BGMSlider->SetKeyboardFocus();
-	else FocusBack();
+	if (Audio && BGMSlider)
+		BGMSlider->SetKeyboardFocus();
+	else
+		FocusBack();
 }
 
 void UBoarSettingsWidget::FocusBack()
 {
-	if (BackButton) BackButton->SetKeyboardFocus();
+	if (BackButton)
+		BackButton->SetKeyboardFocus();
 }
 
 void UBoarSettingsWidget::RequestClose()
@@ -120,7 +159,8 @@ void UBoarSettingsWidget::RequestClose()
 
 void UBoarSettingsWidget::OpenEncyclopedia()
 {
-	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->OpenEncyclopedia(this, EncyclopediaButton);
+	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer()))
+		PC->OpenEncyclopedia(this, EncyclopediaButton);
 }
 
 void UBoarSettingsWidget::FocusEncyclopedia() { if (EncyclopediaButton) EncyclopediaButton->SetKeyboardFocus(); }

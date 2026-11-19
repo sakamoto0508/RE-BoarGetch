@@ -10,6 +10,7 @@ bool FStateTreeBoarPreferPlayerCondition::TestCondition(FStateTreeExecutionConte
 	const ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get());
 
 	bool bPreferPlayer = false;
+
 	if (Boar != nullptr && !Boar->IsCaptured())
 	{
 		bool bPreferCage = false;

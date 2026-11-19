@@ -13,5 +13,5 @@ namespace BoarCaptureResolution
 {
 	ACage* FindDestination(UWorld* World, const FVector& CaptureLocation);
 	void Resolve(UWorld* World, ABoarBase* Boar, FStageRunData& Run, TSubclassOf<AHealPickup> HealPickupClass,
-	             float HealItemDropChance);
-} 
+		float HealItemDropChance);
+}

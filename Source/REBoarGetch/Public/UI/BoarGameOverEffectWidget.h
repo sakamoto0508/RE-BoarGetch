@@ -14,6 +14,7 @@ UCLASS(Blueprintable)
 class REBOARGETCH_API UBoarGameOverEffectWidget : public UUserWidget
 {
 	GENERATED_BODY()
+
 public:
 	/** 0～1。画面全体に重ねる赤フラッシュの強さです。 */
 	void SetFlashAlpha(float Alpha);
@@ -31,13 +32,26 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	/** 各レイヤーのRender OpacityへSet*の値を反映します。0のときはCollapsedにして描画しません。 */
-	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional)) TObjectPtr<UWidget> VignetteLayer;
-	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional)) TObjectPtr<UWidget> FlashLayer;
-	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional)) TObjectPtr<UWidget> WarningLayer;
-	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional)) TObjectPtr<UWidget> NoiseLayer;
+	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> VignetteLayer;
+
+	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> FlashLayer;
+
+	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> WarningLayer;
+
+	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> NoiseLayer;
+
 	/** 表示中ずっとループ再生する警告演出（ラベルの点滅など）。WBPのWidget Animationで編集します。 */
-	UPROPERTY(Transient, BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetAnimOptional)) TObjectPtr<UWidgetAnimation> WarningLoop;
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetAnimOptional))
+	TObjectPtr<UWidgetAnimation> WarningLoop;
+
 private:
 	static void ApplyLayer(UWidget* Layer, float Alpha);
-	float FlashAlpha = 0.f, WarningAlpha = 0.f, NoiseAmount = 0.f, VignetteAlpha = 0.f;
+	float FlashAlpha = 0.f;
+	float WarningAlpha = 0.f;
+	float NoiseAmount = 0.f;
+	float VignetteAlpha = 0.f;
 };

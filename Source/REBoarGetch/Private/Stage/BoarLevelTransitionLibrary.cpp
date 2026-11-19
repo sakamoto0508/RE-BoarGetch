@@ -45,9 +45,11 @@ void UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(const UObject* Wo
 	if (Subsystem)
 	{
 		FACFTransitionOptions TransitionOptions;
+
 		// 覆っている間の操作で二重遷移や移動が起きないよう、入力を止める（終了・失敗時はACFが戻す）。
 		TransitionOptions.bLockInput = true;
 		FACFTransitionHandle Handle;
+
 		if (const UACFTransitionPreset* Preset = Entry.Preset.LoadSynchronous())
 		{
 			Handle = Subsystem->PlayLevelTransitionPreset(Preset, TransitionOptions, LevelName, Options);
@@ -55,16 +57,20 @@ void UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(const UObject* Wo
 		else
 		{
 			if (!Entry.Preset.IsNull())
-				UE_LOG(LogTemp, Warning, TEXT("[LevelTransition] Preset %s could not be loaded. Using effect %d."), *Entry.Preset.ToString(), static_cast<int32>(Entry.Effect));
+				UE_LOG(LogTemp, Warning, TEXT("[LevelTransition] Preset %s を読み込めないため、Effect %d を使います。"),
+					*Entry.Preset.ToString(), static_cast<int32>(Entry.Effect));
 			Handle = Subsystem->PlayLevelTransition(
 				ACFTransition::MakeDefaultSettings(Entry.Effect, EACFTransitionPhase::Close),
 				ACFTransition::MakeDefaultSettings(Entry.Effect, EACFTransitionPhase::Open),
 				TransitionOptions, LevelName, Options);
 		}
+
 		if (Handle.IsValid())
 			return;
-		UE_LOG(LogTemp, Warning, TEXT("[LevelTransition] ACF rejected the transition to %s. Opening without effect."), *LevelName.ToString());
+
+		UE_LOG(LogTemp, Warning, TEXT("[LevelTransition] ACFが %s への遷移を拒否したため、演出なしで開きます。"), *LevelName.ToString());
 	}
+
 	UGameplayStatics::OpenLevel(WorldContextObject, LevelName, bAbsolute, Options);
 }
 

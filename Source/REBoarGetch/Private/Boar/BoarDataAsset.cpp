@@ -23,7 +23,9 @@ namespace
 		static const TMap<EBoarArchetype, FBoarArchetypeSettings> Settings = []
 		{
 			TMap<EBoarArchetype, FBoarArchetypeSettings> Result;
+			// MakeSettingsの引数: Player優先度, 檻優先度, 逃走優先度, 檻を攻撃できるか, スタミナを使うか
 			FBoarArchetypeSettings NormalSettings = MakeSettings(0.8f, 0.9f, 1.4f, true, false);
+
 			// 逃走中の大きな切り返しを捕獲好機にするのはNormalだけ（AKI-152）。
 			NormalSettings.EscapeTurn.bEnabled = true;
 			Result.Add(EBoarArchetype::Normal, NormalSettings);
@@ -32,8 +34,10 @@ namespace
 			FBoarArchetypeSettings EscapeSettings = MakeSettings(0.4f, 0.1f, 2.2f, false, true);
 			EscapeSettings.StaminaDrainPerSecond = 30.0f;
 			EscapeSettings.StaminaRecoveryPerSecond = 35.0f;
+
 			// 通常速度450に対して逃走時675。DataAsset側で個別に調整する前提の初期値。
 			EscapeSettings.EscapeSpeedMultiplier = 1.5f;
+
 			// 背後のプレイヤーも追跡され続ける限り覚えておき、逃げ続けてスタミナ切れになるようにする。
 			EscapeSettings.ThreatMemoryRange = 1200.0f;
 			Result.Add(EBoarArchetype::EscapeSpecialist, EscapeSettings);
@@ -63,6 +67,7 @@ const FBoarArchetypeSettings& UBoarDataAsset::GetSettings(EBoarArchetype Archety
 const FBoarArchetypeSettings& UBoarDataAsset::GetDefaultSettings(EBoarArchetype Archetype)
 {
 	const TMap<EBoarArchetype, FBoarArchetypeSettings>& Settings = GetBuiltInSettings();
+
 	if (const FBoarArchetypeSettings* FoundSettings = Settings.Find(Archetype))
 	{
 		return *FoundSettings;

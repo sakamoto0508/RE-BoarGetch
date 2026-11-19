@@ -25,8 +25,10 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 {
 	// StateTreeが保持しているインスタンスデータを取得する。
 	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
+
 	// このStateTreeを実行しているイノシシを取得する。
 	ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get());
+
 	// イノシシを取得できなかった場合は認識情報を初期化して失敗終了する。
 	if (Boar == nullptr)
 	{
@@ -43,18 +45,25 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 
 	// Perceptionを更新し、現在認識している対象を取得する。
 	InstanceData.bHasTargetInSight = Boar->RefreshPerceptionTargets();
+
 	// 認識しているプレイヤーを保存する。
 	InstanceData.TargetPlayer = Boar->GetPerceivedPlayer();
+
 	// 認識している檻を保存する。
 	InstanceData.TargetCage = Boar->GetPerceivedCage();
+
 	// 認識しているプレイヤーが存在するかを保存する。
 	InstanceData.bHasTargetPlayer = InstanceData.TargetPlayer != nullptr;
+
 	// 認識している檻が存在するかを保存する。
 	InstanceData.bHasTargetCage = InstanceData.TargetCage != nullptr;
+
 	// 認識している檻までの距離を保存する。
 	InstanceData.DistanceToCage = Boar->GetPerceivedCageDistance();
+
 	// 現在檻を攻撃できる状態か更新する。
 	InstanceData.bCanAttackCage = Boar->CanAttackCage();
+
 	// プレイヤー・檻を認識しているか判定する。
 	const bool bHasPlayer = InstanceData.TargetPlayer != nullptr;
 	const bool bHasCage = InstanceData.TargetCage != nullptr && InstanceData.bCanAttackCage;
@@ -64,6 +73,7 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 
 	// 認識中プレイヤーまでの距離を保存する。
 	InstanceData.DistanceToPlayer = Boar->GetPerceivedPlayerDistance();
+
 	// 回復中も認識は更新し続け、回復State側の遷移条件に停止状態を渡す。
 	InstanceData.bIsStaminaRecovering = Boar->ShouldStopWhileRecoveringStamina() && Boar->IsStaminaRecovering();
 
@@ -72,6 +82,7 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 	{
 		// 優先対象は存在しない。
 		InstanceData.bPreferCage = false;
+
 		// 対象がいないことは正常な徘徊状態なので、失敗として扱わない。
 		return EStateTreeRunStatus::Running;
 	}

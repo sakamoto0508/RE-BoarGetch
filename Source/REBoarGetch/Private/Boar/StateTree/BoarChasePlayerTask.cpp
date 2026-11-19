@@ -29,6 +29,7 @@ void FStateTreeBoarChasePlayerTask::ExitState(FStateTreeExecutionContext& Contex
 
 	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	InstanceData.ChaseTarget = nullptr;
+
 	if (const APawn* Pawn = InstanceData.NPC.Get())
 	{
 		if (AAIController* Controller = Cast<AAIController>(Pawn->GetController()))

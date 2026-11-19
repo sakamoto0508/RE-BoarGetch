@@ -1,4 +1,6 @@
 #include "UI/BoarLobbyWidget.h"
+#include "Audio/BoarAudioManagerSubsystem.h"
+#include "Engine/GameInstance.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
@@ -22,8 +24,8 @@ namespace
 	TWidget* ResolveLobbyWidget(UWidgetTree* WidgetTree, const FName WidgetName)
 	{
 		return WidgetTree && !WidgetName.IsNone()
-			       ? Cast<TWidget>(WidgetTree->FindWidget(WidgetName))
-			       : nullptr;
+				? Cast<TWidget>(WidgetTree->FindWidget(WidgetName))
+				: nullptr;
 	}
 }
 
@@ -36,8 +38,13 @@ void UBoarLobbyWidget::NativeConstruct()
 	StageProgress = ResolveLobbyWidget<UTextBlock>(WidgetTree, StageProgressWidgetName);
 	PreviousButton = ResolveLobbyWidget<UButton>(WidgetTree, PreviousButtonName);
 	NextButton = ResolveLobbyWidget<UButton>(WidgetTree, NextButtonName);
-	if (PreviousButton) PreviousButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::PreviousStage);
-	if (NextButton) NextButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::NextStage);
+
+	if (PreviousButton)
+		PreviousButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::PreviousStage);
+
+	if (NextButton)
+		NextButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::NextStage);
+
 	EncyclopediaButton = ResolveLobbyWidget<UButton>(WidgetTree, EncyclopediaButtonName);
 	if (EncyclopediaButton)
 	{
@@ -50,6 +57,7 @@ void UBoarLobbyWidget::NativeConstruct()
 	{
 		StartStageButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::HandleStartStageClicked);
 	}
+
 	if (CancelButton)
 	{
 		CancelButton->OnClicked.AddUniqueDynamic(this, &UBoarLobbyWidget::HandleCancelClicked);
@@ -60,29 +68,39 @@ void UBoarLobbyWidget::NativeDestruct()
 {
 	// Viewとモデル両方の通知を解除し、画面外に生成したプレビューActorも破棄します。
 	ReleasePreviews();
+
 	if (Presenter)
 	{
 		Presenter->OnViewChanged.RemoveDynamic(this, &UBoarLobbyWidget::RefreshSelectedStage);
 		Presenter->Shutdown();
 	}
-	if (PreviousButton) PreviousButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::PreviousStage);
-	if (NextButton) NextButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::NextStage);
+
+	if (PreviousButton)
+		PreviousButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::PreviousStage);
+
+	if (NextButton)
+		NextButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::NextStage);
+
 	for (const auto& Entry : StageEntries)
 		if (Entry)
 		{
 			Entry->OnFocused.RemoveDynamic(this, &UBoarLobbyWidget::SelectStage);
 			Entry->OnChosen.RemoveDynamic(this, &UBoarLobbyWidget::ChooseStage);
 		}
-	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->CloseEncyclopediaFrom(this);
+	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer()))
+		PC->CloseEncyclopediaFrom(this);
+
 	if (EncyclopediaButton)
 	{
 		EncyclopediaButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::OpenEncyclopedia);
 		EncyclopediaButton->OnHovered.RemoveDynamic(this, &UBoarLobbyWidget::FocusEncyclopedia);
 	}
+
 	if (StartStageButton)
 	{
 		StartStageButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::HandleStartStageClicked);
 	}
+
 	if (CancelButton)
 	{
 		CancelButton->OnClicked.RemoveDynamic(this, &UBoarLobbyWidget::HandleCancelClicked);
@@ -107,22 +125,32 @@ void UBoarLobbyWidget::ShowStageCatalog(const TArray<UStageConfig*>& Stages, USt
 		}
 	// カタログを差し替える前に旧Entryの通知を外し、一覧を作り直します。
 	StageEntries.Reset();
-	if (StageList) StageList->ClearChildren();
-	if (!Presenter) Presenter = NewObject<UBoarStageSelectPresenter>(this);
+
+	if (StageList)
+		StageList->ClearChildren();
+
+	if (!Presenter)
+		Presenter = NewObject<UBoarStageSelectPresenter>(this);
+
 	Presenter->Initialize(GetGameInstance(), Stages, FallbackStage);
 	Presenter->OnViewChanged.AddUniqueDynamic(this, &UBoarLobbyWidget::RefreshSelectedStage);
+
 	for (int32 I = 0; I < Presenter->GetStageCount(); ++I)
 	{
 		UBoarLoadoutEntry* Entry = !bUseCarousel && StageList && StageEntryClass
-			                           ? CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), StageEntryClass)
-			                           : nullptr;
+				? CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), StageEntryClass)
+				: nullptr;
 		// カルーセルではEntryを作らず、添字だけPresenterのカタログと揃えておきます。
 		StageEntries.Add(Entry);
-		if (!Entry) continue;
+
+		if (!Entry)
+			continue;
+
 		Entry->OnFocused.AddUniqueDynamic(this, &UBoarLobbyWidget::SelectStage);
 		Entry->OnChosen.AddUniqueDynamic(this, &UBoarLobbyWidget::ChooseStage);
 		StageList->AddChild(Entry);
 	}
+
 	SetVisibility(ESlateVisibility::Visible);
 	RefreshSelectedStage();
 	bInitialFocusPending = true;
@@ -130,21 +158,34 @@ void UBoarLobbyWidget::ShowStageCatalog(const TArray<UStageConfig*>& Stages, USt
 
 void UBoarLobbyWidget::RefreshSelectedStage()
 {
-	if (!Presenter) return;
+	if (!Presenter)
+		return;
 	// Viewは整形済みのデータを描画します。SaveGameや解放条件を直接参照しません。
 	const auto Data = Presenter->GetSelectedStage();
+
 	for (int32 I = 0; I < Presenter->GetStageCount(); ++I)
 	{
-		if (!StageEntries.IsValidIndex(I) || !StageEntries[I]) continue;
+		if (!StageEntries.IsValidIndex(I) || !StageEntries[I])
+			continue;
+
 		const auto Entry = Presenter->GetStage(I);
 		StageEntries[I]->Setup(I, Entry.EntryLabel, Entry.bSelected);
 		StageEntries[I]->SetAvailable(Entry.bUnlocked);
 		StageEntries[I]->SetRenderOpacity(Entry.bUnlocked ? 1.0f : 0.45f);
 	}
-	if (PreviousButton) PreviousButton->SetIsEnabled(Presenter->CanStep(-1, bUseCarousel));
-	if (NextButton) NextButton->SetIsEnabled(Presenter->CanStep(1, bUseCarousel));
-	if (StageNameText) StageNameText->SetText(Data.DisplayName);
-	if (StageDescriptionText) StageDescriptionText->SetText(Data.Description);
+
+	if (PreviousButton)
+		PreviousButton->SetIsEnabled(Presenter->CanStep(-1, bUseCarousel));
+
+	if (NextButton)
+		NextButton->SetIsEnabled(Presenter->CanStep(1, bUseCarousel));
+
+	if (StageNameText)
+		StageNameText->SetText(Data.DisplayName);
+
+	if (StageDescriptionText)
+		StageDescriptionText->SetText(Data.Description);
+
 	if (TargetCaptureCountText) TargetCaptureCountText->SetText(
 		Data.bValid ? FText::AsNumber(Data.TargetCaptureCount) : FText::GetEmpty());
 	if (StageThumbnailImage)
@@ -152,25 +193,40 @@ void UBoarLobbyWidget::RefreshSelectedStage()
 		UTexture2D* Thumbnail = Data.Thumbnail.LoadSynchronous();
 		StageThumbnailImage->SetBrushFromTexture(Thumbnail, true);
 		StageThumbnailImage->SetVisibility(Thumbnail
-			                                   ? ESlateVisibility::SelfHitTestInvisible
-			                                   : ESlateVisibility::Collapsed);
+				? ESlateVisibility::SelfHitTestInvisible
+				: ESlateVisibility::Collapsed);
 	}
-	if (StartStageButton) StartStageButton->SetIsEnabled(Data.bCanStart);
-	if (StageStatus) StageStatus->SetText(Data.Status);
-	if (StageProgress) StageProgress->SetText(Data.Progress);
+
+	if (StartStageButton)
+		StartStageButton->SetIsEnabled(Data.bCanStart);
+
+	if (StageStatus)
+		StageStatus->SetText(Data.Status);
+
+	if (StageProgress)
+		StageProgress->SetText(Data.Progress);
+
 	auto Ratio = [](int32 Found, int32 Total) { return FText::Format(NSLOCTEXT("StageSelect", "Ratio", "{0} / {1}"), Found, Total); };
+
 	if (auto* Coin = ResolveLobbyWidget<UTextBlock>(WidgetTree, CoinProgressTextWidgetName))
 		Coin->SetText(Data.bValid && Data.bUnlocked ? Ratio(Data.CoinsFound, Data.CoinsTotal) : FText::FromString(TEXT("—")));
+
 	if (auto* Book = ResolveLobbyWidget<UTextBlock>(WidgetTree, EncyclopediaProgressTextWidgetName))
 		Book->SetText(Data.bValid && Data.bUnlocked ? Ratio(Data.BoarsFound, Data.BoarsTotal) : FText::FromString(TEXT("—")));
+
 	RefreshStatusBadge(Data.bValid && Data.bUnlocked && Data.bCleared);
-	if (bUseCarousel) RefreshCarousel();
+
+	if (bUseCarousel)
+		RefreshCarousel();
 }
 
 void UBoarLobbyWidget::HideStageSelection()
 {
 	ReleasePreviews();
-	if (Presenter) Presenter->Shutdown();
+
+	if (Presenter)
+		Presenter->Shutdown();
+
 	bInitialFocusPending = false;
 	SetVisibility(ESlateVisibility::Collapsed);
 }
@@ -185,32 +241,52 @@ void UBoarLobbyWidget::ResolveWidgetReferences()
 	CancelButton = ResolveLobbyWidget<UButton>(WidgetTree, CancelButtonWidgetName);
 }
 
+namespace
+{
+	// Stage SelectのSEはUI共通SE（Project Settings）を使い、画面ごとに音源参照を持たない。
+	void PlayStageSelectSound(const UUserWidget* Widget, EBoarUISound Sound)
+	{
+		UGameInstance* Instance = Widget ? Widget->GetGameInstance() : nullptr;
+		if (auto* Audio = Instance ? Instance->GetSubsystem<UBoarAudioManagerSubsystem>() : nullptr)
+			Audio->PlayUISound(const_cast<UUserWidget*>(Widget), Sound);
+	}
+}
+
 void UBoarLobbyWidget::HandleStartStageClicked()
 {
 	// Presenterの開始判定を通った定義だけを通知し、保存とレベル遷移はStageEntranceに委ねます。
+	// 未解放Stageなど開始判定を通らない決定は拒否音を鳴らします（遷移演出の音はStageEntranceが鳴らします）。
 	if (UStageConfig* Stage = Presenter ? Presenter->RequestStart() : nullptr)
 	{
+		PlayStageSelectSound(this, EBoarUISound::Confirm);
 		OnStageStartRequested.Broadcast(Stage);
 	}
+	else if (Presenter)
+		PlayStageSelectSound(this, EBoarUISound::Reject);
 }
 
 void UBoarLobbyWidget::HandleCancelClicked()
 {
+	PlayStageSelectSound(this, EBoarUISound::Cancel);
 	HideStageSelection();
 	OnStageSelectionClosed.Broadcast();
 }
 
 void UBoarLobbyWidget::OpenEncyclopedia()
 {
-	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer())) PC->OpenEncyclopedia(this, EncyclopediaButton);
+	if (auto* PC = Cast<ABoarPlayerController>(GetOwningPlayer()))
+		PC->OpenEncyclopedia(this, EncyclopediaButton);
 }
 
 void UBoarLobbyWidget::FocusEncyclopedia() { if (EncyclopediaButton) EncyclopediaButton->SetKeyboardFocus(); }
 
 void UBoarLobbyWidget::SelectStage(int32 Index)
 {
-	if (!Presenter || !Presenter->TrySelect(Index)) return;
+	if (!Presenter || !Presenter->TrySelect(Index))
+		return;
+
 	RefreshSelectedStage();
+
 	if (StageList && StageEntries.IsValidIndex(Index) && StageEntries[Index]) StageList->ScrollWidgetIntoView(
 		StageEntries[Index], true);
 }
@@ -218,24 +294,39 @@ void UBoarLobbyWidget::SelectStage(int32 Index)
 void UBoarLobbyWidget::ChooseStage(int32 Index)
 {
 	SelectStage(Index);
-	if (Presenter && Presenter->GetSelectedIndex() == Index) HandleStartStageClicked();
+
+	if (Presenter && Presenter->GetSelectedIndex() == Index)
+		HandleStartStageClicked();
 }
 
 void UBoarLobbyWidget::StepStage(int32 Direction)
 {
-	if (!Presenter) return;
+	if (!Presenter)
+		return;
+
 	const bool bHadPending = Presenter->IsTransitionPending();
 	const bool bStepped = Presenter->RequestStep(Direction, bUseCarousel);
+	if (bStepped)
+		PlayStageSelectSound(this, EBoarUISound::Select);
+
 	if (bUseCarousel)
 	{
 		// 連続入力で前の移動先が確定した場合、中央カードを更新してから次をアニメーションします。
-		if (bHadPending) RefreshSelectedStage();
-		if (!bStepped) return;
+		if (bHadPending)
+			RefreshSelectedStage();
+
+		if (!bStepped)
+			return;
+
 		SlideDirection = Direction;
 		CarouselElapsed = 0;
-		if (StartStageButton) StartStageButton->SetIsEnabled(false);
+
+		if (StartStageButton)
+			StartStageButton->SetIsEnabled(false);
+
 		return;
 	}
+
 	if (bStepped)
 	{
 		SelectStage(Presenter->GetSelectedIndex());
@@ -251,15 +342,21 @@ void UBoarLobbyWidget::FocusSelection()
 	const int32 SelectedStageIndex = Presenter ? Presenter->GetSelectedIndex() : INDEX_NONE;
 	if (StageEntries.IsValidIndex(SelectedStageIndex) && StageEntries[SelectedStageIndex]) StageEntries[
 		SelectedStageIndex]->FocusEntry();
-	else if (StartStageButton && StartStageButton->GetIsEnabled()) StartStageButton->SetKeyboardFocus();
-	else if (CancelButton) CancelButton->SetKeyboardFocus();
+	else if (StartStageButton && StartStageButton->GetIsEnabled())
+		StartStageButton->SetKeyboardFocus();
+	else if (CancelButton)
+		CancelButton->SetKeyboardFocus();
 }
 
 void UBoarLobbyWidget::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
-	if (bUseCarousel && Presenter && Presenter->IsTransitionPending()) AnimateCarousel(DeltaTime);
-	if (IsVisible()) UpdateActionHighlight();
+
+	if (bUseCarousel && Presenter && Presenter->IsTransitionPending())
+		AnimateCarousel(DeltaTime);
+
+	if (IsVisible())
+		UpdateActionHighlight();
 	// 表示の次のTickでフォーカスを設定し、生成直後のWidgetへの設定を避けます。
 	if (bInitialFocusPending && IsVisible())
 	{
@@ -273,35 +370,49 @@ FReply UBoarLobbyWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const
 	// 押しっぱなしによる連続移動は抑え、対応キーは子Widgetへ伝播させずここで消費します。
 	if (PreviousStageKeys.Contains(Event.GetKey()))
 	{
-		if (!Event.IsRepeat()) PreviousStage();
+		if (!Event.IsRepeat())
+			PreviousStage();
+
 		return FReply::Handled();
 	}
+
 	if (NextStageKeys.Contains(Event.GetKey()))
 	{
-		if (!Event.IsRepeat()) NextStage();
+		if (!Event.IsRepeat())
+			NextStage();
+
 		return FReply::Handled();
 	}
+
 	if (ConfirmKeys.Contains(Event.GetKey()))
 	{
 		// 戻るボタンにフォーカスがあれば戻る、それ以外は開始します。
 		if (!Event.IsRepeat())
 		{
-			if (CancelButton && CancelButton->HasAnyUserFocus()) HandleCancelClicked();
-			else if (StartStageButton && StartStageButton->GetIsEnabled()) HandleStartStageClicked();
+			if (CancelButton && CancelButton->HasAnyUserFocus())
+				HandleCancelClicked();
+			else if (StartStageButton && StartStageButton->GetIsEnabled())
+				HandleStartStageClicked();
 		}
+
 		return FReply::Handled();
 	}
+
 	if (CancelKeys.Contains(Event.GetKey()))
 	{
-		if (!Event.IsRepeat()) HandleCancelClicked();
+		if (!Event.IsRepeat())
+			HandleCancelClicked();
+
 		return FReply::Handled();
 	}
+
 	return Super::NativeOnPreviewKeyDown(Geometry, Event);
 }
 
 void UBoarLobbyWidget::ShowTravelError(const FText& Message)
 {
-	if (StageStatus) StageStatus->SetText(Message);
+	if (StageStatus)
+		StageStatus->SetText(Message);
 	// 遷移エラーはCLEAR表示より優先して見せます。
 	RefreshStatusBadge(false);
 }
@@ -310,32 +421,47 @@ void UBoarLobbyWidget::ShowTravelError(const FText& Message)
 void UBoarLobbyWidget::RefreshStatusBadge(bool bCleared)
 {
 	UWidget* Badge = ResolveLobbyWidget<UWidget>(WidgetTree, ClearBadgeWidgetName);
-	if (!Badge) return;
+	if (!Badge)
+		return;
+
 	Badge->SetVisibility(bCleared ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
-	if (StageStatus) StageStatus->SetVisibility(bCleared ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+
+	if (StageStatus)
+		StageStatus->SetVisibility(bCleared ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 }
 
 // フォーカス中の開始／戻るボタンの枠を選択テクスチャにします。ホバーし始めたボタンへはフォーカスも移します。
 void UBoarLobbyWidget::UpdateActionHighlight()
 {
-	if (!ButtonSelectedTexture || !ButtonNormalTexture) return;
+	if (!ButtonSelectedTexture || !ButtonNormalTexture)
+		return;
+
 	UButton* Buttons[2] = {StartStageButton, CancelButton};
 	bool* Hovered[2] = {&bStartHovered, &bCancelHovered};
 	int32 Active = INDEX_NONE;
+
 	for (int32 I = 0; I < 2; ++I)
 	{
-		if (!Buttons[I]) continue;
+		if (!Buttons[I])
+			continue;
+
 		const bool bHover = Buttons[I]->IsHovered();
-		if (bHover && !*Hovered[I] && Buttons[I]->GetIsEnabled()) Buttons[I]->SetKeyboardFocus();
+		if (bHover && !*Hovered[I] && Buttons[I]->GetIsEnabled())
+			Buttons[I]->SetKeyboardFocus();
 		*Hovered[I] = bHover;
-		if (Buttons[I]->HasAnyUserFocus()) Active = I;
+		if (Buttons[I]->HasAnyUserFocus())
+			Active = I;
 	}
-	if (Active == HighlightedAction) return;
+
+	if (Active == HighlightedAction)
+		return;
+
 	HighlightedAction = Active;
 	UImage* Frames[2] = {ResolveLobbyWidget<UImage>(WidgetTree, StartButtonFrameImageName),
-	                     ResolveLobbyWidget<UImage>(WidgetTree, CancelButtonFrameImageName)};
+		ResolveLobbyWidget<UImage>(WidgetTree, CancelButtonFrameImageName)};
 	for (int32 I = 0; I < 2; ++I)
-		if (Frames[I]) Frames[I]->SetBrushFromTexture(I == Active ? ButtonSelectedTexture.Get() : ButtonNormalTexture.Get(), false);
+		if (Frames[I])
+			Frames[I]->SetBrushFromTexture(I == Active ? ButtonSelectedTexture.Get() : ButtonNormalTexture.Get(), false);
 }
 
 void UBoarLobbyWidget::RefreshCarousel()
@@ -345,33 +471,43 @@ void UBoarLobbyWidget::RefreshCarousel()
 	{
 		if (!Presenter->IsPreviewVisible(It.Key()))
 		{
-			if (IsValid(It.Value())) It.Value()->Destroy();
+			if (IsValid(It.Value()))
+				It.Value()->Destroy();
+
 			PreviewBrushes.Remove(It.Key());
 			It.RemoveCurrent();
 		}
 	}
+
 	const TCHAR* Names[] = {TEXT("Previous"), TEXT("Current"), TEXT("Next")};
+
 	for (int32 I = 0; I < 3; ++I)
 	{
 		const FString Prefix = FString(TEXT("Carousel")) + Names[I];
 		auto* Card = WidgetTree->FindWidget(FName(*Prefix));
 		const auto Stage = Presenter->GetCarouselStage(I - 1);
-		if (!Card) continue;
+
+		if (!Card)
+			continue;
+
 		Card->SetVisibility(Stage.bValid ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 		Card->SetRenderTranslation(FVector2D::ZeroVector);
 		Card->SetRenderScale(FVector2D(I == 1 ? 1.f : .72f));
 		Card->SetRenderOpacity(I == 1 ? 1.f : I == 0 ? PreviousCardOpacity : NextCardOpacity);
 		const bool bUnlocked = Stage.bUnlocked;
+
 		if (auto* Label = ResolveLobbyWidget<UTextBlock>(WidgetTree, FName(*(Prefix + TEXT("Label")))))
 			Label->SetText(!Stage.bValid
-				               ? FText::GetEmpty()
-				               : !bUnlocked
-				               ? FText::FromString(TEXT("???"))
-				               : I == 2
-				               ? FText::FromName(Stage.StageId)
-				               : Stage.DisplayName);
+					? FText::GetEmpty()
+					: !bUnlocked
+					? FText::FromString(TEXT("???"))
+					: I == 2
+					? FText::FromName(Stage.StageId)
+					: Stage.DisplayName);
+
 		if (auto* Badge = ResolveLobbyWidget<UTextBlock>(WidgetTree, FName(*(Prefix + TEXT("Badge")))))
 			Badge->SetText(Stage.Badge);
+
 		if (auto* Lock = WidgetTree->FindWidget(FName(*(Prefix + TEXT("Lock"))))) Lock->SetVisibility(
 			Stage.bValid && !bUnlocked ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		UTexture2D* Thumbnail = Stage.Thumbnail.LoadSynchronous();
@@ -380,55 +516,77 @@ void UBoarLobbyWidget::RefreshCarousel()
 			TEXT("Saturation"), !bUnlocked || I == 2 ? .18f : I == 0 ? .5f : 1.f);
 		if (auto* Preview = ResolveLobbyWidget<UImage>(WidgetTree, FName(*(Prefix + TEXT("Image")))))
 		{
-			if (Diorama) Preview->SetBrushFromMaterial(Diorama);
-			else Preview->SetBrushFromTexture(Thumbnail, false);
+			if (Diorama)
+				Preview->SetBrushFromMaterial(Diorama);
+			else
+				Preview->SetBrushFromTexture(Thumbnail, false);
+
 			Preview->SetVisibility(Diorama || Thumbnail
-				                       ? ESlateVisibility::HitTestInvisible
-				                       : ESlateVisibility::Collapsed);
+					? ESlateVisibility::HitTestInvisible
+					: ESlateVisibility::Collapsed);
 			// 次のカードとロック中のカードは輪郭を残しつつ、明るい細部を抑えて表示します。
 			Preview->SetColorAndOpacity(!bUnlocked || I == 2
-				                            ? FLinearColor(.5f, .62f, .78f, 1)
-				                            : I == 0
-				                            ? FLinearColor(.75f, .83f, .9f, 1)
-				                            : FLinearColor::White);
+					? FLinearColor(.5f, .62f, .78f, 1)
+					: I == 0
+					? FLinearColor(.75f, .83f, .9f, 1)
+					: FLinearColor::White);
 		}
+
 		if (auto* Empty = WidgetTree->FindWidget(FName(*(Prefix + TEXT("Empty"))))) Empty->SetVisibility(
 			Stage.bValid && !Thumbnail && !Diorama ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
+
 	const auto Selected = Presenter->GetSelectedStage();
+
 	if (auto* Number = ResolveLobbyWidget<UTextBlock>(WidgetTree, TEXT("Text_StageNumber"))) Number->SetText(
 		Selected.bValid ? FText::FromName(Selected.StageId) : FText::GetEmpty());
 	if (!Selected.bUnlocked)
 	{
 		// ロック中の中央カードは閲覧できますが、詳細名・説明・進捗は伏せます。
-		if (StageNameText) StageNameText->SetText(FText::FromString(TEXT("???")));
-		if (StageDescriptionText) StageDescriptionText->SetText(FText::GetEmpty());
-		if (TargetCaptureCountText) TargetCaptureCountText->SetText(FText::FromString(TEXT("—")));
-		if (StageProgress) StageProgress->SetText(FText::GetEmpty());
-		if (StageStatus) StageStatus->SetText(FText::FromString(TEXT("LOCKED")));
+		if (StageNameText)
+			StageNameText->SetText(FText::FromString(TEXT("???")));
+
+		if (StageDescriptionText)
+			StageDescriptionText->SetText(FText::GetEmpty());
+
+		if (TargetCaptureCountText)
+			TargetCaptureCountText->SetText(FText::FromString(TEXT("—")));
+
+		if (StageProgress)
+			StageProgress->SetText(FText::GetEmpty());
+
+		if (StageStatus)
+			StageStatus->SetText(FText::FromString(TEXT("LOCKED")));
 	}
 }
 
 UMaterialInstanceDynamic* UBoarLobbyWidget::GetDioramaBrush(const FBoarStageSelectViewData& Stage)
 {
-	if (!Stage.bValid || Stage.PreviewActorClass.IsNull() || !PreviewMaterial || !GetWorld()) return nullptr;
+	if (!Stage.bValid || Stage.PreviewActorClass.IsNull() || !PreviewMaterial || !GetWorld())
+		return nullptr;
 	// 再描画のたびにActorやRenderTargetを作り直さないよう、StageId単位で再利用します。
-	if (auto* Existing = PreviewBrushes.Find(Stage.StageId)) return Existing->Get();
+	if (auto* Existing = PreviewBrushes.Find(Stage.StageId))
+		return Existing->Get();
+
 	UClass* Class = Stage.PreviewActorClass.LoadSynchronous();
-	if (!Class) return nullptr;
+	if (!Class)
+		return nullptr;
 	// ミニチュア撮影用の一時Actorを画面外に生成します。閉じる際はReleasePreviewsで破棄します。
 	FActorSpawnParameters Params;
 	Params.ObjectFlags |= RF_Transient;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	auto* Actor = GetWorld()->SpawnActor<ABoarStagePreviewActor>(Class, FVector(0, 0, -100000), FRotator::ZeroRotator,
-	                                                             Params);
-	if (!Actor) return nullptr;
+		Params);
+	if (!Actor)
+		return nullptr;
+
 	UTextureRenderTarget2D* Target = Actor->CreatePreview();
 	if (!Target)
 	{
 		Actor->Destroy();
 		return nullptr;
 	}
+
 	auto* Brush = UMaterialInstanceDynamic::Create(PreviewMaterial, this);
 	Brush->SetTextureParameterValue(TEXT("PreviewTexture"), Target);
 	PreviewActors.Add(Stage.StageId, Actor);
@@ -438,7 +596,10 @@ UMaterialInstanceDynamic* UBoarLobbyWidget::GetDioramaBrush(const FBoarStageSele
 
 void UBoarLobbyWidget::ReleasePreviews()
 {
-	for (auto& Pair : PreviewActors) if (IsValid(Pair.Value)) Pair.Value->Destroy();
+	for (auto& Pair : PreviewActors)
+		if (IsValid(Pair.Value))
+			Pair.Value->Destroy();
+
 	PreviewActors.Empty();
 	PreviewBrushes.Empty();
 }
@@ -447,9 +608,11 @@ void UBoarLobbyWidget::AnimateCarousel(float DeltaTime)
 {
 	CarouselElapsed += DeltaTime;
 	const float T = FMath::Clamp(CarouselElapsed / FMath::Max(CarouselDuration, .05f), 0.f, 1.f);
+
 	// Smoothstepで移動・拡縮・透明度の始点と終点をなめらかにつなぎます。
 	const float A = T * T * (3.f - 2.f * T);
 	const TCHAR* Names[] = {TEXT("CarouselPrevious"), TEXT("CarouselCurrent"), TEXT("CarouselNext")};
+
 	for (int32 I = 0; I < 3; ++I)
 		if (auto* Card = WidgetTree->FindWidget(Names[I]))
 		{
@@ -458,7 +621,7 @@ void UBoarLobbyWidget::AnimateCarousel(float DeltaTime)
 			const float To = I - SlideDirection == 1 ? 1.f : .72f;
 			Card->SetRenderScale(FVector2D(FMath::Lerp(From, To, A)));
 			Card->SetRenderOpacity(FMath::Lerp(I == 1 ? 1.f : I == 0 ? PreviousCardOpacity : NextCardOpacity,
-			                                   I - SlideDirection == 1 ? 1.f : NextCardOpacity, A));
+				I - SlideDirection == 1 ? 1.f : NextCardOpacity, A));
 		}
 	if (T >= 1.f)
 	{

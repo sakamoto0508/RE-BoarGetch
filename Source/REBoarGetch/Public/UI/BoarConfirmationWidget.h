@@ -12,22 +12,43 @@ UCLASS(Abstract, Blueprintable)
 class REBOARGETCH_API UBoarConfirmationWidget : public UUserWidget
 {
 	GENERATED_BODY()
+
 public:
-	UPROPERTY(BlueprintAssignable, Category = "Confirmation") FOnBoarConfirmationDecision OnDecision;
+	UPROPERTY(BlueprintAssignable, Category = "Confirmation")
+	FOnBoarConfirmationDecision OnDecision;
+
 	void FocusInitialChoice();
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry& Geometry, float DeltaTime) override;
-	UPROPERTY(EditDefaultsOnly, Category = "Confirmation|Bindings") FName YesButtonName;
-	UPROPERTY(EditDefaultsOnly, Category = "Confirmation|Bindings") FName NoButtonName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Confirmation|Bindings")
+	FName YesButtonName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Confirmation|Bindings")
+	FName NoButtonName;
+
 private:
-	UFUNCTION() void Confirm();
-	UFUNCTION() void Cancel();
-	UFUNCTION() void FocusYes();
-	UFUNCTION() void FocusNo();
-	UPROPERTY(Transient) TObjectPtr<UButton> YesButton;
-	UPROPERTY(Transient) TObjectPtr<UButton> NoButton;
+	UFUNCTION()
+	void Confirm();
+
+	UFUNCTION()
+	void Cancel();
+
+	UFUNCTION()
+	void FocusYes();
+
+	UFUNCTION()
+	void FocusNo();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> YesButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> NoButton;
+
 	bool bInitialFocusPending = true;
 	// 承認・否定のどちらかを通知したら、同じ表示中の追加決定を抑えます。
 	bool bDecisionSent = false;

@@ -14,18 +14,18 @@ UCaptureComponent::UCaptureComponent()
 bool UCaptureComponent::Capture(AActor* Capturer)
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage()) 
+		if (!Mode->CanAdvanceStage())
 			return false;
 	if (bIsCaptured || GetOwner() == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Capture] Capture failed. Owner=%s IsCaptured=%s"),
+		UE_LOG(LogTemp, Warning, TEXT("[Capture] 捕獲に失敗しました。Owner=%s IsCaptured=%s"),
 			*GetNameSafe(GetOwner()),
 			bIsCaptured ? TEXT("true") : TEXT("false"));
 		return false;
 	}
 
 	bIsCaptured = true;
-	
+
 	APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	if (ACharacter* OwnerCharacter = Cast<ACharacter>(OwnerPawn))
 	{
@@ -42,7 +42,7 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 	}
 
 	OnCaptured.Broadcast(Capturer);
-	UE_LOG(LogTemp, Log, TEXT("[Capture] Captured Owner=%s Capturer=%s"),
+	UE_LOG(LogTemp, Log, TEXT("[Capture] 捕獲しました。Owner=%s Capturer=%s"),
 		*GetNameSafe(GetOwner()), *GetNameSafe(Capturer));
 	return true;
 }
@@ -51,16 +51,16 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 bool UCaptureComponent::Release()
 {
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage()) 
+		if (!Mode->CanAdvanceStage())
 			return false;
 	if (!bIsCaptured || GetOwner() == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Capture] Release failed. Owner=%s IsCaptured=%s"),
+		UE_LOG(LogTemp, Warning, TEXT("[Capture] 解放に失敗しました。Owner=%s IsCaptured=%s"),
 			*GetNameSafe(GetOwner()),
 			bIsCaptured ? TEXT("true") : TEXT("false"));
 		return false;
 	}
-	
+
 	bIsCaptured = false;
 
 	if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
@@ -72,6 +72,6 @@ bool UCaptureComponent::Release()
 	}
 
 	OnReleased.Broadcast();
-	UE_LOG(LogTemp, Log, TEXT("[Capture] Released Owner=%s"), *GetNameSafe(GetOwner()));
+	UE_LOG(LogTemp, Log, TEXT("[Capture] 解放しました。Owner=%s"), *GetNameSafe(GetOwner()));
 	return true;
 }

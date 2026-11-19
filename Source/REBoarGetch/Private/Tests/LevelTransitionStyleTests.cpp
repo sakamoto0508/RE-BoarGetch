@@ -25,7 +25,7 @@ bool FLevelTransitionStyleTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Stage departure entry"), static_cast<int32>(Settings->GetEntry(EBoarLevelTransitionStyle::StageDeparture).Effect), static_cast<int32>(EACFTransitionEffect::WireframeConversion));
 	TestEqual(TEXT("Return to lobby entry"), static_cast<int32>(Settings->GetEntry(EBoarLevelTransitionStyle::ReturnToLobby).Effect), static_cast<int32>(EACFTransitionEffect::HologramTransfer));
 	TestEqual(TEXT("Runtime lookup reads the project settings"), static_cast<int32>(UBoarLevelTransitionLibrary::GetTransitionEffect(EBoarLevelTransitionStyle::ReturnToLobby)),
-	          static_cast<int32>(GetDefault<UBoarLevelTransitionSettings>()->ReturnToLobby.Effect));
+		static_cast<int32>(GetDefault<UBoarLevelTransitionSettings>()->ReturnToLobby.Effect));
 
 	// ポータルは既定でProject SettingsのPortalを使い、個別に上書きするときの初期値は12。
 	const AHubPortal* Portal = GetDefault<AHubPortal>();
@@ -41,7 +41,9 @@ bool FLevelTransitionStyleTest::RunTest(const FString& Parameters)
 	const UBlueprint* Title = LoadObject<UBlueprint>(nullptr, TEXT("/Game/BP/Widget/WBP_Title.WBP_Title"));
 	if (!TestNotNull(TEXT("WBP_Title loads"), Title))
 		return false;
+
 	int32 TransitionCalls = 0;
+
 	for (const UEdGraph* Graph : Title->UbergraphPages)
 	{
 		for (const UEdGraphNode* Node : Graph->Nodes)
@@ -49,10 +51,13 @@ bool FLevelTransitionStyleTest::RunTest(const FString& Parameters)
 			const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
 			if (!Call)
 				continue;
+
 			const FName Name = Call->FunctionReference.GetMemberName();
 			TestFalse(TEXT("No plain OpenLevel in WBP_Title"), Name == TEXT("OpenLevel") || Name == TEXT("OpenLevelBySoftObjectPtr"));
+
 			if (Name != GET_FUNCTION_NAME_CHECKED(UBoarLevelTransitionLibrary, OpenLevelWithTransition))
 				continue;
+
 			++TransitionCalls;
 			const UEdGraphPin* Exec = Call->GetExecPin();
 			TestTrue(TEXT("Transition call is wired to Start"), Exec && Exec->LinkedTo.Num() > 0);
@@ -62,6 +67,7 @@ bool FLevelTransitionStyleTest::RunTest(const FString& Parameters)
 			TestTrue(TEXT("Title uses the Menu style"), Style && (Style->DefaultValue.IsEmpty() || Style->DefaultValue == TEXT("Menu")));
 		}
 	}
+
 	TestEqual(TEXT("WBP_Title has one transition call"), TransitionCalls, 1);
 	return true;
 }

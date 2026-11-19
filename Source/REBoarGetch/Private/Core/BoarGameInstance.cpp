@@ -10,16 +10,20 @@
 void UBoarGameInstance::Init()
 {
 	Super::Init();
+
 	if (UGameplayStatics::DoesSaveGameExist(SaveSlotName, SaveUserIndex))
 	{
 		Progress = Cast<UBoarSaveGame>(UGameplayStatics::LoadGameFromSlot(SaveSlotName, SaveUserIndex));
 		bSaveLoadFailed = !Progress;
 	}
+
 	if (!Progress)
 		Progress = NewObject<UBoarSaveGame>(this);
+
 	UpdateUnlockedGadgets(Progress);
+
 	if (bSaveLoadFailed)
-		UE_LOG(LogTemp, Error, TEXT("[Save] Existing save could not be loaded; overwriting is disabled."));
+		UE_LOG(LogTemp, Error, TEXT("[Save] 既存のセーブを読み込めないため、上書き保存を無効にします。"));
 }
 
 bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
@@ -27,16 +31,22 @@ bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
 	// ディスク保存が成功してから正本と購読者へ公開する。失敗した候補は現在の進行へ混ぜない。
 	if (!Candidate || bSaveLoadFailed || !UGameplayStatics::SaveGameToSlot(Candidate, SaveSlotName, SaveUserIndex))
 	{
+		// 自動テスト（AddExpectedError）がこの文言を照合しているため英語のまま。
 		UE_LOG(LogTemp, Error, TEXT("[Save] Progress could not be saved."));
 		return false;
 	}
+
 	const bool bNewUnlocks = !Progress || Candidate->UnlockedGadgetIds.Num() > Progress->UnlockedGadgetIds.Num();
 	Progress = Candidate;
+
 	if (bNewUnlocks)
 	{
 		OnGadgetsUnlocked.Broadcast();
-		if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) Gadgets->OnGadgetsUnlocked.Broadcast();
+
+		if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>())
+			Gadgets->OnGadgetsUnlocked.Broadcast();
 	}
+
 	OnProgressChanged.Broadcast();
 	return true;
 }
@@ -46,10 +56,12 @@ bool UBoarGameInstance::CommitClearedRun(FStageRunData& Run)
 	// NEW判定は保存前の履歴で固定し、同じRunの保存再試行でも結果表示を変えない。
 	if (!Progress || Run.StageId.IsNone())
 		return false;
+
 	Progress->FreezeRunResult(Run);
 	UBoarSaveGame* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);
 	if (!Candidate->MergeClearedRun(Run))
 		return false;
+
 	UpdateUnlockedGadgets(Candidate);
 	return SaveCandidate(Candidate);
 }
@@ -58,6 +70,7 @@ bool UBoarGameInstance::SaveLastAttemptedStage(FName StageId)
 {
 	if (!Progress || StageId.IsNone())
 		return false;
+
 	UBoarSaveGame* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);
 	Candidate->LastAttemptedStageId = StageId;
 	return SaveCandidate(Candidate);
@@ -66,8 +79,9 @@ bool UBoarGameInstance::SaveLastAttemptedStage(FName StageId)
 bool UBoarGameInstance::SaveGadgetLoadout(const TArray<FName>& Ids)
 {
 	const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>();
-	if (!Progress || !Gadgets || !Gadgets->IsLoadoutValid(Ids)) 
+	if (!Progress || !Gadgets || !Gadgets->IsLoadoutValid(Ids))
 		return false;
+
 	UBoarSaveGame* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);
 	Candidate->GadgetLoadout = Ids;
 	Candidate->bHasSavedLoadout = true;
@@ -79,16 +93,18 @@ const TArray<TObjectPtr<UStageConfig>>& UBoarGameInstance::ResolveStageCatalog(
 {
 	const UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
 	const auto* Instance = World ? World->GetGameInstance<UBoarGameInstance>() : nullptr;
-	if (Instance && !Instance->StageCatalog.IsEmpty()) 
+	if (Instance && !Instance->StageCatalog.IsEmpty())
 		return Instance->StageCatalog;
+
 	static bool bWarned = false;
 	if (!LegacyCatalog.IsEmpty() && !bWarned)
 	{
 		bWarned = true;
 		UE_LOG(LogTemp, Warning,
-		       TEXT("[Stage] GameInstanceのStageCatalogが未設定のため、%sの個別StageCatalogを使用します。BP_BoarGameInstanceへ移してください。"),
-		       *GetNameSafe(WorldContext));
+			TEXT("[Stage] GameInstanceのStageCatalogが未設定のため、%sの個別StageCatalogを使用します。BP_BoarGameInstanceへ移してください。"),
+			*GetNameSafe(WorldContext));
 	}
+
 	return LegacyCatalog;
 }
 
@@ -101,19 +117,22 @@ bool UBoarGameInstance::IsStageUnlocked(const UStageConfig* Config) const
 bool UBoarGameInstance::SaveArchiveDisplays(const TArray<FName>& Ids)
 {
 	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>() : nullptr;
-	if (!Progress || !Mode || !Mode->bArchive) 
+	if (!Progress || !Mode || !Mode->bArchive)
 		return false;
+
 	auto* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);
-	if (!Candidate->SetArchiveDisplays(Ids) || !SaveCandidate(Candidate)) 
+	if (!Candidate->SetArchiveDisplays(Ids) || !SaveCandidate(Candidate))
 		return false;
+
 	OnArchiveDisplaysChanged.Broadcast();
 	return true;
 }
 
 TArray<FName> UBoarGameInstance::GetArchiveDisplayIds() const
 {
-	if (Progress) 
+	if (Progress)
 		return Progress->ResolveArchiveDisplays();
+
 	TArray<FName> Empty;
 	Empty.SetNum(UBoarSaveGame::ArchiveDisplaySlotCount);
 	return Empty;
@@ -122,11 +141,13 @@ TArray<FName> UBoarGameInstance::GetArchiveDisplayIds() const
 bool UBoarGameInstance::AssignArchiveDisplay(int32 Slot, FName Id)
 {
 	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>() : nullptr;
-	if (!Progress || !Mode || !Mode->bArchive) 
+	if (!Progress || !Mode || !Mode->bArchive)
 		return false;
+
 	auto* Candidate = DuplicateObject<UBoarSaveGame>(Progress, this);
-	if (!Candidate->AssignArchiveDisplay(Slot, Id) || !SaveCandidate(Candidate)) 
+	if (!Candidate->AssignArchiveDisplay(Slot, Id) || !SaveCandidate(Candidate))
 		return false;
+
 	OnArchiveDisplaysChanged.Broadcast();
 	return true;
 }
@@ -187,12 +208,12 @@ bool UBoarGameInstance::SelectTestGadget(FName Id)
 
 void UBoarGameInstance::ClearTestGadget()
 {
-	if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) 
+	if (auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>())
 		Gadgets->ClearTestGadget();
 }
 
 void UBoarGameInstance::UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const
 {
-	if (const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>()) 
+	if (const auto* Gadgets = GetSubsystem<UBoarGadgetSubsystem>())
 		Gadgets->UpdateInitialUnlocks(Candidate);
 }

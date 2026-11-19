@@ -46,38 +46,86 @@ public:
 	FOnLobbyStageSelectionClosed OnStageSelectionClosed;
 
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Lobby Widget References") FName EncyclopediaButtonName;
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Lobby Widget References")
+	FName EncyclopediaButtonName;
+
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry& Geometry, float DeltaTime) override;
 	virtual FReply NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TSubclassOf<UBoarLoadoutEntry> StageEntryClass;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") bool bUseCarousel = false;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Preview") TObjectPtr<UMaterialInterface> PreviewMaterial;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta=(ClampMin="0.05", ClampMax="0.5")) float CarouselDuration = .18f;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> PreviousStageKeys = { EKeys::Left, EKeys::Gamepad_DPad_Left, EKeys::Gamepad_LeftShoulder };
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> NextStageKeys = { EKeys::Right, EKeys::Gamepad_DPad_Right, EKeys::Gamepad_RightShoulder };
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> CancelKeys = { EKeys::Escape, EKeys::Gamepad_FaceButton_Right };
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select")
+	TSubclassOf<UBoarLoadoutEntry> StageEntryClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select")
+	bool bUseCarousel = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Preview")
+	TObjectPtr<UMaterialInterface> PreviewMaterial;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta=(ClampMin="0.05", ClampMax="0.5"))
+	float CarouselDuration = .18f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select")
+	TArray<FKey> PreviousStageKeys = { EKeys::Left, EKeys::Gamepad_DPad_Left, EKeys::Gamepad_LeftShoulder };
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select")
+	TArray<FKey> NextStageKeys = { EKeys::Right, EKeys::Gamepad_DPad_Right, EKeys::Gamepad_RightShoulder };
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select")
+	TArray<FKey> CancelKeys = { EKeys::Escape, EKeys::Gamepad_FaceButton_Right };
+
 	/** 決定キー（フォーカス中のボタンを実行。戻るボタン以外なら開始）。空ならSlate標準の決定（Enter・パッド下ボタン）だけを使います。 */
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select") TArray<FKey> ConfirmKeys;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select")
+	TArray<FKey> ConfirmKeys;
+
 	/** カルーセルの隣カードまでの距離（px）と、隣カードの不透明度（前／次）。 */
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0")) float CarouselSpacing = 470.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0", ClampMax = "1")) float PreviousCardOpacity = .58f;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0", ClampMax = "1")) float NextCardOpacity = .38f;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0"))
+	float CarouselSpacing = 470.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0", ClampMax = "1"))
+	float PreviousCardOpacity = .58f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select", meta = (ClampMin = "0", ClampMax = "1"))
+	float NextCardOpacity = .38f;
+
 	/** 特別コイン・図鑑登録の「取得数 / 総数」を表示するTextBlockと、クリア済みのときだけ出すCLEAR表示。 */
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName CoinProgressTextWidgetName;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName EncyclopediaProgressTextWidgetName;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName ClearBadgeWidgetName;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName CoinProgressTextWidgetName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName EncyclopediaProgressTextWidgetName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName ClearBadgeWidgetName;
+
 	/** 開始／戻るボタン背面の枠Image。フォーカス中の方を選択テクスチャにします。 */
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName StartButtonFrameImageName;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName CancelButtonFrameImageName;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") TObjectPtr<class UTexture2D> ButtonSelectedTexture;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") TObjectPtr<class UTexture2D> ButtonNormalTexture;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName StageListWidgetName;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName StageStatusWidgetName;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName StageProgressWidgetName;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName PreviousButtonName;
-	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings") FName NextButtonName;
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName StartButtonFrameImageName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName CancelButtonFrameImageName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	TObjectPtr<class UTexture2D> ButtonSelectedTexture;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	TObjectPtr<class UTexture2D> ButtonNormalTexture;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName StageListWidgetName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName StageStatusWidgetName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName StageProgressWidgetName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName PreviousButtonName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stage Select|Bindings")
+	FName NextButtonName;
 
 	/** ステージ名を表示する任意名のTextBlockです。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Lobby Widget References")
@@ -107,36 +155,73 @@ private:
 	UMaterialInstanceDynamic* GetDioramaBrush(const FBoarStageSelectViewData& Stage);
 	void ReleasePreviews();
 	// 表示範囲内のミニチュアと描画用MaterialをStageIdで対応付けて保持します。
-	UPROPERTY(Transient) TMap<FName, TObjectPtr<ABoarStagePreviewActor>> PreviewActors;
-	UPROPERTY(Transient) TMap<FName, TObjectPtr<UMaterialInstanceDynamic>> PreviewBrushes;
-	UFUNCTION() void RefreshSelectedStage();
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<ABoarStagePreviewActor>> PreviewActors;
+
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UMaterialInstanceDynamic>> PreviewBrushes;
+
+	UFUNCTION()
+	void RefreshSelectedStage();
+
 	void FocusSelection();
 	void StepStage(int32 Direction);
 	void RefreshCarousel();
 	void AnimateCarousel(float DeltaTime);
 	float CarouselElapsed = 0.f;
 	int32 SlideDirection = 0;
-	UFUNCTION() void SelectStage(int32 Index);
-	UFUNCTION() void ChooseStage(int32 Index);
-	UFUNCTION() void PreviousStage();
-	UFUNCTION() void NextStage();
+
+	UFUNCTION()
+	void SelectStage(int32 Index);
+
+	UFUNCTION()
+	void ChooseStage(int32 Index);
+
+	UFUNCTION()
+	void PreviousStage();
+
+	UFUNCTION()
+	void NextStage();
+
 	// 選択ルールと進捗の整形はPresenter、描画・入力・フォーカスはこのWidgetが担当します。
-	UPROPERTY(Transient) TObjectPtr<UBoarStageSelectPresenter> Presenter;
-	UPROPERTY(Transient) TArray<TObjectPtr<UBoarLoadoutEntry>> StageEntries;
-	UPROPERTY(Transient) TObjectPtr<UScrollBox> StageList;
-	UPROPERTY(Transient) TObjectPtr<UTextBlock> StageStatus;
-	UPROPERTY(Transient) TObjectPtr<UTextBlock> StageProgress;
-	UPROPERTY(Transient) TObjectPtr<UButton> PreviousButton;
-	UPROPERTY(Transient) TObjectPtr<UButton> NextButton;
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarStageSelectPresenter> Presenter;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UBoarLoadoutEntry>> StageEntries;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UScrollBox> StageList;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> StageStatus;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> StageProgress;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> PreviousButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> NextButton;
+
 	// 表示直後のフォーカス設定を次のTickまで遅らせます。
 	bool bInitialFocusPending = false;
-	UFUNCTION() void OpenEncyclopedia();
-	UFUNCTION() void FocusEncyclopedia();
-	UPROPERTY(Transient) TObjectPtr<UButton> EncyclopediaButton;
+
+	UFUNCTION()
+	void OpenEncyclopedia();
+
+	UFUNCTION()
+	void FocusEncyclopedia();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> EncyclopediaButton;
+
 	void ResolveWidgetReferences();
 	void UpdateActionHighlight();
 	void RefreshStatusBadge(bool bCleared);
-	bool bStartHovered = false, bCancelHovered = false;
+	bool bStartHovered = false;
+	bool bCancelHovered = false;
 	int32 HighlightedAction = INDEX_NONE - 1;
 
 	UFUNCTION()

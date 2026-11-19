@@ -19,12 +19,12 @@ class REBOARGETCH_API UBoarGameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
-	/** Read-only UI consumers are notified only after a saved candidate is published. */
+	/** 読み取り専用のUIへは、保存に成功した候補を公開した後にだけ通知します。 */
 	FOnBoarProgressChanged OnProgressChanged;
 	UPROPERTY(BlueprintAssignable)
 	FOnGadgetsUnlocked OnGadgetsUnlocked;
 	virtual void Init() override;
-	/** Startup can reject a missing/unreadable progress dependency before spawning. */
+	/** 起動時、進行データが無い・読めない場合はSpawn前に拒否できます。 */
 	bool IsProgressReady() const { return Progress && !bSaveLoadFailed; }
 	/** 読み取り用の確定済み進行です。 */
 	UFUNCTION(BlueprintPure)
@@ -58,8 +58,8 @@ public:
 	TArray<TObjectPtr<UStageConfig>> StageCatalog;
 	/** GameInstanceのStageCatalogを返します。未設定の間だけ呼び出し元の旧設定を使い、移行を促す警告を出します。 */
 	static const TArray<TObjectPtr<UStageConfig>>& ResolveStageCatalog(const UObject* WorldContext,
-	                                                                   const TArray<TObjectPtr<UStageConfig>>&
-	                                                                   LegacyCatalog);
+		const TArray<TObjectPtr<UStageConfig>>&
+		LegacyCatalog);
 	UPROPERTY(BlueprintAssignable)
 	FOnGadgetsUnlocked OnTestGadgetChanged;
 	UFUNCTION(BlueprintPure)

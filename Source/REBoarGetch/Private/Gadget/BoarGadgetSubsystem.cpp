@@ -28,12 +28,14 @@ TSubclassOf<AGadgetBase> UBoarGadgetSubsystem::FindGadgetClass(FName Id) const
 {
 	if (Id.IsNone())
 		return nullptr;
+
 	for (const TSubclassOf<AGadgetBase> &Class : GetCatalog())
 	{
 		const UGadgetDataAsset *Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
 		if (Def && Def->GadgetId == Id)
 			return Class;
 	}
+
 	return nullptr;
 }
 
@@ -41,6 +43,7 @@ void UBoarGadgetSubsystem::UpdateInitialUnlocks(UBoarSaveGame *Candidate) const
 {
 	if (!Candidate)
 		return;
+
 	for (const TSubclassOf<AGadgetBase> &Class : GetCatalog())
 	{
 		const UGadgetDataAsset *Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
@@ -73,16 +76,19 @@ bool UBoarGadgetSubsystem::UnlockGadgetInLab(FName Id)
 	// 解放条件と永続化はSubsystem/GIが所有する。UIの表示状態を解放済みの根拠にしない。
 	const auto *Owner = GetProgressOwner();
 	const auto *Progress = Owner ? Owner->GetProgress() : nullptr;
+
 	if (!IsInGadgetLab() || !CanUnlockGadget(Id))
 		return false;
+
 	auto *Candidate = DuplicateObject<UBoarSaveGame>(Progress, GetProgressOwner());
 	Candidate->UnlockedGadgetIds.Add(Id);
-	return GetProgressOwner()->SaveCandidate(Candidate); // Coin IDs are never removed; publish only after save succeeds.
+	return GetProgressOwner()->SaveCandidate(Candidate); // コインIDは削除されない。保存に成功した後でだけ公開する。
 }
 bool UBoarGadgetSubsystem::SelectTestGadget(FName Id)
 {
 	if (!IsInGadgetLab() || (!Id.IsNone() && (!FindGadgetClass(Id) || !IsGadgetUnlocked(Id))))
 		return false;
+
 	SelectedTestGadget = Id;
 	GetProgressOwner()->OnTestGadgetChanged.Broadcast();
 	OnTestGadgetChanged.Broadcast();
@@ -99,6 +105,7 @@ void UBoarGadgetSubsystem::ClearTestGadget()
 {
 	if (SelectedTestGadget.IsNone())
 		return;
+
 	SelectedTestGadget = NAME_None;
 	GetProgressOwner()->OnTestGadgetChanged.Broadcast();
 	OnTestGadgetChanged.Broadcast();
@@ -108,15 +115,19 @@ bool UBoarGadgetSubsystem::IsLoadoutValid(const TArray<FName> &Ids) const
 {
 	if (Ids.Num() != UGadgetComponent::GetGadgetSlotCount())
 		return false;
+
 	TSet<FName> Used;
+
 	for (FName Id : Ids)
 	{
 		if (Id.IsNone())
 			continue;
 		if (!IsGadgetUnlocked(Id) || !FindGadgetClass(Id) || Used.Contains(Id))
 			return false;
+
 		Used.Add(Id);
 	}
+
 	return true;
 }
 
@@ -126,19 +137,26 @@ void UBoarGadgetSubsystem::RestoreSavedLoadout(TArray<TSubclassOf<AGadgetBase>> 
 	const auto *Save = Owner ? Owner->GetProgress() : nullptr;
 	if (!Save || !Save->bHasSavedLoadout || Save->GadgetLoadout.Num() != UGadgetComponent::GetGadgetSlotCount())
 		return;
+
 	TArray<TSubclassOf<AGadgetBase>> Restored;
 	bool bCanRestore = true;
+
 	for (FName Id : Save->GadgetLoadout)
 	{
 		TSubclassOf<AGadgetBase> Class = FindGadgetClass(Id);
 		if (!Id.IsNone() && !Class)
 			bCanRestore = false;
+
 		Restored.Add(Class);
 	}
+
 	if (bCanRestore)
 		Slots = Restored;
 	else
+	{
+		// 自動テスト（AddExpectedError）がこの文言を照合しているため英語のまま。
 		UE_LOG(LogTemp, Error, TEXT("[Gadget] Saved loadout has unresolved IDs; defaults retained, save unchanged."));
+	}
 }
 bool UBoarGadgetSubsystem::CanEquipGadgetClass(TSubclassOf<AGadgetBase> Class) const
 {
@@ -150,13 +168,17 @@ bool UBoarGadgetSubsystem::SaveLoadoutClasses(const TArray<TSubclassOf<AGadgetBa
 	auto *Owner = GetProgressOwner();
 	if (!Owner)
 		return false;
+
 	TArray<FName> Ids;
+
 	for (const auto &Class : Slots)
 	{
 		const auto *Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
 		if (Class && (!Def || Def->GadgetId.IsNone()))
 			return false;
+
 		Ids.Add(Def ? Def->GadgetId : NAME_None);
 	}
+
 	return Owner->SaveGadgetLoadout(Ids);
 }

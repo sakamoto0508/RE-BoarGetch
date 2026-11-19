@@ -24,6 +24,6 @@ void ABoarArchiveTerminal::Interact(ABoarPlayerController* Controller)
 		return;
 	if (bDisplaySelection)
 		Controller->OpenArchiveDisplaySelection();
-	else 
+	else
 		Controller->OpenFacilityMenu(true);
 }

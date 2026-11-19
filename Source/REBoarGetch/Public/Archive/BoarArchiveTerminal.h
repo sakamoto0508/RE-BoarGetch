@@ -8,9 +8,15 @@ UCLASS(Blueprintable)
 class REBOARGETCH_API ABoarArchiveTerminal : public AHubPortal
 {
     GENERATED_BODY()
+
 public:
     ABoarArchiveTerminal();
-    UPROPERTY(VisibleAnywhere,BlueprintReadOnly) TObjectPtr<class UStaticMeshComponent> TerminalVisual;
-    UPROPERTY(EditAnywhere,Category="Archive") bool bDisplaySelection=false;
+
+    UPROPERTY(VisibleAnywhere,BlueprintReadOnly)
+    TObjectPtr<class UStaticMeshComponent> TerminalVisual;
+
+    UPROPERTY(EditAnywhere,Category="Archive")
+    bool bDisplaySelection=false;
+
     virtual void Interact(class ABoarPlayerController* Controller) override;
 };

@@ -76,18 +76,18 @@ public:
 	/** UGameplayStatics::OpenLevelと同じ引数名（Blueprintのノード差し替えでピンの接続を保つため）。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Level", meta = (WorldContext = "WorldContextObject", AdvancedDisplay = "bAbsolute,Options"))
 	static void OpenLevelWithTransition(const UObject* WorldContextObject, FName LevelName, EBoarLevelTransitionStyle Style = EBoarLevelTransitionStyle::Menu,
-	                                    bool bAbsolute = true, FString Options = FString(TEXT("")));
+		bool bAbsolute = true, FString Options = FString(TEXT("")));
 
 	/** UGameplayStatics::OpenLevelBySoftObjectPtrと同じ引数名。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Level", meta = (WorldContext = "WorldContextObject", AdvancedDisplay = "bAbsolute,Options"))
 	static void OpenLevelBySoftObjectPtrWithTransition(const UObject* WorldContextObject, const TSoftObjectPtr<UWorld> Level,
-	                                                   EBoarLevelTransitionStyle Style = EBoarLevelTransitionStyle::Menu,
-	                                                   bool bAbsolute = true, FString Options = FString(TEXT("")));
+		EBoarLevelTransitionStyle Style = EBoarLevelTransitionStyle::Menu,
+		bool bAbsolute = true, FString Options = FString(TEXT("")));
 
 	/** 演出を直接指定して遷移します（ポータルなど、配置したActorごとに演出を変えるとき）。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Level", meta = (WorldContext = "WorldContextObject", AdvancedDisplay = "bAbsolute,Options"))
 	static void OpenLevelWithTransitionEntry(const UObject* WorldContextObject, FName LevelName, const FBoarLevelTransitionEntry& Transition,
-	                                         bool bAbsolute = true, FString Options = FString(TEXT("")));
+		bool bAbsolute = true, FString Options = FString(TEXT("")));
 
 	/** 設定上の演出（Presetを指定していても、Effectの値を返します）。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Level")

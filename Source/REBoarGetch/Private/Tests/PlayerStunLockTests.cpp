@@ -23,11 +23,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarPlayerStunLockTest, "REBoarGetch.Spec.Play
 bool FBoarPlayerStunLockTest::RunTest(const FString& Parameters)
 {
 	const auto Initialization = UWorld::InitializationValues().AllowAudioPlayback(false)
-	                                                          .CreatePhysicsScene(false).CreateNavigation(false).
-	                                                          CreateAISystem(false);
+		.CreatePhysicsScene(false).CreateNavigation(false).
+		CreateAISystem(false);
 	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true,
-	                                    ERHIFeatureLevel::Num, &Initialization);
-	if (!TestNotNull(TEXT("検証World"), World)) return false;
+		ERHIFeatureLevel::Num, &Initialization);
+	if (!TestNotNull(TEXT("検証World"), World))
+		return false;
+
 	GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(World);
 	ON_SCOPE_EXIT
 	{
@@ -39,24 +41,33 @@ bool FBoarPlayerStunLockTest::RunTest(const FString& Parameters)
 	const auto PlayerClass = LoadClass<ABoarPlayerCharacter>(
 		nullptr, TEXT("/Game/BP/Player/BP_PlayerCharacter.BP_PlayerCharacter_C"));
 	const auto NetClass = LoadClass<AGadgetBase>(nullptr, TEXT("/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C"));
-	if (!TestNotNull(TEXT("既存Player BP"), PlayerClass) || !TestNotNull(TEXT("既存Net BP"), NetClass)) return false;
+	if (!TestNotNull(TEXT("既存Player BP"), PlayerClass) || !TestNotNull(TEXT("既存Net BP"), NetClass))
+		return false;
+
 	auto* Player = World->SpawnActor<ABoarPlayerCharacter>(PlayerClass, FVector(0, 0, 100), FRotator::ZeroRotator, Spawn);
+
 	// Boarはプレイヤーの+X側（前方）から突進してくる。
 	auto* Boar = World->SpawnActor<ABoarBase>(FVector(200, 0, 100), FRotator(0, 180, 0), Spawn);
-	if (!TestNotNull(TEXT("Player"), Player) || !TestNotNull(TEXT("Boar"), Boar)) return false;
+	if (!TestNotNull(TEXT("Player"), Player) || !TestNotNull(TEXT("Boar"), Boar))
+		return false;
+
 	Boar->InitializeForStage();
 
 	FBoarGadgetLoadoutContext Context;
 	Context.bTemporary = true;
 	Context.TestGadgetClass = NetClass;
-	if (!TestTrue(TEXT("Netを保存なしで装備"), Player->InitializeForPlay(Context))) return false;
+
+	if (!TestTrue(TEXT("Netを保存なしで装備"), Player->InitializeForPlay(Context)))
+		return false;
 	// GameModeのないWorldなので、準備済みのPlayerだけBeginPlayを通す（演出ComponentのEvent購読・HP初期化）。
 	Player->DispatchBeginPlay();
 
 	UCharacterMovementComponent* Move = Player->GetCharacterMovement();
 	UHealthComponent* Health = Player->GetHealthComponent();
 	UPlayerHitReactionComponent* Reaction = Player->GetHitReactionComponent();
-	if (!TestNotNull(TEXT("被弾演出Component"), Reaction)) return false;
+	if (!TestNotNull(TEXT("被弾演出Component"), Reaction))
+		return false;
+
 	FTimerManager& Timers = World->GetTimerManager();
 	auto Advance = [&Timers](float Seconds)
 	{
@@ -76,6 +87,7 @@ bool FBoarPlayerStunLockTest::RunTest(const FString& Parameters)
 		Player->SetActorRotation(FRotator::ZeroRotator);
 		Player->bIsInvincible = false;
 		Timers.ClearTimer(Player->InvincibleTimerHandle);
+
 		// 各ケースを独立させる（累積ダメージでダウンしない）。
 		Health->ResetHealth();
 		Boar->BeginChargeHitTracking();
@@ -105,6 +117,7 @@ bool FBoarPlayerStunLockTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("攻撃してきた方向（+X）を向く"), Player->GetActorForwardVector().X > 0.99);
 	TestFalse(TEXT("Stun中は速度方向へ振り向かない"), Move->bOrientRotationToMovement);
 	TestTrue(TEXT("Hit Flashを開始"), Reaction->IsHitFlashActive());
+
 	if (UAnimInstance* Anim = Player->GetMesh() ? Player->GetMesh()->GetAnimInstance() : nullptr)
 		TestTrue(TEXT("しりもちAnimationを再生"), Reaction->IsKnockdownAnimationPlaying());
 	else
@@ -224,6 +237,7 @@ bool FBoarPlayerStunLockTest::RunTest(const FString& Parameters)
 		Player2->HandleBoarContact(Boar);
 		TestTrue(TEXT("破棄検証のStun"), Player2->IsStunned());
 		const FTimerHandle StunHandle = Player2->StunTimerHandle;
+
 		// Retry・Level遷移と同じEndPlay（このテスト用Worldはアクター初期化を経ないためRouteEndPlay／Destroyが素通りする。EndPlayを直接通す）。
 		UPlayerHitReactionComponent* Reaction2 = Player2->GetHitReactionComponent();
 		Player2->EndPlay(EEndPlayReason::LevelTransition);

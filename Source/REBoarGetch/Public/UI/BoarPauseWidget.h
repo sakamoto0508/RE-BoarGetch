@@ -11,28 +11,62 @@ UCLASS(Abstract, Blueprintable)
 class REBOARGETCH_API UBoarPauseWidget : public UUserWidget
 {
 	GENERATED_BODY()
+
 public:
 	void FocusInitialChoice();
 	/** 装備画面から戻った際、開く前の操作へフォーカスを戻します。 */
 	void FocusLoadoutChoice();
 	void FocusLobbyChoice();
+
 protected:
 	virtual void NativeConstruct() override;
-	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings") FName ResumeButtonName;
-	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings") FName LobbyButtonName;
-	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings") FName LoadoutButtonName;
-	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings") FName SettingsButtonName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings")
+	FName ResumeButtonName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings")
+	FName LobbyButtonName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings")
+	FName LoadoutButtonName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings")
+	FName SettingsButtonName;
+
 private:
-	UFUNCTION() void OpenSettings();
-	UFUNCTION() void FocusSettings();
-	UPROPERTY(Transient) TObjectPtr<UButton> SettingsButton;
-	UFUNCTION() void Resume();
-	UFUNCTION() void LeaveStage();
-	UFUNCTION() void FocusResume();
-	UFUNCTION() void FocusLobby();
-	UFUNCTION() void OpenLoadout();
-	UFUNCTION() void FocusLoadout();
-	UPROPERTY(Transient) TObjectPtr<UButton> ResumeButton;
-	UPROPERTY(Transient) TObjectPtr<UButton> LobbyButton;
-	UPROPERTY(Transient) TObjectPtr<UButton> LoadoutButton;
+	UFUNCTION()
+	void OpenSettings();
+
+	UFUNCTION()
+	void FocusSettings();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> SettingsButton;
+
+	UFUNCTION()
+	void Resume();
+
+	UFUNCTION()
+	void LeaveStage();
+
+	UFUNCTION()
+	void FocusResume();
+
+	UFUNCTION()
+	void FocusLobby();
+
+	UFUNCTION()
+	void OpenLoadout();
+
+	UFUNCTION()
+	void FocusLoadout();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> ResumeButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> LobbyButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> LoadoutButton;
 };
