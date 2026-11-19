@@ -54,3 +54,10 @@ Level は `/Game/Level/L_Stage02`（GameMode Override は `BP_GM_Stage02`、Stag
 - 地形は 150 cm グリッドなので、3 m 未満の段差は NavMesh 上で歩ける斜面になることがある。ボアを止めたい崖は経路長で確認する。
 - NavMesh：エディタはアセットのコンパイル中は Build() を無視するので、プローブ点が NavMesh に乗るまで再ビルドを繰り返す。
 - `Logs/` と `Screenshots/` は Git 管理外。
+
+## Stage Select ジオラマ（`Diorama/`）
+Stage Select 中央に表示する展示専用ミニチュア。実ステージは読み込まず、`ABoarStagePreviewActor`（Stage 1 と同じ SceneCapture 方式・同じ正射影 Camera）で撮影する。
+- `Diorama/build_diorama.py`（Blender）：`s02_layout.py` の高さ関数を 150 cm グリッドで再サンプル（水平 0.088 倍、高さはさらに 2 倍に誇張）。プレイ範囲の角丸輪郭で切り抜き、側面に土の厚みを付ける。川は幅を広げた青い帯。檻・檻の足場・風車・見張り台・橋は自前の FBX 原本（`SourceArt/Cage`、`SourceArt/Stage01Redesign`）を拡大して配置し、木・納屋・母屋・柵・近道の岩は `s02_dressing.py` の位置に簡易形状で置く。全 Mesh が頂点カラー＋1 スロット（FBX は linear で出力。UE の VertexColor ノードは sRGB 変換をしないため）。
+- `Diorama/ue_apply_diorama.py`（ヘッドレス、エディタを閉じて実行）：`/Game/UI/StagePreview/Meshes/SM_S02_Diorama_{Island,Props}`、`M_Preview_VertexColor`（Stage 1 の `M_Preview_*` と同じ擬似ライティング）、`BP_Stage02_Diorama`（Yaw 45 で北を奥へ、Z -87 で手前下端を Stage 1 と同じ画面位置へ）、`DA_Stage02StageConfig`（表示名・PreviewActorClass）、`BP_StageEntrance_Stage01.StageCatalog` に Stage02 を追加。
+- `Diorama/ue_verify_diorama.py`（ヘッドレス・読み取り専用）、`Diorama/capture_dioramas.py`（GUI・実 GPU・PIE なし）、`Diorama/build_select_mockups.js`（Stage Select の合成モック）。
+- 台座は Mesh に含めない。WBP の共通ホログラム台座（`T_SS_Pedestal`）を Stage 1 と共用する。
