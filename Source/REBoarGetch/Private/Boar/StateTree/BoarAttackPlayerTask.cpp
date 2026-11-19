@@ -18,6 +18,7 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::EnterState(FStateTreeExecuti
 
 	// Global Senseが同フレームで更新した認識結果から攻撃対象を確定する。
 	InstanceData.TargetPlayer = Boar->GetPerceivedPlayer();
+
 	// StateTreeから直接このStateへ入っても、追跡側と同じ射程・Cooldown条件を守る。
 	if (!Boar->CanStartPlayerAttack())
 		return EStateTreeRunStatus::Failed;
@@ -98,12 +99,15 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::TickAttack(
 		InstanceData.Phase = EBoarChargeAttackPhase::Charge;
 		InstanceData.PhaseElapsedTime = 0.0f;
 		Boar->SetActorRotation(InstanceData.ChargeDirection.Rotation());
+
 		if (Movement)
 		{
 			Movement->MaxWalkSpeed = Boar->GetChargeSpeed();
 		}
+
 		Boar->BeginChargeHitTracking();
 		Boar->OnChargeStarted();
+		Boar->PlayBoarSound(Boar->GetAudioSettings().ChargeStart);
 		return EStateTreeRunStatus::Running;
 	}
 
@@ -126,6 +130,7 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::TickAttack(
 		const FVector ToPlayer = Player
 			? (Player->GetActorLocation() - Boar->GetActorLocation()).GetSafeNormal2D()
 			: FVector::ZeroVector;
+
 		const FVector RetreatDirection = ToPlayer.IsNearlyZero() ? -InstanceData.ChargeDirection : -ToPlayer;
 		const FVector FaceDirection = ToPlayer.IsNearlyZero() ? InstanceData.ChargeDirection : ToPlayer;
 		const float TurnRate = Movement ? Movement->RotationRate.Yaw : 360.0f;
@@ -135,9 +140,14 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::TickAttack(
 
 		// 壁などで後退できない場合に止まり続けないよう、想定時間を超えたら打ち切る。
 		const float RetreatSpeed = FMath::Max(Boar->GetAttackRetreatSpeed(), 1.0f);
-		const float RetreatTimeLimit = Boar->GetAttackRetreatDistance() / RetreatSpeed * 1.5f + 0.2f;
+
+		// 本来かかる時間の1.5倍＋0.2秒の余裕を見る。
+		constexpr float RetreatTimeScale = 1.5f;
+		constexpr float RetreatTimeMargin = 0.2f;
+		const float RetreatTimeLimit = Boar->GetAttackRetreatDistance() / RetreatSpeed * RetreatTimeScale + RetreatTimeMargin;
 		const bool bReachedDistance = FVector::DistSquared2D(Boar->GetActorLocation(), InstanceData.RetreatStartLocation)
 			>= FMath::Square(Boar->GetAttackRetreatDistance());
+
 		if (!bReachedDistance && InstanceData.PhaseElapsedTime < RetreatTimeLimit)
 		{
 			Boar->AddMovementInput(RetreatDirection, 1.0f);
@@ -145,6 +155,7 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::TickAttack(
 		}
 
 		RestoreRotationSettings(InstanceData, Boar);
+
 		if (Movement)
 		{
 			Movement->StopMovementImmediately();
@@ -187,10 +198,12 @@ void FStateTreeBoarAttackPlayerTask::BeginRetreat(
 	FInstanceDataType& InstanceData, ABoarBase* Boar) const
 {
 	Boar->EndChargeHitTracking();
+
 	if (UCharacterMovementComponent* Movement = Boar->GetCharacterMovement())
 	{
 		Movement->StopMovementImmediately();
 		Movement->MaxWalkSpeed = Boar->GetAttackRetreatSpeed();
+
 		// 後退中は移動方向ではなくプレイヤー方向を向かせるため、移動による自動回転を止める。
 		Movement->bOrientRotationToMovement = false;
 		Movement->bUseControllerDesiredRotation = false;
@@ -204,6 +217,7 @@ void FStateTreeBoarAttackPlayerTask::BeginRetreat(
 	// クールダウンも突進終了から数え、プレイヤーを見失って再判断した後も次の突進へ移りやすくする。
 	InstanceData.bChargeFinishedNotified = true;
 	Boar->OnChargeAttackFinished();
+	Boar->PlayBoarSound(Boar->GetAudioSettings().ChargeEnd);
 	Boar->StartPlayerAttackCooldown();
 }
 
@@ -215,6 +229,7 @@ void FStateTreeBoarAttackPlayerTask::BeginTelegraph(
 	InstanceData.bChargeFinishedNotified = false;
 	Boar->OnAttackTelegraphStarted(
 		Boar->GetAttackTelegraphDuration(), Boar->GetAttackTelegraphPlayRate());
+	Boar->PlayAttackTelegraphSound();
 }
 
 void FStateTreeBoarAttackPlayerTask::RestoreRotationSettings(

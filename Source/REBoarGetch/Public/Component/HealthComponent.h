@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -30,15 +28,15 @@ public:
 	/** ダメージを受けます */
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void TakeDamage(float DamageAmount);
-	
+
 	/** HPを回復します */
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void Heal(float HealAmount);
-	
+
 	/** HPReset */
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void ResetHealth();
-	
+
 	/** 死亡状態かどうかを返します。 */
 	UFUNCTION(BlueprintPure, Category = "Health")
 	bool IsDead() const;

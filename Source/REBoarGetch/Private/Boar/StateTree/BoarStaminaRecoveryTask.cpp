@@ -23,10 +23,12 @@ EStateTreeRunStatus FStateTreeBoarStaminaRecoveryTask::EnterState(FStateTreeExec
 	{
 		Controller->StopMovement();
 	}
+
 	if (UCharacterMovementComponent* Move = Boar->GetCharacterMovement())
 	{
 		Move->StopMovementImmediately();
 	}
+
 	return EStateTreeRunStatus::Running;
 }
 

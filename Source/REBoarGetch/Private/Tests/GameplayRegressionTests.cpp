@@ -20,21 +20,27 @@ bool FBoarGameplayRegressionTest::RunTest(const FString& Parameters)
 {
 	// PIE・実セーブを使わず、状態遷移と移動値の副作用だけを独立Worldで検証する。
 	const auto Initialization = UWorld::InitializationValues().AllowAudioPlayback(false)
-	                                                          .CreatePhysicsScene(false).CreateNavigation(false).
-	                                                          CreateAISystem(false);
+		.CreatePhysicsScene(false).CreateNavigation(false).
+		CreateAISystem(false);
 	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true,
-	                                    ERHIFeatureLevel::Num, &Initialization);
-	if (!TestNotNull(TEXT("回帰検証World"), World)) return false;
+		ERHIFeatureLevel::Num, &Initialization);
+	if (!TestNotNull(TEXT("回帰検証World"), World))
+		return false;
+
 	ON_SCOPE_EXIT { World->DestroyWorld(false); };
 	FActorSpawnParameters Spawn;
 	Spawn.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	auto* Boar = World->SpawnActor<ABoarBase>(FVector::ZeroVector, FRotator::ZeroRotator, Spawn);
 	const auto PlayerClass = LoadClass<ABoarPlayerCharacter>(
 		nullptr, TEXT("/Game/BP/Player/BP_PlayerCharacter.BP_PlayerCharacter_C"));
-	if (!TestNotNull(TEXT("既存Player BP"), PlayerClass)) return false;
+	if (!TestNotNull(TEXT("既存Player BP"), PlayerClass))
+		return false;
+
 	auto* Player = World->SpawnActor<ABoarPlayerCharacter>(PlayerClass, FVector(500, 0, 100), FRotator::ZeroRotator,
-	                                                       Spawn);
-	if (!TestNotNull(TEXT("Boar"), Boar) || !TestNotNull(TEXT("Player"), Player)) return false;
+		Spawn);
+	if (!TestNotNull(TEXT("Boar"), Boar) || !TestNotNull(TEXT("Player"), Player))
+		return false;
+
 	Boar->InitializeForStage();
 	Boar->PerceivedPlayer = Player;
 	Boar->PerceivedPlayerDistance = 100.f;
@@ -64,9 +70,14 @@ bool FBoarGameplayRegressionTest::RunTest(const FString& Parameters)
 	FBoarGadgetLoadoutContext Context;
 	Context.bTemporary = true;
 	Context.TestGadgetClass = LoadClass<AGadgetBase>(nullptr, TEXT("/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C"));
-	if (!TestTrue(TEXT("既存装備を保存なしで準備"), Player->InitializeForPlay(Context))) return false;
+
+	if (!TestTrue(TEXT("既存装備を保存なしで準備"), Player->InitializeForPlay(Context)))
+		return false;
+
 	auto* Net = Cast<ANetGadget>(Player->GetGadgetComponent()->GetCurrentGadget());
-	if (!TestNotNull(TEXT("既存Net BP"), Net)) return false;
+	if (!TestNotNull(TEXT("既存Net BP"), Net))
+		return false;
+
 	auto* Move = Player->GetCharacterMovement();
 	Move->SetMovementMode(MOVE_Falling);
 	Move->Velocity = FVector(123, 45, 678);

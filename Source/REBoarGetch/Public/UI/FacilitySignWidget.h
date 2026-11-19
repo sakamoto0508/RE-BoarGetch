@@ -15,6 +15,7 @@ UCLASS(Blueprintable)
 class REBOARGETCH_API UFacilitySignWidget : public UUserWidget
 {
     GENERATED_BODY()
+
 public:
     UFacilitySignWidget(const FObjectInitializer& ObjectInitializer);
 
@@ -28,22 +29,42 @@ public:
     FSlateFontInfo MakeTitleFont(int32 Points) const;
     FSlateFontInfo MakeSubtitleFont(int32 Points) const;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style") TMap<EFacilitySignTier, FFacilitySignStyle> TierStyles;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style")
+    TMap<EFacilitySignTier, FFacilitySignStyle> TierStyles;
+
     /** 空き枠など、暗く表示するときの明るさ倍率。 */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(ClampMin="0", ClampMax="1")) float DimmedBrightness=.35f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(ClampMin="0", ClampMax="1"))
+    float DimmedBrightness=.35f;
+
     /** タイトル1文字の描画解像度（px）。階層に関わらずこの高さで描いて縮小配置します。 */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(ClampMin="8")) float TitlePixelHeight=64.f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(ClampMin="8"))
+    float TitlePixelHeight=64.f;
+
     /** タイトルとサブタイトルの行間（Paddingに対する割合）。 */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(ClampMin="0")) float SubtitleGapRatio=.5f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(ClampMin="0"))
+    float SubtitleGapRatio=.5f;
+
     /** 下端のアクセントラインの高さ＝TitleSize×Ratio（最小MinHeight）。 */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(ClampMin="0")) float AccentLineHeightRatio=.06f;
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm", ClampMin="0")) float AccentLineMinHeight=1.5f;
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm", ClampMin="0.01")) float AccentLineDepth=.6f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(ClampMin="0"))
+    float AccentLineHeightRatio=.06f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm", ClampMin="0"))
+    float AccentLineMinHeight=1.5f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm", ClampMin="0.01"))
+    float AccentLineDepth=.6f;
+
     /** パネル前面からの手前方向オフセット。 */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm")) float AccentLineOffset=.3f;
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(Units="cm")) float TextSurfaceOffset=.5f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm"))
+    float AccentLineOffset=.3f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(Units="cm"))
+    float TextSurfaceOffset=.5f;
 
 protected:
-    UPROPERTY(BlueprintReadOnly, Category="Sign", meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> TitleText;
-    UPROPERTY(BlueprintReadOnly, Category="Sign", meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> SubtitleText;
+    UPROPERTY(BlueprintReadOnly, Category="Sign", meta=(BindWidgetOptional))
+    TObjectPtr<UTextBlock> TitleText;
+
+    UPROPERTY(BlueprintReadOnly, Category="Sign", meta=(BindWidgetOptional))
+    TObjectPtr<UTextBlock> SubtitleText;
 };

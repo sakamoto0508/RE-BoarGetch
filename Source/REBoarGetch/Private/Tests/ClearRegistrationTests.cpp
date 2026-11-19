@@ -34,6 +34,7 @@ bool FClearRegistrationTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("B: 収容中のBは登録"), Save->CapturedBoarUniqueIds.Contains("B"));
 		TestFalse(TEXT("B: Aは最近捕獲順にも入らない"), Save->CapturedBoarHistory.Contains("A"));
 	}
+
 	// C：登録済みAを再捕獲してClear。NEWにはならないが、最近捕獲順の先頭へ移る。未収容のXの登録と順序は維持。
 	{
 		UBoarSaveGame* Save = NewObject<UBoarSaveGame>();
@@ -46,6 +47,7 @@ bool FClearRegistrationTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("C: 最近捕獲順を更新"), Save->GetRecentCapturedBoarIds(), TArray<FName>{"A", "Y", "X"});
 		TestEqual(TEXT("C: 登録数は増えない"), Save->CapturedBoarUniqueIds.Num(), 3);
 	}
+
 	// D：同じ一振り（同じ順序番号）でC・Aを捕獲してClear。新しい順に読むとID昇順。
 	{
 		UBoarSaveGame* Save = NewObject<UBoarSaveGame>();
@@ -58,6 +60,7 @@ bool FClearRegistrationTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("D: 同時捕獲はID昇順、過去の保存より新しい"), Save->GetRecentCapturedBoarIds(), TArray<FName>{"A", "C", "Z"});
 		TestEqual(TEXT("D: Default展示"), Save->ResolveArchiveDisplays(), TArray<FName>{"A", "C", "Z"});
 	}
+
 	// E：A捕獲→解放→Bを捕獲→Aを再捕獲・収容してClear。重複登録せず、Aが最新。
 	{
 		UBoarSaveGame* Save = NewObject<UBoarSaveGame>();
@@ -68,6 +71,7 @@ bool FClearRegistrationTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("E: 再捕獲したAが最新"), Save->GetRecentCapturedBoarIds(), TArray<FName>{"A", "B"});
 		TestEqual(TEXT("E: 重複なし"), Save->CapturedBoarHistory.Num(), 2);
 	}
+
 	// 収容スナップショットの無いRun（Clear処理を経ていない）からは個体を登録しない。
 	{
 		UBoarSaveGame* Save = NewObject<UBoarSaveGame>();
@@ -79,6 +83,7 @@ bool FClearRegistrationTest::RunTest(const FString& Parameters)
 		Save->MergeClearedRun(Run);
 		TestFalse(TEXT("スナップショット無しは登録しない"), Save->CapturedBoarUniqueIds.Contains("A"));
 	}
+
 	// G：順序情報の無い旧セーブ。登録を消さず、履歴のある個体の後ろにID昇順で並べる。
 	{
 		UBoarSaveGame* Save = NewObject<UBoarSaveGame>();
@@ -97,6 +102,7 @@ bool FClearRegistrationTest::RunTest(const FString& Parameters)
 			TestEqual(TEXT("G: 登録を失わない"), Loaded->CapturedBoarUniqueIds.Num(), 4);
 		}
 	}
+
 	// 旧セーブと新しいClearの混在：順序の無い旧個体は最近捕獲した個体より新しくならない。
 	// 旧個体Bを再捕獲・収容してClearすると、そのときだけ最新になる。Custom展示は変わらない。
 	{
@@ -114,6 +120,7 @@ bool FClearRegistrationTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("再捕獲した旧個体が最新"), Save->GetRecentCapturedBoarIds(), TArray<FName>{"B", "Z", "M"});
 		TestEqual(TEXT("Custom展示は捕獲順で変わらない"), Save->ResolveArchiveDisplays(), TArray<FName>{"M", NAME_None, "Z"});
 	}
+
 	return true;
 }
 #endif

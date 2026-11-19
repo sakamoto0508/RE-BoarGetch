@@ -16,6 +16,7 @@ AHealPickup::AHealPickup()
 	PickupCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
 	PickupCollision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	PickupCollision->SetGenerateOverlapEvents(true);
+
 	// ピックアップはオーバーラップ開始で即時取得する。
 	PickupCollision->OnComponentBeginOverlap.AddDynamic(this, &AHealPickup::OnPickupBeginOverlap);
 }
@@ -30,12 +31,14 @@ void AHealPickup::OnPickupBeginOverlap(UPrimitiveComponent* OverlappedComponent,
 	(void)SweepResult;
 
 	ABoarPlayerCharacter* PlayerCharacter = Cast<ABoarPlayerCharacter>(OtherActor);
-	if (PlayerCharacter == nullptr)	
+	if (PlayerCharacter == nullptr)
 		return;
 
 	if (UHealthComponent* Health = PlayerCharacter->GetHealthComponent())
 	{
 		Health->Heal(HealAmount);
+		PlayerCharacter->PlayPlayerSound(PickupSound);
+
 		// 二重取得を防ぐため、回復適用後に即Destroyする。
 		Destroy();
 	}

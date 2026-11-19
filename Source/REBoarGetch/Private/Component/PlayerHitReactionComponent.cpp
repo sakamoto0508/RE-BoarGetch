@@ -35,7 +35,7 @@ namespace BoarHitReaction
 	/** PIEで新旧の衝撃波を見比べるためのConsole Variableです。 */
 	TAutoConsoleVariable<int32> CVarUseLegacyImpactVFX(
 		TEXT("boar.HitVFX.UseLegacy"), -1,
-		TEXT("Red Boar hit shockwave: -1 = HitReactionComponent setting (default), 0 = new stylized impact, 1 = legacy ring."),
+		TEXT("赤いBoarに当たったときの衝撃波: -1 = HitReactionComponentの設定（既定）、0 = 新しいインパクト、1 = 従来のリング。"),
 		ECVF_Default);
 }
 
@@ -81,9 +81,10 @@ void UPlayerHitReactionComponent::BeginPlay()
 	ABoarPlayerCharacter* Player = GetPlayer();
 	if (!Player)
 	{
-		UE_LOG(LogBoarHitReaction, Warning, TEXT("%s is not on an ABoarPlayerCharacter; hit presentation is disabled."), *GetPathName());
+		UE_LOG(LogBoarHitReaction, Warning, TEXT("%s がABoarPlayerCharacterに付いていないため、被弾演出を無効にします。"), *GetPathName());
 		return;
 	}
+
 	Player->OnPlayerHitReceived.AddUniqueDynamic(this, &UPlayerHitReactionComponent::HandleHitReceived);
 	Player->OnStunStarted.AddUniqueDynamic(this, &UPlayerHitReactionComponent::HandleStunStarted);
 	Player->OnStunRecoveryStarted.AddUniqueDynamic(this, &UPlayerHitReactionComponent::HandleStunRecoveryStarted);
@@ -96,10 +97,12 @@ void UPlayerHitReactionComponent::EndPlay(const EEndPlayReason::Type EndPlayReas
 	// Retry・Level遷移・破棄で、Overlay Material・頭上VFX・Camera Effect・Timerを残さない。
 	if (UWorld* World = GetWorld())
 		World->GetTimerManager().ClearTimer(SitImpactTimerHandle);
+
 	StopHitFlash();
 	StopStunVFX(true);
 	bStunPresentationActive = false;
 	ReleaseCameraEffect(true);
+
 	if (ABoarPlayerCharacter* Player = GetPlayer(); Player && bBound)
 	{
 		Player->OnPlayerHitReceived.RemoveDynamic(this, &UPlayerHitReactionComponent::HandleHitReceived);
@@ -107,6 +110,7 @@ void UPlayerHitReactionComponent::EndPlay(const EEndPlayReason::Type EndPlayReas
 		Player->OnStunRecoveryStarted.RemoveDynamic(this, &UPlayerHitReactionComponent::HandleStunRecoveryStarted);
 		Player->OnStunEnded.RemoveDynamic(this, &UPlayerHitReactionComponent::HandleStunEnded);
 	}
+
 	bBound = false;
 	Super::EndPlay(EndPlayReason);
 }
@@ -124,6 +128,7 @@ void UPlayerHitReactionComponent::TickComponent(float DeltaTime, ELevelTick Tick
 		// 立ち上がりは瞬時、消えるときは二乗で素早く落とす（一瞬で認識でき、残光は短く）。
 		const float Amount = HitFlashIntensity * FMath::Square(1.0f - FadeT);
 		HitFlashMID->SetScalarParameterValue(HitFlashAmountParameter, Amount);
+
 		if (FadeT >= 1.0f)
 			StopHitFlash();
 	}
@@ -135,13 +140,14 @@ void UPlayerHitReactionComponent::TickComponent(float DeltaTime, ELevelTick Tick
 }
 
 //-------------------------------------------------
-// Gameplay Event
+// ---- Gameplayからの通知 ----
 //-------------------------------------------------
 
 void UPlayerHitReactionComponent::HandleHitReceived(const FBoarPlayerHitInfo& HitInfo)
 {
 	++ImpactPresentationCount;
 	PlayImpactVFX(HitInfo);
+
 	if (HitInfo.bLethal)
 	{
 		// GameOverの最後の一撃：衝撃波に加えて頭上の星を出し、倒れたまま残す（Retry・Level遷移のEndPlayで消える）。
@@ -149,6 +155,7 @@ void UPlayerHitReactionComponent::HandleHitReceived(const FBoarPlayerHitInfo& Hi
 		StartStunVFX();
 		return;
 	}
+
 	PlaySound2D(ImpactSound, ImpactSoundVolume);
 	StartHitFlash();
 	PlayCameraReaction(HitInfo);
@@ -170,12 +177,20 @@ void UPlayerHitReactionComponent::HandleStunRecoveryStarted(float RecoveryDurati
 void UPlayerHitReactionComponent::HandleStunEnded(bool bInterrupted)
 {
 	bStunPresentationActive = false;
+
+	if (!bInterrupted)
+		PlaySound2D(StunRecoveredSound, StunRecoveredSoundVolume);
+
 	if (UWorld* World = GetWorld())
 		World->GetTimerManager().ClearTimer(SitImpactTimerHandle);
+
 	StopStunVFX(bInterrupted);
+
 	// 正常終了ではAnimationが既に起き上がり・BlendOut中。再生速度の上下限で尺が余った場合だけ止める。
 	// 中断（ダウン等）では後続のGameOver演出のMontageへ素早く譲る。自分のMontageインスタンスだけを止める。
-	StopKnockdown(bInterrupted ? 0.1f : KnockdownBlendOut);
+	// 中断時は素早く（0.1秒で）抜け、通常終了時は設定どおりのBlend Outで戻す。
+	constexpr float InterruptedBlendOut = 0.1f;
+	StopKnockdown(bInterrupted ? InterruptedBlendOut : KnockdownBlendOut);
 }
 
 //-------------------------------------------------
@@ -195,16 +210,20 @@ void UPlayerHitReactionComponent::PlayImpactVFX(const FBoarPlayerHitInfo& HitInf
 	const double Now = World->GetTimeSeconds();
 	if (LastImpactVFXTime >= 0.0 && Now - LastImpactVFXTime < MinImpactVFXInterval)
 		return;
+
 	LastImpactVFXTime = Now;
 
 	// 突進方向（イノシシ→プレイヤーへ押し込む向き、水平）。命中情報が無ければ位置関係、最後はプレイヤーの後ろ向き。
 	FVector Direction = HitInfo.HitDirection.GetSafeNormal2D();
 	if (Direction.IsNearlyZero() && HitInfo.Attacker)
 		Direction = (GetOwner()->GetActorLocation() - HitInfo.AttackerLocation).GetSafeNormal2D();
+
 	if (Direction.IsNearlyZero())
 		Direction = -GetOwner()->GetActorForwardVector().GetSafeNormal2D();
+
 	if (Direction.IsNearlyZero())
 		Direction = FVector::ForwardVector;
+
 	const FRotator Rotation = FRotationMatrix::MakeFromX(Direction).Rotator();
 
 	if (bLegacy)
@@ -215,6 +234,7 @@ void UPlayerHitReactionComponent::PlayImpactVFX(const FBoarPlayerHitInfo& HitInf
 			VFX->SetVariableLinearColor(BoarHitReaction::ColorParameter, LegacyImpactVFXColor);
 			++ImpactVFXSpawnCount;
 		}
+
 		return;
 	}
 
@@ -239,10 +259,12 @@ void UPlayerHitReactionComponent::PlayImpactVFX(const FBoarPlayerHitInfo& HitInf
 		World, System, HitInfo.HitLocation, Rotation, FVector::OneVector, true, false, ENCPoolMethod::AutoRelease);
 	if (!VFX)
 		return;
+
 	VFX->SetVariableLinearColor(BoarHitReaction::ColorParameter, ImpactVFXColor);
 	VFX->SetVariableFloat(BoarHitReaction::ScaleParameter, ImpactVFXScale);
 	VFX->SetVariableVec3(BoarHitReaction::ImpactDirectionParameter, Direction);
 	VFX->SetVariableVec3(BoarHitReaction::RingNormalParameter, RingNormal);
+
 	// User Parameterを入れてから開始する（初回Spawnで向き・色が確定するため）。
 	VFX->Activate(true);
 	++ImpactVFXSpawnCount;
@@ -268,6 +290,7 @@ void UPlayerHitReactionComponent::PlayCameraReaction(const FBoarPlayerHitInfo& H
 		Params.bUseSourceLocation = true;
 		Params.SourceLocation = Source;
 		Params.Direction = HitInfo.HitDirection;
+
 		// このComponentが破棄されたらACF側でも止まる。
 		Params.Instigator = this;
 		ActiveCameraEffect = Cameras->PlayCameraEffect(HitCameraEffect, Params);
@@ -295,6 +318,7 @@ void UPlayerHitReactionComponent::PlaySound2D(USoundBase* Sound, float Volume) c
 {
 	if (!Sound || Volume <= 0.0f)
 		return;
+
 	const UWorld* World = GetWorld();
 	UGameInstance* GameInstance = World ? World->GetGameInstance() : nullptr;
 	if (UBoarAudioManagerSubsystem* Audio = GameInstance ? GameInstance->GetSubsystem<UBoarAudioManagerSubsystem>() : nullptr)
@@ -302,7 +326,7 @@ void UPlayerHitReactionComponent::PlaySound2D(USoundBase* Sound, float Volume) c
 }
 
 //-------------------------------------------------
-// Hit Flash
+// ---- 被弾フラッシュ ----
 //-------------------------------------------------
 
 void UPlayerHitReactionComponent::StartHitFlash()
@@ -315,9 +339,11 @@ void UPlayerHitReactionComponent::StartHitFlash()
 		HitFlashMID = UMaterialInstanceDynamic::Create(HitFlashMaterial, this);
 		if (!HitFlashMID)
 			return;
+
 		HitFlashOriginalOverlay = Mesh->GetOverlayMaterial();
 		Mesh->SetOverlayMaterial(HitFlashMID);
 	}
+
 	HitFlashElapsed = 0.0f;
 	HitFlashMID->SetVectorParameterValue(HitFlashColorParameter, HitFlashColor);
 	HitFlashMID->SetScalarParameterValue(HitFlashAmountParameter, HitFlashIntensity);
@@ -331,6 +357,7 @@ void UPlayerHitReactionComponent::StopHitFlash()
 	// 自分が設定したOverlayのときだけ戻す。後から別の演出が設定したOverlayは上書きしない。
 	if (USkeletalMeshComponent* Mesh = GetMesh(); Mesh && Mesh->GetOverlayMaterial() == HitFlashMID)
 		Mesh->SetOverlayMaterial(HitFlashOriginalOverlay);
+
 	HitFlashMID = nullptr;
 	HitFlashOriginalOverlay = nullptr;
 	HitFlashElapsed = 0.0f;
@@ -352,12 +379,14 @@ void UPlayerHitReactionComponent::StartStunVFX()
 	// 連続Stunでも1つだけ表示する（既に出ていれば継続）。
 	if (IsStunVFXActive())
 		return;
+
 	StopStunVFX(true);
 	StunVFXComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 		GetWorld(), StunVFX, GetOwner()->GetActorLocation(), FRotator::ZeroRotator, FVector(StunVFXScale), false, false,
 		ENCPoolMethod::None);
 	if (!StunVFXComponent)
 		return;
+
 	StunVFXComponent->SetVariableLinearColor(BoarHitReaction::ColorParameter, StunVFXColor);
 	UpdateStunVFXLocation();
 	StunVFXComponent->Activate(true);
@@ -368,8 +397,10 @@ void UPlayerHitReactionComponent::StopStunVFX(bool bImmediate)
 {
 	if (!StunVFXComponent)
 		return;
+
 	UNiagaraComponent* VFX = StunVFXComponent;
 	StunVFXComponent = nullptr;
+
 	if (!IsValid(VFX))
 		return;
 	// 「操作不能」の表示は操作が戻った瞬間に消す（粒子の余韻を残すと、まだ動けないように見えるため）。
@@ -387,6 +418,7 @@ void UPlayerHitReactionComponent::UpdateStunVFXLocation() const
 	const FVector Head = Mesh->DoesSocketExist(StunVFXSocket)
 		? Mesh->GetSocketLocation(StunVFXSocket)
 		: GetOwner()->GetActorLocation() + FVector(0.0, 0.0, 80.0);
+
 	StunVFXComponent->SetWorldLocation(Head + FVector(0.0, 0.0, StunVFXHeight));
 }
 
@@ -400,6 +432,7 @@ bool UPlayerHitReactionComponent::IsKnockdownAnimationPlaying() const
 	UAnimInstance* Anim = Mesh ? Mesh->GetAnimInstance() : nullptr;
 	if (!Anim || !KnockdownMontage || KnockdownMontageInstanceID == INDEX_NONE)
 		return false;
+
 	const FAnimMontageInstance* Instance = Anim->GetMontageInstanceForID(KnockdownMontageInstanceID);
 	return Instance && Instance->IsActive() && Instance->Montage == KnockdownMontage;
 }
@@ -410,6 +443,7 @@ void UPlayerHitReactionComponent::PlayKnockdown(float RecoveryDuration)
 	UAnimInstance* Anim = Mesh ? Mesh->GetAnimInstance() : nullptr;
 	if (!Anim || !KnockdownAnimation)
 		return;
+
 	StopKnockdown(KnockdownBlendIn);
 
 	const float Length = KnockdownAnimation->GetPlayLength();
@@ -419,13 +453,15 @@ void UPlayerHitReactionComponent::PlayKnockdown(float RecoveryDuration)
 	const float PlayRate = RecoveryDuration > KINDA_SMALL_NUMBER
 		? FMath::Clamp(Length / RecoveryDuration, KnockdownMinPlayRate, FMath::Max(KnockdownMinPlayRate, KnockdownMaxPlayRate))
 		: KnockdownMaxPlayRate;
+
 	KnockdownMontage = Anim->PlaySlotAnimationAsDynamicMontage(KnockdownAnimation, KnockdownSlotName,
 		KnockdownBlendIn, KnockdownBlendOut, PlayRate, 1, -1.0f, 0.0f);
 	if (!KnockdownMontage)
 	{
-		UE_LOG(LogBoarHitReaction, Warning, TEXT("Knockdown animation could not be played on slot %s."), *KnockdownSlotName.ToString());
+		UE_LOG(LogBoarHitReaction, Warning, TEXT("Slot %s でダウンアニメーションを再生できませんでした。"), *KnockdownSlotName.ToString());
 		return;
 	}
+
 	const FAnimMontageInstance* Instance = Anim->GetActiveInstanceForMontage(KnockdownMontage);
 	KnockdownMontageInstanceID = Instance ? Instance->GetInstanceID() : INDEX_NONE;
 
@@ -433,7 +469,7 @@ void UPlayerHitReactionComponent::PlayKnockdown(float RecoveryDuration)
 	{
 		const float Delay = SitImpactNormalizedTime * Length / PlayRate;
 		GetWorld()->GetTimerManager().SetTimer(SitImpactTimerHandle, this, &UPlayerHitReactionComponent::HandleSitImpact,
-		                                       FMath::Max(Delay, KINDA_SMALL_NUMBER), false);
+			FMath::Max(Delay, KINDA_SMALL_NUMBER), false);
 	}
 }
 
@@ -452,12 +488,16 @@ void UPlayerHitReactionComponent::StopKnockdown(float BlendOutTime)
 	const int32 InstanceID = KnockdownMontageInstanceID;
 	KnockdownMontage = nullptr;
 	KnockdownMontageInstanceID = INDEX_NONE;
+
 	if (!Anim || !Montage || InstanceID == INDEX_NONE)
 		return;
+
 	FAnimMontageInstance* Instance = Anim->GetMontageInstanceForID(InstanceID);
+
 	// 既にBlendOut中・終了済み、別Montageに置き換わっている場合は触らない（GameOver等の後続Montageを止めない）。
 	if (!Instance || !Instance->IsActive() || Instance->Montage != Montage)
 		return;
+
 	Instance->Stop(FAlphaBlend(FMath::Max(BlendOutTime, 0.0f)));
 }
 

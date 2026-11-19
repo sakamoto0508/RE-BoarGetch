@@ -27,6 +27,7 @@ UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UStageClearPresentationComponent : public UActorComponent
 {
  GENERATED_BODY()
+
 public:
  UStageClearPresentationComponent();
  /** GameModeから1回だけ呼びます。開始できない場合はfalseを返し、呼び出し側は従来どおり即時完了します。 */
@@ -35,24 +36,43 @@ public:
  void CancelPresentation();
  /** Result表示時にControllerから呼び、演出BPへ通知します（Result BGMなど）。 */
  void NotifyResultShown();
- UFUNCTION(BlueprintPure, Category="Stage Clear Presentation") bool IsPresentationActive() const { return Phase == EStageClearPresentationPhase::WaitingCapture || Phase == EStageClearPresentationPhase::Playing; }
- UFUNCTION(BlueprintPure, Category="Stage Clear Presentation") EStageClearPresentationPhase GetPhase() const { return Phase; }
- UFUNCTION(BlueprintPure, Category="Stage Clear Presentation") AStageClearPresentationDirector* GetDirector() const { return Director; }
 
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stage Clear Presentation", meta=(ToolTip="OFFの場合は演出を行わず、従来どおりClear確定後すぐResultへ進みます。")) bool bEnabled = true;
+ UFUNCTION(BlueprintPure, Category="Stage Clear Presentation")
+ bool IsPresentationActive() const { return Phase == EStageClearPresentationPhase::WaitingCapture || Phase == EStageClearPresentationPhase::Playing; }
+
+ UFUNCTION(BlueprintPure, Category="Stage Clear Presentation")
+ EStageClearPresentationPhase GetPhase() const { return Phase; }
+
+ UFUNCTION(BlueprintPure, Category="Stage Clear Presentation")
+ AStageClearPresentationDirector* GetDirector() const { return Director; }
+
+ /** OFFの場合は演出を行わず、従来どおりClear確定後すぐResultへ進みます。 */
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stage Clear Presentation")
+ bool bEnabled = true;
+
  /** 演出の内容（順序・タイミング・Montage・VFX・SE・カメラ）を持つBP。未設定なら演出なしで即Resultへ進みます。 */
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stage Clear Presentation") TSubclassOf<AStageClearPresentationDirector> DirectorClass;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stage Clear Presentation", meta=(ClampMin="0", ToolTip="最後の捕獲演出の完了を待つ最大時間（秒）。超えた場合は捕獲演出を中断して勝利演出へ進みます。")) float CaptureWaitTimeout = 2.f;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stage Clear Presentation", meta=(ClampMin="3", ToolTip="演出BPが完了報告しない場合でもResultへ進む上限時間（秒）。無限待機を防ぎます。")) float SafetyTimeout = 14.f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stage Clear Presentation")
+ TSubclassOf<AStageClearPresentationDirector> DirectorClass;
+
+ /** 最後の捕獲演出の完了を待つ最大時間（秒）。超えた場合は捕獲演出を中断して勝利演出へ進みます。 */
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stage Clear Presentation", meta=(ClampMin="0"))
+ float CaptureWaitTimeout = 2.f;
+
+ /** 演出BPが完了報告しない場合でもResultへ進む上限時間（秒）。無限待機を防ぎます。 */
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stage Clear Presentation", meta=(ClampMin="3"))
+ float SafetyTimeout = 14.f;
 
 protected:
  virtual void BeginPlay() override;
  virtual void EndPlay(const EEndPlayReason::Type Reason) override;
  virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 private:
  void BeginDirector();
  void Finish();
  EStageClearPresentationPhase Phase = EStageClearPresentationPhase::Idle;
  float PhaseAge = 0.f, TotalAge = 0.f;
- UPROPERTY(Transient) TObjectPtr<AStageClearPresentationDirector> Director;
+
+ UPROPERTY(Transient)
+ TObjectPtr<AStageClearPresentationDirector> Director;
 };

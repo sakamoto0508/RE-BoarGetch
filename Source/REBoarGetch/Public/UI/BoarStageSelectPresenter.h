@@ -21,6 +21,11 @@ struct FBoarStageSelectViewData
 	FText Status;
 	FText Progress;
 	int32 TargetCaptureCount = 0;
+	// 特別コインと図鑑（捕獲済み個体）の取得数／総数。Progressと同じ集計を個別表示用に分けて持ちます。
+	int32 CoinsFound = 0;
+	int32 CoinsTotal = 0;
+	int32 BoarsFound = 0;
+	int32 BoarsTotal = 0;
 	bool bValid = false;
 	bool bUnlocked = false;
 	bool bCleared = false;
@@ -38,6 +43,7 @@ UCLASS()
 class REBOARGETCH_API UBoarStageSelectPresenter : public UObject
 {
 	GENERATED_BODY()
+
 public:
 	/** カタログと進捗通知を接続し、前回挑戦したステージを優先して初期選択します。 */
 	void Initialize(UGameInstance* Instance, const TArray<UStageConfig*>& Stages, UStageConfig* FallbackStage);
@@ -45,7 +51,9 @@ public:
 	void Shutdown();
 	virtual void BeginDestroy() override;
 	// 進捗更新後にViewへ再描画を要求します。表示値はGetStageで最新状態から取得します。
-	UPROPERTY() FOnStageSelectViewChanged OnViewChanged;
+	UPROPERTY()
+	FOnStageSelectViewChanged OnViewChanged;
+
 	int32 GetStageCount() const { return Stages.Num(); }
 	int32 GetSelectedIndex() const { return SelectedIndex; }
 	bool IsTransitionPending() const { return PendingIndex != INDEX_NONE; }
@@ -61,11 +69,17 @@ public:
 	/** 開始可能な選択ステージを返します。保存処理やレベル遷移は呼び出し側の責務です。 */
 	UStageConfig* RequestStart() const;
 	bool IsPreviewVisible(FName StageId) const;
+
 private:
 	bool IsUnlocked(const UStageConfig* Stage) const;
 	void HandleProgressChanged();
-	UPROPERTY(Transient) TObjectPtr<UBoarGameInstance> ProgressOwner;
-	UPROPERTY(Transient) TArray<TObjectPtr<UStageConfig>> Stages;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarGameInstance> ProgressOwner;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UStageConfig>> Stages;
+
 	FDelegateHandle ProgressChangedHandle;
 	// SelectedIndexは表示中の中央、PendingIndexはスライド完了後の中央です。
 	int32 SelectedIndex = INDEX_NONE;

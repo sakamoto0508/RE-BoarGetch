@@ -1,4 +1,7 @@
 #include "Stage/StageEntrance.h"
+#include "Audio/BoarAudioManagerSubsystem.h"
+#include "Audio/BoarLoopingSoundComponent.h"
+#include "Engine/GameInstance.h"
 
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
@@ -6,6 +9,8 @@
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Stage/StageConfig.h"
+#include "Stage/BoarLevelTransitionLibrary.h"
+#include "Misc/PackageName.h"
 #include "UI/BoarLobbyWidget.h"
 #include "BoarGameInstance.h"
 #include "Player/BoarPlayerController.h"
@@ -16,18 +21,27 @@ AStageEntrance::AStageEntrance()
 	// StageEntranceはOverlapイベントだけで動作するためTickを使用しない。
 	PrimaryActorTick.bCanEverTick = false;
 
+	// 個別に上書きするときの初期値（Project Settingsの既定と同じ30）。
+	Transition.Effect = EACFTransitionEffect::WireframeConversion;
+
 	// Transformの基点と、Pawnだけを検知するQuery OnlyのBoxを構築する。
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
 
 	Trigger = CreateDefaultSubobject<UBoxComponent>(TEXT("Trigger"));
 	Trigger->SetupAttachment(SceneRoot);
+
+	// 既定の判定範囲（cm）。入口ごとの大きさはBP／配置側のComponentで調整する。
 	Trigger->SetBoxExtent(FVector(150.0f, 150.0f, 120.0f));
 	Trigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Trigger->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Trigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	Trigger->OnComponentBeginOverlap.AddDynamic(this, &AStageEntrance::HandleTriggerBeginOverlap);
 	Trigger->OnComponentEndOverlap.AddDynamic(this, &AStageEntrance::HandleTriggerEndOverlap);
+
+	IdleSound = CreateDefaultSubobject<UBoarLoopingSoundComponent>(TEXT("IdleSound"));
+	IdleSound->SetupAttachment(SceneRoot);
+	IdleSound->AmbienceType = EBoarAmbienceType::PortalIdle;
 }
 
 void AStageEntrance::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -68,7 +82,13 @@ bool AStageEntrance::CanInteract(const APlayerController* Controller) const
 void AStageEntrance::Interact(APlayerController* Controller)
 {
     if(CanInteract(Controller))
+    {
+        // 範囲内での操作が受理された時だけ鳴らす（Stage SelectのUI SEはLobby Widgetが鳴らす）。
+        if (UGameInstance* GI = GetGameInstance())
+            if (auto* Audio = GI->GetSubsystem<UBoarAudioManagerSubsystem>())
+                Audio->PlayPortalSound(this, EBoarPortalSound::InteractAccepted);
     	ShowStageSelection(Controller);
+    }
 }
 void AStageEntrance::HandleTriggerEndOverlap(
 	UPrimitiveComponent* OverlappedComponent,
@@ -102,10 +122,11 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 	UBoarUIFlowComponent* UIFlow = BoarPC ? BoarPC->GetUIFlow() : nullptr;
 	if (!UIFlow)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[StageEntrance] %s: %s has no UIFlow; stage selection is not opened."),
-		       *GetName(), *GetNameSafe(PlayerController));
+		UE_LOG(LogTemp, Error, TEXT("[StageEntrance] %s: %s にUIFlowが無いため、ステージ選択を開きません。"),
+			*GetName(), *GetNameSafe(PlayerController));
 		return;
 	}
+
 	if (!LobbyWidget && !UIFlow->CanOpenStageSelection())
 	{
 		return;
@@ -113,6 +134,7 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 
 	// 同じOverlap中はWidgetを再利用し、Delegateの重複登録と多重AddToViewportを防ぐ。
 	InteractingPlayerController = PlayerController;
+
 	if (!LobbyWidget)
 	{
 		LobbyWidget = CreateWidget<UBoarLobbyWidget>(PlayerController, LobbyWidgetClass);
@@ -123,23 +145,26 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 
 		LobbyWidget->OnStageStartRequested.AddUniqueDynamic(this, &AStageEntrance::HandleStageStartRequested);
 		LobbyWidget->OnStageSelectionClosed.AddUniqueDynamic(this, &AStageEntrance::HandleStageSelectionClosed);
-		LobbyWidget->AddToViewport(50);
+		constexpr int32 StageSelectZOrder = 50; // HUDより前面
+		LobbyWidget->AddToViewport(StageSelectZOrder);
 	}
 
 	// 表示内容を現在のStageConfigで更新してから、Game入力とUI入力を両立させる。
 	TArray<UStageConfig*> Stages;
 	const auto& Catalog = UBoarGameInstance::ResolveStageCatalog(this, StageCatalog);
-	if (Catalog.IsEmpty()) 
+	if (Catalog.IsEmpty())
 		Stages.Add(StageConfig);
-	else 
-		for (UStageConfig* Stage : Catalog) 
+	else
+		for (UStageConfig* Stage : Catalog)
 			Stages.Add(Stage);
+
 	LobbyWidget->ShowStageCatalog(Stages, StageConfig);
+
 	// Gameplay入力の抑制・フォーカス・カーソルはUIFlowが引き受ける。
 	// 引き受けられなかった場合は、入力を奪わない空の画面を残さないよう、生成したWidgetとDelegateを片付ける。
 	if (!UIFlow->OpenStageSelection(LobbyWidget))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StageEntrance] %s: UIFlow refused stage selection; closing the widget."), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("[StageEntrance] %s: UIFlowがステージ選択を拒否したため、Widgetを閉じます。"), *GetName());
 		CloseStageSelection();
 	}
 }
@@ -151,14 +176,17 @@ void AStageEntrance::CloseStageSelection(bool bLevelEnding)
 	{
 		LobbyWidget->OnStageStartRequested.RemoveDynamic(this, &AStageEntrance::HandleStageStartRequested);
 		LobbyWidget->OnStageSelectionClosed.RemoveDynamic(this, &AStageEntrance::HandleStageSelectionClosed);
+
 		// Widgetを外す前に入力状態を解放させる（子画面の復帰先判定にViewport上の親が必要）。
 		// Level遷移を開始した後は入力を戻さず、通常のキャンセル／退出時だけ戻す。
 		const auto* BoarPC = Cast<ABoarPlayerController>(InteractingPlayerController);
 		if (UBoarUIFlowComponent* UIFlow = IsValid(BoarPC) ? BoarPC->GetUIFlow() : nullptr; IsValid(UIFlow))
 			UIFlow->CloseStageSelection(LobbyWidget, bLevelEnding || bTravelRequested);
+
 		LobbyWidget->RemoveFromParent();
 		LobbyWidget = nullptr;
 	}
+
 	InteractingPlayerController = nullptr;
 }
 
@@ -175,28 +203,42 @@ void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfi
 	// 最初の要求で即座に再入力を遮断してから、Soft World参照のLevelを開く。
 	if (UBoarGameInstance* Instance = GetGameInstance<UBoarGameInstance>())
 	{
-		if (!Instance->IsStageUnlocked(RequestedStageConfig)) 
+		if (!Instance->IsStageUnlocked(RequestedStageConfig))
 			return;
 		if (!Instance->SaveLastAttemptedStage(RequestedStageConfig->StageId))
 		{
-			if (LobbyWidget) 
+			if (LobbyWidget)
 				LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "SaveFailed", "保存に失敗しました。出発を選んで再試行してください。"));
-			UE_LOG(LogTemp, Error, TEXT("[StageEntrance] Last stage could not be saved; travel canceled."));
+
+			UE_LOG(LogTemp, Error, TEXT("[StageEntrance] 最後に選んだステージを保存できないため、遷移を中止しました。"));
 			return;
 		}
 	}
 	else
 	{
-		if (LobbyWidget) 
+		if (LobbyWidget)
 			LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "NoProgress", "進行データを取得できません。"));
+
 		return;
 	}
+
 	bTravelRequested = true;
+
+	// 遷移が確定した時点で1回だけ鳴らす（BGMの切替は遷移先のGameModeが行う）。
+	if (UGameInstance* GI = GetGameInstance())
+		if (auto* Audio = GI->GetSubsystem<UBoarAudioManagerSubsystem>())
+			Audio->PlayPortalSound(this, EBoarPortalSound::Activate);
+
 	if (LobbyWidget)
 	{
 		LobbyWidget->SetIsEnabled(false);
 	}
-	UGameplayStatics::OpenLevelBySoftObjectPtr(this, RequestedStageConfig->Level);
+
+	const FBoarLevelTransitionEntry& Effect = bOverrideTransition
+		? Transition
+		: GetDefault<UBoarLevelTransitionSettings>()->GetEntry(EBoarLevelTransitionStyle::StageDeparture);
+	UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(
+		this, FName(*FPackageName::ObjectPathToPackageName(RequestedStageConfig->Level.ToString())), Effect);
 }
 
 void AStageEntrance::HandleStageSelectionClosed()

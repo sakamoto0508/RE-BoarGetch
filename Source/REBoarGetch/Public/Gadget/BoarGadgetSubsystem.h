@@ -9,14 +9,19 @@ class UBoarSaveGame;
 class UBoarGameInstance;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBoarGadgetProgressChanged);
 
-/** Gadget progression and session-only trial selection; saving remains transactional in GI. */
+/** ガジェットの進行と、セッション中だけの試用選択を扱う。保存はGameInstance側でまとめて行う。 */
 UCLASS()
 class REBOARGETCH_API UBoarGadgetSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
+
   public:
-	UPROPERTY() FOnBoarGadgetProgressChanged OnGadgetsUnlocked;
-	UPROPERTY() FOnBoarGadgetProgressChanged OnTestGadgetChanged;
+	UPROPERTY()
+	FOnBoarGadgetProgressChanged OnGadgetsUnlocked;
+
+	UPROPERTY()
+	FOnBoarGadgetProgressChanged OnTestGadgetChanged;
+
 	const TArray<TSubclassOf<AGadgetBase>> &GetCatalog() const;
 	TSubclassOf<AGadgetBase> FindGadgetClass(FName Id) const;
 	bool IsGadgetUnlocked(FName Id) const;
@@ -40,5 +45,7 @@ class REBOARGETCH_API UBoarGadgetSubsystem : public UGameInstanceSubsystem
   private:
 	friend class FBoarGadgetProgressTest;
 	UBoarGameInstance *GetProgressOwner() const;
-	UPROPERTY(Transient) FName SelectedTestGadget;
+
+	UPROPERTY(Transient)
+	FName SelectedTestGadget;
 };

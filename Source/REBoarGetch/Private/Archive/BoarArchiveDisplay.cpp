@@ -6,6 +6,8 @@
 #include "Boar/BoarBase.h"
 #include "Stage/StageConfig.h"
 #include "Core/BoarGameInstance.h"
+#include "Components/ChildActorComponent.h"
+#include "Stage/FacilitySign.h"
 
 ABoarArchiveDisplay::ABoarArchiveDisplay()
 {
@@ -25,14 +27,20 @@ void ABoarArchiveDisplay::ConfigureVisual(USkeletalMesh* Mesh, const TArray<UMat
 {
 	BoarVisual->SetSkeletalMesh(Mesh);
 	BoarVisual->EmptyOverrideMaterials();
-	for (int32 I = 0; I < Materials.Num(); ++I) if (Materials[I])BoarVisual->SetMaterial(I, Materials[I]);
+
+	for (int32 I = 0; I < Materials.Num(); ++I)
+		if (Materials[I])
+			BoarVisual->SetMaterial(I, Materials[I]);
+
 	BoarVisual->SetRelativeLocation(VisualOffset);
 	BoarVisual->SetRelativeScale3D(FVector(DisplayScale));
 	BoarVisual->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+
 	if (Idle && Mesh && Idle->GetSkeleton() == Mesh->GetSkeleton())
 		BoarVisual->PlayAnimation(Idle, true);
-	else 
+	else
 		BoarVisual->SetAnimation(nullptr);
+
 	BoarVisual->SetVisibility(Mesh != nullptr);
 	BoarVisual->SetHiddenInGame(Mesh == nullptr);
 }
@@ -40,17 +48,33 @@ void ABoarArchiveDisplay::ConfigureVisual(USkeletalMesh* Mesh, const TArray<UMat
 void ABoarArchiveDisplay::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+
 	if (!GetWorld() || GetWorld()->IsGameWorld())
 		return;
+
 	TArray<UMaterialInterface*> Mats;
+
 	for (auto& M : VisualMaterials)
 		Mats.Add(M);
+
 	ConfigureVisual(bPreviewInEditor ? PreviewMesh.Get() : nullptr, Mats, IdleAnimation);
 }
 
 void ABoarArchiveDisplay::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// BPが所有する名札（Child Actor）へ、この展示と発光リング（ArchiveSpecimenRingタグ）を渡す。
+	TArray<UPrimitiveComponent*> Rings;
+
+	for (UPrimitiveComponent* Part : TInlineComponentArray<UPrimitiveComponent*>(this))
+		if (Part->ComponentHasTag(TEXT("ArchiveSpecimenRing")))
+			Rings.Add(Part);
+
+	for (UChildActorComponent* Child : TInlineComponentArray<UChildActorComponent*>(this))
+		if (auto* Sign = Cast<AFacilitySign>(Child->GetChildActor()))
+			Sign->BindSpecimenSource(this, Rings);
+
 	if (auto* GI = GetGameInstance<UBoarGameInstance>())GI->OnArchiveDisplaysChanged.AddUniqueDynamic(
 		this, &ABoarArchiveDisplay::RefreshDisplay);
 	RefreshDisplay();
@@ -71,6 +95,7 @@ void ABoarArchiveDisplay::RefreshDisplay()
 	const FName Id = Ids.IsValidIndex(SlotIndex) ? Ids[SlotIndex] : NAME_None;
 	const FBoarSpawnDefinition* Match = nullptr;
 	int32 Matches = 0;
+
 	if (!Id.IsNone())
 		for (const auto& Stage : UBoarGameInstance::ResolveStageCatalog(this, StageCatalog))
 			if (Stage)
@@ -83,17 +108,23 @@ void ABoarArchiveDisplay::RefreshDisplay()
 	const ABoarBase* Default = Matches == 1 && Match->BoarClass ? Match->BoarClass.GetDefaultObject() : nullptr;
 	const auto* Source = Default ? Default->GetMesh() : nullptr;
 	TArray<UMaterialInterface*> Mats = Source ? Source->GetMaterials() : TArray<UMaterialInterface*>();
+
 	// 種類ごとの色を展示へ反映するためBoarClass側を優先し、VisualMaterialsは未設定スロットの補完だけに使う。
-	for (int32 I = 0; I < Mats.Num(); ++I) if (!Mats[I] && VisualMaterials.IsValidIndex(I))Mats[I] = VisualMaterials[I];
+	for (int32 I = 0; I < Mats.Num(); ++I)
+		if (!Mats[I] && VisualMaterials.IsValidIndex(I))
+			Mats[I] = VisualMaterials[I];
+
 	ConfigureVisual(Source ? Source->GetSkeletalMeshAsset() : nullptr, Mats,
-	                Match && Matches == 1 && !Match->ArchiveIdleAnimation.IsNull()
-		                ? Match->ArchiveIdleAnimation.LoadSynchronous()
-		                : IdleAnimation.Get());
+		Match && Matches == 1 && !Match->ArchiveIdleAnimation.IsNull()
+			? Match->ArchiveIdleAnimation.LoadSynchronous()
+			: IdleAnimation.Get());
+
 	BoarVisual->SetRelativeRotation(FRotator::ZeroRotator);
 	SetActorTickEnabled(Source && Source->GetSkeletalMeshAsset());
+
 	if (!Id.IsNone() && !Source)UE_LOG(LogTemp, Warning,
-	                                   TEXT("[Archive] Slot %d: unresolved captured Boar ID %s; left empty."),
-	                                   SlotIndex, *Id.ToString());
+		TEXT("[Archive] スロット %d: 捕獲済みBoarのID %s を解決できないため空欄にします。"),
+		SlotIndex, *Id.ToString());
 	// 名札は本編定義の図鑑名だけを使い、未登録の名前をIDなどから推測しない。
 	bHasSpecimen = Source && Source->GetSkeletalMeshAsset();
 	DisplayedBoarName = bHasSpecimen ? Match->EncyclopediaName : FText::GetEmpty();
@@ -103,6 +134,7 @@ void ABoarArchiveDisplay::RefreshDisplay()
 void ABoarArchiveDisplay::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
 	if (BoarVisual->IsVisible())
 		BoarVisual->AddLocalRotation(FRotator(0, RotationSpeed * DeltaSeconds, 0));
 }

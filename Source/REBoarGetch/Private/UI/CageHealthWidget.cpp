@@ -28,7 +28,10 @@ void UCageHealthWidget::ApplyToBoundWidgets()
 		HealthBar->SetPercent(Fraction);
 		HealthBar->SetFillColorAndOpacity(FLinearColor::LerpUsingHSV(Color, FlashColor, Flash));
 	}
-	if (TrailBar) TrailBar->SetPercent(Trail);
+
+	if (TrailBar)
+		TrailBar->SetPercent(Trail);
+
 	if (PulseIndicator)
 	{
 		PulseIndicator->SetVisibility(Pulse > 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);

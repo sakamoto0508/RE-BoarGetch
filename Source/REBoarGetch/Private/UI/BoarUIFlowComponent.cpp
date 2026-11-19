@@ -1,4 +1,6 @@
 #include "UI/BoarUIFlowComponent.h"
+#include "Audio/BoarAudioManagerSubsystem.h"
+#include "Engine/GameInstance.h"
 #include "Player/BoarPlayerController.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Core/BoarGameMode.h"
@@ -49,6 +51,7 @@ bool UBoarUIFlowComponent::OpenStageSelection(UUserWidget* Menu)
 		PC->SetIgnoreLookInput(true);
 		PC->FlushPressedKeys();
 	}
+
 	// Game入力とUI入力を両立させ、マウスとゲームパッドの両方で選択できるようにする。
 	FInputModeGameAndUI ModeUI;
 	ModeUI.SetWidgetToFocus(Menu->TakeWidget());
@@ -68,28 +71,44 @@ void UBoarUIFlowComponent::CloseStageSelection(UUserWidget* Menu, bool bLevelEnd
 	auto* PC = GetController();
 	if (!PC)
 		return;
+
 	PC->SetIgnoreMoveInput(false);
 	PC->SetIgnoreLookInput(false);
 	PC->FlushPressedKeys();
+
 	if (bLevelEnding)
 	{
 		// Level遷移・破棄中はGameplay入力を止めたままにし、次のLevelのBeginPlayで初期化させる。
 		PC->bLevelTransitionRequested = true;
 		return;
 	}
+
 	// 他のメニューが入力を必要としている間は、そのメニューの入力状態を上書きしない。
 	if (BlocksGameplayInput())
 		return;
+
 	FInputModeGameOnly ModeGame;
 	PC->SetInputMode(ModeGame);
 	PC->SetShowMouseCursor(false);
 }
 
 // 子画面を閉じてからPauseを解除し、メニューに伴う入力状態を片付けます。
+void UBoarUIFlowComponent::PlayFlowSound(EBoarUISound Sound)
+{
+	if (UISoundMute > 0 || !GetWorld() || !GetWorld()->GetGameInstance())
+		return;
+
+	if (auto* Audio = GetWorld()->GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>())
+		Audio->PlayUISound(this, Sound);
+}
+
 void UBoarUIFlowComponent::Shutdown()
 {
+	// Level終了時の後始末ではUI SEを鳴らさない。
+	TGuardValue<int32> MuteGuard(UISoundMute, UISoundMute + 1);
 	if (bFacilityMenuOpen)
 		CloseLoadoutMenu();
+
 	CloseArchiveDisplaySelection();
 	CloseEncyclopedia();
 	CloseSettingsMenu();
@@ -118,6 +137,7 @@ void UBoarUIFlowComponent::HandleMenuBack()
 		CloseArchiveDisplaySelection();
 		return;
 	}
+
 	if (EncyclopediaWidget)
 		CloseEncyclopedia();
 	else if (LobbyExitConfirmation)
@@ -138,12 +158,16 @@ void UBoarUIFlowComponent::OpenLoadoutMenu()
 	if (!PauseWidget || LoadoutWidget || SettingsWidget || LobbyExitConfirmation || !PC->LoadoutWidgetClass ||
 		PC->bLevelTransitionRequested)
 		return;
+
 	LoadoutWidget = CreateWidget<UBoarLoadoutWidget>(PC, PC->LoadoutWidgetClass);
 	if (!LoadoutWidget)
 		return;
+
 	LoadoutWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseLoadoutMenu);
 	PauseWidget->SetVisibility(ESlateVisibility::Collapsed);
 	LoadoutWidget->AddToViewport(90);
+	PlayFlowSound(EBoarUISound::Open);
+
 	// 既存UI入力ContextとPauseを維持し、戻る操作で親画面へ戻します。
 	FInputModeGameAndUI ModeUI;
 	ModeUI.SetHideCursorDuringCapture(false);
@@ -159,6 +183,7 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* Re
 	auto* PC = GetController();
 	if (!PC)
 		return;
+
 	const auto* ArchiveMode = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
 	if (!ArchiveMode || !ArchiveMode->bArchive)
 		return;
@@ -168,9 +193,11 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* Re
 		return;
 	if (ParentMenu != SettingsWidget && !Cast<UBoarLobbyWidget>(ParentMenu))
 		return;
+
 	EncyclopediaWidget = CreateWidget<UBoarEncyclopediaWidget>(PC, PC->EncyclopediaWidgetClass);
 	if (!EncyclopediaWidget)
 		return;
+
 	EncyclopediaParent = ParentMenu;
 	EncyclopediaReturnFocus = ReturnFocus;
 	EncyclopediaParentVisibility = ParentMenu->GetVisibility();
@@ -178,8 +205,10 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* Re
 	bEncyclopediaAddedUIContext = PC->UIMappingContext && !PC->OwnedMappingContexts.Contains(PC->UIMappingContext);
 	if (bEncyclopediaAddedUIContext)
 		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
+
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
+
 	if (auto* PlayerCharacter = PC->GetBoarCharacter())
 	{
 		PlayerCharacter->StopDash();
@@ -188,9 +217,11 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* Re
 		PlayerCharacter->GetCharacterMovement()->StopMovementImmediately();
 		PlayerCharacter->SetMenuOpen(true);
 	}
+
 	EncyclopediaWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseEncyclopedia);
 	ParentMenu->SetVisibility(ESlateVisibility::Collapsed);
 	EncyclopediaWidget->AddToViewport(120);
+	PlayFlowSound(EBoarUISound::Open);
 	FInputModeGameAndUI ModeUI;
 	ModeUI.SetWidgetToFocus(EncyclopediaWidget->TakeWidget());
 	ModeUI.SetHideCursorDuringCapture(false);
@@ -208,26 +239,35 @@ void UBoarUIFlowComponent::CloseEncyclopedia()
 		return;
 	if (!EncyclopediaWidget)
 		return;
+
+	PlayFlowSound(EBoarUISound::Cancel);
 	EncyclopediaWidget->OnClosed.RemoveDynamic(this, &UBoarUIFlowComponent::CloseEncyclopedia);
 	EncyclopediaWidget->RemoveFromParent();
 	EncyclopediaWidget = nullptr;
+
 	if (bFacilityMenuOpen)
 	{
 		CloseFacilityMenuInput();
 		return;
 	}
+
 	if (bEncyclopediaAddedUIContext)
 		PC->RemoveOwnedMappingContext(PC->UIMappingContext);
+
 	bEncyclopediaAddedUIContext = false;
 	PC->SetIgnoreMoveInput(false);
 	PC->SetIgnoreLookInput(false);
+
 	if (!PauseWidget)
 		if (auto* PlayerCharacter = PC->GetBoarCharacter())
 			PlayerCharacter->SetMenuOpen(false);
+
 	PC->FlushPressedKeys();
+
 	if (IsValid(EncyclopediaParent) && EncyclopediaParent->IsInViewport())
 	{
 		EncyclopediaParent->SetVisibility(EncyclopediaParentVisibility);
+
 		if (bEncyclopediaGameAndUI)
 		{
 			FInputModeGameAndUI ModeUI;
@@ -243,9 +283,11 @@ void UBoarUIFlowComponent::CloseEncyclopedia()
 			ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 			PC->SetInputMode(ModeUI);
 		}
+
 		if (IsValid(EncyclopediaReturnFocus))
 			EncyclopediaReturnFocus->SetUserFocus(PC);
 	}
+
 	EncyclopediaParent = nullptr;
 	EncyclopediaReturnFocus = nullptr;
 }
@@ -268,15 +310,18 @@ void UBoarUIFlowComponent::OpenSettingsMenu(UUserWidget* ParentMenu, UWidget* Re
 		SettingsWidgetClass ||
 		PC->bLevelTransitionRequested)
 		return;
+
 	SettingsWidget = CreateWidget<UBoarSettingsWidget>(PC, PC->SettingsWidgetClass);
 	if (!SettingsWidget)
 		return;
+
 	SettingsParent = ParentMenu;
 	SettingsReturnFocus = ReturnFocus;
 	SettingsParentVisibility = ParentMenu->GetVisibility();
 	SettingsWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseSettingsMenu);
 	ParentMenu->SetVisibility(ESlateVisibility::Collapsed);
 	SettingsWidget->AddToViewport(100);
+
 	if (PauseWidget)
 	{
 		FInputModeGameAndUI ModeUI;
@@ -292,8 +337,10 @@ void UBoarUIFlowComponent::OpenSettingsMenu(UUserWidget* ParentMenu, UWidget* Re
 		ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 		PC->SetInputMode(ModeUI);
 	}
+
 	PC->SetShowMouseCursor(true);
 	SettingsWidget->FocusInitialChoice();
+	PlayFlowSound(EBoarUISound::Open);
 }
 
 void UBoarUIFlowComponent::CloseSettingsMenu()
@@ -303,13 +350,18 @@ void UBoarUIFlowComponent::CloseSettingsMenu()
 		return;
 	if (!SettingsWidget)
 		return;
+
+	PlayFlowSound(EBoarUISound::Cancel);
+	TGuardValue<int32> MuteGuard(UISoundMute, UISoundMute + 1);
 	CloseEncyclopedia();
 	SettingsWidget->OnClosed.RemoveDynamic(this, &UBoarUIFlowComponent::CloseSettingsMenu);
 	SettingsWidget->RemoveFromParent();
 	SettingsWidget = nullptr;
+
 	if (IsValid(SettingsParent))
 	{
 		SettingsParent->SetVisibility(SettingsParentVisibility);
+
 		if (PauseWidget)
 		{
 			FInputModeGameAndUI ModeUI;
@@ -325,9 +377,11 @@ void UBoarUIFlowComponent::CloseSettingsMenu()
 			ModeUI.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 			PC->SetInputMode(ModeUI);
 		}
+
 		if (IsValid(SettingsReturnFocus))
 			SettingsReturnFocus->SetUserFocus(PC);
 	}
+
 	SettingsParent = nullptr;
 	SettingsReturnFocus = nullptr;
 }
@@ -339,14 +393,18 @@ void UBoarUIFlowComponent::CloseLoadoutMenu()
 		return;
 	if (!LoadoutWidget)
 		return;
+
+	PlayFlowSound(EBoarUISound::Cancel);
 	LoadoutWidget->OnClosed.RemoveDynamic(this, &UBoarUIFlowComponent::CloseLoadoutMenu);
 	LoadoutWidget->RemoveFromParent();
 	LoadoutWidget = nullptr;
+
 	if (bFacilityMenuOpen)
 	{
 		CloseFacilityMenuInput();
 		return;
 	}
+
 	if (PauseWidget)
 	{
 		PauseWidget->SetVisibility(ESlateVisibility::Visible);
@@ -359,26 +417,34 @@ void UBoarUIFlowComponent::OpenPauseMenu()
 	auto* PC = GetController();
 	if (!PC)
 		return;
+
 	const auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
+
 	// Lobby/Title、終了演出、他のPauseとの競合、および多重生成を防ぎます。
 	if (!PC->IsLocalController() || PauseWidget || !PC->PauseWidgetClass || PC->bGameplayInputBlocked ||
 		StageSelectionMenu || PC->bLevelTransitionRequested ||
 		!Mode || !Mode->CanAdvanceStage() || UGameplayStatics::IsGamePaused(this))
 		return;
+
 	auto* Widget = CreateWidget<UBoarPauseWidget>(PC, PC->PauseWidgetClass);
 	if (!Widget)
 		return;
 	if (!PC->SetPause(true))
 		return;
+
 	PauseWidget = Widget;
+	PlayFlowSound(EBoarUISound::Open);
+
 	// 旧BPは入口の判定で保護し、専用Context設定済みの画面だけ切り替えます。
 	if (PC->GlobalMappingContext && PC->UIMappingContext)
 	{
 		PC->RemoveOwnedMappingContext(PC->DefaultMappingContext);
 		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
 	}
+
 	// 押下状態を持ち越さず、既存のアクション終了経路を使用します。
 	PC->bIsGadgetModifierHeld = false;
+
 	if (auto* PlayerCharacter = PC->GetBoarCharacter())
 	{
 		PlayerCharacter->StopDash();
@@ -386,6 +452,7 @@ void UBoarUIFlowComponent::OpenPauseMenu()
 		PlayerCharacter->StopGadgetUse();
 		PlayerCharacter->SetMenuOpen(true);
 	}
+
 	PC->FlushPressedKeys();
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
@@ -407,6 +474,9 @@ void UBoarUIFlowComponent::ResumeFromPause()
 		return;
 	if (!PauseWidget)
 		return;
+
+	PlayFlowSound(EBoarUISound::Close);
+	TGuardValue<int32> MuteGuard(UISoundMute, UISoundMute + 1);
 	CloseEncyclopedia();
 	RemoveLobbyExitConfirmation();
 	CloseSettingsMenu();
@@ -416,8 +486,10 @@ void UBoarUIFlowComponent::ResumeFromPause()
 	PauseWidget = nullptr;
 	PC->RemoveOwnedMappingContext(PC->UIMappingContext);
 	PC->AddOwnedMappingContext(PC->DefaultMappingContext, 0);
+
 	if (auto* PlayerCharacter = PC->GetBoarCharacter())
 		PlayerCharacter->SetMenuOpen(false);
+
 	PC->SetIgnoreMoveInput(false);
 	PC->SetIgnoreLookInput(false);
 	PC->FlushPressedKeys();
@@ -434,12 +506,15 @@ void UBoarUIFlowComponent::LeaveStageFromPause()
 	if (!PauseWidget || SettingsWidget || LoadoutWidget || LobbyExitConfirmation || !PC->LobbyExitConfirmationClass ||
 		PC->GetLobbyLevel().IsNull() || PC->bLevelTransitionRequested)
 		return;
+
 	LobbyExitConfirmation = CreateWidget<UBoarConfirmationWidget>(PC, PC->LobbyExitConfirmationClass);
 	if (!LobbyExitConfirmation)
 		return;
+
 	LobbyExitConfirmation->OnDecision.AddUniqueDynamic(this, &UBoarUIFlowComponent::ResolveLobbyExit);
 	PauseWidget->SetVisibility(ESlateVisibility::Collapsed);
 	LobbyExitConfirmation->AddToViewport(110);
+	PlayFlowSound(EBoarUISound::Open);
 	FInputModeGameAndUI ModeUI;
 	ModeUI.SetWidgetToFocus(LobbyExitConfirmation->TakeWidget());
 	ModeUI.SetHideCursorDuringCapture(false);
@@ -455,6 +530,7 @@ void UBoarUIFlowComponent::RemoveLobbyExitConfirmation()
 		return;
 	if (!LobbyExitConfirmation)
 		return;
+
 	LobbyExitConfirmation->OnDecision.RemoveDynamic(this, &UBoarUIFlowComponent::ResolveLobbyExit);
 	LobbyExitConfirmation->RemoveFromParent();
 	LobbyExitConfirmation = nullptr;
@@ -467,7 +543,11 @@ void UBoarUIFlowComponent::ResolveLobbyExit(bool bConfirmed)
 		return;
 	if (!LobbyExitConfirmation || !PauseWidget || PC->bLevelTransitionRequested)
 		return;
+
+	PlayFlowSound(bConfirmed ? EBoarUISound::Confirm : EBoarUISound::Cancel);
+	TGuardValue<int32> MuteGuard(UISoundMute, UISoundMute + 1);
 	RemoveLobbyExitConfirmation();
+
 	if (!bConfirmed || PC->GetLobbyLevel().IsNull())
 	{
 		PauseWidget->SetVisibility(ESlateVisibility::Visible);
@@ -479,7 +559,9 @@ void UBoarUIFlowComponent::ResolveLobbyExit(bool bConfirmed)
 		PauseWidget->FocusLobbyChoice();
 		return;
 	}
+
 	ResumeFromPause();
+
 	// 途中退出は既存のLobby遷移だけを呼び、Clear結果を保存しません。
 	PC->ReturnToLobby();
 }
@@ -490,19 +572,24 @@ void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 	auto* PC = GetController();
 	if (!PC)
 		return;
+
 	const auto* Facility = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
 	if (!PC->IsLocalController() || !Facility || Facility->bGadgetTest || Facility->bArchive != bArchive ||
 		bFacilityMenuOpen ||
 		PauseWidget || SettingsWidget || LoadoutWidget || EncyclopediaWidget || PC->bLevelTransitionRequested)
 		return;
+
 	UUserWidget* Menu = nullptr;
+
 	if (bArchive)
 	{
 		if (!PC->EncyclopediaWidgetClass)
 			return;
+
 		EncyclopediaWidget = CreateWidget<UBoarEncyclopediaWidget>(PC, PC->EncyclopediaWidgetClass);
 		if (!EncyclopediaWidget)
 			return;
+
 		EncyclopediaWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseEncyclopedia);
 		Menu = EncyclopediaWidget;
 	}
@@ -510,18 +597,23 @@ void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 	{
 		if (!PC->LoadoutWidgetClass)
 			return;
+
 		LoadoutWidget = CreateWidget<UBoarLoadoutWidget>(PC, PC->LoadoutWidgetClass);
 		if (!LoadoutWidget)
 			return;
+
 		LoadoutWidget->SetLabContext(true);
 		LoadoutWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseLoadoutMenu);
 		Menu = LoadoutWidget;
 	}
+
 	bFacilityMenuOpen = true;
 	bFacilityAddedUIContext = PC->UIMappingContext && !PC->OwnedMappingContexts.Contains(PC->UIMappingContext);
 	if (bFacilityAddedUIContext)
 		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
+
 	PC->bIsGadgetModifierHeld = false;
+
 	if (auto* FacilityPlayer = PC->GetBoarCharacter())
 	{
 		FacilityPlayer->StopDash();
@@ -530,6 +622,7 @@ void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 		FacilityPlayer->SetMenuOpen(true);
 		FacilityPlayer->GetCharacterMovement()->StopMovementImmediately();
 	}
+
 	PC->FlushPressedKeys();
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
@@ -540,6 +633,7 @@ void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	PC->SetInputMode(Mode);
 	PC->SetShowMouseCursor(true);
+
 	if (bArchive)
 		EncyclopediaWidget->FocusInitialChoice();
 	else
@@ -551,31 +645,38 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 	auto* PC = GetController();
 	if (!PC)
 		return;
+
 	const auto* Mode = GetWorld()->GetAuthGameMode<ABoarFacilityGameMode>();
 	if (!PC->IsLocalController() || !Mode || !Mode->bArchive || !PC->CanProcessGameplayInput())
 		return;
 	if (PC->ArchiveSelectionWidgetClass)
 		ArchiveSelectionWidget = CreateWidget<UBoarArchiveSelectionWidget>(PC, PC->ArchiveSelectionWidgetClass);
+
 	if (!ArchiveSelectionWidget)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: ArchiveSelectionWidgetClass is unset or could not be created. Skipping Archive Display Selection."),
-		       *GetNameSafe(PC->GetClass()));
+		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: ArchiveSelectionWidgetClassが未設定か生成できません。展示選択画面を省きます。"),
+			*GetNameSafe(PC->GetClass()));
 		return;
 	}
+
 	ArchiveSelectionWidget->TakeWidget();
+
 	if (!ArchiveSelectionWidget->IsReadyForDisplay())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s (%s.ArchiveSelectionWidgetClass): Status / SlotsPanel / Grid / BackButton are not bound in the WBP. Skipping Archive Display Selection."),
-		       *GetNameSafe(ArchiveSelectionWidget->GetClass()), *GetNameSafe(PC->GetClass()));
+		UE_LOG(LogTemp, Error, TEXT("[Archive] %s（%s.ArchiveSelectionWidgetClass）: WBPで Status / SlotsPanel / Grid / BackButton が未Bindです。展示選択画面を省きます。"),
+			*GetNameSafe(ArchiveSelectionWidget->GetClass()), *GetNameSafe(PC->GetClass()));
 		ArchiveSelectionWidget = nullptr;
 		return;
 	}
+
 	ArchiveSelectionWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseArchiveDisplaySelection);
 	bFacilityMenuOpen = true;
 	bFacilityAddedUIContext = PC->UIMappingContext && !PC->OwnedMappingContexts.Contains(PC->UIMappingContext);
 	if (bFacilityAddedUIContext)
 		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
+
 	PC->bIsGadgetModifierHeld = false;
+
 	if (auto* ArchivePlayer = PC->GetBoarCharacter())
 	{
 		ArchivePlayer->StopDash();
@@ -584,10 +685,12 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 		ArchivePlayer->SetMenuOpen(true);
 		ArchivePlayer->GetCharacterMovement()->StopMovementImmediately();
 	}
+
 	PC->FlushPressedKeys();
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
 	ArchiveSelectionWidget->AddToViewport(100);
+	PlayFlowSound(EBoarUISound::Open);
 	FInputModeUIOnly Input;
 	Input.SetWidgetToFocus(ArchiveSelectionWidget->TakeWidget());
 	Input.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -603,6 +706,8 @@ void UBoarUIFlowComponent::CloseArchiveDisplaySelection()
 		return;
 	if (!ArchiveSelectionWidget)
 		return;
+
+	PlayFlowSound(EBoarUISound::Cancel);
 	ArchiveSelectionWidget->OnClosed.RemoveDynamic(this, &UBoarUIFlowComponent::CloseArchiveDisplaySelection);
 	ArchiveSelectionWidget->RemoveFromParent();
 	ArchiveSelectionWidget = nullptr;
@@ -617,12 +722,17 @@ void UBoarUIFlowComponent::CloseFacilityMenuInput()
 		return;
 	if (!bFacilityMenuOpen)
 		return;
+
 	bFacilityMenuOpen = false;
+
 	if (bFacilityAddedUIContext)
 		PC->RemoveOwnedMappingContext(PC->UIMappingContext);
+
 	bFacilityAddedUIContext = false;
+
 	if (auto* FacilityPlayer = PC->GetBoarCharacter())
 		FacilityPlayer->SetMenuOpen(false);
+
 	PC->SetIgnoreMoveInput(false);
 	PC->SetIgnoreLookInput(false);
 	PC->FlushPressedKeys();

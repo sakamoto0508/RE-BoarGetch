@@ -3,8 +3,10 @@
 
 void AGadgetBase::SetStageStopped(bool bStopped)
 {
-	if (bStopped) GetWorldTimerManager().PauseTimer(CooldownTimerHandle);
-	else GetWorldTimerManager().UnPauseTimer(CooldownTimerHandle);
+	if (bStopped)
+		GetWorldTimerManager().PauseTimer(CooldownTimerHandle);
+	else
+		GetWorldTimerManager().UnPauseTimer(CooldownTimerHandle);
 }
 #include "Interaction/AttackActivatable.h"
 #include "TimerManager.h"
@@ -21,9 +23,9 @@ AGadgetBase::AGadgetBase()
  */
 void AGadgetBase::Use_Implementation(AActor* TargetActor)
 {
-	if (!CanUse()) 
+	if (!CanUse())
 		return;
-	
+
 	(void) TargetActor;
 	StartCooldown();
 }
@@ -36,7 +38,7 @@ void AGadgetBase::BeginUse_Implementation(AActor* TargetActor)
 {
 	if (!CanUse() || bIsUsing)
 		return;
-	
+
 	bIsUsing = true;
 	Use(TargetActor);
 
@@ -54,11 +56,12 @@ void AGadgetBase::BeginUse_Implementation(AActor* TargetActor)
 void AGadgetBase::EndUse_Implementation(AActor* TargetActor)
 {
 	(void)TargetActor;
+
 	if (!bIsUsing)
 		return;
-	
 
 	bIsUsing = false;
+
 	if (UseStyle == EGadgetUseStyle::Hold && !bIsOnCooldown)
 	{
 		StartCooldown();
@@ -70,15 +73,15 @@ void AGadgetBase::EndUse_Implementation(AActor* TargetActor)
  */
 void AGadgetBase::StartCooldown()
 {
-	if (CooldownSeconds <= 0.0f) 
+	if (CooldownSeconds <= 0.0f)
 		return;
-	
+
 	UWorld* World = GetWorld();
-	if (World == nullptr) 
+	if (World == nullptr)
 		return;
-	
+
 	bIsOnCooldown = true;
-	
+
 	World->GetTimerManager().ClearTimer(CooldownTimerHandle);
 	World->GetTimerManager().SetTimer(
 		CooldownTimerHandle,

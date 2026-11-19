@@ -2,6 +2,8 @@
 /Game/BP/Widget/WBP_StageSelectEntry.WBP_StageSelectEntry
 /Game/BP/Widget/WBP_Settings.WBP_Settings
 /Game/BP/Widget/WBP_Result.WBP_Result
+/Game/BP/Widget/WBP_ResultBoarCard.WBP_ResultBoarCard
+/Game/BP/Widget/WBP_StageClearBanner.WBP_StageClearBanner
 /Game/BP/Widget/WBP_PlayerHUD.WBP_PlayerHUD
 /Game/BP/Widget/WBP_PauseMenu.WBP_PauseMenu
 /Game/BP/Widget/WBP_LobbyStageSelect.WBP_LobbyStageSelect
@@ -21,6 +23,10 @@
 /Game/BP/Player/BP_BoarPlayerController.BP_BoarPlayerController
 /Game/Animation/Player/ABP_Player.ABP_Player
 /Game/BP/Lobby/BP_StageEntrance_Stage01.BP_StageEntrance_Stage01
+/Game/BP/Lobby/BP_HubPortal.BP_HubPortal
+/Game/BP/Lobby/BP_Lobby_CentralHologram.BP_Lobby_CentralHologram
+/Game/BP/GadgetLab/BP_GadgetLab_LoadoutTerminal.BP_GadgetLab_LoadoutTerminal
+/Game/BP/GadgetLab/BP_GadgetCollectionPod.BP_GadgetCollectionPod
 /Game/BP/Lobby/BP_PC_Lobby.BP_PC_Lobby
 /Game/BP/Lobby/BP_GM_Lobby.BP_GM_Lobby
 /Game/BP/Lobby/BP_GM_GadgetTest_Net.BP_GM_GadgetTest_Net
@@ -28,6 +34,7 @@
 /Game/BP/Lobby/BP_GM_Archive.BP_GM_Archive
 /Game/BP/Lobby/BP_Display_Net.BP_Display_Net
 /Game/BP/GameMode/BP_BoarGameMode.BP_BoarGameMode
+/Game/BP/GameMode/BP_GM_Stage02.BP_GM_Stage02
 /Game/BP/Gadget/BP_NetGadget.BP_NetGadget
 /Game/BP/Core/BP_BoarGameInstance.BP_BoarGameInstance
 /Game/Art/Materials/Cage/M_Cage_Yellow.M_Cage_Yellow

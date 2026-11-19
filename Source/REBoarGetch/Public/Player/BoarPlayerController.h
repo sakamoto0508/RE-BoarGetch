@@ -36,6 +36,8 @@ class REBOARGETCH_API ABoarPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+	bool bLastInputGamepad = false;
+
 public:
 	ABoarPlayerController();
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
@@ -49,14 +51,24 @@ public:
 	/** 通常TPSカメラのACF Requestを所有します（ACF無効・Preset未設定ならSpringArmカメラのまま）。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
 	TObjectPtr<class UBoarGameplayCameraComponent> GameplayCamera;
+	/** 最後のキー入力がゲームパッドだったか。UIの操作表記（PlayStation式／キーボード）の切り替えにだけ使い、入力処理は変えません。 */
+	UFUNCTION(BlueprintPure, Category = "Input")
+	bool WasLastInputGamepad() const { return bLastInputGamepad; }
+
+	/** UI側（UI Only入力中のWidget）で受けた入力機器を記録します。 */
+	void NotifyInputDevice(bool bGamepad) { bLastInputGamepad = bGamepad; }
+	virtual bool InputKey(const FInputKeyEventArgs& Params) override;
 	/** 勝利演出中に通常HUDを隠します。 */
 	void SetPlayerHUDHidden(bool bHideHUD);
 	/** GameOver演出中に通常HUDをフェードアウトします（1で元に戻ります）。 */
 	void SetPlayerHUDOpacity(float Opacity);
-	/** Dedicated non-stage terminal entry; existing widget/save implementations are reused. */
+	/** ステージ外の端末から開く専用の入口。既存のWidget・セーブの実装を再利用する。 */
 	void OpenFacilityMenu(bool bArchive);
 	void OpenArchiveDisplaySelection();
-	UFUNCTION() void CloseArchiveDisplaySelection();
+
+	UFUNCTION()
+	void CloseArchiveDisplaySelection();
+
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
 	void HandleStageCleared(const FStageRunData& Run, int32 TargetCount);
 	/** 終了演出からUIまでゲーム入力を遮断します（Stage進行による入力禁止。メニュー表示による禁止はUIFlowが管理します）。 */
@@ -71,24 +83,49 @@ public:
 	/** このControllerのLobby復帰先です。LobbyLevel未設定ならGameDefaultMapを使い、設定不足をErrorで1回だけ報告します。 */
 	TSoftObjectPtr<UWorld> GetLobbyLevel() const;
 	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage") void RetryStage();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage")
+	void RetryStage();
+
 	/** ポーズ画面を開き、ゲーム入力を遮断します。 */
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenPauseMenu();
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void TogglePauseMenu();
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenLoadoutMenu();
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void CloseLoadoutMenu();
-	UFUNCTION() void HandleMenuBack();
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenSettingsMenu(UUserWidget* ParentMenu, UWidget* ReturnFocus);
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void CloseSettingsMenu();
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* ReturnFocus);
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void CloseEncyclopedia();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void OpenPauseMenu();
+
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void TogglePauseMenu();
+
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void OpenLoadoutMenu();
+
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void CloseLoadoutMenu();
+
+	UFUNCTION()
+	void HandleMenuBack();
+
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void OpenSettingsMenu(UUserWidget* ParentMenu, UWidget* ReturnFocus);
+
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void CloseSettingsMenu();
+
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* ReturnFocus);
+
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void CloseEncyclopedia();
+
 	void CloseEncyclopediaFrom(UUserWidget* ParentMenu);
 	/** ポーズ画面を閉じてゲーム入力へ戻す。*/
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void ResumeFromPause();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void ResumeFromPause();
+
 	/** ポーズ画面からLobby退出確認を開きます。 */
-	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI") void LeaveStageFromPause();
+	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|UI")
+	void LeaveStageFromPause();
+
 	/** ポーズメニューが開いているかどうかを返します。 */
-	UFUNCTION(BlueprintPure, Category = "REBoarGetch|UI") bool IsPauseMenuOpen() const;
+	UFUNCTION(BlueprintPure, Category = "REBoarGetch|UI")
+	bool IsPauseMenuOpen() const;
 
 protected:
 	/** 入力Mapping Contextをローカルプレイヤーへ登録します。 */
@@ -108,29 +145,50 @@ private:
 	/** LobbyLevel未設定の報告済みフラグです。 */
 	mutable bool bLobbyLevelFallbackReported = false;
 	friend class UBoarUIFlowComponent;
-	UPROPERTY(Transient) TObjectPtr<class UBoarUIFlowComponent> UIFlow;
-	UPROPERTY(EditDefaultsOnly,Category="UI") TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;
-	UPROPERTY(EditDefaultsOnly, Category="Input") TObjectPtr<UInputAction> InteractAction;
-	UPROPERTY(EditDefaultsOnly, Category="Input") TObjectPtr<UInputMappingContext> FacilityMappingContext;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class UBoarUIFlowComponent> UIFlow;
+
+	UPROPERTY(EditDefaultsOnly,Category="UI")
+	TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> InteractAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputMappingContext> FacilityMappingContext;
+
 	void InteractWithFacility();
 	void CloseFacilityMenuInput();
-	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarEncyclopediaWidget> EncyclopediaWidgetClass;
-	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarConfirmationWidget> LobbyExitConfirmationClass;
-	UFUNCTION() void ResolveLobbyExit(bool bConfirmed);
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UBoarEncyclopediaWidget> EncyclopediaWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UBoarConfirmationWidget> LobbyExitConfirmationClass;
+
+	UFUNCTION()
+	void ResolveLobbyExit(bool bConfirmed);
+
 	void RemoveLobbyExitConfirmation();
-	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarSettingsWidget> SettingsWidgetClass;
-	UPROPERTY(EditDefaultsOnly, Category = "UI") TSubclassOf<UBoarLoadoutWidget> LoadoutWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UBoarSettingsWidget> SettingsWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UBoarLoadoutWidget> LoadoutWidgetClass;
+
 	/** ポーズメニューWidget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarPauseWidget> PauseWidgetClass;
-	
-	
+
 	/** ゲームオーバー画面Widget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarGameOverWidget> GameOverWidgetClass;
-	
+
 	/**	 現在表示中のゲームオーバーWidgetです。 */
-	UPROPERTY(Transient) TObjectPtr<UBoarGameOverWidget> GameOverWidget;
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarGameOverWidget> GameOverWidget;
 
 	/** ゲームプレイ中に常時表示するHUD Widget Blueprintクラスです。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
@@ -203,9 +261,15 @@ private:
 	bool CanProcessGameplayInput() const;
 	void AddOwnedMappingContext(UInputMappingContext* Context, int32 Priority);
 	void RemoveOwnedMappingContext(UInputMappingContext* Context);
-	UPROPERTY(Transient) TArray<TObjectPtr<UInputMappingContext>> OwnedMappingContexts;
-	UPROPERTY(EditDefaultsOnly, Category = "Input") TObjectPtr<UInputMappingContext> GlobalMappingContext;
-	UPROPERTY(EditDefaultsOnly, Category = "Input") TObjectPtr<UInputMappingContext> UIMappingContext;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UInputMappingContext>> OwnedMappingContexts;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> GlobalMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> UIMappingContext;
 
 	UFUNCTION()
 	void ReturnToLobby();
@@ -213,20 +277,19 @@ private:
 	/** BeginPlay時にPriority 0で登録するMapping Contextです。Controller Blueprintで設定します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
-	
+
 	/**
 	 * 移動入力（Axis2D）
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> MoveAction;
-	
+
 	/**
 	 * カメラ入力(Axis2D)
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> LookAction;
 
-	
 	/**
 	 * ジャンプ入力（Digital）
 	 */
@@ -274,19 +337,21 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot4Action;
-	
+
 	/**
 	 *	 ポーズ入力（Digital）
 	 */
 	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> PauseAction;
-	UPROPERTY(EditDefaultsOnly, Category = "Input") TObjectPtr<UInputAction> UIBackAction;
-	
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> UIBackAction;
+
 	/**
 	 * 移動入力を受け取る。
 	 */
 	void Move(const FInputActionValue& Value);
-	
+
 	/**
 	 * カメラ入力を受け取る。
 	 */
@@ -336,7 +401,7 @@ private:
 	void SwitchGadgetSlot4();
 	/** 切替条件を満たす場合に指定スロットへの変更をCharacterへ依頼します。 */
 	void TrySwitchGadgetSlot(int32 SlotIndex);
-	
+
 	/** 現在Possess中のPawnをBoarPlayerCharacterとして取得します。キャッシュせずPossess変更へ追従します。 */
 	ABoarPlayerCharacter* GetBoarCharacter() const;
 

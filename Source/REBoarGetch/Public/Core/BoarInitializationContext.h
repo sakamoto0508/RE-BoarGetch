@@ -5,7 +5,7 @@
 class UBoarGadgetSubsystem;
 class AGadgetBase;
 
-/** GameMode resolves startup dependencies and passes them to the player. */
+/** GameModeが起動時の依存関係を解決し、Playerへ渡す。 */
 struct FBoarGadgetLoadoutContext
 {
 	UBoarGadgetSubsystem* Progress = nullptr;

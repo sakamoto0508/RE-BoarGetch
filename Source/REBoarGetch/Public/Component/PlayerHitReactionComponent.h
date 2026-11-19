@@ -112,7 +112,7 @@ protected:
 	float ImpactSoundVolume = 1.0f;
 
 	//-------------------------------------------------
-	// Hit Flash
+	// ---- 被弾フラッシュ ----
 	//-------------------------------------------------
 
 	/**
@@ -232,6 +232,13 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX", meta = (ClampMin = "0.0"))
 	float StunSoundVolume = 0.6f;
+
+	/** スタンから通常どおり起き上がったときのSEです（ダウン等で中断された場合は鳴らしません）。未設定なら無音です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX")
+	TObjectPtr<USoundBase> StunRecoveredSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX", meta = (ClampMin = "0.0"))
+	float StunRecoveredSoundVolume = 0.6f;
 
 private:
 	UFUNCTION()

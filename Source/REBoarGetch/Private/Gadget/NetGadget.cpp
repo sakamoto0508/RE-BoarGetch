@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Gadget/NetGadget.h"
 
 #include "Boar/BoarBase.h"
@@ -12,23 +10,31 @@ ANetGadget::ANetGadget()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	EquipSocketName = TEXT("NetSocket");
+
 	// ネットは単発ガジェットとして扱う。
 	UseStyle = EGadgetUseStyle::OneShot;
+
 	// 新しいルートコンポーネント（シーンコンポーネント）を作成して設定。
 	USceneComponent* DummyRoot = CreateDefaultSubobject<USceneComponent>(TEXT("DummyRoot"));
 	SetRootComponent(DummyRoot);
+
 	// スフィアコリジョンを作成。
 	CaptureCollision = CreateDefaultSubobject<USphereComponent>(TEXT("CaptureCollision"));
+
 	// スフィアコリジョンをルート（DummyRoot）の子階層として繋ぐ。
 	CaptureCollision->SetupAttachment(DummyRoot);
+
 	// 初期状態ではセンサーを「オフ」にする。
 	CaptureCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 	// センサーの「属性」を決める。
 	CaptureCollision->SetCollisionObjectType(ECC_WorldDynamic);
+
 	// PawnのみOverlapする。
 	CaptureCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
 	CaptureCollision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	CaptureCollision->SetGenerateOverlapEvents(true);
+
 	// Overlap開始時のイベントを登録。
 	CaptureCollision->OnComponentBeginOverlap.AddDynamic(this, &ANetGadget::OnCaptureCollisionBeginOverlap);
 }
@@ -36,9 +42,9 @@ ANetGadget::ANetGadget()
 // ガジェット使用。
 void ANetGadget::Use_Implementation(AActor* TargetActor)
 {
-	if (!CanUse())	
+	if (!CanUse())
 		return;
-	
+
 	(void)TargetActor;
 
 	EndCaptureWindow();
@@ -51,7 +57,7 @@ void ANetGadget::Use_Implementation(AActor* TargetActor)
 // 捕獲判定を有効化。
 void ANetGadget::BeginCaptureWindow()
 {
-	if (CaptureCollision == nullptr)	
+	if (CaptureCollision == nullptr)
 		return;
 	// Notify以外の経路からも、中断済み（Stun・Downed・装備解除・Stage終了）の使用で判定窓を開かない。
 	// Playerが所有しない網（検証用の単体配置など）は従来どおり開ける。
@@ -61,9 +67,11 @@ void ANetGadget::BeginCaptureWindow()
 	// SphereCollisionを有効化。
 	CaptureCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	bCaptureWindowActive = true;
+
 	// Sweepは判定窓を開いた位置から始める。
 	LastCaptureSweepLocation = CaptureCollision->GetComponentLocation();
 	bHasCaptureSweepLocation = true;
+
 	// 既に範囲内にいるイノシシも判定する。
 	CaptureOverlappingBoars();
 }
@@ -83,23 +91,26 @@ void ANetGadget::EndCaptureWindow()
 // 前回位置から現在位置までSphereを掃引し、通り抜けたイノシシを捕獲する。
 void ANetGadget::SweepCaptureWindow()
 {
-	if (!bCaptureWindowActive || CaptureCollision == nullptr) 
+	if (!bCaptureWindowActive || CaptureCollision == nullptr)
 		return;
+
 	UWorld* World = GetWorld();
-	if (World == nullptr) 
+	if (World == nullptr)
 		return;
 
 	const FVector Current = CaptureCollision->GetComponentLocation();
 	const FVector Start = bHasCaptureSweepLocation ? LastCaptureSweepLocation : Current;
 	LastCaptureSweepLocation = Current;
 	bHasCaptureSweepLocation = true;
+
 	// 移動がほぼ無い場合は通常のOverlap判定で足りる。
-	if (FVector::DistSquared(Start, Current) < 1.0f) 
+	if (FVector::DistSquared(Start, Current) < 1.0f)
 		return;
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(NetCaptureSweep), false, this);
 	Params.AddIgnoredActor(GetOwner());
 	TArray<FHitResult> Hits;
+
 	// 通常判定と同じくPawnのみを対象にし、半径もSphereCollisionの実寸を使う。
 	World->SweepMultiByObjectType(Hits, Start, Current, FQuat::Identity, FCollisionObjectQueryParams(ECC_Pawn),
 		FCollisionShape::MakeSphere(CaptureCollision->GetScaledSphereRadius()), Params);
@@ -118,8 +129,8 @@ void ANetGadget::OnCaptureCollisionBeginOverlap(UPrimitiveComponent* OverlappedC
 	(void)OtherBodyIndex;
 	(void)bFromSweep;
 	(void)SweepResult;
-	
-	if (!bCaptureWindowActive)	
+
+	if (!bCaptureWindowActive)
 		return;
 
 	TryCaptureBoar(Cast<ABoarBase>(OtherActor));
@@ -128,12 +139,14 @@ void ANetGadget::OnCaptureCollisionBeginOverlap(UPrimitiveComponent* OverlappedC
 // イノシシの捕獲を試みる
 bool ANetGadget::TryCaptureBoar(ABoarBase* Boar)
 {
-	if (!bCaptureWindowActive || Boar == nullptr || Boar->IsCaptured() || AttemptedBoarsThisUse.Contains(Boar)) 
+	if (!bCaptureWindowActive || Boar == nullptr || Boar->IsCaptured() || AttemptedBoarsThisUse.Contains(Boar))
 		return false;
+
 	AttemptedBoarsThisUse.Add(Boar);
-	
-	if (!Boar->CaptureWithFeedback(!bSuccessFeedbackPlayedThisUse)) 
+
+	if (!Boar->CaptureWithFeedback(!bSuccessFeedbackPlayedThisUse))
 		return false;
+
 	bSuccessFeedbackPlayedThisUse = true;
 	UE_LOG(LogTemp, Log, TEXT("[Net] Captured %s"), *GetNameSafe(Boar));
 	return true;
@@ -142,10 +155,11 @@ bool ANetGadget::TryCaptureBoar(ABoarBase* Boar)
 // Sphere内にいるイノシシを捕獲する
 void ANetGadget::CaptureOverlappingBoars()
 {
-	if (CaptureCollision == nullptr || !bCaptureWindowActive)	
+	if (CaptureCollision == nullptr || !bCaptureWindowActive)
 		return;
-	
+
 	TArray<AActor*> OverlappingActors;
+
 	// Sphere内のイノシシを取得
 	CaptureCollision->GetOverlappingActors(OverlappingActors, ABoarBase::StaticClass());
 

@@ -40,8 +40,9 @@ void UBoarHUDWidget::ResolveWidgetReferences()
 	CurrentHealthText = ResolveHUDTextBlock(WidgetTree, CurrentHealthTextWidgetName);
 	MaxHealthText = ResolveHUDTextBlock(WidgetTree, MaxHealthTextWidgetName);
 	StaminaBarWidget = WidgetTree && !StaminaBarWidgetName.IsNone()
-		             ? Cast<UProgressBar>(WidgetTree->FindWidget(StaminaBarWidgetName))
-		             : nullptr;
+			? Cast<UProgressBar>(WidgetTree->FindWidget(StaminaBarWidgetName))
+			: nullptr;
+
 	if (StaminaBarWidget)
 	{
 		// 最初の通知と位置計算が済むまで、画面左上などに一瞬表示されないようにする。
@@ -50,14 +51,15 @@ void UBoarHUDWidget::ResolveWidgetReferences()
 
 	GadgetIconWidgets.Reset();
 	GadgetSelectionWidgets.Reset();
+
 	for (int32 SlotIndex = 0; SlotIndex < UGadgetComponent::GetGadgetSlotCount(); ++SlotIndex)
 	{
 		const FName IconName = GadgetIconWidgetNames.IsValidIndex(SlotIndex)
-			                       ? GadgetIconWidgetNames[SlotIndex]
-			                       : NAME_None;
+				? GadgetIconWidgetNames[SlotIndex]
+				: NAME_None;
 		const FName SelectionName = GadgetSelectionWidgetNames.IsValidIndex(SlotIndex)
-			                            ? GadgetSelectionWidgetNames[SlotIndex]
-			                            : NAME_None;
+				? GadgetSelectionWidgetNames[SlotIndex]
+				: NAME_None;
 		GadgetIconWidgets.Add(WidgetTree ? Cast<UImage>(WidgetTree->FindWidget(IconName)) : nullptr);
 		GadgetSelectionWidgets.Add(WidgetTree ? WidgetTree->FindWidget(SelectionName) : nullptr);
 	}
@@ -71,6 +73,7 @@ void UBoarHUDWidget::UpdateGadgetSlots(
 	for (int32 SlotIndex = 0; SlotIndex < UGadgetComponent::GetGadgetSlotCount(); ++SlotIndex)
 	{
 		UTexture2D* DisplayIcon = nullptr;
+
 		if (GadgetSlots.IsValidIndex(SlotIndex) && GadgetSlots[SlotIndex])
 		{
 			const AGadgetBase* GadgetDefaults = GadgetSlots[SlotIndex]->GetDefaultObject<AGadgetBase>();
@@ -111,6 +114,11 @@ void UBoarHUDWidget::UpdateCaptureCount(int32 CurrentCount, int32 TargetCount)
 // 受け取ったHPを整数表示へ丸めます。ダメージ計算やHPの更新はゲームプレイ側が担当します。
 void UBoarHUDWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 {
+	if (UProgressBar* HealthBar = Cast<UProgressBar>(GetWidgetFromName(TEXT("HealthMeter"))))
+	{
+		HealthBar->SetPercent(MaxHealth > 0.f ? FMath::Clamp(CurrentHealth / MaxHealth, 0.f, 1.f) : 0.f);
+	}
+
 	if (CurrentHealthText)
 	{
 		CurrentHealthText->SetText(FText::AsNumber(FMath::RoundToInt(CurrentHealth)));
@@ -132,6 +140,7 @@ void UBoarHUDWidget::UpdateStamina(float CurrentStamina, float MaxStamina, bool 
 		// 減り始めた・回復中の間は表示を続け、満タンに戻ってから非表示までの待ち時間を数え直す。
 		StaminaFullElapsed = 0.0f;
 	}
+
 	bStaminaFull = bFull;
 	bStaminaLocked = bDashLocked;
 
@@ -139,8 +148,8 @@ void UBoarHUDWidget::UpdateStamina(float CurrentStamina, float MaxStamina, bool 
 	{
 		StaminaBarWidget->SetPercent(Ratio);
 		StaminaBarWidget->SetFillColorAndOpacity(bDashLocked
-			                                         ? StaminaExhaustedColor
-			                                         : (Ratio < StaminaLowRatio ? StaminaLowColor : StaminaNormalColor));
+				? StaminaExhaustedColor
+				: (Ratio < StaminaLowRatio ? StaminaLowColor : StaminaNormalColor));
 	}
 }
 
@@ -155,6 +164,7 @@ void UBoarHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	{
 		StaminaFullElapsed += InDeltaTime;
 	}
+
 	// 満タンで一定時間たったら隠し、Dashで減り始めたらすぐ表示する。
 	const bool bWantVisible = !bStaminaFull || StaminaHideDelayWhenFull < 0.0f ||
 		StaminaFullElapsed < StaminaHideDelayWhenFull;
@@ -163,6 +173,7 @@ void UBoarHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	const float TargetOpacity = (bWantVisible && bOnScreen) ? 1.0f : 0.0f;
 	StaminaGaugeOpacity = FMath::FInterpConstantTo(StaminaGaugeOpacity, TargetOpacity, InDeltaTime, StaminaFadeSpeed);
+
 	if (!bOnScreen)
 	{
 		StaminaGaugeOpacity = 0.0f;
@@ -170,6 +181,7 @@ void UBoarHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	// スタミナ切れ（再使用しきい値まで回復していない）間は点滅させ、Dashできないことを示す。
 	float Blink = 1.0f;
+
 	if (bStaminaLocked && StaminaExhaustedBlinkRate > 0.0f)
 	{
 		StaminaBlinkTime += InDeltaTime;
@@ -179,6 +191,7 @@ void UBoarHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	{
 		StaminaBlinkTime = 0.0f;
 	}
+
 	StaminaBarWidget->SetRenderOpacity(StaminaGaugeOpacity * Blink);
 }
 
@@ -192,14 +205,16 @@ bool UBoarHUDWidget::UpdateStaminaGaugePosition()
 
 	// カメラの右・上方向にずらしたワールド位置を投影し、キャラクターのすぐ横に置く。
 	const FRotator CameraRotation = PC->PlayerCameraManager
-		                                ? PC->PlayerCameraManager->GetCameraRotation()
-		                                : PC->GetControlRotation();
+			? PC->PlayerCameraManager->GetCameraRotation()
+			: PC->GetControlRotation();
+
 	const FRotationMatrix CameraAxes(CameraRotation);
 	const FVector WorldLocation = Pawn->GetActorLocation() +
 		CameraAxes.GetUnitAxis(EAxis::Y) * StaminaGaugeWorldOffset.X +
 		FVector::UpVector * StaminaGaugeWorldOffset.Y;
 
 	FVector2D WidgetPosition;
+
 	if (!UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(PC, WorldLocation, WidgetPosition, true))
 		return false;
 

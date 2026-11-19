@@ -26,36 +26,26 @@ public class REBoarGetch : ModuleRules
 			"Niagara",
 			"EngineCameras",
 			// 通常TPSカメラ（UBoarGameplayCameraComponent）と演出のACF連携で使用します。
-			"ActionCameraFramework"
+			"ActionCameraFramework",
+			// Level遷移の演出（UBoarLevelTransitionLibrary）で使用します。
+			"ActionCameraFrameworkTransitions",
+			// 遷移の演出の設定（UBoarLevelTransitionSettings）で使用します。
+			"DeveloperSettings"
 		});
 
 		// Editor専用の自動化関数（UBoarUIAuthoringLibrary）だけが使用します。
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMGEditor", "MovieScene", "MovieSceneTracks" });
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMGEditor", "BlueprintGraph","MovieScene", "MovieSceneTracks" });
 		}
 
 		PublicIncludePaths.AddRange(new string[] {
 			"REBoarGetch",
-			"REBoarGetch/Variant_Platforming",
-			"REBoarGetch/Variant_Platforming/Animation",
-			"REBoarGetch/Variant_Combat",
-			"REBoarGetch/Variant_Combat/AI",
-			"REBoarGetch/Variant_Combat/Animation",
-			"REBoarGetch/Variant_Combat/Gameplay",
-			"REBoarGetch/Variant_Combat/Interfaces",
-			"REBoarGetch/Variant_Combat/UI",
-			"REBoarGetch/Variant_SideScrolling",
-			"REBoarGetch/Variant_SideScrolling/AI",
-			"REBoarGetch/Variant_SideScrolling/Gameplay",
-			"REBoarGetch/Variant_SideScrolling/Interfaces",
-			"REBoarGetch/Variant_SideScrolling/UI",
 			"REBoarGetch/Private/Core",
 			"REBoarGetch/Private/Player",
 			"REBoarGetch/Private/Boar",
 			"REBoarGetch/Private/Gadget",
 			"REBoarGetch/Private/Cage",
-			"REBoarGetch/Private/Mission",
 			"REBoarGetch/Private/Save"
 		});
 	}

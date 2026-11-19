@@ -8,28 +8,45 @@ class UTexture2D;
 class UWorld;
 class ABoarBase;
 class ABoarStagePreviewActor;
+class USoundBase;
 
 /** 永続個体IDと、Level上の固定SpawnPoint IDを結び付ける定義です。 */
 USTRUCT(BlueprintType)
 struct FBoarSpawnDefinition
 {
 	GENERATED_BODY()
+
 	/** 捕獲記録・NEW判定に使う固定個体ID。例：Stage01_Boar_001。再挑戦・再起動でも変更せず、他個体と重複させません。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName BoarUniqueId;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName BoarUniqueId;
+
 	/** この個体として生成するABoarBase派生Class。使用するイノシシBPを指定します。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) TSubclassOf<ABoarBase> BoarClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<ABoarBase> BoarClass;
+
 	/** 配置先LevelのABoarSpawnPointに設定したID。例：Spawn_A。配列順・Actor取得順ではなくIDで位置を対応付けます。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName SpawnPointId;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName SpawnPointId;
+
 	/** 図鑑表示用の個体名。未登録の文面をUI側で推測しません。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia") FText EncyclopediaName;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia")
+	FText EncyclopediaName;
+
 	/** 図鑑の個体説明。表示する紹介文を設定します。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia", meta = (MultiLine = "true")) FText EncyclopediaDescription;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia", meta = (MultiLine = "true"))
+	FText EncyclopediaDescription;
+
 	/** 図鑑の特徴説明。個体の性質・行動など、表示する文面を設定します。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia", meta = (MultiLine = "true")) FText EncyclopediaTraits;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia", meta = (MultiLine = "true"))
+	FText EncyclopediaTraits;
+
 	/** 図鑑で表示する個体写真。未登録の素材をUI側で推測しません。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia") TSoftObjectPtr<UTexture2D> EncyclopediaPhoto;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia")
+	TSoftObjectPtr<UTexture2D> EncyclopediaPhoto;
+
 	/** 展示専用のIdleを指定します。歩行・攻撃AnimBPは展示で使用しません。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia") TSoftObjectPtr<class UAnimSequence> ArchiveIdleAnimation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Encyclopedia")
+	TSoftObjectPtr<class UAnimSequence> ArchiveIdleAnimation;
 };
 
 /** 特別コインの固定IDと配置地点です。 */
@@ -37,10 +54,14 @@ USTRUCT(BlueprintType)
 struct FSpecialCoinDefinition
 {
 	GENERATED_BODY()
+
 	/** 取得記録に使う固定ID。例：Stage01_Coin_001。再挑戦・再起動でも変更せず、保存済みの取得IDは再出現させません。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName SpecialCoinId;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName SpecialCoinId;
+
 	/** 配置先LevelのABoarSpawnPointに設定したID。例：CoinSpawn_A。コインの配置位置を安定したIDで参照します。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName SpawnPointId;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName SpawnPointId;
 };
 
 /** 解放状態は保存せず、クリア済みStage IDから導出します。 */
@@ -48,8 +69,10 @@ USTRUCT(BlueprintType)
 struct FStageUnlockCondition
 {
 	GENERATED_BODY()
+
 	/** 解放に必要なクリア済みStageId。Noneなら初期解放。例：Stage02の解放条件にStage01を指定します。 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FName RequiredClearedStageId;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName RequiredClearedStageId;
 };
 
 /**
@@ -99,6 +122,18 @@ public:
 	/** 指定Stageのクリア状態による解放条件。RequiredClearedStageIdがNoneなら初期解放。捕獲数・コイン数は条件に含めません。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Unlock")
 	FStageUnlockCondition UnlockCondition;
+
+	/** Stage BGM。Playing開始時にフェードインし、Playing中はループします。未設定なら前LevelのBGMを止めて無音にします。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Audio")
+	TObjectPtr<USoundBase> StageBGM;
+
+	/** Stage BGMのフェードイン時間です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Audio", meta = (ClampMin = "0.0", Units = "s"))
+	float StageBGMFadeInSeconds = 1.5f;
+
+	/** Stage読み込み時、前のLevel（Lobby等）から続くBGMを止めるフェードアウト時間です。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage|Audio", meta = (ClampMin = "0.0", Units = "s"))
+	float PreviousBGMFadeOutSeconds = 0.5f;
 
 	/** 個体定義から設定上の出現数を返します。Level上の地点の存在・ID重複は検証しません。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage|Spawn")

@@ -15,11 +15,12 @@ bool FCageRespawnTest::RunTest(const FString& Parameters)
 {
 	const auto Initialization =
 		UWorld::InitializationValues().AllowAudioPlayback(false).CreatePhysicsScene(false).CreateNavigation(false).
-		                               CreateAISystem(false);
+			CreateAISystem(false);
 	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true, ERHIFeatureLevel::Num,
-	                                    &Initialization);
+		&Initialization);
 	if (!TestNotNull(TEXT("Cage test world"), World))
 		return false;
+
 	FActorSpawnParameters Spawn;
 	Spawn.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	ACage* Cage = World->SpawnActor<ACage>(FVector::ZeroVector, FRotator::ZeroRotator, Spawn);
@@ -29,10 +30,13 @@ bool FCageRespawnTest::RunTest(const FString& Parameters)
 		World->DestroyWorld(false);
 		return false;
 	}
+
 	Cage->InitializeForStage();
+
 	// 復旧時間はEditor設定（RespawnDelay）。テストでは5秒にする。
 	if (FFloatProperty* Delay = FindFProperty<FFloatProperty>(ACage::StaticClass(), TEXT("RespawnDelay")))
 		Delay->SetPropertyValue_InContainer(Cage, 5.f);
+
 	Boar->BoarUniqueId = TEXT("CageRespawn_Boar");
 	UCaptureComponent* Capture = Boar->FindComponentByClass<UCaptureComponent>();
 	if (TestNotNull(TEXT("CaptureComponent"), Capture) && TestTrue(TEXT("捕獲状態"), Capture->Capture(nullptr)))
@@ -72,6 +76,7 @@ bool FCageRespawnTest::RunTest(const FString& Parameters)
 		Cage->CollectBoar(Boar);
 		TestEqual(TEXT("復旧後は再び収容できる"), Cage->GetCapturedBoarCount(), 1);
 	}
+
 	World->DestroyWorld(false);
 	return true;
 }

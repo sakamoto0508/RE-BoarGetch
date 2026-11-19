@@ -37,12 +37,18 @@ UCLASS()
 class REBOARGETCH_API UBoarLoadoutPresenter : public UObject
 {
 	GENERATED_BODY()
+
   public:
 	/** モデルの取得に失敗した場合はfalseを返し、Viewに利用不能状態を表示させます。 */
 	bool Initialize(APlayerController *Owner, bool bRequestedLabContext);
 	void Shutdown();
-	UPROPERTY() FOnLoadoutViewChanged OnSlotsChanged;
-	UPROPERTY() FOnLoadoutViewChanged OnCandidatesChanged;
+
+	UPROPERTY()
+	FOnLoadoutViewChanged OnSlotsChanged;
+
+	UPROPERTY()
+	FOnLoadoutViewChanged OnCandidatesChanged;
+
 	bool IsLabContext() const
 	{
 		return bLabContext;
@@ -70,11 +76,22 @@ class REBOARGETCH_API UBoarLoadoutPresenter : public UObject
 
   private:
 	FBoarLoadoutEntryViewData BuildDetails(TSubclassOf<AGadgetBase> Class) const;
-	UFUNCTION() void HandleSlotsChanged();
-	UFUNCTION() void HandleCandidatesChanged();
-	UPROPERTY(Transient) TObjectPtr<UGadgetComponent> Gadgets;
-	UPROPERTY(Transient) TObjectPtr<UBoarGadgetSubsystem> Progress;
-	UPROPERTY(Transient) TArray<TSubclassOf<AGadgetBase>> Candidates;
+
+	UFUNCTION()
+	void HandleSlotsChanged();
+
+	UFUNCTION()
+	void HandleCandidatesChanged();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UGadgetComponent> Gadgets;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarGadgetSubsystem> Progress;
+
+	UPROPERTY(Transient)
+	TArray<TSubclassOf<AGadgetBase>> Candidates;
+
 	int32 SelectedSlot = 0;
 	// 0: 装備変更、1: 研究所での解放、2: 装備枠とは別のTest対象選択。
 	int32 LabMode = 0;

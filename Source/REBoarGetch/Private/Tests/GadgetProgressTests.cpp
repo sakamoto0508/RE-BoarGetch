@@ -25,9 +25,11 @@ bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 	const auto NetClass = LoadClass<AGadgetBase>(nullptr, TEXT("/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C"));
 	if (!TestNotNull(TEXT("Existing catalog gadget"), NetClass))
 		return false;
+
 	const auto* Definition = NetClass->GetDefaultObject<AGadgetBase>()->GetGadgetDefinition();
 	if (!TestNotNull(TEXT("Existing definition"), Definition))
 		return false;
+
 	Instance->GadgetCatalog = {NetClass};
 	Instance->InitializeStandalone();
 	Instance->bSaveLoadFailed = true;
@@ -35,6 +37,7 @@ bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 	auto* Gadgets = Instance->GetSubsystem<UBoarGadgetSubsystem>();
 	const FName Id = Definition->GadgetId;
 	TestNotNull(TEXT("Gadget subsystem created before GI initial unlock update"), Gadgets);
+
 	if (Gadgets)
 	{
 		TestTrue(TEXT("Initial unlock from existing catalog"), Gadgets->IsGadgetUnlocked(Id));
@@ -43,13 +46,13 @@ bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 		TestFalse(TEXT("Unknown ID cannot unlock"), Gadgets->CanUnlockGadget(TEXT("Missing")));
 		TestFalse(TEXT("None is never unlocked"), Gadgets->IsGadgetUnlocked(NAME_None));
 		TestTrue(TEXT("Four slots including empty accepted"), Gadgets->IsLoadoutValid({
-			         Id, NAME_None, NAME_None, NAME_None
-		         }));
+				Id, NAME_None, NAME_None, NAME_None
+			}));
 		TestFalse(TEXT("Wrong slot count rejected"), Gadgets->IsLoadoutValid({Id}));
 		TestFalse(TEXT("Duplicate gadget rejected"), Gadgets->IsLoadoutValid({Id, Id, NAME_None, NAME_None}));
 		TestFalse(TEXT("Unresolved gadget rejected"), Gadgets->IsLoadoutValid({
-			          TEXT("Missing"), NAME_None, NAME_None, NAME_None
-		          }));
+				TEXT("Missing"), NAME_None, NAME_None, NAME_None
+			}));
 		TArray<TSubclassOf<AGadgetBase>> Defaults = {NetClass, nullptr, nullptr, nullptr};
 		TArray<TSubclassOf<AGadgetBase>> Restored = Defaults;
 		Instance->Progress->bHasSavedLoadout = true;
@@ -62,7 +65,7 @@ bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 		Gadgets->RestoreSavedLoadout(Restored);
 		TestTrue(TEXT("Unknown saved ID keeps full default loadout"), Restored == Defaults);
 		TestEqual(TEXT("Unknown saved ID is not rewritten"), Instance->Progress->GadgetLoadout[0],
-		          FName(TEXT("Missing")));
+			FName(TEXT("Missing")));
 		Instance->Progress->GadgetLoadout = {NAME_None, NAME_None, NAME_None, NAME_None};
 		Gadgets->RestoreSavedLoadout(Restored);
 		TestTrue(
@@ -149,7 +152,7 @@ bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 					TestTrue(TEXT("Presenter connects in Lab"), Presenter->Initialize(PC, true));
 					TestEqual(TEXT("Catalog keeps empty then unique gadget"), Presenter->GetCandidateCount(), 2);
 					TestEqual(TEXT("Catalog display comes from definition"), Presenter->GetCandidate(1).Name.ToString(),
-					          Definition->DisplayName.ToString());
+						Definition->DisplayName.ToString());
 					TestTrue(TEXT("Lab exposes test intent"), Presenter->ChooseLabMode(2));
 					TestFalse(TEXT("Invalid mode rejected"), Presenter->ChooseLabMode(3));
 					Presenter->ChooseCandidate(1);
@@ -166,6 +169,7 @@ bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 			}
 		}
 	}
+
 	Instance->Shutdown();
 	World->DestroyWorld(false);
 	GEngine->DestroyWorldContext(World);

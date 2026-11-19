@@ -28,6 +28,7 @@ namespace
 
 		const FVector BoarLocation = Boar.GetActorLocation();
 		FVector AwayDirection = (BoarLocation - ThreatLocation).GetSafeNormal2D();
+
 		// プレイヤーと重なっている場合は正面へ抜ける。
 		if (AwayDirection.IsNearlyZero())
 		{
@@ -42,6 +43,7 @@ namespace
 		{
 			const FVector Direction = AwayDirection.RotateAngleAxis(Angle, FVector::UpVector);
 			FNavLocation Result;
+
 			if (!Nav.ProjectPointToNavigation(BoarLocation + Direction * EscapeDistance, Result))
 				continue;
 			if (FVector::DistSquared(BoarLocation, Result.Location) < MinimumEscapeDistanceSq)
@@ -57,9 +59,11 @@ namespace
 		// プレイヤーより遠くならない地点しかなくても、停止し続けるよりは移動を優先する。
 		bool bFound = false;
 		float BestThreatDistanceSq = -1.0f;
+
 		for (int32 Attempt = 0; Attempt < RandomEscapeAttempts; ++Attempt)
 		{
 			FNavLocation Result;
+
 			if (!Nav.GetRandomReachablePointInRadius(BoarLocation, EscapeDistance * 1.5f, Result))
 				continue;
 			if (FVector::DistSquared(BoarLocation, Result.Location) < MinimumEscapeDistanceSq)
@@ -73,6 +77,7 @@ namespace
 				bFound = true;
 			}
 		}
+
 		return bFound;
 	}
 
@@ -96,10 +101,12 @@ namespace
 	float NavClearDistance(ABoarBase& Boar, const FVector& Start, const FVector& Direction, float Length)
 	{
 		FVector Hit;
+
 		if (UNavigationSystemV1::NavigationRaycast(&Boar, Start, Start + Direction * Length, Hit, {}, Boar.GetController()))
 		{
 			return FMath::Max(0.0f, FVector::Dist2D(Start, Hit) - HeadingWallPullback);
 		}
+
 		return Length;
 	}
 
@@ -111,6 +118,7 @@ namespace
 		float Length, float MinimumDistance, FVector& OutLocation)
 	{
 		FNavLocation Start;
+
 		if (Length <= KINDA_SMALL_NUMBER || !Nav.ProjectPointToNavigation(Boar.GetActorLocation(), Start))
 			return false;
 
@@ -120,12 +128,16 @@ namespace
 			const float Clear = NavClearDistance(Boar, Start.Location, Direction, Length);
 			if (Clear < MinimumDistance)
 				continue;
+
 			FNavLocation Result;
+
 			if (!Nav.ProjectPointToNavigation(Start.Location + Direction * Clear, Result))
 				continue;
+
 			OutLocation = Result.Location;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -137,31 +149,44 @@ namespace
 		float Length, float MinimumDistance, FVector& OutDirection, FVector& OutLocation)
 	{
 		FNavLocation Start;
+
 		if (Length <= KINDA_SMALL_NUMBER || !Nav.ProjectPointToNavigation(Boar.GetActorLocation(), Start))
 			return false;
+
 		const FVector AwayDirection = (Start.Location - ThreatLocation).GetSafeNormal2D();
 
 		float BestScore = -BIG_NUMBER;
 		bool bFound = false;
+
 		for (const float Angle : OpenDirectionAngles)
 		{
 			const FVector Direction = Heading.RotateAngleAxis(Angle, FVector::UpVector);
 			const float Clear = NavClearDistance(Boar, Start.Location, Direction, Length);
 			if (Clear < MinimumDistance)
 				continue;
-			const float Score = 1.0f * FVector::DotProduct(Direction, AwayDirection)
-				+ 0.8f * (Clear / Length)
-				+ 0.3f * FVector::DotProduct(Direction, Heading);
+
+			// 評価の重み: プレイヤーから離れる(1.0) ＞ 開けている(0.8) ＞ 今の向きに近い(0.3)。
+			constexpr float AwayWeight = 1.0f;
+			constexpr float ClearanceWeight = 0.8f;
+			constexpr float KeepHeadingWeight = 0.3f;
+			const float Score = AwayWeight * FVector::DotProduct(Direction, AwayDirection)
+				+ ClearanceWeight * (Clear / Length)
+				+ KeepHeadingWeight * FVector::DotProduct(Direction, Heading);
+
 			if (Score <= BestScore)
 				continue;
+
 			FNavLocation Result;
+
 			if (!Nav.ProjectPointToNavigation(Start.Location + Direction * Clear, Result))
 				continue;
+
 			BestScore = Score;
 			OutDirection = Direction;
 			OutLocation = Result.Location;
 			bFound = true;
 		}
+
 		return bFound;
 	}
 
@@ -247,7 +272,9 @@ namespace
 		{
 			if (bAwayComputed)
 				return;
+
 			bAwayComputed = true;
+
 			if (Threat != nullptr
 				&& FindEscapeLocation(Boar, Threat->GetActorLocation(), Nav, MinEscapeDistance, MinEscapeDistanceRatio, AwayLocation))
 			{
@@ -259,8 +286,10 @@ namespace
 		if (!Boar.HasEscapeHeading())
 		{
 			ComputeAway();
+
 			if (!bHasAway)
 				return EEscapePlan::None;
+
 			Boar.CommitEscapeHeading(AwayDirection, TEXT("NewHeading"));
 			OutLocation = AwayLocation;
 			return EEscapePlan::NewHeading;
@@ -282,10 +311,12 @@ namespace
 			else
 			{
 				ComputeAway();
+
 				if (bHasAway)
 				{
 					const float Delta = Boar.GetEscapeReferenceYawDelta(AwayDirection);
 					const bool bLargeTurn = FMath::Abs(Delta) >= Settings.PivotAngleThreshold;
+
 					if (bDebug)
 					{
 						Boar.LogEscapeTurn(FString::Printf(
@@ -295,6 +326,7 @@ namespace
 							Boar.GetEscapeThreatDistance(), Boar.GetEscapeCommitElapsed(), Boar.GetEscapeCommitDistance(),
 							Boar.GetEscapeEffectiveMaxSpeed()));
 					}
+
 					if (bLargeTurn)
 					{
 						if (Boar.TryStartEscapePivot(AwayDirection, bSkipDecelerate, EBoarEscapePivotReason::Reevaluate))
@@ -302,6 +334,7 @@ namespace
 							OutLocation = AwayLocation;
 							return EEscapePlan::Pivot;
 						}
+
 						// 始められなかった（旋回中など。通常は起きない）：今の方向を維持して次のN秒へ。
 						Boar.CommitEscapeHeading(Heading, TEXT("PivotRejected"));
 					}
@@ -315,6 +348,7 @@ namespace
 				{
 					if (bDebug)
 						Boar.LogEscapeTurn(TEXT("DirectionReevaluate: プレイヤーから離れる逃走先が見つからない → 方向を維持"));
+
 					Boar.CommitEscapeHeading(Heading, TEXT("NoAwayLocation"));
 				}
 			}
@@ -335,12 +369,14 @@ namespace
 
 		// 直進できない：到達可能な次の逃走方向を確定してから向きを変える（N秒の終了は待たない）。
 		ComputeAway();
+
 		// 進めない原因がすぐ近くのプレイヤー（体がぶつかって止まった）なら障害物として扱わない（AKI-172）。
 		// 走行旋回で回り込まず、離れる方向との差が大きければ切り返す。差が小さければ通常の障害物復帰へ進む。
 		if (Context == EPlanContext::Stuck && Threat != nullptr && bHasAway
 			&& FVector::Dist2D(BoarLocation, Threat->GetActorLocation()) <= Settings.PlayerBlockDistance)
 		{
 			const float Delta = Boar.GetEscapeReferenceYawDelta(AwayDirection);
+
 			if (bDebug)
 				Boar.LogEscapeTurn(FString::Printf(TEXT("BlockedByPlayer heading=%.0f away=%.0f delta=%.1f threshold=%.1f threatDist=%.0f → %s"),
 					Heading.Rotation().Yaw, AwayDirection.Rotation().Yaw, Delta, Settings.PivotAngleThreshold,
@@ -353,14 +389,17 @@ namespace
 				return EEscapePlan::Pivot;
 			}
 		}
+
 		// プレイヤーを認識していないときは、維持方向に近い方向を優先する（脅威を維持方向の真後ろに置いて評価する）。
 		const FVector ScoreThreatLocation = Threat != nullptr ? Threat->GetActorLocation() : BoarLocation - Heading * 100.0f;
 		FVector OpenDirection;
 		FVector OpenLocation;
+
 		if (FindOpenDirection(Boar, Heading, ScoreThreatLocation, Nav, Settings.RunSegmentDistance, MinRun, OpenDirection, OpenLocation))
 		{
 			OutLocation = OpenLocation;
 			const bool bNeedsPivot = Boar.NeedsEscapePivot(OpenDirection, EBoarEscapePivotReason::NaturalObstacle);
+
 			if (bDebug)
 				Boar.LogEscapeTurn(FString::Printf(TEXT("ObstacleRecovery (%s) heading=%.0f open=%.0f delta=%.1f obstacleThreshold=%.1f"),
 					PlanContextName(Context), Heading.Rotation().Yaw, OpenDirection.Rotation().Yaw,
@@ -375,6 +414,7 @@ namespace
 		// 開けた方向が無い（角・狭所）：プレイヤーから離れる到達可能地点へ走りながら復帰する。止まり続けない。
 		if (!bHasAway)
 			return EEscapePlan::None;
+
 		Boar.CommitEscapeHeading(AwayDirection, TEXT("ObstacleFallback"));
 		OutLocation = AwayLocation;
 		return EEscapePlan::ObstacleRecovery;
@@ -424,6 +464,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 	if (bSustained && Boar->IsEscapeTurnEnabled())
 	{
 		Boar->SetEscapeThreat(InstanceData.TargetPlayer);
+
 		if (bDebug)
 			Boar->LogEscapeTurn(FString::Printf(TEXT("EscapeTaskEnter (Sustained): 逃走先に到着（再Enter。逃走開始旋回はしない）commitRemaining=%.2fs"),
 				Boar->GetEscapeCommitRemaining()));
@@ -446,10 +487,13 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 					InstanceData.EscapeLocation = Extended;
 				}
 			}
+
 			InstanceData.bHasPendingEscapeLocation = false;
 			InstanceData.bSegmentEndChecked = false;
+
 			if (bDebug)
 				Boar->LogEscapeTurn(FString::Printf(TEXT("PlanResult=TurnInProgress adopted=%s"), *InstanceData.EscapeLocation.ToCompactString()));
+
 			return EStateTreeRunStatus::Running;
 		}
 
@@ -461,13 +505,17 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 		{
 			if (bDebug)
 				Boar->LogEscapeTurn(TEXT("EscapeTaskEnter (Sustained): 逃走先が見つからない（Failed）"));
+
 			return EStateTreeRunStatus::Failed;
 		}
+
 		InstanceData.EscapeLocation = NextLocation;
 		InstanceData.bHasPendingEscapeLocation = false;
 		InstanceData.bSegmentEndChecked = false;
+
 		if (bDebug)
 			LogPlanResult(*Boar, Plan, Previous, NextLocation);
+
 		return EStateTreeRunStatus::Running;
 	}
 
@@ -481,14 +529,18 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 		const FBoarEscapeTurnSettings& TurnSettings = Boar->GetEscapeTurnSettings();
 		const bool bTurning = Boar->IsEscapePivoting() || Boar->GetEscapeTurnPhase() == EBoarEscapeTurnPhase::StartTurn;
 		FVector Resumed;
+
 		if (FindLocationAlongHeading(*Boar, Boar->GetEscapeHeading(), *Nav, TurnSettings.RunSegmentDistance,
 			TurnSettings.RunSegmentDistance * 0.5f, Resumed))
 		{
 			InstanceData.EscapeLocation = Resumed;
+
 			if (bDebug)
 				Boar->LogEscapeTurn(FString::Printf(TEXT("PlanResult=Resume (方向を維持) adopted=%s"), *Resumed.ToCompactString()));
+
 			return EStateTreeRunStatus::Running;
 		}
+
 		// 控えた方向へ直進できない：安全なNavMesh復帰を優先する。旋回中は旋回先を変えず、止まっている間の仮の逃走先だけ置く。
 		FVector NextLocation = FVector::ZeroVector;
 		const EEscapePlan Plan = bTurning ? EEscapePlan::None
@@ -511,6 +563,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 		{
 			InstanceData.EscapeLocation = Boar->GetActorLocation();
 		}
+
 		if (bDebug)
 			Boar->LogEscapeTurn(FString::Printf(TEXT("PlanResult=Resume (控えた方向へ直進できない → %s) adopted=%s"),
 				bTurning ? TEXT("旋回中のため仮の逃走先") : EscapePlanName(Plan),
@@ -519,12 +572,15 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 	}
 
 	FVector NewLocation;
+
 	if (!FindEscapeLocation(*Boar, ThreatLocation, *Nav, MinEscapeDistance, MinEscapeDistanceRatio, NewLocation))
 	{
 		if (bDebug)
 			Boar->LogEscapeTurn(TEXT("EscapeTaskEnter: 逃走先が見つからない（Failed）"));
+
 		return EStateTreeRunStatus::Failed;
 	}
+
 	const FVector NewDirection = (NewLocation - Boar->GetActorLocation()).GetSafeNormal2D();
 
 	// EscapeTurn無効の種別（Red／Blue等）の再選択は従来どおり、プレイヤーから離れる新しい逃走先を使う。
@@ -538,11 +594,13 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 	InstanceData.EscapeLocation = NewLocation;
 	InstanceData.bHasPendingEscapeLocation = false;
 	InstanceData.bSegmentEndChecked = false;
+
 	if (bDebug)
 		Boar->LogEscapeTurn(FString::Printf(TEXT("EscapeTaskEnter (Changed) dest=%s angle=%.1f threatDist=%.0f"),
 			*NewLocation.ToCompactString(), Boar->GetEscapeYawDelta(NewDirection), Boar->GetEscapeThreatDistance()));
 	Boar->SetEscapeThreat(InstanceData.TargetPlayer);
 	Boar->SetEscaping(true);
+
 	// 新しい逃走：逃走開始の旋回・加速を始める（EscapeTurn無効の種別では何もしない）。
 	Boar->BeginEscapeMotion(NewDirection);
 	return EStateTreeRunStatus::Running;
@@ -566,6 +624,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 		InstanceData.EscapeLocation = InstanceData.PendingEscapeLocation;
 		InstanceData.bHasPendingEscapeLocation = false;
 		InstanceData.bSegmentEndChecked = false;
+
 		if (ABoarBase::IsEscapeTurnDebugEnabled())
 			Boar->LogEscapeTurn(FString::Printf(TEXT("PendingDestinationApplied dest=%s"), *InstanceData.EscapeLocation.ToCompactString()));
 	}
@@ -582,9 +641,12 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 		{
 			if (bDebug)
 				Boar->LogEscapeTurn(TEXT("EscapeTaskComplete 逃げ切り → 逃走Stateを完了"));
+
 			return EStateTreeRunStatus::Succeeded;
 		}
+
 		Boar->SetEscapeThreat(InstanceData.TargetPlayer);
+
 		// 旋回中は目標方向を固定したまま判断しない。
 		if (InstanceData.bHasPendingEscapeLocation || Boar->IsEscapePivoting()
 			|| Boar->GetEscapeTurnPhase() == EBoarEscapeTurnPhase::StartTurn)
@@ -598,6 +660,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 			? InstanceData.StuckTime + DeltaTime : 0.0f;
 
 		EPlanContext PlanContext;
+
 		if (Boar->IsEscapeCommitExpired())
 		{
 			PlanContext = EPlanContext::Reevaluate;
@@ -622,6 +685,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 		UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(Boar->GetWorld());
 		if (Nav == nullptr)
 			return EStateTreeRunStatus::Running;
+
 		const FVector Previous = InstanceData.EscapeLocation;
 		FVector NextLocation;
 		const EEscapePlan Plan = PlanEscapeDestination(*Boar, InstanceData.TargetPlayer, *Nav,
@@ -644,11 +708,14 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 		default:
 			break;
 		}
+
 		// 逃走先が見つからなくても、毎フレーム再評価し続けないよう方向維持を始め直す。
 		if (PlanContext == EPlanContext::Reevaluate && !Boar->IsEscapePivoting() && Boar->IsEscapeCommitExpired())
 			Boar->CommitEscapeHeading(Boar->GetEscapeHeading(), TEXT("NoDestination"));
+
 		if (bDebug)
 			LogPlanResult(*Boar, Plan, Previous, NextLocation);
+
 		return EStateTreeRunStatus::Running;
 	}
 
@@ -656,14 +723,17 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 		return EStateTreeRunStatus::Running;
 
 	InstanceData.ReplanTimeRemaining -= DeltaTime;
+
 	if (InstanceData.ReplanTimeRemaining > 0.0f)
 		return EStateTreeRunStatus::Running;
+
 	InstanceData.ReplanTimeRemaining = ReplanInterval;
 
 	if (InstanceData.TargetPlayer == nullptr)
 	{
 		if (bDebug)
 			Boar->LogEscapeTurn(TEXT("ReplanSkipped: NoTargetPlayer（プレイヤーを見失っている）"));
+
 		return EStateTreeRunStatus::Running;
 	}
 
@@ -673,6 +743,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 	{
 		if (bDebug)
 			Boar->LogEscapeTurn(TEXT("ReplanSkipped: TurnInProgress/PendingDestination"));
+
 		return EStateTreeRunStatus::Running;
 	}
 
@@ -686,18 +757,22 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 	{
 		if (bDebug)
 			Boar->LogEscapeTurn(TEXT("ReplanSkipped: DestinationAwayFromPlayer（回り込まれていない）"));
+
 		return EStateTreeRunStatus::Running;
 	}
 
 	// 更新した逃走先はMove ToのTrack Moving Goalが有効な場合に経路へ反映される。
 	UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(Boar->GetWorld());
 	FVector NewLocation;
+
 	if (Nav == nullptr || !FindEscapeLocation(*Boar, InstanceData.TargetPlayer->GetActorLocation(), *Nav, MinEscapeDistance, MinEscapeDistanceRatio, NewLocation))
 	{
 		if (bDebug)
 			Boar->LogEscapeTurn(TEXT("ReplanFailed: 新しい逃走先が見つからない"));
+
 		return EStateTreeRunStatus::Running;
 	}
+
 	if (bDebug)
 	{
 		const AAIController* AIController = Cast<AAIController>(Boar->GetController());
@@ -717,6 +792,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 			InstanceData.PendingEscapeLocation = NewLocation;
 			InstanceData.bHasPendingEscapeLocation = true;
 		}
+
 		// 再発動間隔中は大きく向きを変えず、今の逃走先へ走り続ける。
 		return EStateTreeRunStatus::Running;
 	}
@@ -738,15 +814,19 @@ void FStateTreeBoarEscapeTask::ExitState(FStateTreeExecutionContext& Context,
 		{
 			if (ABoarBase::IsEscapeTurnDebugEnabled())
 				Boar->LogEscapeTurn(TEXT("EscapeTaskExit (Sustained): 逃走を継続"));
+
 			return;
 		}
+
 		// StateTreeの停止（StopLogic：Stage Clear／GameOver／Retry等。遷移先が完了状態）は逃走を完全に終える。
 		// 別Stateへの遷移（プレイヤーを見失ってPatrolへ等）は、速度・回転・Montageを戻したうえで逃走方向と方向維持を控え、
 		// すぐ同じ相手の逃走へ戻ったときに再開できるようにする（AKI-172）。捕獲はCaptureWithFeedbackで控えごと破棄する。
 		const bool bTreeStopping = Transition.TargetState.IsCompletionState();
+
 		if (ABoarBase::IsEscapeTurnDebugEnabled())
 			Boar->LogEscapeTurn(bTreeStopping ? TEXT("EscapeTaskExit (Changed: StateTree停止 → 逃走終了)")
 				: TEXT("EscapeTaskExit (Changed: 別Stateへ遷移 → 逃走を控える)"));
+
 		if (bTreeStopping)
 			Boar->SetEscaping(false);
 		else

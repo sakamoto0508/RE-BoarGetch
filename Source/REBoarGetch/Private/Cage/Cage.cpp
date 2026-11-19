@@ -1,7 +1,6 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Cage/Cage.h"
+#include "Audio/BoarAudioManagerSubsystem.h"
+#include "Engine/GameInstance.h"
 #include "Cage/CageVisualComponent.h"
 #include "Boar/BoarBase.h"
 #include "AIController.h"
@@ -13,7 +12,6 @@
 #include "Core/BoarGameMode.h"
 #include "Engine/World.h"
 
-// Sets default values
 ACage::ACage()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -34,22 +32,23 @@ ACage::ACage()
 void ACage::BeginPlay()
 {
 	Super::BeginPlay();
-	// The stage prepares placed cages before BeginPlay. Standalone cages use
-	// the same idempotent initialization without knowing any startup phase.
+
+	// ステージ配置の檻はBeginPlay前にGameModeが初期化済み。単体で置かれた檻も、
+	// 起動段階を知らずに同じ初期化（何度呼んでも安全）を通す。
 	InitializeForStage();
 }
-
 
 void ACage::InitializeForStage()
 {
 	if (bStageInitialized)
 		return;
+
 	bStageInitialized = true;
 	MaxHp = FMath::Max(MaxHp, 1.0f);
 	CurrentHp = MaxHp;
 	bIsDestroyed = false;
 	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] Cage ready: %s"), *GetName());
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] 檻の準備完了: %s"), *GetName());
 }
 
 void ACage::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -74,6 +73,7 @@ void ACage::CollectBoar(ABoarBase* Boar)
 		NotifyHousedCountChanged();
 		return;
 	}
+
 	if (!Boar->IsCaptured() || CapturedBoars.Contains(Boar))
 		return;
 
@@ -121,8 +121,8 @@ FVector ACage::GetCapturedBoarLocation(int32 SlotIndex, const ABoarBase* Boar) c
 
 	const FVector AreaExtent = CapturedBoarArea->GetScaledBoxExtent();
 	const float CapsuleHalfHeight = Boar && Boar->GetCapsuleComponent()
-		                                ? Boar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
-		                                : 0.0f;
+			? Boar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
+			: 0.0f;
 
 	return CapturedBoarArea->GetComponentLocation()
 		+ CapturedBoarArea->GetForwardVector() * SlotOffset.X
@@ -136,10 +136,25 @@ void ACage::ApplyDamage(float Damage)
 {
 	if (!CanAdvance() || bIsDestroyed || Damage <= 0.0f)
 		return;
+
 	SecondsSinceDamage = 0.0f;
 
+	const float PreviousRatio = CurrentHp / FMath::Max(MaxHp, 1.0f);
 	CurrentHp = FMath::Clamp(CurrentHp - Damage, 0.0f, MaxHp);
 	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
+
+	// 命中音は攻撃が通った時だけ。危険域の警告はしきい値をまたいだ時と、再警告間隔ごとに限る。
+	PlayCageSound(HitSound, false);
+	const float Ratio = CurrentHp / FMath::Max(MaxHp, 1.0f);
+	if (CurrentHp > 0.0f && Ratio <= WarningHpRatio && GetWorld())
+	{
+		const double Now = GetWorld()->GetTimeSeconds();
+		if (PreviousRatio > WarningHpRatio || (WarningRepeatInterval > 0.0f && Now - LastWarningSoundTime >= WarningRepeatInterval))
+		{
+			LastWarningSoundTime = Now;
+			PlayCageSound(LowHpWarningSound, true);
+		}
+	}
 
 	if (CurrentHp <= 0.0f)
 	{
@@ -152,9 +167,11 @@ void ACage::DestroyCage()
 {
 	if (!CanAdvance() || bIsDestroyed)
 		return;
+
 	bIsDestroyed = true;
 
 	OnCageDestroyed.Broadcast();
+	PlayCageSound(DestroyedSound, true);
 
 	// Actor自体はDestroyせず、非表示にして当たり判定を停止する。
 	// Destroy()すると、このActor自身から復活処理を呼べなくなる。
@@ -165,6 +182,10 @@ void ACage::DestroyCage()
 	// 解放通知が収容配列を更新するため、先にコピーして空にします。
 	const TArray<TObjectPtr<ABoarBase>> ReleasedBoars = CapturedBoars;
 	CapturedBoars.Empty();
+
+	if (ReleasedBoars.Num() > 0)
+		PlayCageSound(BoarReleasedSound, false);
+
 	for (ABoarBase* Boar : ReleasedBoars)
 	{
 		if (IsValid(Boar))
@@ -173,6 +194,7 @@ void ACage::DestroyCage()
 			Boar->ReleaseBoar();
 		}
 	}
+
 	NotifyHousedCountChanged();
 
 	// RespawnDelay秒後にRespawnCageを1回だけ呼び出す。
@@ -191,13 +213,16 @@ void ACage::DestroyCage()
 //檻が再出現する処理。一定時間後に呼ばれる。
 void ACage::RespawnCage()
 {
-	if (!CanAdvance() || !bIsDestroyed) return;
+	if (!CanAdvance() || !bIsDestroyed)
+		return;
 
 	CurrentHp = MaxHp;
 	bIsDestroyed = false;
+	LastWarningSoundTime = -1.0e9;
 
 	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
 	OnRespawned.Broadcast();
+	PlayCageSound(RestoredSound, true);
 
 	//まず、見た目を復活。
 	SetActorHiddenInGame(false);
@@ -206,6 +231,19 @@ void ACage::RespawnCage()
 
 	// 実行済みタイマーのハンドルを明示的にクリアする。
 	GetWorldTimerManager().ClearTimer(RespawnTimerHandle);
+}
+
+void ACage::PlayCageSound(USoundBase* Sound, bool bAs2D) const
+{
+	UGameInstance* Instance = GetGameInstance();
+	auto* Audio = Sound && Instance ? Instance->GetSubsystem<UBoarAudioManagerSubsystem>() : nullptr;
+	if (!Audio)
+		return;
+
+	if (bAs2D)
+		Audio->PlaySoundEffect2D(const_cast<ACage*>(this), Sound);
+	else
+		Audio->PlayWorldSoundEffect(const_cast<ACage*>(this), Sound, GetActorLocation(), nullptr, SoundAttenuation);
 }
 
 bool ACage::CanAdvance() const
@@ -217,7 +255,11 @@ bool ACage::CanAdvance() const
 int32 ACage::GetCapturedBoarCount() const
 {
 	int32 Count = 0;
-	for (const ABoarBase* Boar : CapturedBoars) if (IsValid(Boar) && Boar->IsCaptured()) ++Count;
+
+	for (const ABoarBase* Boar : CapturedBoars)
+		if (IsValid(Boar) && Boar->IsCaptured())
+			++Count;
+
 	return Count;
 }
 
@@ -239,8 +281,9 @@ void ACage::ForgetBoar(ABoarBase* Boar)
 {
 	if (CapturedBoars.Remove(Boar) > 0)
 	{
-		if (Boar) 
+		if (Boar)
 			Boar->OnDestroyed.RemoveDynamic(this, &ACage::HandleHousedBoarDestroyed);
+
 		NotifyHousedCountChanged();
 	}
 }
@@ -263,8 +306,10 @@ void ACage::SetStageStopped(bool bStopped)
 void ACage::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
 	if (!CanAdvance() || bIsDestroyed)
 		return;
+
 	const float Previous = SecondsSinceDamage;
 	SecondsSinceDamage += DeltaSeconds;
 	const float RecoveryTime = FMath::Max(0.0f, SecondsSinceDamage - FMath::Max(Previous, RecoveryDelay));

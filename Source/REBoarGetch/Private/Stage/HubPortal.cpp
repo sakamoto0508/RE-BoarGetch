@@ -1,5 +1,11 @@
 #include "Stage/HubPortal.h"
+#include "Audio/BoarAudioManagerSubsystem.h"
+#include "Audio/BoarLoopingSoundComponent.h"
+#include "Engine/GameInstance.h"
 #include "Components/BoxComponent.h"
+#include "Components/ChildActorComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Player/BoarPlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
@@ -9,29 +15,57 @@
 #include "Gadget/GadgetBase.h"
 #include "GadgetDataAsset.h"
 #include "Engine/TextRenderActor.h"
+#include "Animation/SkeletalMeshActor.h"
 #include "Components/TextRenderComponent.h"
 #include "Stage/BoarLevelDestination.h"
+#include "Stage/BoarLevelTransitionLibrary.h"
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
 #endif
+
+namespace
+{
+	const FName TestVisualTag(TEXT("PortalTestVisual"));
+	const FName TestBarrierTag(TEXT("PortalTestBarrier"));
+	const FName TestLabelTag(TEXT("PortalTestLabel"));
+	const FName TestPreviewTag(TEXT("PortalTestPreview"));
+
+	FString GetTravelPackage(const TSoftObjectPtr<UWorld>& Destination)
+	{
+		return UWorld::RemovePIEPrefix(Destination.ToSoftObjectPath().GetLongPackageName());
+	}
+
+	bool HasTravelMap(const FString& PackageName)
+	{
+		return !PackageName.IsEmpty() && FPackageName::DoesPackageExist(PackageName);
+	}
+}
 
 AHubPortal::AHubPortal()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	Trigger = CreateDefaultSubobject<UBoxComponent>(TEXT("PortalTrigger"));
 	SetRootComponent(Trigger);
+
+	IdleSound = CreateDefaultSubobject<UBoarLoopingSoundComponent>(TEXT("IdleSound"));
+	IdleSound->SetupAttachment(Trigger);
+	IdleSound->AmbienceType = EBoarAmbienceType::PortalIdle;
+
+	// 既定の判定範囲（cm）。各ポータルの大きさはBP／配置側のComponentで調整する。
 	Trigger->SetBoxExtent(FVector(140, 80, 150));
 	Trigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Trigger->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Trigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	Trigger->SetCanEverAffectNavigation(false);
 	Trigger->OnComponentBeginOverlap.AddDynamic(this, &AHubPortal::Enter);
+	Transition.Effect = EACFTransitionEffect::DigitalGlitch;
 }
 
 void AHubPortal::Enter(UPrimitiveComponent*, AActor* Other, UPrimitiveComponent*, int32, bool, const FHitResult&)
 {
 	const APawn* Pawn = Cast<APawn>(Other);
 	auto* PC = Pawn ? Cast<ABoarPlayerController>(Pawn->GetController()) : nullptr;
+
 	if (!bRequiresInteraction)
 		Activate(PC);
 }
@@ -40,12 +74,18 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 {
 	if (!PC || !PC->IsLocalController() || bTravelRequested)
 		return;
+
 	TSoftObjectPtr<UWorld> TravelDestination = GetTravelDestination();
+
 	if (Action == EHubPortalAction::GadgetTest)
 	{
 		auto* GI = GetGameInstance<UBoarGameInstance>();
 		if (!GI || !GI->IsInGadgetLab())
+		{
+			PlayPortalSound(EBoarPortalSound::Reject);
 			return;
+		}
+
 		TravelDestination = GI->GetSelectedTestLevel();
 	}
 	else if (Action != EHubPortalAction::Travel)
@@ -53,29 +93,45 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 		PC->OpenFacilityMenu(Action == EHubPortalAction::Archive);
 		return;
 	}
-	// PIE rewrites soft references to visited worlds. Validate and travel using
-	// the on-disk package, never the transient UEDPIE_<instance>_ package.
-	const FString PackageName = UWorld::RemovePIEPrefix(TravelDestination.ToSoftObjectPath().GetLongPackageName());
-	if (TravelDestination.IsNull() || !FPackageName::DoesPackageExist(PackageName))
+
+	// PIEは訪れたWorldへのSoft Referenceを書き換える。一時的な UEDPIE_<instance>_ Packageではなく、
+	// ディスク上のPackageで検証・遷移する。
+	const FString PackageName = GetTravelPackage(TravelDestination);
+	if (!HasTravelMap(PackageName))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[HubPortal] Missing destination: %s"), *TravelDestination.ToString());
+		UE_LOG(LogTemp, Error, TEXT("[HubPortal] %s: 遷移先のLevel '%s' が無効です"),
+			*GetActorNameOrLabel(), *TravelDestination.ToString());
+		// Test対象未選択のGadget Test Portalもここへ来る。遷移しない操作であることを音で返す。
+		PlayPortalSound(EBoarPortalSound::Reject);
 		return;
 	}
+
 	bTravelRequested = true;
+	PlayPortalSound(EBoarPortalSound::Activate);
+
 	if (bClearTestTargetOnTravel)
 		if (auto* GI = GetGameInstance<UBoarGameInstance>())
 			GI->ClearTestGadget();
-	UGameplayStatics::OpenLevel(this, FName(*PackageName));
+
+	const FBoarLevelTransitionEntry& Effect = bOverrideTransition
+		? Transition
+		: GetDefault<UBoarLevelTransitionSettings>()->GetEntry(TransitionStyle);
+	UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(this, FName(*PackageName), Effect);
 }
 
 TSoftObjectPtr<UWorld> AHubPortal::GetTravelDestination() const
 {
+	const AHubPortal* Defaults = GetClass()->GetDefaultObject<AHubPortal>();
+	if (Defaults->bUseClassDestination)
+		return Defaults->Destination;
+
 	return DestinationAsset ? DestinationAsset->Level : Destination;
 }
 
 void AHubPortal::BeginPlay()
 {
 	Super::BeginPlay();
+
 	if (Action == EHubPortalAction::GadgetTest)
 	{
 		if (auto* GI = GetGameInstance<UBoarGameInstance>())
@@ -83,9 +139,11 @@ void AHubPortal::BeginPlay()
 			// 不正な看板設定はクラッシュさせず、該当看板を非表示にしたうえで原因をログへ出す。
 			for (const FString& Problem : FindGadgetLabelProblems(GadgetLabels, GI))
 				UE_LOG(LogTemp, Warning, TEXT("[HubPortal] %s GadgetLabels: %s"), *GetActorNameOrLabel(), *Problem);
+
 			GI->OnTestGadgetChanged.AddUniqueDynamic(this, &AHubPortal::RefreshTestTarget);
 			GI->OnGadgetsUnlocked.AddUniqueDynamic(this, &AHubPortal::RefreshTestTarget);
 		}
+
 		RefreshTestTarget();
 	}
 }
@@ -96,9 +154,20 @@ void AHubPortal::Interact(ABoarPlayerController* Controller)
 		!Controller->GetPawn() || !Trigger->IsOverlappingActor(Controller->GetPawn()))
 		return;
 	if (Action == EHubPortalAction::Loadout || Action == EHubPortalAction::Archive)
+	{
+		// 入力を押しただけでは鳴らさず、範囲内のローカルPlayerの操作が受理された時だけ鳴らす。
+		PlayPortalSound(EBoarPortalSound::InteractAccepted);
 		Controller->OpenFacilityMenu(Action == EHubPortalAction::Archive);
-	else 
+	}
+	else
 		Activate(Controller);
+}
+
+void AHubPortal::PlayPortalSound(EBoarPortalSound Sound) const
+{
+	if (UGameInstance* GI = GetGameInstance())
+		if (auto* Audio = GI->GetSubsystem<UBoarAudioManagerSubsystem>())
+			Audio->PlayPortalSound(const_cast<AHubPortal*>(this), Sound);
 }
 
 void AHubPortal::EndPlay(const EEndPlayReason::Type Reason)
@@ -108,12 +177,14 @@ void AHubPortal::EndPlay(const EEndPlayReason::Type Reason)
 		GI->OnTestGadgetChanged.RemoveDynamic(this, &AHubPortal::RefreshTestTarget);
 		GI->OnGadgetsUnlocked.RemoveDynamic(this, &AHubPortal::RefreshTestTarget);
 	}
+
 	Super::EndPlay(Reason);
 }
 
 void AHubPortal::RefreshTestTarget()
 {
 	auto* GI = GetGameInstance<UBoarGameInstance>();
+
 	for (const FGadgetCollectionLabel& Entry : GadgetLabels)
 	{
 		auto* Label = Entry.Label.Get();
@@ -123,36 +194,88 @@ void AHubPortal::RefreshTestTarget()
 		const auto Class = GI ? GI->FindGadgetClass(Entry.GadgetId) : nullptr;
 		const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
 		Label->SetActorHiddenInGame(!Def);
+
 		if (Def)Label->GetTextRender()->SetText(FText::Format(FText::FromString(TEXT("{0}  {1}")),
-		                                                      FText::FromString(
-			                                                      GI->IsGadgetUnlocked(Def->GadgetId)
-				                                                      ? TEXT("READY")
-				                                                      : TEXT("LOCKED")), Def->DisplayName));
+			FText::FromString(
+				GI->IsGadgetUnlocked(Def->GadgetId)
+					? TEXT("READY")
+					: TEXT("LOCKED")), Def->DisplayName));
 	}
+
 	const bool bShow = GI && GI->IsInGadgetLab() && !GI->GetSelectedTestGadget().IsNone() && GI->IsGadgetUnlocked(
 		GI->GetSelectedTestGadget());
 	SetActorHiddenInGame(false);
-	const bool bHasLevel = bShow && !GI->GetSelectedTestLevel().IsNull();
-	Trigger->SetCollisionEnabled(bHasLevel ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	const TSoftObjectPtr<UWorld> TestLevel = bShow ? GI->GetSelectedTestLevel() : TSoftObjectPtr<UWorld>();
+	const bool bHasLevel = bShow && HasTravelMap(GetTravelPackage(TestLevel));
+	if (bShow && !TestLevel.IsNull() && !bHasLevel)
+		UE_LOG(LogTemp, Warning, TEXT("[HubPortal] %s: ガジェットテストのLevel '%s' が無効です"),
+			*GetActorNameOrLabel(), *TestLevel.ToString());
 	for (const auto& A : TestVisualActors)
-		if (A)A->SetActorHiddenInGame(!bHasLevel);
+		if (A)
+			A->SetActorHiddenInGame(!bHasLevel);
+
 	for (const auto& A : TestBarrierActors)
 		if (A)
 		{
 			A->SetActorHiddenInGame(bHasLevel);
 			A->SetActorEnableCollision(!bHasLevel);
 		}
+	const auto Class = GI ? GI->FindGadgetClass(GI->GetSelectedTestGadget()) : nullptr;
+	const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
+	const FText LabelText = Def
+		? FText::Format(NSLOCTEXT("HubPortal", "TestTarget", "TEST : {0}{1}"), Def->DisplayName,
+			bHasLevel ? FText::GetEmpty()
+			: NSLOCTEXT("HubPortal", "TestLevelMissing", " - Level未登録"))
+		: NSLOCTEXT("HubPortal", "SelectTestTarget", "SELECT GADGET TO TEST");
+
 	if (TestLabel)
 	{
 		TestLabel->SetActorHiddenInGame(false);
-		const auto Class = GI ? GI->FindGadgetClass(GI->GetSelectedTestGadget()) : nullptr;
-		const auto* Def = Class ? Class.GetDefaultObject()->GetGadgetDefinition() : nullptr;
-		TestLabel->GetTextRender()->SetText(Def
-			                                    ? FText::Format(FText::FromString(TEXT("TEST : {0}{1}")),
-			                                                    Def->DisplayName,
-			                                                    FText::FromString(
-				                                                    bHasLevel ? TEXT("") : TEXT(" - Level未登録")))
-			                                    : FText::FromString(TEXT("SELECT GADGET TO TEST")));
+		TestLabel->GetTextRender()->SetText(LabelText);
+	}
+
+	for (UPrimitiveComponent* Part : TInlineComponentArray<UPrimitiveComponent*>(this))
+	{
+		if (Part->ComponentHasTag(TestVisualTag))
+			Part->SetHiddenInGame(!bHasLevel);
+
+		if (Part->ComponentHasTag(TestBarrierTag))
+		{
+			Part->SetHiddenInGame(bHasLevel);
+			Part->SetCollisionEnabled(bHasLevel ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryAndPhysics);
+		}
+
+		if (Part->ComponentHasTag(TestLabelTag))
+			if (auto* Label = Cast<UTextRenderComponent>(Part))
+				Label->SetText(LabelText);
+	}
+
+	// バリアが開いた後でだけOverlapを有効にする。
+	RefreshTestPreview(bShow ? GI->GetSelectedTestGadget() : NAME_None);
+	Trigger->SetCollisionEnabled(bHasLevel ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+}
+
+void AHubPortal::RefreshTestPreview(FName GadgetId)
+{
+	const TSubclassOf<ASkeletalMeshActor>* PreviewClass = TestPreviewClasses.Find(GadgetId);
+
+	for (UChildActorComponent* Component : TInlineComponentArray<UChildActorComponent*>(this))
+	{
+		if (!Component->ComponentHasTag(TestPreviewTag))
+			continue;
+
+		Component->SetChildActorClass(PreviewClass ? PreviewClass->Get() : nullptr);
+
+		if (auto* Preview = Cast<ASkeletalMeshActor>(Component->GetChildActor()))
+		{
+			Preview->SetActorEnableCollision(false);
+			USkeletalMeshComponent* Mesh = Preview->GetSkeletalMeshComponent();
+			Mesh->SetCastShadow(false);
+
+			if (TestPreviewMaterial)
+				for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
+					Mesh->SetMaterial(Slot, TestPreviewMaterial);
+		}
 	}
 }
 
@@ -162,6 +285,7 @@ TArray<FString> AHubPortal::FindGadgetLabelProblems(const TArray<FGadgetCollecti
 	TArray<FString> Problems;
 	TSet<FName> SeenIds;
 	TSet<const ATextRenderActor*> SeenLabels;
+
 	for (int32 I = 0; I < Labels.Num(); ++I)
 	{
 		const FGadgetCollectionLabel& Entry = Labels[I];
@@ -171,23 +295,27 @@ TArray<FString> AHubPortal::FindGadgetLabelProblems(const TArray<FGadgetCollecti
 		{
 			if (GI && !GI->FindGadgetClass(Entry.GadgetId))
 				Problems.Add(FString::Printf(TEXT("[%d] GadgetId '%s' がGadgetCatalogに存在しません"), I,
-				                             *Entry.GadgetId.ToString()));
+					*Entry.GadgetId.ToString()));
 			bool bDuplicateId = false;
 			SeenIds.Add(Entry.GadgetId, &bDuplicateId);
+
 			if (bDuplicateId)
 				Problems.Add(FString::Printf(TEXT("[%d] GadgetId '%s' が重複しています"), I, *Entry.GadgetId.ToString()));
 		}
+
 		if (!Entry.Label)
 			Problems.Add(FString::Printf(TEXT("[%d] Label Actorが未設定です"), I));
 		else
 		{
 			bool bDuplicateLabel = false;
 			SeenLabels.Add(Entry.Label.Get(), &bDuplicateLabel);
+
 			if (bDuplicateLabel)
 				Problems.Add(FString::Printf(TEXT("[%d] Label Actor '%s' が複数の要素に設定されています"), I,
-				                             *Entry.Label->GetActorNameOrLabel()));
+					*Entry.Label->GetActorNameOrLabel()));
 		}
 	}
+
 	return Problems;
 }
 
@@ -195,17 +323,22 @@ TArray<FString> AHubPortal::FindGadgetLabelProblems(const TArray<FGadgetCollecti
 EDataValidationResult AHubPortal::IsDataValid(FDataValidationContext& Context) const
 {
 	EDataValidationResult Result = Super::IsDataValid(Context);
+
 	// EditorではGameInstanceが無いため、未登録IDの判定はPIE開始時のログで行う。
 	for (const FString& Problem : FindGadgetLabelProblems(GadgetLabels, nullptr))
 	{
 		Context.AddError(FText::FromString(FString::Printf(TEXT("%s GadgetLabels: %s"), *GetActorNameOrLabel(), *Problem)));
 		Result = EDataValidationResult::Invalid;
 	}
-	if (Action == EHubPortalAction::Travel && GetTravelDestination().IsNull())
+
+	const AHubPortal* Defaults = GetClass()->GetDefaultObject<AHubPortal>();
+	if (Action == EHubPortalAction::Travel && (!IsTemplate() || Defaults->bUseClassDestination)
+		&& !HasTravelMap(GetTravelPackage(GetTravelDestination())))
 	{
-		Context.AddError(FText::FromString(FString::Printf(TEXT("%s: 行き先が未設定です（DestinationAsset、またはそのLevel）"), *GetActorNameOrLabel())));
+		Context.AddError(FText::FromString(FString::Printf(TEXT("%s: 有効な遷移先 Level が設定されていません"), *GetActorNameOrLabel())));
 		Result = EDataValidationResult::Invalid;
 	}
+
 	return Result;
 }
 #endif

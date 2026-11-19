@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -28,7 +26,6 @@ class REBOARGETCH_API AGadgetBase : public AActor
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	/** Tickを使用しないガジェットActorの初期状態を構築します。 */
 	AGadgetBase();
 	/** 終了演出中はCooldownを停止します。通常PauseはWorld側で停止します。 */
@@ -71,6 +68,10 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	EGadgetUseStyle GetUseStyle() const { return UseStyle; }
+
+	/** 使用開始が受理されたときに使用者の位置で鳴らすSEです（アミの振り・剣の振り等）。未設定なら無音です。 */
+	class USoundBase* GetUseSound() const { return UseSound; }
+	float GetUseSoundVolume() const { return UseSoundVolume; }
 
 	/**
 	 * 装備時に接続するSocket名を返します。
@@ -130,6 +131,13 @@ protected:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta =(AllowPrivateAccess = "true"))
 	bool bCanMoveWhileUsing = false;
+
+	/** 使用開始が受理されたときのSEです。Cooldown中などで拒否された入力では鳴りません。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Audio", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class USoundBase> UseSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Audio", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float UseSoundVolume = 1.0f;
 
 	/**
 	 * クールタイム中かどうかです。

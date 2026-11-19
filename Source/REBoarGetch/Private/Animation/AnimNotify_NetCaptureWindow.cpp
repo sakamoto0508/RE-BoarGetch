@@ -13,20 +13,17 @@ void UAnimNotify_NetCaptureWindow::Notify(USkeletalMeshComponent* MeshComp, UAni
 
 	if (MeshComp == nullptr)
 		return;
-	
 
 	ABoarPlayerCharacter* PlayerCharacter = Cast<ABoarPlayerCharacter>(MeshComp->GetOwner());
 	if (PlayerCharacter == nullptr)
 		return;
-	
 
 	// Notify時点で装備中のガジェットがネットなら捕獲判定窓を切り替える。
 	UGadgetComponent* GadgetComponent = PlayerCharacter->GetGadgetComponent();
 	ANetGadget* NetGadget = GadgetComponent ? Cast<ANetGadget>(GadgetComponent->GetCurrentGadget()) : nullptr;
-	
-	if (NetGadget == nullptr)	
+	if (NetGadget == nullptr)
 		return;
-	
+
 	if (bEnableCaptureWindow)
 	{
 		// Stun・Downed・装備解除などで使用が中断された後に、止め損ねたMontageや
@@ -36,9 +33,10 @@ void UAnimNotify_NetCaptureWindow::Notify(USkeletalMeshComponent* MeshComp, UAni
 		const int32 MontageInstanceID = MontageContext ? MontageContext->MontageInstanceID : INDEX_NONE;
 		if (!PlayerCharacter->CanOpenNetCaptureWindow(NetGadget, MontageInstanceID))
 		{
-			UE_LOG(LogTemp, Log, TEXT("[Net] Capture window ON ignored: gadget use is not active"));
+			UE_LOG(LogTemp, Log, TEXT("[Net] ガジェット使用中ではないため、捕獲判定窓のONを無視しました"));
 			return;
 		}
+
 		NetGadget->BeginCaptureWindow();
 	}
 	else

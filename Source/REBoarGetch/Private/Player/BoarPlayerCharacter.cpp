@@ -1,6 +1,6 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Player/BoarPlayerCharacter.h"
+#include "Audio/BoarAudioManagerSubsystem.h"
+#include "Engine/GameInstance.h"
 
 #include "Boar/BoarBase.h"
 #include "Core/BoarGameMode.h"
@@ -53,6 +53,7 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 	GadgetComponent = CreateDefaultSubobject<UGadgetComponent>(TEXT("GadgetComponent"));
 	CaptureComponent = CreateDefaultSubobject<UCaptureComponent>(TEXT("CaptureComponent"));
+
 	// 被弾・Stunの演出はGameplay結果のEventを受けて再生する（AKI-163）。
 	HitReactionComponent = CreateDefaultSubobject<UPlayerHitReactionComponent>(TEXT("HitReactionComponent"));
 
@@ -79,6 +80,7 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	GetCharacterMovement()->RotationRate = FRotator(0.f, RotationRate, 0.f);
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->JumpZVelocity = JumpVelocity;
+
 	// Characterの標準ジャンプ回数設定を使って二段ジャンプに対応する。
 	JumpMaxCount = FMath::Max(1, MaxJumpCountSetting);
 	GetCharacterMovement()->AirControl = AirControl;
@@ -107,6 +109,7 @@ void ABoarPlayerCharacter::BeginPlay()
 	{
 		// プレイヤー被弾判定はカプセル接触で受ける。
 		Capsule->OnComponentBeginOverlap.AddDynamic(this, &ABoarPlayerCharacter::OnCapsuleBeginOverlap);
+
 		// Pawn同士がBlockする設定では接触はHitとして届くため、同じ被弾処理へ渡す。
 		Capsule->OnComponentHit.AddDynamic(this, &ABoarPlayerCharacter::OnCapsuleHit);
 	}
@@ -117,26 +120,27 @@ void ABoarPlayerCharacter::BeginPlay()
 		HealthComponent->OnDeath.AddDynamic(this, &ABoarPlayerCharacter::OnDeath);
 	}
 
-	// Stages prepare the player before BeginPlay. Unmanaged lobby worlds and
-	// runtime-spawned players use the same initialization with an explicit context.
+	// ステージではBeginPlay前にGameModeがPlayerを準備済み。GameModeの管理外のLobbyや、
+	// 実行中にSpawnされたPlayerは、ここで同じ初期化を明示的なContextで行う。
 	const auto* Stage = GetWorld()->GetAuthGameMode<ABoarGameMode>();
 	if (!bStageInitialized && (!Stage || Stage->CanAdvanceStage()) &&
 		!InitializeForPlay(BoarGadgetLoadoutInitializer::ResolveContext(GetWorld())))
 	{
 		GetCharacterMovement()->DisableMovement();
-		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Player preparation failed: %s"), *GetName());
+		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Playerの準備に失敗しました: %s"), *GetName());
 	}
 }
 
 bool ABoarPlayerCharacter::InitializeForPlay(const FBoarGadgetLoadoutContext& Context)
 {
-	if (bStageInitialized) 
+	if (bStageInitialized)
 		return true;
 	if (!HealthComponent || !HealthComponent->InitializeHealth()
-		|| !BoarGadgetLoadoutInitializer::Initialize(GadgetComponent, Context)) 
+		|| !BoarGadgetLoadoutInitializer::Initialize(GadgetComponent, Context))
 		return false;
+
 	bStageInitialized = true;
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] Player ready: %s"), *GetName());
+	UE_LOG(LogTemp, Log, TEXT("[StageInit] Playerの準備完了: %s"), *GetName());
 	return true;
 }
 
@@ -169,12 +173,12 @@ void ABoarPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode,
 			// 地上・空中以外（移動無効化など）へ移った場合は継続させない。
 			EndGadgetUse(true);
 		}
+
 		return;
 	}
 
 	if (bIsStunned || bIsDowned || CurrentActionState == EPlayerActionState::Capture)
 		return;
-
 
 	if (GetCharacterMovement() && GetCharacterMovement()->IsFalling())
 	{
@@ -209,6 +213,7 @@ void ABoarPlayerCharacter::Move(const FVector2D& Input)
 	{
 		AddMovementInput(Forward, Input.Y);
 	}
+
 	if (!FMath::IsNearlyZero(Input.X))
 	{
 		AddMovementInput(Right, Input.X);
@@ -217,6 +222,7 @@ void ABoarPlayerCharacter::Move(const FVector2D& Input)
 	// スタン終了時や着地時にも正しい移動状態へ戻せるよう、最後に移動入力があったかを保存しておく。
 	const bool bHasMoveInput = !FMath::IsNearlyZero(Input.X) || !FMath::IsNearlyZero(Input.Y);
 	bHadMoveInput = bHasMoveInput;
+
 	// 地上にいる場合は入力内容に応じて切り替える。
 	UpdateGroundActionState(bHasMoveInput);
 }
@@ -253,7 +259,7 @@ void ABoarPlayerCharacter::StartJump()
 {
 	if (!CanUseMovementActions())
 		return;
-	if (!CanJump()) 
+	if (!CanJump())
 		return;
 
 	// 地上ジャンプ前は0、二段ジャンプ前は1
@@ -262,10 +268,11 @@ void ABoarPlayerCharacter::StartJump()
 		JumpCurrentCount >= 1;
 
 	Jump();
+	PlayPlayerSound(bIsDoubleJump ? PlayerAudio.DoubleJump.Get() : PlayerAudio.Jump.Get());
 
 	SetPlayerActionState(bIsDoubleJump
-		                     ? EPlayerActionState::DoubleJump
-		                     : EPlayerActionState::Jump);
+			? EPlayerActionState::DoubleJump
+			: EPlayerActionState::Jump);
 }
 
 void ABoarPlayerCharacter::StopJump()
@@ -287,15 +294,18 @@ void ABoarPlayerCharacter::StartGadgetUse()
 
 		// 空中かどうかは使用開始のこの時点で確定させ、途中で上昇→下降に変わっても地上用へ切り替えない。
 		const bool bAirNetDrop = ShouldStartAirNetDrop(CurrentGadget);
+
 		// Notifyが捕獲窓を管理する現行仕様では、素材欠落時に別の判定を代用しない。
 		// 使用開始・Cooldown・速度変更より前に拒否し、通常の空中移動をそのまま保つ。
 		if (bAirNetDrop && !HasAirNetDropPresentation())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] Required animation or AnimInstance is missing; use rejected without changing movement or cooldown."));
+			UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] 必要なアニメーションかAnimInstanceが無いため、移動とクールダウンを変えずに使用を却下しました。"));
 			return;
 		}
+
 		// 使用開始後にガジェットが切り替わっても判定できるよう、UseStyleをCharacter側へ保存する。
 		CurrentGadgetUseStyle = CurrentGadget->GetUseStyle();
+
 		if (!GadgetComponent->BeginUseCurrentGadget())
 			return;
 
@@ -316,6 +326,7 @@ void ABoarPlayerCharacter::StartGadgetUse()
 		{
 				// ガジェット使用中は移動入力を受けても動かないようにする。
 				Move->StopMovementImmediately();
+
 				// 移動方向へキャラクターを自動回転させる機能をオフ。
 				Move->bOrientRotationToMovement = false;
 		}
@@ -327,16 +338,19 @@ void ABoarPlayerCharacter::StartGadgetUse()
 		}
 
 		SetPlayerActionState(EPlayerActionState::UseGadget);
+
 		if (bAirNetDrop)
 		{
 			// 空中用AnimationはC++側でFullBodyスロットへ再生する（BPの地上用Montageは再生しない）。
 			if (!BeginAirNetDrop())
 			{
-				UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] Animation could not be played; ending gadget use"));
+				UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] アニメーションを再生できないため、ガジェットの使用を終了します"));
 				EndGadgetUse(true);
 			}
+
 			return;
 		}
+
 		// 地上用MontageはBPが再生するため、呼び出し前後の再生インスタンスを比べて今回の使用分だけを記録する。
 		// 既に再生中の無関係なMontageは記録せず、中断時にも止めない。
 		UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
@@ -384,10 +398,11 @@ void ABoarPlayerCharacter::FinishGadgetUseAnimation(bool bWasInterrupted)
 			AnimInstance ? AnimInstance->GetMontageInstanceForID(GadgetUseMontageInstanceID) : nullptr;
 		if (Instance && Instance->IsActive())
 		{
-			UE_LOG(LogTemp, Verbose, TEXT("[Gadget] Ignored a finish callback from an older gadget montage"));
+			UE_LOG(LogTemp, Verbose, TEXT("[Gadget] 古いガジェットMontageからの終了通知を無視しました"));
 			return;
 		}
 	}
+
 	EndGadgetUse(bWasInterrupted);
 }
 
@@ -410,6 +425,7 @@ bool ABoarPlayerCharacter::CanOpenNetCaptureWindow(const ANetGadget* Gadget, int
 	if (AirNetDropPhase == EAirNetDropPhase::None && MontageInstanceID != INDEX_NONE &&
 		GadgetUseMontageInstanceID != INDEX_NONE && MontageInstanceID != GadgetUseMontageInstanceID)
 		return false;
+
 	return true;
 }
 
@@ -417,14 +433,17 @@ void ABoarPlayerCharacter::StopGadgetUseMontage()
 {
 	UAnimMontage* Montage = GadgetUseMontage;
 	const int32 InstanceID = GadgetUseMontageInstanceID;
+
 	// 停止で届くInterrupted通知が再入しても、記録が消えているため二重に停止しない。
 	GadgetUseMontage = nullptr;
 	GadgetUseMontageInstanceID = INDEX_NONE;
+
 	if (Montage == nullptr || InstanceID == INDEX_NONE)
 		return;
 
 	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
 	FAnimMontageInstance* Instance = AnimInstance ? AnimInstance->GetMontageInstanceForID(InstanceID) : nullptr;
+
 	// 既にBlendOut中・終了済み、または別のMontageに置き換わっている場合は触らない。
 	if (Instance == nullptr || !Instance->IsActive() || Instance->Montage != Montage)
 		return;
@@ -454,7 +473,7 @@ void ABoarPlayerCharacter::SwitchGadgetSlot(int32 SlotIndex)
 	{
 		// 装備に失敗した場合、GadgetComponentは旧Gadgetを装備したまま残す。
 		// Hold使用は終了済みで入力ロックも残らず、旧Gadgetを再度押せば通常どおり使用できる。
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Quick switch to slot %d failed; previous gadget kept equipped"), SlotIndex);
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] スロット %d への素早い切替に失敗したため、前のガジェットを装備したままにします"), SlotIndex);
 	}
 }
 
@@ -464,8 +483,10 @@ void ABoarPlayerCharacter::Capture()
 		return;
 
 	SetPlayerActionState(EPlayerActionState::Capture);
+
 	// 捕獲対象の検索や捕獲成立判定はCaptureComponent側へ任せる。
 	CaptureComponent->Capture(this);
+
 	// Captureが同期的に完了する仕様の場合は、捕獲終了後の地上状態へ戻す。
 	UpdateGroundActionState(bHadMoveInput);
 }
@@ -480,6 +501,7 @@ void ABoarPlayerCharacter::StartDash()
 		return;
 
 	bIsDashing = true;
+	PlayPlayerSound(PlayerAudio.DashStart);
 	ApplyGroundMoveSpeed();
 	UpdateGroundActionState(bHadMoveInput);
 }
@@ -492,7 +514,7 @@ void ABoarPlayerCharacter::StopDash()
 }
 
 //-------------------------------------------------
-// Dash Stamina
+// ---- ダッシュとスタミナ ----
 //-------------------------------------------------
 
 void ABoarPlayerCharacter::ApplyGroundMoveSpeed()
@@ -526,11 +548,13 @@ bool ABoarPlayerCharacter::ShouldDrainDashStamina() const
 	// 移動入力の有無はCMCが入力から作るAccelerationで判断する（入力なしの慣性移動では0）。
 	// IgnoreMoveInput中もAddMovementInputが無視されるため0になる。
 	const FVector InputAccel2D(Move->GetCurrentAcceleration().X, Move->GetCurrentAcceleration().Y, 0.0f);
+
 	if (InputAccel2D.IsNearlyZero())
 		return false;
 
 	// Walking中のVelocityは実際の移動量から求め直されるため、壁へ正面から押し付けている間はほぼ0になる。
 	const FVector Velocity2D(GetVelocity().X, GetVelocity().Y, 0.0f);
+
 	if (Velocity2D.SizeSquared() < FMath::Square(DashDrainMinSpeed))
 		return false;
 
@@ -548,6 +572,7 @@ void ABoarPlayerCharacter::TickStamina(float DeltaSeconds)
 		// 消費・回復ともにDeltaSecondsで積算し、フレームレートに依存しない。
 		CurrentStamina = FMath::Max(0.0f, CurrentStamina - DashDrainPerSecond * DeltaSeconds);
 		TimeSinceStaminaDrain = 0.0f;
+
 		if (CurrentStamina <= 0.0f)
 		{
 			EndDashByExhaustion();
@@ -556,6 +581,7 @@ void ABoarPlayerCharacter::TickStamina(float DeltaSeconds)
 	else
 	{
 		const UCharacterMovementComponent* Move = GetCharacterMovement();
+
 		// 既存仕様ではDash状態のままジャンプすると空中でもDash速度の上限が残る。
 		// 空中は消費しない代わりに、Dashの勢いを保っている間は回復待ちも進めない（Dashジャンプ連打で無償回復しない）。
 		const bool bCarryingDashInAir = bIsDashing && Move && Move->IsFalling() &&
@@ -575,6 +601,7 @@ void ABoarPlayerCharacter::TickStamina(float DeltaSeconds)
 			{
 				CurrentStamina = FMath::Min(MaxStamina, CurrentStamina + StaminaRegenPerSecond * RegenSeconds);
 			}
+
 			// 長時間放置しても値が際限なく増えないよう、遅延を超えた状態のまま上限を設ける。
 			TimeSinceStaminaDrain = FMath::Min(TimeSinceStaminaDrain, StaminaRegenDelay + 1.0f);
 		}
@@ -592,6 +619,7 @@ void ABoarPlayerCharacter::TickStamina(float DeltaSeconds)
 void ABoarPlayerCharacter::EndDashByExhaustion()
 {
 	bDashExhausted = true;
+
 	if (!bIsDashing)
 		return;
 	// 急停止させず、Shiftを離したときと同じDash→Walkの速度遷移（CMCの既定の減速）に任せる。
@@ -604,6 +632,7 @@ void ABoarPlayerCharacter::BroadcastStaminaChanged(bool bForce)
 {
 	if (!bForce && CurrentStamina == LastBroadcastStamina && bDashExhausted == bLastBroadcastDashLocked)
 		return;
+
 	LastBroadcastStamina = CurrentStamina;
 	bLastBroadcastDashLocked = bDashExhausted;
 	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina, bDashExhausted);
@@ -646,7 +675,7 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 	if (!Boar->IsPlayerAttackHitActive())
 		return;
 	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage()) 
+		if (!Mode->CanAdvanceStage())
 			return;
 
 	// 命中情報は被弾が成立する前の位置・移動状態から確定する（Gadget中断やノックバックで変わる前）。
@@ -657,14 +686,19 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 	Away.Z = 0.0;
 	HitInfo.HitDirection = Away.IsNearlyZero() ? -GetActorForwardVector().GetSafeNormal2D() : Away.GetSafeNormal();
 	const UCapsuleComponent* Capsule = GetCapsuleComponent();
+
+	// Capsuleが無い場合はUEの標準的なCharacterの大きさとみなす。
 	const float Radius = Capsule ? Capsule->GetScaledCapsuleRadius() : 34.0f;
 	const float HalfHeight = Capsule ? Capsule->GetScaledCapsuleHalfHeight() : 88.0f;
-	// 攻撃側を向いたCapsule表面の、胴（中心より少し上）の高さを命中位置とする。
-	HitInfo.HitLocation = GetActorLocation() - HitInfo.HitDirection * Radius + FVector(0.0, 0.0, HalfHeight * 0.15);
+
+	// 攻撃側を向いたCapsule表面の、胴（中心よりHalf Heightの15%上）の高さを命中位置とする。
+	constexpr double TorsoHeightRatio = 0.15;
+	HitInfo.HitLocation = GetActorLocation() - HitInfo.HitDirection * Radius + FVector(0.0, 0.0, HalfHeight * TorsoHeightRatio);
 	HitInfo.bAirborne = GetCharacterMovement() && GetCharacterMovement()->IsFalling();
 
 	// ダメージを受けてスタン状態にする
 	HealthComponent->TakeDamage(ContactDamage);
+
 	// HP0ではStunを開始せず、GameOver演出のダウンアニメがStun状態で上書きされないようにする。
 	// カメラ・フラッシュ・SEはGameOver演出（AGameOverPresentationDirector）に任せ、
 	// 最後の一撃が見えるよう衝撃波と頭上の星だけを被弾演出側で出す（bLethal）。
@@ -678,10 +712,11 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 
 	// 多段ヒットを防ぐため、被弾後に短い無敵を付与する。Stun中は別途bIsStunnedで被弾を受け付けない。
 	bIsInvincible = true;
+
 	// 以前の無敵終了Timerが残っている場合は、新しい被弾時間を基準に再設定する。
 	GetWorldTimerManager().ClearTimer(InvincibleTimerHandle);
 	GetWorldTimerManager().SetTimer(InvincibleTimerHandle, this, &ABoarPlayerCharacter::EndInvincible,
-	                                FMath::Max(InvincibleDuration, KINDA_SMALL_NUMBER), false);
+		FMath::Max(InvincibleDuration, KINDA_SMALL_NUMBER), false);
 
 	// Gameplayの結果（ダメージ成立・Stun開始）を確定してから演出へ通知する。
 	// 演出側の失敗・欠落はこの後のStun進行に影響しない。
@@ -692,6 +727,7 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 void ABoarPlayerCharacter::OnDeath()
 {
 	EnterDowned();
+
 	if (ABoarGameMode* GameMode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
 	{
 		GameMode->HandlePlayerDeath(this);
@@ -710,14 +746,18 @@ void ABoarPlayerCharacter::BeginStun(const FBoarPlayerHitInfo& HitInfo)
 {
 	if (bIsDowned)
 		return;
+
 	const bool bWasStunned = bIsStunned;
 	bIsStunned = true;
 	SetPlayerActionState(EPlayerActionState::Stun);
+
 	// ガジェット使用中に被弾した場合はMontageや捕獲判定を中断扱いで終了する（空中アミの重力・AirControlもここで戻る）。
 	EndGadgetUse(true);
 	StopDash();
+
 	// 押しっぱなしのJump入力がスタン解除後に勝手にジャンプとして残らないようにする。
 	StopJumping();
+
 	// このフレームまでに積まれた移動入力を捨て、Stun中の加速に使わせない。
 	ConsumeMovementInputVector();
 	bHadMoveInput = false;
@@ -747,6 +787,7 @@ void ABoarPlayerCharacter::BeginStun(const FBoarPlayerHitInfo& HitInfo)
 		{
 			// 地上では一度止めてから攻撃方向へ短く押し出す。入力はないため、通常の地上減速で自然に止まる。
 			Move->StopMovementImmediately();
+
 			if (Move->IsMovingOnGround())
 				Move->Velocity = Push * StunKnockbackSpeed;
 		}
@@ -760,6 +801,7 @@ void ABoarPlayerCharacter::BeginStun(const FBoarPlayerHitInfo& HitInfo)
 
 	// 開始通知は残り時間の計測（OnStunRecoveryStarted）より先に送る。
 	OnStunStarted.Broadcast(HitInfo);
+
 	if (!bIsStunned)
 		return; // 通知先が同期的にダウン等で打ち切った場合
 
@@ -768,7 +810,7 @@ void ABoarPlayerCharacter::BeginStun(const FBoarPlayerHitInfo& HitInfo)
 		// 着地を待つ。落ち続けても上限でスタン時間の計測へ進み、操作不能が残り続けないようにする。
 		if (StunAirborneMaxWait > 0.0f)
 			GetWorldTimerManager().SetTimer(StunAirborneWaitTimerHandle, this, &ABoarPlayerCharacter::StartStunRecovery,
-			                                StunAirborneMaxWait, false);
+				StunAirborneMaxWait, false);
 		else
 			StartStunRecovery();
 	}
@@ -782,11 +824,13 @@ void ABoarPlayerCharacter::StartStunRecovery()
 {
 	GetWorldTimerManager().ClearTimer(StunAirborneWaitTimerHandle);
 	bStunAwaitingLanding = false;
+
 	if (!bIsStunned || bIsDowned)
 		return;
 
 	GetWorldTimerManager().ClearTimer(StunTimerHandle);
 	OnStunRecoveryStarted.Broadcast(StunDuration);
+
 	if (!bIsStunned)
 		return;
 	// SetTimerは0秒で何もしないため、0秒設定は即時終了として扱う。
@@ -799,20 +843,45 @@ void ABoarPlayerCharacter::StartStunRecovery()
 void ABoarPlayerCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
+
+	// 着地音は1回の着地で通常／強着地のどちらか一方だけ。被弾の尻もち（HitReaction）と空中アミの叩き付けは各専用音に任せる。
+	if (!bIsStunned && !bIsDowned && AirNetDropPhase == EAirNetDropPhase::None)
+	{
+		const float FallSpeed = -GetVelocity().Z;
+		if (FallSpeed >= PlayerAudio.MinLandSpeed)
+		{
+			const bool bHard = FallSpeed >= PlayerAudio.HardLandSpeed && PlayerAudio.HardLand;
+			PlayPlayerSound(bHard ? PlayerAudio.HardLand.Get() : PlayerAudio.Land.Get());
+		}
+	}
+
 	if (!bIsStunned || !bStunAwaitingLanding)
 		return;
 	// 空中被弾の着地：横滑りしたまま座り込まないよう止めてから、しりもち→起き上がりの時間を数え始める。
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 		Move->StopMovementImmediately();
+
 	StartStunRecovery();
+}
+
+void ABoarPlayerCharacter::PlayPlayerSound(USoundBase* Sound, float VolumeMultiplier) const
+{
+	if (!Sound || !GetGameInstance())
+		return;
+
+	if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>())
+		Audio->PlayWorldSoundEffect(const_cast<ABoarPlayerCharacter*>(this), Sound, GetActorLocation(), GetRootComponent(),
+			PlayerAudio.Attenuation, VolumeMultiplier);
 }
 
 void ABoarPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	// Retry・Level遷移・破棄でStunが中断されても、演出側が頭上VFX等を確実に片付けられるよう終了を通知する。
 	FinishStun(true);
+
 	if (UWorld* World = GetWorld())
 		World->GetTimerManager().ClearTimer(InvincibleTimerHandle);
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -820,13 +889,17 @@ void ABoarPlayerCharacter::EnterDowned()
 {
 	if (bIsDowned)
 		return;
+
 	bIsDowned = true;
+
 	// 既に開始していたStunのTimerで通常状態へ戻らないようにし、頭上VFX等の演出も中断扱いで終える。
 	FinishStun(true);
 	EndGadgetUse(true);
 	StopDash();
+
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 		Move->StopMovementImmediately();
+
 	SetPlayerActionState(EPlayerActionState::Down);
 }
 
@@ -842,9 +915,11 @@ void ABoarPlayerCharacter::FinishStun(bool bInterrupted)
 		World->GetTimerManager().ClearTimer(StunTimerHandle);
 		World->GetTimerManager().ClearTimer(StunAirborneWaitTimerHandle);
 	}
+
 	bStunAwaitingLanding = false;
 	const bool bWasStunned = bIsStunned;
 	bIsStunned = false;
+
 	if (!bWasStunned)
 		return;
 
@@ -870,6 +945,7 @@ void ABoarPlayerCharacter::FinishStun(bool bInterrupted)
 	}
 
 	ApplyGroundMoveSpeed();
+
 	if (GetCharacterMovement() && GetCharacterMovement()->IsFalling())
 		SetPlayerActionState(JumpCurrentCount >= 2 ? EPlayerActionState::DoubleJump : EPlayerActionState::Fall);
 	else
@@ -980,6 +1056,7 @@ bool ABoarPlayerCharacter::IsGameplayActionBlocked() const
 	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
 		if (!Mode->CanAdvanceStage())
 			return true;
+
 	return bIsStunned || bIsDowned;
 }
 
@@ -987,6 +1064,7 @@ bool ABoarPlayerCharacter::CanUseMovementActions() const
 {
 	if (IsGameplayActionBlocked())
 		return false;
+
 	return !bIsGadgetInUse || bGadgetUseAllowsMovement;
 }
 
@@ -1017,6 +1095,7 @@ ANetGadget* ABoarPlayerCharacter::GetEquippedNetGadget() const
 bool ABoarPlayerCharacter::ShouldStartAirNetDrop(const AGadgetBase* Gadget) const
 {
 	const UCharacterMovementComponent* Move = GetCharacterMovement();
+
 	// Jump上昇中・二段ジャンプ中・落下中はいずれもFalling。
 	return Cast<ANetGadget>(Gadget) && Move && Move->IsFalling();
 }
@@ -1041,6 +1120,7 @@ bool ABoarPlayerCharacter::BeginAirNetDrop()
 	SavedAirNetDropAirControl = Move->AirControl;
 	bAirNetDropMovementOverridden = true;
 	Move->AirControl = SavedAirNetDropAirControl * AirNetDropHorizontalControlMultiplier;
+
 	// 予備動作：上昇を止め、重力を弱めて一瞬ためる。
 	Move->Velocity.Z = FMath::Min(Move->Velocity.Z, AirNetDropAnticipationMaxRiseSpeed);
 	Move->GravityScale = SavedAirNetDropGravityScale * AirNetDropAnticipationGravityMultiplier;
@@ -1059,6 +1139,7 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 		// Swingも急降下中として数える。見た目の再生速度・長さにかかわらず、
 		// Gameplayの上限に達したフレームでは追加加速・掃引より先に終了する。
 		AirNetDropDiveElapsed += FMath::Max(DeltaSeconds, 0.0f);
+
 		if (AirNetDropDiveElapsed >= FMath::Max(0.0f, AirNetDropMaxDiveDuration))
 		{
 			BeginAirNetDropRecovery();
@@ -1080,11 +1161,13 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 	case EAirNetDropPhase::Anticipation:
 	{
 		Move->Velocity.Z = FMath::Min(Move->Velocity.Z, AirNetDropAnticipationMaxRiseSpeed);
+
 		// 次のAnimationへクロスフェードできるよう、ブレンド時間ぶん早めに切り替える。
 		if (AirNetDropPhaseElapsed >= FMath::Max(0.0f, AirNetDropAnticipationDuration - AirNetDropBlendTime))
 		{
 			BeginAirNetDropDive();
-			if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing)) 
+
+			if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing))
 				EndGadgetUse(true);
 		}
 		break;
@@ -1100,7 +1183,7 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 			const float SwingDuration = AirNetDropSwingAnimation->GetPlayLength() / FMath::Max(0.1f, AirNetDropSwingPlayRate);
 			if (AirNetDropPhaseElapsed >= FMath::Max(0.0f, SwingDuration - AirNetDropBlendTime))
 			{
-				if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) 
+				if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop))
 					EndGadgetUse(true);
 			}
 		}
@@ -1114,10 +1197,12 @@ void ABoarPlayerCharacter::TickAirNetDrop(float DeltaSeconds)
 void ABoarPlayerCharacter::BeginAirNetDropRecovery()
 {
 	// Capture OFF Notifyが未到達でも、時間上限を過ぎて捕獲性能を延長しない。
-	if (ANetGadget* NetGadget = GetEquippedNetGadget()) 
+	if (ANetGadget* NetGadget = GetEquippedNetGadget())
 		NetGadget->EndCaptureWindow();
+
 	RestoreAirNetDropMovement();
-	if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery)) 
+
+	if (!EnterAirNetDropPhase(EAirNetDropPhase::Recovery))
 		EndGadgetUse(true);
 }
 
@@ -1152,7 +1237,8 @@ bool ABoarPlayerCharacter::EnterAirNetDropPhase(EAirNetDropPhase NewPhase)
 		return PlayAirNetDropAnimation(AirNetDropSwingAnimation, AirNetDropSwingPlayRate, 1, 0.0f);
 	case EAirNetDropPhase::Drop:
 		// 着地か最大急降下時間まで構えを保持する（ループ回数は十分大きく取る）。
-		return PlayAirNetDropAnimation(AirNetDropLoopAnimation, 1.0f, 1000, 0.0f);
+		// 着地まで回し続けるため、実質無限のループ回数を指定する（着地時にLandingへ切り替える）。
+		return PlayAirNetDropAnimation(AirNetDropLoopAnimation, 1.0f, /*LoopCount=*/1000, 0.0f);
 	case EAirNetDropPhase::Recovery:
 		return PlayAirNetDropAnimation(AirNetDropRecoveryAnimation, 1.0f, 1, 0.0f);
 	default:
@@ -1196,6 +1282,7 @@ void ABoarPlayerCharacter::RestoreAirNetDropMovement()
 		return;
 
 	bAirNetDropMovementOverridden = false;
+
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
 		Move->GravityScale = SavedAirNetDropGravityScale;
@@ -1206,6 +1293,7 @@ void ABoarPlayerCharacter::RestoreAirNetDropMovement()
 void ABoarPlayerCharacter::EndAirNetDrop()
 {
 	RestoreAirNetDropMovement();
+
 	if (AirNetDropPhase == EAirNetDropPhase::None)
 		return;
 
@@ -1235,6 +1323,7 @@ bool ABoarPlayerCharacter::PlayAirNetDropAnimation(UAnimSequenceBase* Animation,
 	UAnimMontage* Montage = AnimInstance->PlaySlotAnimationAsDynamicMontage(Animation, AirNetDropSlotName,
 		AirNetDropBlendTime, AirNetDropBlendTime, PlayRate, LoopCount, -1.0f, StartTime);
 	AirNetDropMontage = Montage;
+
 	if (Montage == nullptr)
 		return false;
 
@@ -1247,6 +1336,7 @@ bool ABoarPlayerCharacter::PlayAirNetDropAnimation(UAnimSequenceBase* Animation,
 void ABoarPlayerCharacter::ClearAirNetDropMontageDelegate()
 {
 	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+
 	// ブレンドアウト中のインスタンスにも届くよう、再生中かどうかに関わらず外す。
 	if (AnimInstance && AirNetDropMontage)
 	{
@@ -1261,6 +1351,7 @@ void ABoarPlayerCharacter::OnAirNetDropMontageEnded(UAnimMontage* Montage, bool 
 		return;
 
 	AirNetDropMontage = nullptr;
+
 	if (bInterrupted)
 	{
 		// GameOver・Clear演出など外部のMontageに割り込まれた場合は中断終了する。
@@ -1273,12 +1364,15 @@ void ABoarPlayerCharacter::OnAirNetDropMontageEnded(UAnimMontage* Montage, bool 
 	case EAirNetDropPhase::Anticipation:
 		// 通常はTick側が先に切り替えるが、低FPSでAnimationが先に終わった場合もここで進める。
 		BeginAirNetDropDive();
-		if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing)) 
+
+		if (!EnterAirNetDropPhase(EAirNetDropPhase::Swing))
 			EndGadgetUse(true);
+
 		break;
 	case EAirNetDropPhase::Swing:
-		if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop)) 
+		if (!EnterAirNetDropPhase(EAirNetDropPhase::Drop))
 			EndGadgetUse(true);
+
 		break;
 	case EAirNetDropPhase::Drop:
 		BeginAirNetDropRecovery();

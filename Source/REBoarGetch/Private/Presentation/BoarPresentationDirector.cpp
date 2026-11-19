@@ -22,10 +22,11 @@ void ABoarPresentationDirector::BeginPresentation(ABoarPlayerController* InContr
 
 void ABoarPresentationDirector::FinishPresentation()
 {
-	if (bFinished) 
+	if (bFinished)
 		return;
+
 	bFinished = true;
-	UE_LOG(LogTemp, Log, TEXT("[Presentation] %s finished after %.2fs"), *GetClass()->GetName(), Age);
+	UE_LOG(LogTemp, Log, TEXT("[Presentation] %s 終了（%.2f秒）"), *GetClass()->GetName(), Age);
 	OnFinished.ExecuteIfBound();
 }
 
@@ -56,12 +57,13 @@ void ABoarPresentationDirector::PlayPresentationBGM(USoundBase* Music, float Fad
 void ABoarPresentationDirector::StopStageBGM(float FadeOutTime)
 {
 	if (GetGameInstance())
-		if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()) Audio->StopBGM(FadeOutTime);
+		if (auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>())
+			Audio->StopBGM(FadeOutTime);
 }
 
 void ABoarPresentationDirector::SetPlayerHUDHidden(bool bHideHUD)
 {
-	if (Controller.IsValid()) 
+	if (Controller.IsValid())
 		Controller->SetPlayerHUDHidden(bHideHUD);
 }
 
@@ -69,10 +71,14 @@ void ABoarPresentationDirector::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	const double Now = GetWorld()->GetRealTimeSeconds();
+
+	// ヒッチやブレークポイントで大きく飛んでも、演出が1フレームで進みすぎないよう0.1秒で打ち切る。
 	const float Dt = FMath::Clamp(float(Now - LastRealTime), 0.f, .1f);
 	LastRealTime = Now;
 	Age += Dt;
+
 	// ヒットストップ中もBPのDelay / Timelineが実時間で進むよう、Global Time Dilationを打ち消します。
-	CustomTimeDilation = 1.f / FMath::Max(UGameplayStatics::GetGlobalTimeDilation(this), .0001f);
+	constexpr float MinTimeDilation = .0001f; // 0除算防止
+	CustomTimeDilation = 1.f / FMath::Max(UGameplayStatics::GetGlobalTimeDilation(this), MinTimeDilation);
 	TickPresentation(Dt);
 }

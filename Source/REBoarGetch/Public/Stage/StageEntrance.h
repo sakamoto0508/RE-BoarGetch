@@ -2,9 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Stage/BoarLevelTransitionLibrary.h"
 #include "StageEntrance.generated.h"
 
 class UBoxComponent;
+class UBoarLoopingSoundComponent;
 class UBoarLobbyWidget;
 class UPrimitiveComponent;
 class USceneComponent;
@@ -28,7 +30,17 @@ public:
     /** Lobby共通Interactで、範囲内の入口だけを操作します。 */
     bool CanInteract(const class APlayerController* Controller) const;
     void Interact(class APlayerController* Controller);
-    UPROPERTY(EditAnywhere, Category="Interaction") bool bRequiresInteraction=true;
+
+    UPROPERTY(EditAnywhere, Category="Interaction")
+    bool bRequiresInteraction=true;
+
+	/** オンにすると、この入口から出発するときだけ Transition の演出を使います。オフのときは Project Settings > Game > Boar Level Transitions の Stage Departure。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="REBoarGetch|Stage|Transition", meta=(InlineEditConditionToggle))
+	bool bOverrideTransition=false;
+
+	/** この入口からステージへ出発するときの演出（Effect、または長さ・色まで調整したPreset）。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="REBoarGetch|Stage|Transition", meta=(EditCondition="bOverrideTransition"))
+	FBoarLevelTransitionEntry Transition;
 
 protected:
 	/** @brief Level終了時にWidgetと入力状態を後始末します。 */
@@ -73,6 +85,10 @@ private:
 	/** Pawnの進入・退出を検知するOverlap専用Boxです。 */
 	UPROPERTY(VisibleAnywhere, Category = "REBoarGetch|Stage")
 	TObjectPtr<UBoxComponent> Trigger;
+
+	/** 入口（Stage Select Portal）の待機ループ音です。既定はProject SettingsのAmbience Portal Idleです。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "REBoarGetch|Stage|Audio", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UBoarLoopingSoundComponent> IdleSound;
 
 	/** UI表示内容、クリア条件、遷移先Levelを持つステージ設定です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))

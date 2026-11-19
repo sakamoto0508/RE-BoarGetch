@@ -25,6 +25,7 @@ UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UGameOverPresentationComponent : public UActorComponent
 {
  GENERATED_BODY()
+
 public:
  UGameOverPresentationComponent();
  /** GameModeから1回だけ呼びます。開始できない場合はfalseを返し、呼び出し側は従来どおり即時完了します。 */
@@ -33,23 +34,41 @@ public:
  void CancelPresentation();
  /** GameOver UI表示時にControllerから呼び、演出BPへ通知します（敗北ジングル、警告ラインを控えめに残す）。 */
  void NotifyGameOverUIShown();
- UFUNCTION(BlueprintPure, Category="GameOver Presentation") bool IsPresentationActive() const { return Phase == EGameOverPresentationPhase::Playing; }
- UFUNCTION(BlueprintPure, Category="GameOver Presentation") EGameOverPresentationPhase GetPhase() const { return Phase; }
- /** 演出開始からの経過秒数（実時間）。 */
- UFUNCTION(BlueprintPure, Category="GameOver Presentation") float GetPresentationAge() const;
- UFUNCTION(BlueprintPure, Category="GameOver Presentation") AGameOverPresentationDirector* GetDirector() const { return Director; }
 
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GameOver Presentation", meta=(ToolTip="OFFの場合は演出を行わず、従来どおりGameOver確定後すぐUIを表示します。")) bool bEnabled = true;
+ UFUNCTION(BlueprintPure, Category="GameOver Presentation")
+ bool IsPresentationActive() const { return Phase == EGameOverPresentationPhase::Playing; }
+
+ UFUNCTION(BlueprintPure, Category="GameOver Presentation")
+ EGameOverPresentationPhase GetPhase() const { return Phase; }
+
+ /** 演出開始からの経過秒数（実時間）。 */
+ UFUNCTION(BlueprintPure, Category="GameOver Presentation")
+ float GetPresentationAge() const;
+
+ UFUNCTION(BlueprintPure, Category="GameOver Presentation")
+ AGameOverPresentationDirector* GetDirector() const { return Director; }
+
+ /** OFFの場合は演出を行わず、従来どおりGameOver確定後すぐUIを表示します。 */
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GameOver Presentation")
+ bool bEnabled = true;
+
  /** 演出の内容（順序・タイミング・Montage・カメラ・警告UI・SE）を持つBP。未設定なら演出なしで即UIへ進みます。 */
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GameOver Presentation") TSubclassOf<AGameOverPresentationDirector> DirectorClass;
- UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GameOver Presentation", meta=(ClampMin="1", ToolTip="演出BPが完了報告しない場合でもUIへ進む上限時間（実時間・秒）。")) float SafetyTimeout = 6.f;
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GameOver Presentation")
+ TSubclassOf<AGameOverPresentationDirector> DirectorClass;
+
+ /** 演出BPが完了報告しない場合でもUIへ進む上限時間（実時間・秒）。 */
+ UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GameOver Presentation", meta=(ClampMin="1"))
+ float SafetyTimeout = 6.f;
 
 protected:
  virtual void EndPlay(const EEndPlayReason::Type Reason) override;
  virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 private:
  void Finish();
  EGameOverPresentationPhase Phase = EGameOverPresentationPhase::Idle;
  double StartRealTime = 0.0;
- UPROPERTY(Transient) TObjectPtr<AGameOverPresentationDirector> Director;
+
+ UPROPERTY(Transient)
+ TObjectPtr<AGameOverPresentationDirector> Director;
 };

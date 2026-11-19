@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Components/SlateWrapperTypes.h"
+#include "Audio/BoarAudioTypes.h"
 #include "BoarUIFlowComponent.generated.h"
 
 class ABoarPlayerController;
@@ -20,6 +21,7 @@ UCLASS()
 class REBOARGETCH_API UBoarUIFlowComponent : public UActorComponent
 {
 	GENERATED_BODY()
+
   public:
 	void Shutdown();
 	bool IsPauseMenuOpen() const
@@ -30,20 +32,35 @@ class REBOARGETCH_API UBoarUIFlowComponent : public UActorComponent
 	void TogglePauseMenu();
 	void HandleMenuBack();
 	void OpenLoadoutMenu();
-	UFUNCTION() void CloseLoadoutMenu();
+
+	UFUNCTION()
+	void CloseLoadoutMenu();
+
 	void OpenEncyclopedia(UUserWidget *ParentMenu, UWidget *ReturnFocus);
-	UFUNCTION() void CloseEncyclopedia();
+
+	UFUNCTION()
+	void CloseEncyclopedia();
+
 	void CloseEncyclopediaFrom(UUserWidget *ParentMenu);
 	void OpenSettingsMenu(UUserWidget *ParentMenu, UWidget *ReturnFocus);
-	UFUNCTION() void CloseSettingsMenu();
+
+	UFUNCTION()
+	void CloseSettingsMenu();
+
 	void OpenPauseMenu();
 	void ResumeFromPause();
 	void LeaveStageFromPause();
 	void RemoveLobbyExitConfirmation();
-	UFUNCTION() void ResolveLobbyExit(bool bConfirmed);
+
+	UFUNCTION()
+	void ResolveLobbyExit(bool bConfirmed);
+
 	void OpenFacilityMenu(bool bArchive);
 	void OpenArchiveDisplaySelection();
-	UFUNCTION() void CloseArchiveDisplaySelection();
+
+	UFUNCTION()
+	void CloseArchiveDisplaySelection();
+
 	void CloseFacilityMenuInput();
 	/** ステージ選択画面を開けるか。他のメニュー表示中・Level遷移中は開きません。 */
 	bool CanOpenStageSelection() const;
@@ -59,20 +76,44 @@ class REBOARGETCH_API UBoarUIFlowComponent : public UActorComponent
 	 */
 	void CloseStageSelection(UUserWidget* Menu, bool bLevelEnding);
 	bool IsStageSelectionOpen() const { return StageSelectionMenu != nullptr; }
+
   private:
 	ABoarPlayerController *GetController() const;
-	UPROPERTY(Transient) TObjectPtr<UBoarArchiveSelectionWidget> ArchiveSelectionWidget;
-	UPROPERTY(Transient) TObjectPtr<UBoarEncyclopediaWidget> EncyclopediaWidget;
-	UPROPERTY(Transient) TObjectPtr<UUserWidget> EncyclopediaParent;
-	UPROPERTY(Transient) TObjectPtr<UWidget> EncyclopediaReturnFocus;
-	UPROPERTY(Transient) TObjectPtr<UBoarConfirmationWidget> LobbyExitConfirmation;
-	UPROPERTY(Transient) TObjectPtr<UBoarSettingsWidget> SettingsWidget;
-	UPROPERTY(Transient) TObjectPtr<UUserWidget> SettingsParent;
-	UPROPERTY(Transient) TObjectPtr<UWidget> SettingsReturnFocus;
-	UPROPERTY(Transient) TObjectPtr<UBoarLoadoutWidget> LoadoutWidget;
-	UPROPERTY(Transient) TObjectPtr<UBoarPauseWidget> PauseWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarArchiveSelectionWidget> ArchiveSelectionWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarEncyclopediaWidget> EncyclopediaWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> EncyclopediaParent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UWidget> EncyclopediaReturnFocus;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarConfirmationWidget> LobbyExitConfirmation;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarSettingsWidget> SettingsWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> SettingsParent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UWidget> SettingsReturnFocus;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarLoadoutWidget> LoadoutWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBoarPauseWidget> PauseWidget;
+
 	/** 表示中のステージ選択画面。Widgetの生成・破棄はAStageEntrance、入力状態はUIFlowが所有します。 */
-	UPROPERTY(Transient) TObjectPtr<UUserWidget> StageSelectionMenu;
+	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> StageSelectionMenu;
+
 	ESlateVisibility EncyclopediaParentVisibility = ESlateVisibility::Visible;
 	ESlateVisibility SettingsParentVisibility = ESlateVisibility::SelfHitTestInvisible;
 	bool bFacilityMenuOpen = false;
@@ -80,4 +121,9 @@ class REBOARGETCH_API UBoarUIFlowComponent : public UActorComponent
 	bool bFacilityAddedUIContext = false;
 	bool bEncyclopediaGameAndUI = false;
 	bool bEncyclopediaAddedUIContext = false;
+
+	/** 0より大きい間はUI SEを鳴らしません。親画面を閉じる処理が子画面を連鎖して閉じる間・Shutdown中に使います。 */
+	int32 UISoundMute = 0;
+	/** UI共通SE（Project Settings）を鳴らします。 */
+	void PlayFlowSound(EBoarUISound Sound);
 };

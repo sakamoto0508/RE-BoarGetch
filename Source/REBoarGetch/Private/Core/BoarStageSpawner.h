@@ -18,5 +18,5 @@ namespace BoarStageSpawner
 	bool SpawnConfiguredBoars(UWorld* World, const UStageConfig* StageConfig);
 	/** SpecialCoinDefinitionsから未取得のコインだけを生成します。定義が空ならtrueを返します。 */
 	bool SpawnConfiguredSpecialCoins(UWorld* World, const UStageConfig* StageConfig,
-	                                 TSubclassOf<ASpecialCoin> SpecialCoinClass, const UBoarSaveGame* Progress);
+		TSubclassOf<ASpecialCoin> SpecialCoinClass, const UBoarSaveGame* Progress);
 }

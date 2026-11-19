@@ -35,4 +35,11 @@ Stage 1 を作り直したもの。草原と研究施設がある箱庭型のス
 - NavMesh：エディタは、アセットのコンパイルが終わるまで `AsyncLoadLock` で Build() を無視する。そのため `ue_build_level.py` は池・橋・丘の3点が NavMesh に乗るまで再ビルドを繰り返す。
 - PIE検証の前に `Saved/SaveGames` をスクラッチにバックアップし、終了時に元へ戻す。
 - コリジョン：Collision Preset が BlockAll でも、単純コリジョン形状がないメッシュはキャラクターを止めない。自作の小物には `ue_fix_collision.py`（GUIエディタ必須）でボックスを付けてある。既存パックの岩・崖・樽などは `Meshes/Reused/` に複製し、そちらにコリジョンを付けて Level の配置を差し替えた（元のアセットは変更していない）。対応表は `s01r_dressing.REUSED`。
+- 水場の進入防止：池と小川の水面に見えないブロッカー `S01_WaterBlock_*`（48個、フォルダ `Stage01/WaterBlock`）を置いてある。Pawn だけをブロックし、カメラ・Visibility・網は通す。高さは水面 -150〜+950 cm で、上に乗れない。各ブロッカーには NavModifier（NavArea_Null）があり、水の上の NavMesh を消してイノシシの経路から外している。木橋の下だけは空けてある。範囲は `Scripts/s01r_water.py`、配置と NavMesh 再ビルドは `Scripts/ue_patch_water.py`（GUIエディタ。再実行すると古いブロッカーを消して置き直す）、確認は `Scripts/ue_dump_water.py` と `Scripts/ue_check_water_block.py`（ヘッドレス）。`ue_build_level.py` で Level を作り直したときは、`ue_patch_water.py` も実行し直すこと。
 - Level の名前はエディタ上で `L_Stage01` に変更された。`ue_build_level.py` で作り直すと S01R の配置がすべて置き直され、手作業の変更が消える。既存の Level を直すときは `ue_patch_collision_level.py` のように差分だけ当てる。
+
+## Stage Select ジオラマ（`Diorama/`、2026-11-20 作り直し）
+`BP_Stage01_Diorama` は、Engine 基本形状 53 個の構成から、Stage 2 と同じ方式の頂点カラー Mesh 2 個に置き換えた（旧パーツ一覧は `Logs/stage01_diorama_old_parts.json`）。
+- `Diorama/build_diorama_s01.py`（Blender）：`SourceArt/Stage02/Diorama/build_diorama.py` をライブラリとして使い、`s01r_layout.height()` を 150 cm グリッドで再サンプル（水平 0.11 倍、高さは 2.2 倍に誇張）。プレイ範囲と研究所の敷地を角丸輪郭で切り抜き、土の側面・道・池・小川・滝を作る。檻と足場、研究施設、ドーム、アンテナ、研究所の柵とゲート、見張り台、風車、木橋、ボラード、木箱は Stage01Redesign の FBX 原本を使い、Stage 2 と同じ絶対縮尺で置く。
+- `Diorama/ue_apply_diorama_s01.py`（ヘッドレス、エディタを閉じて実行）：`/Game/UI/StagePreview/Meshes/SM_S01_Diorama_{Island,Props}` を取り込み、BP のパーツを Yaw 135（開始地点が手前、研究所が奥）・Z -80（手前下端が Stage 2 と同じ画面位置）に差し替える。
+- 検証と撮影は Stage 2 と共通：`SourceArt/Stage02/Diorama/ue_verify_diorama.py`、`capture_dioramas.py`、`build_select_mockups.js`。

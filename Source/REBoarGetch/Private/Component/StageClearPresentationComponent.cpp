@@ -26,15 +26,17 @@ void UStageClearPresentationComponent::EndPlay(const EEndPlayReason::Type Reason
 bool UStageClearPresentationComponent::StartPresentation()
 {
 	// 多重起動防止：1回のStageで開始できるのは1度だけです。演出BP未設定なら呼び出し側が即時完了します。
-	if (!bEnabled || !DirectorClass || Phase != EStageClearPresentationPhase::Idle) 
+	if (!bEnabled || !DirectorClass || Phase != EStageClearPresentationPhase::Idle)
 		return false;
+
 	const auto* PC = Cast<ABoarPlayerController>(GetOwner());
-	if (!PC || !PC->IsLocalController() || !PC->GetPawn()) 
+	if (!PC || !PC->IsLocalController() || !PC->GetPawn())
 		return false;
+
 	Phase = EStageClearPresentationPhase::WaitingCapture;
 	PhaseAge = TotalAge = 0.f;
 	SetComponentTickEnabled(true);
-	UE_LOG(LogTemp, Log, TEXT("[StageClear] Presentation requested"));
+	UE_LOG(LogTemp, Log, TEXT("[StageClear] 演出を要求しました"));
 	return true;
 }
 
@@ -46,15 +48,17 @@ void UStageClearPresentationComponent::BeginDirector()
 	Params.Owner = PC;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	Director = PC
-		           ? GetWorld()->SpawnActor<AStageClearPresentationDirector>(
-			           DirectorClass, FTransform::Identity, Params)
-		           : nullptr;
+			? GetWorld()->SpawnActor<AStageClearPresentationDirector>(
+				DirectorClass, FTransform::Identity, Params)
+			: nullptr;
+
 	if (!Director)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StageClear] Presentation director could not be spawned; showing Result."));
+		UE_LOG(LogTemp, Warning, TEXT("[StageClear] 演出Directorを生成できないため、Resultを表示します。"));
 		Finish();
 		return;
 	}
+
 	Phase = EStageClearPresentationPhase::Playing;
 	PhaseAge = 0.f;
 	Director->BeginPresentation(PC, FSimpleDelegate::CreateUObject(this, &UStageClearPresentationComponent::Finish));
@@ -64,53 +68,63 @@ void UStageClearPresentationComponent::TickComponent(float DeltaTime, ELevelTick
                                                      FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	// ヒッチで大きく飛んでも演出の段階を飛ばさないよう、1フレームの進みを0.1秒までにする。
 	const float Dt = FMath::Min(DeltaTime, .1f);
 	TotalAge += Dt;
 	PhaseAge += Dt;
+
 	if (Phase == EStageClearPresentationPhase::WaitingCapture)
 	{
 		const auto* PC = Cast<ABoarPlayerController>(GetOwner());
 		UCapturePresentationComponent* Capture = PC ? PC->CapturePresentation.Get() : nullptr;
-		if (Capture && Capture->HasPendingCaptures() && PhaseAge < CaptureWaitTimeout) 
+		if (Capture && Capture->HasPendingCaptures() && PhaseAge < CaptureWaitTimeout)
 			return;
-		if (Capture && Capture->HasPendingCaptures()) 
+		if (Capture && Capture->HasPendingCaptures())
 			Capture->CancelPresentation();
+
 		BeginDirector();
 		return;
 	}
+
 	// 演出BPが完了報告しない・Playerが消えた場合も、残りを省略してResultへ進めます。
 	if (Phase == EStageClearPresentationPhase::Playing && (TotalAge > SafetyTimeout || !IsValid(Director)))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StageClear] Presentation timed out or director lost; showing Result."));
+		UE_LOG(LogTemp, Warning, TEXT("[StageClear] 演出がタイムアウトしたかDirectorが失われたため、Resultを表示します。"));
 		Finish();
 	}
 }
 
 void UStageClearPresentationComponent::Finish()
 {
-	if (Phase != EStageClearPresentationPhase::WaitingCapture && Phase != EStageClearPresentationPhase::Playing) 
+	if (Phase != EStageClearPresentationPhase::WaitingCapture && Phase != EStageClearPresentationPhase::Playing)
 		return;
+
 	Phase = EStageClearPresentationPhase::Finished;
 	SetComponentTickEnabled(false);
-	UE_LOG(LogTemp, Log, TEXT("[StageClear] Presentation finished after %.2fs"), TotalAge);
+	UE_LOG(LogTemp, Log, TEXT("[StageClear] 演出終了（%.2f秒）"), TotalAge);
+
 	// 演出BPはResult表示中も残し、勝利カメラ・消失状態を保持します（Level遷移で破棄）。
-	if (auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr) 
+	if (auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
 		Mode -> CompleteStageEndPresentation();
 }
 
 void UStageClearPresentationComponent::NotifyResultShown()
 {
-	if (IsValid(Director)) 
+	if (IsValid(Director))
 		Director->OnResultShown();
 }
 
 void UStageClearPresentationComponent::CancelPresentation()
 {
-	if (Phase == EStageClearPresentationPhase::Idle) 
+	if (Phase == EStageClearPresentationPhase::Idle)
 		return;
+
 	SetComponentTickEnabled(false);
-	if (IsValid(Director)) 
+
+	if (IsValid(Director))
 		Director->Destroy();
+
 	Director = nullptr;
 	Phase = EStageClearPresentationPhase::Idle;
 }

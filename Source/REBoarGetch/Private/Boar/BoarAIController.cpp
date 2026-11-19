@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "BoarAIController.h"
 #include "Components/StateTreeAIComponent.h"
 #include "Core/BoarGameMode.h"
@@ -23,6 +20,7 @@ void ABoarAIController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 
 	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
+
 	// Preparing中はGameModeのPlaying遷移で開始します。
 	if (StateTreeAI && (!Mode || Mode->CanAdvanceStage()))
 	{

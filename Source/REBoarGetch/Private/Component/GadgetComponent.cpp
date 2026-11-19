@@ -7,17 +7,16 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
 #include "Player/BoarPlayerCharacter.h"
+#include "Sound/SoundBase.h"
 
-
-// Sets default values for this component's properties
 UGadgetComponent::UGadgetComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	// ゲーム開始前からスロット数を固定しておく。 
+
+	// ゲーム開始前からスロット数を固定しておく。
 	// 実際の装備内容は所有者がInitializeResolvedLoadoutへ渡す。
 	EquippedGadgetSlots.SetNum(MaxGadgetSlots);
 }
-
 
 bool UGadgetComponent::InitializeResolvedLoadout(const TArray<TSubclassOf<AGadgetBase>>& Slots,
                                                  UBoarGadgetSubsystem* Progress, bool bTemporary)
@@ -27,24 +26,27 @@ bool UGadgetComponent::InitializeResolvedLoadout(const TArray<TSubclassOf<AGadge
 		return true;
 	if (Slots.Num() != MaxGadgetSlots || !Cast<APawn>(GetOwner()))
 		return false;
+
 	GadgetProgress = Progress;
 	bTemporaryLoadout = bTemporary;
 	OwningPawn = Cast<APawn>(GetOwner());
 	EquippedGadgetSlots = Slots;
+
 	// スロット0から順番に確認し最初にガジェットが登録されているスロットを初期装備にする。
 	const int32 FirstSlot = FindFirstValidSlot();
 	if (FirstSlot != INDEX_NONE)
 	{
 		const bool bEquipped = SwitchGadgetBySlot(FirstSlot);
-		UE_LOG(LogTemp, Log, TEXT("[Gadget] Initial slot %d equip: %s"),
-		       FirstSlot, bEquipped ? TEXT("success") : TEXT("failed"));
+		UE_LOG(LogTemp, Log, TEXT("[Gadget] 初期スロット %d の装備: %s"),
+			FirstSlot, bEquipped ? TEXT("success") : TEXT("failed"));
 		if (!bEquipped)
 			return false;
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] No valid gadget slot is configured"));
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] 有効なガジェットスロットが設定されていません"));
 	}
+
 	bStageInitialized = true;
 	return true;
 }
@@ -61,9 +63,11 @@ bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 		return false;
 
 	FActorSpawnParameters SpawnParams;
+
 	// Spawnされたガジェットの所有者をプレイヤーPawnに設定する。
 	SpawnParams.Owner = OwningPawn;
 	SpawnParams.Instigator = OwningPawn->GetInstigator();
+
 	// 装備用ガジェットは衝突によってSpawnに失敗してほしくないため周囲のCollision状態にかかわらず必ず生成する。
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
@@ -76,23 +80,24 @@ bool UGadgetComponent::EquipGadget(TSubclassOf<AGadgetBase> GadgetClass)
 	// ガジェットはCharacterのSkeletalMeshにあるSocketへ装備するため、所有者PawnをACharacterへ変換してMeshを取得する。
 	ACharacter* OwningCharacter = Cast<ACharacter>(OwningPawn.Get());
 	USkeletalMeshComponent* CharacterMesh = OwningCharacter ? OwningCharacter->GetMesh() : nullptr;
+
 	// 装備先のSocket名はガジェット側に持たせる。これにより、ガジェットごとに異なるSocketへ装備できる。
 	const FName EquipSocketName = NewGadget->GetEquipSocketName();
 
 	// CharacterのMesh、Socket名、実際のSocketの存在を確認する。
 	if (CharacterMesh == nullptr || EquipSocketName.IsNone() || !CharacterMesh->DoesSocketExist(EquipSocketName))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Equip failed: Socket '%s' was not found on '%s'"),
-		       *EquipSocketName.ToString(), *GetNameSafe(CharacterMesh));
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] 装備に失敗: Socket '%s' が '%s' に見つかりません"),
+			*EquipSocketName.ToString(), *GetNameSafe(CharacterMesh));
 		NewGadget->Destroy();
 		return false;
 	}
 
 	if (!NewGadget->AttachToComponent(CharacterMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-	                                  EquipSocketName))
+		EquipSocketName))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Equip failed: Could not attach '%s' to Socket '%s'"),
-		       *GetNameSafe(NewGadget), *EquipSocketName.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] 装備に失敗: '%s' を Socket '%s' へ取り付けられません"),
+			*GetNameSafe(NewGadget), *EquipSocketName.ToString());
 		NewGadget->Destroy();
 		return false;
 	}
@@ -110,11 +115,13 @@ void UGadgetComponent::UnequipGadget()
 {
 	if (IsValid(CurrentGadget))
 	{
-		if (ABoarPlayerCharacter* Player = Cast<ABoarPlayerCharacter>(OwningPawn)) 
+		if (ABoarPlayerCharacter* Player = Cast<ABoarPlayerCharacter>(OwningPawn))
 			Player->InterruptGadgetUse();
+
 		CurrentGadget->EndUse(OwningPawn);
 		CurrentGadget->Destroy();
 	}
+
 	CurrentGadget = nullptr;
 	CurrentGadgetSlotIndex = INDEX_NONE;
 }
@@ -126,17 +133,21 @@ bool UGadgetComponent::BeginUseCurrentGadget()
 {
 	if (!IsValid(CurrentGadget))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] BeginUse failed: CurrentGadget is null"));
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] 使用開始に失敗: CurrentGadget が null です"));
 		return false;
 	}
 
 	// Playerが演出や操作制限を始める前に、地上・空中共通の使用拒否を返す。
 	// BeginUseはOneShotでは直ちにIsUsingを戻すため、開始後の値を成功判定には使わない。
-	if (!CurrentGadget->CanUse() || CurrentGadget->IsUsing()) 
+	if (!CurrentGadget->CanUse() || CurrentGadget->IsUsing())
 		return false;
 
 	UE_LOG(LogTemp, Log, TEXT("[Gadget] BeginUse: %s"), *GetNameSafe(CurrentGadget.Get()));
 	CurrentGadget->BeginUse(OwningPawn.Get());
+
+	// 使用が受理された入力だけSEを鳴らす（地上・空中共通）。
+	if (const auto* Player = Cast<ABoarPlayerCharacter>(OwningPawn.Get()))
+		Player->PlayPlayerSound(CurrentGadget->GetUseSound(), CurrentGadget->GetUseSoundVolume());
 	return true;
 }
 
@@ -147,7 +158,7 @@ bool UGadgetComponent::EndUseCurrentGadget()
 {
 	if (!IsValid(CurrentGadget))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] EndUse failed: CurrentGadget is null"));
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] 使用終了に失敗: CurrentGadget が null です"));
 		return false;
 	}
 
@@ -161,7 +172,7 @@ bool UGadgetComponent::EndUseCurrentGadget()
  */
 bool UGadgetComponent::SwitchGadget(TSubclassOf<AGadgetBase> NewGadgetClass)
 {
-	if (NewGadgetClass == nullptr) 
+	if (NewGadgetClass == nullptr)
 		return false;
 
 	return EquipGadget(NewGadgetClass);
@@ -172,7 +183,7 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 	// 固定4枠の外側へ書き込まないよう、配列アクセス前に番号を検証する。
 	if (!IsValidSlotIndex(SlotIndex))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Invalid slot index: %d"), SlotIndex);
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] 無効なスロット番号です: %d"), SlotIndex);
 		return false;
 	}
 
@@ -182,21 +193,26 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 		bLastLoadoutSaveSuccessful = SaveCurrentLoadout();
 		return true;
 	}
-	if (GadgetProgress && !GadgetProgress->CanEquipGadgetClass(GadgetClass)) 
+
+	if (GadgetProgress && !GadgetProgress->CanEquipGadgetClass(GadgetClass))
 		return false;
+
 	TArray<TSubclassOf<AGadgetBase>> NewSlots = EquippedGadgetSlots;
+
 	// 同じガジェットを選ぶと元の枠を空にして移動します。
 	for (int32 Index = 0; Index < MaxGadgetSlots; ++Index)
-		if (GadgetClass && NewSlots[Index] == GadgetClass) 
+		if (GadgetClass && NewSlots[Index] == GadgetClass)
 			NewSlots[Index] = nullptr;
+
 	NewSlots[SlotIndex] = GadgetClass;
 	const int32 PreviousSlot = CurrentGadgetSlotIndex;
 	if (IsValidSlotIndex(PreviousSlot) && NewSlots[PreviousSlot] != EquippedGadgetSlots[PreviousSlot])
 	{
 		if (NewSlots[PreviousSlot])
 		{
-			if (!EquipGadget(NewSlots[PreviousSlot])) 
+			if (!EquipGadget(NewSlots[PreviousSlot]))
 				return false;
+
 			CurrentGadgetSlotIndex = PreviousSlot;
 		}
 		else
@@ -205,10 +221,12 @@ bool UGadgetComponent::SetGadgetSlot(int32 SlotIndex, TSubclassOf<AGadgetBase> G
 			CurrentGadgetSlotIndex = PreviousSlot;
 		}
 	}
+
 	EquippedGadgetSlots = NewSlots;
 	bLastLoadoutSaveSuccessful = SaveCurrentLoadout();
 	if (!bLastLoadoutSaveSuccessful)
-		UE_LOG(LogTemp, Error, TEXT("[Gadget] Loadout changed but not saved; check GadgetId/catalog/save status."));
+		UE_LOG(LogTemp, Error, TEXT("[Gadget] 装備構成は変更されましたが保存されていません。GadgetId・カタログ・セーブ状態を確認してください。"));
+
 	OnGadgetLoadoutChanged.Broadcast();
 	return true;
 }
@@ -223,12 +241,13 @@ bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
 	// 切替に失敗した場合は現在装備を維持するため、先にスロットとクラスを検証する。
 	if (!IsValidSlotIndex(SlotIndex))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Switch failed: invalid slot index %d"), SlotIndex);
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] 切替に失敗: 無効なスロット番号 %d"), SlotIndex);
 		return false;
 	}
 
 	TSubclassOf<AGadgetBase> SlotClass = EquippedGadgetSlots[SlotIndex];
-	if (CurrentGadgetSlotIndex == SlotIndex && IsValid(CurrentGadget)) 
+
+	if (CurrentGadgetSlotIndex == SlotIndex && IsValid(CurrentGadget))
 		return true;
 	if (SlotClass == nullptr)
 	{
@@ -240,7 +259,7 @@ bool UGadgetComponent::SwitchGadgetBySlot(int32 SlotIndex)
 
 	if (!EquipGadget(SlotClass))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] Switch failed: slot %d equip error"), SlotIndex);
+		UE_LOG(LogTemp, Warning, TEXT("[Gadget] 切替に失敗: スロット %d の装備でエラー"), SlotIndex);
 		return false;
 	}
 

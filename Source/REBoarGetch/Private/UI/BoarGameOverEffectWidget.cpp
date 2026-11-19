@@ -10,10 +10,19 @@ void UBoarGameOverEffectWidget::NativeOnInitialized()
 TArray<FString> UBoarGameOverEffectWidget::GetMissingLayerNames() const
 {
 	TArray<FString> Missing;
-	if (!VignetteLayer) Missing.Add(TEXT("VignetteLayer"));
-	if (!FlashLayer) Missing.Add(TEXT("FlashLayer"));
-	if (!WarningLayer) Missing.Add(TEXT("WarningLayer"));
-	if (!NoiseLayer) Missing.Add(TEXT("NoiseLayer"));
+
+	if (!VignetteLayer)
+		Missing.Add(TEXT("VignetteLayer"));
+
+	if (!FlashLayer)
+		Missing.Add(TEXT("FlashLayer"));
+
+	if (!WarningLayer)
+		Missing.Add(TEXT("WarningLayer"));
+
+	if (!NoiseLayer)
+		Missing.Add(TEXT("NoiseLayer"));
+
 	return Missing;
 }
 
@@ -24,13 +33,17 @@ void UBoarGameOverEffectWidget::NativeConstruct()
 	ApplyLayer(FlashLayer, FlashAlpha);
 	ApplyLayer(WarningLayer, WarningAlpha);
 	ApplyLayer(NoiseLayer, NoiseAmount);
-	if (WarningLoop) PlayAnimation(WarningLoop, 0.f, 0);
+
+	if (WarningLoop)
+		PlayAnimation(WarningLoop, 0.f, 0);
 }
 
 // 強さをレイヤーのRender Opacityへ反映します。色・形・動きはWBPとUI Material側の設定です。
 void UBoarGameOverEffectWidget::ApplyLayer(UWidget* Layer, float Alpha)
 {
-	if (!Layer) return;
+	if (!Layer)
+		return;
+
 	Layer->SetRenderOpacity(FMath::Clamp(Alpha, 0.f, 1.f));
 	Layer->SetVisibility(Alpha > 0.f ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 }

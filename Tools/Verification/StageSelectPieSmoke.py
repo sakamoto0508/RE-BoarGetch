@@ -32,6 +32,7 @@ passed = []
 state = 'start'
 deadline = time.monotonic() + 120
 next_tick = 0
+shot_wait = 0
 handle = None
 widget = None
 entrance = None
@@ -70,6 +71,17 @@ def find_widget(name):
     if value is None:
         raise AssertionError('Missing binding widget ' + name)
     return value
+
+SHOTS = ROOT / 'Saved' / 'Screenshots' / 'StageSelect' / time.strftime('%Y%m%d_%H%M%S')
+
+def shot(label):
+    SHOTS.mkdir(parents=True, exist_ok=True)
+    return unreal.BoarUIAuthoringLibrary.request_verification_screenshot(str(SHOTS / (label + '.png')), True)
+
+def press(key_name):
+    k = unreal.Key()
+    k.set_editor_property('key_name', key_name)
+    return unreal.BoarUIAuthoringLibrary.simulate_key_press(k)
 
 def text(name):
     return str(find_widget(name).get_text())
@@ -139,7 +151,7 @@ def finish(error=None, complete=False):
         unreal.SystemLibrary.quit_editor()
 
 def tick(delta):
-    global state, next_tick, deadline, pc, entrance, catalog, widget, save_slot, save_user_index, performance_defaults, original_throttle
+    global state, next_tick, deadline, shot_wait, pc, entrance, catalog, widget, save_slot, save_user_index, performance_defaults, original_throttle
     if time.monotonic() < next_tick:
         return
     next_tick = time.monotonic() + .5
@@ -171,14 +183,22 @@ def tick(delta):
             expected = 'CLEAR' if prop(catalog[0], 'StageId') in prop(save, 'ClearedStageIds') else '未クリア'
             record('Actual stage name displayed', text('StageName') == str(prop(catalog[0], 'DisplayName')))
             record('Actual clear status matches isolated progress', text('Text_StageStatus') == expected)
-            record('Actual stage progress displayed', '図鑑：' in text('Text_StageProgress'))
+            record('Actual coin / encyclopedia progress displayed', ' / ' in text('CoinProgressValue') and ' / ' in text('BookProgressValue'))
+            record('CLEAR badge shown only when cleared', (find_widget('ClearBadge').get_visibility() != unreal.SlateVisibility.COLLAPSED) == (expected == 'CLEAR'))
             record('Actual start enabled', find_widget('Button_Start').get_is_enabled())
             record('Single-stage carousel previous/next disabled', not find_widget('Button_Previous').get_is_enabled()
                    and not find_widget('Button_Next').get_is_enabled())
+            state = 'shot'
+            shot_wait = 0
+        elif state == 'shot':
+            # 中央ジオラマの撮り直し（RecaptureDuration）を待ってから画面を保存します。
+            shot_wait += 1
+            if shot_wait == 4: shot('01_stage_select')
+            if shot_wait < 5: return
             state = 'cancel'
         elif state == 'cancel':
             record('Initial focus reaches Start', find_widget('Button_Start').has_user_focus(pc))
-            widget.call_method('HandleCancelClicked')
+            record('Gamepad × (FaceButton_Bottom) is consumed by Stage Select', press('Gamepad_FaceButton_Bottom'))
             record('Cancel removes selection and releases input locks', not widget.is_in_viewport()
                    and not pc.is_move_input_ignored() and not pc.is_look_input_ignored())
             entrance.set_editor_property('StageCatalog', synthetic_catalog(catalog[0]))
@@ -190,7 +210,7 @@ def tick(delta):
             if text('Text_StageNumber') != 'SmokeLocked': return
             record('Carousel moves to locked card', text('Text_StageNumber') == 'SmokeLocked')
             record('Locked card label/status redacted', text('StageName') == '???' and text('Text_StageStatus') == 'LOCKED')
-            record('Locked progress hidden and start disabled', text('Text_StageProgress') == '' and not find_widget('Button_Start').get_is_enabled())
+            record('Locked progress hidden and start disabled', text('CoinProgressValue') == '—' and text('BookProgressValue') == '—' and not find_widget('Button_Start').get_is_enabled())
             widget.call_method('HandleStartStageClicked')
             record('Locked start leaves lobby selection open', widget.is_in_viewport())
             widget.call_method('SelectStage', args=(0,))
@@ -204,7 +224,8 @@ def tick(delta):
             if text('Text_StageNumber') != 'SmokeUnlocked': return
             record('Rapid Next requests finish at third card', text('Text_StageNumber') == 'SmokeUnlocked')
             record('Duplicate catalog ID excluded at carousel boundary', not find_widget('Button_Next').get_is_enabled())
-            record('Transient coin/boar progress rendered', text('Text_StageProgress') == '特別コイン：0 / 2\n図鑑：0 / 2')
+            record('Transient coin/boar progress rendered', text('CoinProgressValue') == '0 / 2' and text('BookProgressValue') == '0 / 2')
+            shot('02_third_card')
             record('Carousel transform settles after animation', prop(find_widget('CarouselCurrent'), 'RenderTransform').translation == unreal.Vector2D(0, 0))
             record('Focus returns to enabled Start', find_widget('Button_Start').has_user_focus(pc))
             widget.call_method('PreviousStage')
@@ -221,7 +242,7 @@ def tick(delta):
             # Actual Start path writes inside the isolated process UserDir, then travels normally.
             instance = unreal.GameplayStatics.get_game_instance(worlds.get_game_world())
             record('Start guard verifies isolated save directory', isolated_save_path())
-            widget.call_method('HandleStartStageClicked')
+            record('Gamepad ○ (FaceButton_Right) starts the focused stage', press('Gamepad_FaceButton_Right'))
             state = 'travel'
             deadline = time.monotonic() + 120
         elif state == 'travel':

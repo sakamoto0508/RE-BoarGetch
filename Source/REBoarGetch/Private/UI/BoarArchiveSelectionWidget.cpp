@@ -24,16 +24,19 @@ namespace
 	constexpr int32 GridColumns = 3;
 
 	const FBoarSpawnDefinition* Definition(const TArray<TObjectPtr<UStageConfig>>& Stages, FName Id,
-	                                       const UStageConfig*& FoundStage)
+		const UStageConfig*& FoundStage)
 	{
 		FoundStage = nullptr;
+
 		if (Id.IsNone())
 			return nullptr;
+
 		for (const auto& S : Stages)if (S)for (const auto& D : S->BoarSpawnDefinitions)if (D.BoarUniqueId == Id)
 		{
 			FoundStage = S;
 			return &D;
 		}
+
 		return nullptr;
 	}
 }
@@ -47,8 +50,8 @@ TSharedRef<SWidget> UBoarArchiveSelectionWidget::RebuildWidget()
 {
 	// WBPのレイアウトとBindWidgetOptionalの参照をそのまま使います。C++で代替レイアウトは作りません。
 	if (WidgetTree && !WidgetTree->RootWidget)
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: WBP has no layout (RootWidget is empty). Archive Display Selection is not displayed."),
-		       *GetNameSafe(GetClass()));
+		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: WBPにレイアウトがありません（RootWidgetが空）。展示選択画面を表示しません。"),
+			*GetNameSafe(GetClass()));
 	return Super::RebuildWidget();
 }
 
@@ -56,16 +59,20 @@ TSharedRef<SWidget> UBoarArchiveSelectionWidget::RebuildWidget()
 void UBoarArchiveSelectionWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
 	if (!IsReadyForDisplay())
 	{
 		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: Status / SlotsPanel / Grid / BackButton が見つかりません。"),
-		       *GetNameSafe(GetClass()));
+			*GetNameSafe(GetClass()));
 		return;
 	}
+
 	if (SetButton)
 		SetButton->OnClicked.AddUniqueDynamic(this, &UBoarArchiveSelectionWidget::Confirm);
+
 	if (RemoveButton)
 		RemoveButton->OnClicked.AddUniqueDynamic(this, &UBoarArchiveSelectionWidget::RemoveBoar);
+
 	BackButton->OnClicked.AddUniqueDynamic(this, &UBoarArchiveSelectionWidget::Cancel);
 	auto* GI = GetGameInstance<UBoarGameInstance>();
 	PendingIds = GI ? GI->GetArchiveDisplayIds() : TArray<FName>();
@@ -77,39 +84,46 @@ void UBoarArchiveSelectionWidget::NativeConstruct()
 	CandidateRows.Reset();
 	SlotsPanel->ClearChildren();
 	Grid->ClearChildren();
+
 	if (const auto* Save = GI ? GI->GetProgress() : nullptr)
 	{
 		// 最近捕獲順（Default展示と同じ並び）。捕獲順のない旧セーブのIDはSaveGame側でID昇順に補われる。
 		Candidates = Save->GetRecentCapturedBoarIds();
 	}
+
 	// カードもWBPで作成します。未設定時はC++のカードで代替せず、Errorを出してカードを並べません。
 	const TSubclassOf<UBoarLoadoutEntry> CardClass = EntryClass;
 	if (!CardClass)
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: EntryClass is unset. Archive cards are not displayed."),
-		       *GetNameSafe(GetClass()));
+		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: EntryClassが未設定です。展示カードを表示しません。"),
+			*GetNameSafe(GetClass()));
 	for (int32 I = 0; CardClass && I < UBoarSaveGame::ArchiveDisplaySlotCount; ++I)
 	{
 		auto* C = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), CardClass);
 		if (!C)
 			continue;
+
 		C->OnChosen.AddUniqueDynamic(this, &UBoarArchiveSelectionWidget::SelectSlot);
 		SlotsPanel->AddChildToHorizontalBox(C)->SetPadding(FMargin(0, 0, 8, 0));
 		SlotRows.Add(C);
 	}
+
 	for (int32 I = 0; CardClass && I < Candidates.Num(); ++I)
 	{
 		auto* C = CreateWidget<UBoarLoadoutEntry>(GetOwningPlayer(), CardClass);
 		if (!C)
 			continue;
+
 		C->Setup(I, LabelFor(Candidates[I]));
 		C->OnChosen.AddUniqueDynamic(this, &UBoarArchiveSelectionWidget::ChooseBoar);
 		C->OnFocused.AddUniqueDynamic(this, &UBoarArchiveSelectionWidget::ChooseBoar);
 		Grid->AddChildToUniformGrid(C, I / GridColumns, I % GridColumns);
 		CandidateRows.Add(C);
 	}
+
 	SetStatus(Candidates.IsEmpty()
-		          ? LOCTEXT("NoCandidates", "捕獲済みのボアがいません")
-		          : LOCTEXT("ChoosePrompt", "ボアを選び、展示に設定してください。"));
+			? LOCTEXT("NoCandidates", "捕獲済みのボアがいません")
+			: LOCTEXT("ChoosePrompt", "ボアを選び、展示に設定してください。"));
+
 	RefreshSlotRows();
 	RefreshDetail();
 	bInitialFocusPending = true;
@@ -119,6 +133,7 @@ void UBoarArchiveSelectionWidget::SetStatus(const FText& Message, bool bError)
 {
 	if (!Status)
 		return;
+
 	Status->SetColorAndOpacity(FSlateColor(bError ? ErrorColor : StatusColor));
 	Status->SetText(Message);
 }
@@ -127,6 +142,7 @@ FText UBoarArchiveSelectionWidget::LabelFor(FName Id) const
 {
 	if (Id.IsNone())
 		return LOCTEXT("Empty", "EMPTY");
+
 	const UStageConfig* S;
 	const auto* D = Definition(UBoarGameInstance::ResolveStageCatalog(this, StageCatalog), Id, S);
 	return D && !D->EncyclopediaName.IsEmpty() ? D->EncyclopediaName : FText::FromName(Id);
@@ -140,7 +156,7 @@ void UBoarArchiveSelectionWidget::UpdatePortrait(UBoarLoadoutEntry* Entry, FName
 		const auto* D = Definition(UBoarGameInstance::ResolveStageCatalog(this, StageCatalog), Id, S);
 		auto* Texture = D ? D->EncyclopediaPhoto.LoadSynchronous() : nullptr;
 		Card->SetPortrait(Texture, Id.IsNone() ? LOCTEXT("Empty", "EMPTY") : LOCTEXT("NoPhoto", "写真未登録"), Badge,
-		                  bActive);
+			bActive);
 	}
 }
 
@@ -150,16 +166,19 @@ void UBoarArchiveSelectionWidget::RefreshSlotRows()
 	{
 		SlotRows[I]->Setup(I, LabelFor(PendingIds[I]), ActiveSlot == I);
 		UpdatePortrait(SlotRows[I], PendingIds[I], FText::Format(LOCTEXT("SlotBadge", "展示{0}"), I + 1),
-		               ActiveSlot == I);
+			ActiveSlot == I);
 	}
+
 	for (int32 I = 0; I < CandidateRows.Num(); ++I)
 	{
 		const int32 DisplayIndex = PendingIds.Find(Candidates[I]);
 		FText Badge = DisplayIndex == INDEX_NONE
-			              ? FText::GetEmpty()
-			              : FText::Format(LOCTEXT("DisplayBadge", "DISPLAY {0}"), DisplayIndex + 1);
+				? FText::GetEmpty()
+				: FText::Format(LOCTEXT("DisplayBadge", "DISPLAY {0}"), DisplayIndex + 1);
+
 		UpdatePortrait(CandidateRows[I], Candidates[I], Badge, false);
 	}
+
 	if (SetButton)
 		SetButton->SetIsEnabled(Candidates.IsValidIndex(FocusedCandidate));
 }
@@ -170,14 +189,17 @@ void UBoarArchiveSelectionWidget::RefreshDetail()
 	const UStageConfig* S;
 	const auto* D = Definition(UBoarGameInstance::ResolveStageCatalog(this, StageCatalog), Id, S);
 	FText Value = Id.IsNone() ? LOCTEXT("SelectPrompt", "ボアを選択してください") : LabelFor(Id);
+
 	if (D)
 	{
 		const FText Type = D->BoarClass
-			                   ? StaticEnum<EBoarArchetype>()->GetDisplayNameTextByValue(
-				                   static_cast<int64>(D->BoarClass.GetDefaultObject()->GetBoarArchetype()))
-			                   : LOCTEXT("Unregistered", "未登録");
+				? StaticEnum<EBoarArchetype>()->GetDisplayNameTextByValue(
+					static_cast<int64>(D->BoarClass.GetDefaultObject()->GetBoarArchetype()))
+				: LOCTEXT("Unregistered", "未登録");
+
 		const FText StageName = S->DisplayName.IsEmpty() ? FText::FromName(S->StageId) : S->DisplayName;
 		Value = FText::Format(LOCTEXT("DetailFormat", "{0}\n種類：{1}\n初捕獲Stage：{2}"), Value, Type, StageName);
+
 		if (!D->EncyclopediaDescription.IsEmpty())
 			Value = FText::Format(
 			LOCTEXT("DetailDescription", "{0}\n{1}"), Value,
@@ -185,14 +207,18 @@ void UBoarArchiveSelectionWidget::RefreshDetail()
 	}
 	else if (!Id.IsNone())
 		Value = FText::Format(LOCTEXT("DetailMissing", "{0}\n個体情報未登録"), Value);
+
 	auto* Texture = D ? D->EncyclopediaPhoto.LoadSynchronous() : nullptr;
+
 	if (DetailPhoto)
 	{
 		DetailPhoto->SetBrushFromTexture(Texture);
 		DetailPhoto->SetVisibility(Texture ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
 	}
+
 	if (DetailText)
 		DetailText->SetText(Value);
+
 	if (SetButton)
 		SetButton->SetIsEnabled(!Id.IsNone());
 }
@@ -225,12 +251,14 @@ void UBoarArchiveSelectionWidget::AssignBoar(FName Id)
 		SetStatus(LOCTEXT("AlreadyDisplayed", "この枠には選択中のボアが展示されています。"));
 		return;
 	}
+
 	auto* GI = GetGameInstance<UBoarGameInstance>();
 	if (!GI || !GI->AssignArchiveDisplay(ActiveSlot, Id))
 	{
 		SetStatus(LOCTEXT("SaveFailed", "保存できませんでした。展示は変更されていません。"), true);
 		return;
 	}
+
 	PendingIds = GI->GetArchiveDisplayIds();
 	RefreshSlotRows();
 	SetStatus(LOCTEXT("Saved", "展示を更新・保存しました。"));
@@ -256,6 +284,7 @@ void UBoarArchiveSelectionWidget::FocusInitialChoice()
 void UBoarArchiveSelectionWidget::NativeTick(const FGeometry& G, float D)
 {
 	Super::NativeTick(G, D);
+
 	if (bInitialFocusPending)
 	{
 		bInitialFocusPending = false;
@@ -268,9 +297,11 @@ void UBoarArchiveSelectionWidget::MoveGridFocus(int32 Offset)
 {
 	if (CandidateRows.IsEmpty())
 		return;
+
 	int32 Index = FMath::Clamp((FocusedCandidate == INDEX_NONE ? 0 : FocusedCandidate) + Offset, 0,
-	                           CandidateRows.Num() - 1);
+		CandidateRows.Num() - 1);
 	CandidateRows[Index]->FocusEntry();
+
 	if (GridScroll)
 		GridScroll->ScrollWidgetIntoView(CandidateRows[Index], true, EDescendantScrollDestination::IntoView);
 }
@@ -283,21 +314,29 @@ FReply UBoarArchiveSelectionWidget::NativeOnPreviewKeyDown(const FGeometry& G, c
 		Cancel();
 		return FReply::Handled();
 	}
+
 	if (K == EKeys::E || K == EKeys::Gamepad_FaceButton_Right)
 	{
-		if (!E.IsRepeat())Confirm();
+		if (!E.IsRepeat())
+			Confirm();
+
 		return FReply::Handled();
 	}
+
 	if (K == EKeys::Delete || K == EKeys::Gamepad_FaceButton_Left)
 	{
-		if (!E.IsRepeat())RemoveBoar();
+		if (!E.IsRepeat())
+			RemoveBoar();
+
 		return FReply::Handled();
 	}
+
 	if (K == EKeys::One || K == EKeys::Two || K == EKeys::Three)
 	{
 		SelectSlot(K == EKeys::One ? 0 : K == EKeys::Two ? 1 : 2);
 		return FReply::Handled();
 	}
+
 	if (K == EKeys::Gamepad_LeftShoulder || K == EKeys::Gamepad_RightShoulder)
 	{
 		SelectSlot(
@@ -305,16 +344,27 @@ FReply UBoarArchiveSelectionWidget::NativeOnPreviewKeyDown(const FGeometry& G, c
 			UBoarSaveGame::ArchiveDisplaySlotCount);
 		return FReply::Handled();
 	}
+
 	int32 Move = 0;
-	if (K == EKeys::Right || K == EKeys::D || K == EKeys::Gamepad_DPad_Right)Move = 1;
-	if (K == EKeys::Left || K == EKeys::A || K == EKeys::Gamepad_DPad_Left)Move = -1;
-	if (K == EKeys::Down || K == EKeys::S || K == EKeys::Gamepad_DPad_Down)Move = GridColumns;
-	if (K == EKeys::Up || K == EKeys::W || K == EKeys::Gamepad_DPad_Up)Move = -GridColumns;
+
+	if (K == EKeys::Right || K == EKeys::D || K == EKeys::Gamepad_DPad_Right)
+		Move = 1;
+
+	if (K == EKeys::Left || K == EKeys::A || K == EKeys::Gamepad_DPad_Left)
+		Move = -1;
+
+	if (K == EKeys::Down || K == EKeys::S || K == EKeys::Gamepad_DPad_Down)
+		Move = GridColumns;
+
+	if (K == EKeys::Up || K == EKeys::W || K == EKeys::Gamepad_DPad_Up)
+		Move = -GridColumns;
+
 	if (Move)
 	{
 		MoveGridFocus(Move);
 		return FReply::Handled();
 	}
+
 	return Super::NativeOnPreviewKeyDown(G, E);
 }
 
@@ -329,8 +379,10 @@ FReply UBoarArchiveSelectionWidget::NativeOnAnalogValueChanged(const FGeometry& 
 			MoveGridFocus(E.GetKey() == EKeys::Gamepad_LeftX ? Sign : -Sign * GridColumns);
 			NextAnalogNavigation = FPlatformTime::Seconds() + 0.18;
 		}
+
 		return FReply::Handled();
 	}
+
 	return Super::NativeOnAnalogValueChanged(G, E);
 }
 

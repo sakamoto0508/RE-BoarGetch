@@ -1,0 +1,307 @@
+{
+ "layers": {
+  "Backdrop": {
+   "rect": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "texture": [
+    480,
+    270
+   ],
+   "standalone": false
+  },
+  "Frame": {
+   "rect": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "texture": [
+    1920,
+    1080
+   ],
+   "standalone": false
+  },
+  "Header": {
+   "rect": [
+    40,
+    28,
+    620,
+    130
+   ],
+   "texture": [
+    620,
+    130
+   ],
+   "standalone": false
+  },
+  "Dome": {
+   "rect": [
+    400,
+    130,
+    1120,
+    520
+   ],
+   "texture": [
+    1120,
+    520
+   ],
+   "standalone": false
+  },
+  "Pedestal": {
+   "rect": [
+    420,
+    470,
+    1080,
+    340
+   ],
+   "texture": [
+    1080,
+    340
+   ],
+   "standalone": false
+  },
+  "TitlePlate": {
+   "rect": [
+    680,
+    24,
+    560,
+    158
+   ],
+   "texture": [
+    560,
+    158
+   ],
+   "standalone": false
+  },
+  "ArrowLeft": {
+   "rect": [
+    300,
+    320,
+    170,
+    160
+   ],
+   "texture": [
+    170,
+    160
+   ],
+   "standalone": false
+  },
+  "ArrowRight": {
+   "rect": [
+    1450,
+    320,
+    170,
+    160
+   ],
+   "texture": [
+    170,
+    160
+   ],
+   "standalone": false
+  },
+  "InfoPanel": {
+   "rect": [
+    186,
+    720,
+    1548,
+    158
+   ],
+   "texture": [
+    1548,
+    158
+   ],
+   "standalone": false
+  },
+  "ThumbPlaceholder": {
+   "rect": [
+    220,
+    746,
+    236,
+    106
+   ],
+   "texture": [
+    236,
+    106
+   ],
+   "standalone": false
+  },
+  "ClearBadge": {
+   "rect": [
+    1480,
+    750,
+    228,
+    96
+   ],
+   "texture": [
+    228,
+    96
+   ],
+   "standalone": false
+  },
+  "ButtonSelected": {
+   "rect": [
+    0,
+    0,
+    380,
+    124
+   ],
+   "texture": [
+    380,
+    124
+   ],
+   "standalone": true
+  },
+  "ButtonNormal": {
+   "rect": [
+    0,
+    0,
+    380,
+    124
+   ],
+   "texture": [
+    380,
+    124
+   ],
+   "standalone": true
+  },
+  "IconCircle": {
+   "rect": [
+    0,
+    0,
+    64,
+    64
+   ],
+   "texture": [
+    64,
+    64
+   ],
+   "standalone": true
+  },
+  "IconCross": {
+   "rect": [
+    0,
+    0,
+    64,
+    64
+   ],
+   "texture": [
+    64,
+    64
+   ],
+   "standalone": true
+  },
+  "IconBook": {
+   "rect": [
+    0,
+    0,
+    64,
+    56
+   ],
+   "texture": [
+    64,
+    56
+   ],
+   "standalone": true
+  },
+  "KeyEnter": {
+   "rect": [
+    0,
+    0,
+    84,
+    36
+   ],
+   "texture": [
+    84,
+    36
+   ],
+   "standalone": true
+  },
+  "KeyEsc": {
+   "rect": [
+    0,
+    0,
+    60,
+    36
+   ],
+   "texture": [
+    60,
+    36
+   ],
+   "standalone": true
+  }
+ },
+ "live": {
+  "Diorama": [
+   492.18,
+   66.39999999999999,
+   942.08,
+   706.5600000000001
+  ],
+  "StageNumber": [
+   960,
+   82
+  ],
+  "StageName": [
+   960,
+   148
+  ],
+  "Thumbnail": [
+   220,
+   746,
+   236,
+   106
+  ],
+  "Description": [
+   482,
+   754,
+   470,
+   100
+  ],
+  "Stats": {
+   "x": 1012,
+   "right": 1432,
+   "rows": [
+    757,
+    802,
+    847
+   ]
+  },
+  "StatusCenter": [
+   1594,
+   792
+  ],
+  "ArrowLeft": [
+   330,
+   340,
+   116,
+   116
+  ],
+  "ArrowRight": [
+   1474,
+   340,
+   116,
+   116
+  ],
+  "Start": [
+   560,
+   902,
+   340,
+   84
+  ],
+  "Cancel": [
+   1020,
+   902,
+   340,
+   84
+  ],
+  "Guide": [
+   1844,
+   944
+  ]
+ }
+}

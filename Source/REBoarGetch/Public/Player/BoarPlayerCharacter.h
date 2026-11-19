@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Audio/BoarAudioTypes.h"
 #include "Gadget/GadgetBase.h"
 #include "GameFramework/Character.h"
 #include "BoarPlayerCharacter.generated.h"
@@ -173,11 +174,11 @@ protected:
 	/** ガジェット使用終了時のアニメ通知入口です（AnimBP側で実装）。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Gadget")
 	void OnGadgetUseStopped(EGadgetUseStyle UseStyle, AGadgetBase* Gadget);
-	
+
 	/** ガジェット使用アニメーションの終了時に呼び出します。 */
 	UFUNCTION(BlueprintCallable, Category = "Player|Gadget")
 	void FinishGadgetUseAnimation(bool bWasInterrupted);
-	
+
 	/** ガジェット使用アニメーションが中断されたことをAnimBPへ通知します。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Animation")
 	void OnGadgetUseInterrupted();
@@ -312,7 +313,7 @@ public:
 	bool IsAirNetDropActive() const { return AirNetDropPhase != EAirNetDropPhase::None; }
 
 	//-------------------------------------------------
-	// Dash Stamina
+	// ---- ダッシュとスタミナ ----
 	//-------------------------------------------------
 
 	/** スタミナの値またはDash禁止状態が変わったときに通知します。 */
@@ -335,7 +336,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Stamina")
 	bool IsDashing() const { return bIsDashing; }
 
+	/** Playerの移動SE設定です（足音はAnimNotify_BoarFootstepから参照します）。 */
+	const FBoarPlayerAudioSettings& GetPlayerAudio() const { return PlayerAudio; }
+
+	/** Player位置から位置付きSEを一度鳴らします（BoarAudioManagerSubsystem経由。未設定なら何もしません）。 */
+	void PlayPlayerSound(USoundBase* Sound, float VolumeMultiplier = 1.0f) const;
+
 private:
+	/** ジャンプ・着地・ダッシュ・足音のSEです。Gameplayの判定には使いません。 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Audio", meta = (AllowPrivateAccess = "true"))
+	FBoarPlayerAudioSettings PlayerAudio;
+
 	bool bMenuOpen = false;
 	/** 被弾判定用。イノシシ接触時にダメージ/スタン/無敵を開始します。 */
 	UFUNCTION()
@@ -377,19 +388,19 @@ private:
 	 * 自分が変更した回転設定だけを戻し、Stage停止など他の所有者による移動停止・入力停止は解除しません。
 	 */
 	void FinishStun(bool bInterrupted);
-	
+
 	/** 被弾直後の無敵時間を終了します。 */
 	void EndInvincible();
-	
+
 	/** ガジェット使用終了処理。 */
 	void EndGadgetUse(bool bWasInterrupted);
-	
+
 	/**  地上での入力状態に応じてIdle・Walk・Runを設定します。 */
 	void UpdateGroundActionState(bool bHasMoveInput);
-	
+
 	/** プレイヤーの現在行動状態を変更します。 */
 	void SetPlayerActionState(EPlayerActionState NewState);
-	
+
 	/**
 	 * Gadgetの使用状態に関係なく、すべての行動入力を止める状態か確認します（Stage停止・Stun・Downed）。
 	 * 操作ごとの許可判定は必ずこの条件を含みます。
@@ -584,9 +595,9 @@ private:
 	//TObjectPtr<UCameraComponent> CameraComponentEx;
 
 	//-------------------------------------------------
-	// Movement Settings
+	// ---- 移動の設定 ----
 	//-------------------------------------------------
-	
+
 	/** Yaw回転速度。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement",meta = (AllowPrivateAccess = "true"))
 	float RotationRate = 720.f;
