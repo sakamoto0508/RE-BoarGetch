@@ -10,6 +10,7 @@ class UHealthComponent;
 class UGadgetComponent;
 class UCaptureComponent;
 class UPlayerHitReactionComponent;
+class UFootstepDustComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UPrimitiveComponent;
@@ -589,6 +590,10 @@ private:
 	/** 被弾・Stunの演出（衝撃波・Hit Flash・SE・Camera・しりもちAnimation・頭上VFX）を担当するComponentです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UPlayerHitReactionComponent> HitReactionComponent;
+
+	/** 走行中の接地で足元に出す土煙（演出のみ）。量・勢い・色はこのComponentのDetailsで調整します。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UFootstepDustComponent> FootstepDustComponent;
 
 	/** 独自のカメラ制御用Component。（Aim・LockOnなどを担当） */
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components",meta = (AllowPrivateAccess = "true"))

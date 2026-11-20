@@ -8,6 +8,7 @@
 #include "BoarBase.generated.h"
 
 class UCaptureComponent;
+class UFootstepDustComponent;
 class ACage;
 class APawn;
 class UAnimSequenceBase;
@@ -540,6 +541,10 @@ private:
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boar|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCaptureComponent> CaptureComponent;
+
+	/** 走行中の接地で足元に出す土煙（演出のみ）。既定ではBlue Boar（EscapeSpecialist）の速い移動中だけ出します。 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boar|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UFootstepDustComponent> FootstepDustComponent;
 
 	/** 檻から解放するときにNavMesh上の出現地点を探す半径です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boar|Capture",

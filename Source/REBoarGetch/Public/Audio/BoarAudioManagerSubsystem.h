@@ -126,8 +126,8 @@ private:
 	/** @brief 登録済みSE ComponentへMaster×SE×個別倍率を再適用し、破棄済みの登録を除きます。 */
 	void ApplyManagedSoundEffectVolume();
 
-	/** @brief 旧BGMをOldFadeOutで止め（0なら即停止）、新BGMをFadeInで開始します。 */
-	void StartBGM(UObject* WorldContextObject, USoundBase* BGM, float FadeInDuration, float OldFadeOutDuration);
+	/** @brief 旧BGMをOldFadeOutで止め（0なら即停止）、新BGMをFadeInで開始します。bLoopなら最後まで再生した後に頭から再生し直します。 */
+	void StartBGM(UObject* WorldContextObject, USoundBase* BGM, float FadeInDuration, float OldFadeOutDuration, bool bLoop = false);
 
 	/** @brief 現在のBGM Componentを管理対象から外し、フェードアウトまたは即停止します。 */
 	void ReleaseCurrentBGM(float FadeOutDuration);
@@ -147,6 +147,9 @@ private:
 	/** Level遷移をまたいで維持するBGM再生Componentです。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UAudioComponent> BGMComponent;
+
+	/** Level / Stage BGMとして再生中か。音源側のLoopingが無効でも、最後まで再生したら頭から再生し直します（ジングルはループしない）。 */
+	bool bLoopCurrentBGM = false;
 
 	/** SE音量の変更を反映する再生中Componentと、その個別音量倍率です。 */
 	TMap<TWeakObjectPtr<UAudioComponent>, float> ManagedSoundEffects;

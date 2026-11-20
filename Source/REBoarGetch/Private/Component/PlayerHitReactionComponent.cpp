@@ -18,6 +18,7 @@
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
+#include "Presentation/BoarImpactShockwave.h"
 #include "Sound/SoundBase.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
@@ -28,9 +29,6 @@ namespace BoarHitReaction
 {
 	/** Niagaraの色はUser Parameter「Color」で受けます（捕獲・Stage Clearの既存Systemと同じ規約）。 */
 	const FName ColorParameter(TEXT("Color"));
-	const FName ScaleParameter(TEXT("Scale"));
-	const FName ImpactDirectionParameter(TEXT("ImpactDirection"));
-	const FName RingNormalParameter(TEXT("RingNormal"));
 
 	/** PIEで新旧の衝撃波を見比べるためのConsole Variableです。 */
 	TAutoConsoleVariable<int32> CVarUseLegacyImpactVFX(
@@ -238,36 +236,14 @@ void UPlayerHitReactionComponent::PlayImpactVFX(const FBoarPlayerHitInfo& HitInf
 		return;
 	}
 
-	// リング面は突進方向に垂直（法線＝突進方向）。真横から見て線になりすぎないよう、法線を少しだけカメラへ傾ける。
-	// 両面Materialなので、カメラと突進方向の前後関係に関わらず「カメラ側へ開く」向きに傾ける。
-	FVector RingNormal = Direction;
+	// 衝撃波の向き・User Parameterの設定は檻への攻撃命中（UCageVisualComponent）と共通（BoarImpactShockwave）。
+	FBoarImpactShockwaveParams Params;
+	Params.Scale = ImpactVFXScale;
+	Params.Color = ImpactVFXColor;
+	Params.RingCameraBias = ImpactRingCameraBias;
 	const APlayerController* PC = GetLocalController();
-	if (PC && PC->PlayerCameraManager && ImpactRingCameraBias > 0.0f)
-	{
-		const FVector ToCamera = (PC->PlayerCameraManager->GetCameraLocation() - HitInfo.HitLocation).GetSafeNormal();
-		if (!ToCamera.IsNearlyZero())
-		{
-			const double Side = FVector::DotProduct(Direction, ToCamera) >= 0.0 ? 1.0 : -1.0;
-			const FVector Blended = (Direction + ToCamera * (Side * ImpactRingCameraBias)).GetSafeNormal();
-			if (!Blended.IsNearlyZero())
-				RingNormal = Blended;
-		}
-	}
-
-	// World Space Emitterなので、大きさはComponentのScaleではなくUser Parameter「Scale」で渡す。
-	UNiagaraComponent* VFX = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-		World, System, HitInfo.HitLocation, Rotation, FVector::OneVector, true, false, ENCPoolMethod::AutoRelease);
-	if (!VFX)
-		return;
-
-	VFX->SetVariableLinearColor(BoarHitReaction::ColorParameter, ImpactVFXColor);
-	VFX->SetVariableFloat(BoarHitReaction::ScaleParameter, ImpactVFXScale);
-	VFX->SetVariableVec3(BoarHitReaction::ImpactDirectionParameter, Direction);
-	VFX->SetVariableVec3(BoarHitReaction::RingNormalParameter, RingNormal);
-
-	// User Parameterを入れてから開始する（初回Spawnで向き・色が確定するため）。
-	VFX->Activate(true);
-	++ImpactVFXSpawnCount;
+	if (BoarImpactShockwave::Spawn(World, System, HitInfo.HitLocation, Direction, PC ? PC->PlayerCameraManager.Get() : nullptr, Params))
+		++ImpactVFXSpawnCount;
 }
 
 void UPlayerHitReactionComponent::PlayCameraReaction(const FBoarPlayerHitInfo& HitInfo)

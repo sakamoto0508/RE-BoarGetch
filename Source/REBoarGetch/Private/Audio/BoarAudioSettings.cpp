@@ -4,6 +4,33 @@
 #include "Sound/SoundBase.h"
 #include "Engine/World.h"
 
+float UBoarAudioSettings::GetSoundVolume(const USoundBase* Sound) const
+{
+	if (!Sound)
+		return 1.0f;
+
+	if (!bSoundVolumeCacheBuilt)
+	{
+		SoundVolumeCache.Reset();
+		for (const FBoarSoundVolumeEntry& Entry : SoundVolumes)
+			if (!Entry.Sound.IsNull())
+				SoundVolumeCache.Add(Entry.Sound.ToSoftObjectPath(), FMath::Max(0.0f, Entry.Volume));
+		bSoundVolumeCacheBuilt = true;
+	}
+
+	const float* Found = SoundVolumeCache.Find(FSoftObjectPath(Sound));
+	return Found ? *Found : 1.0f;
+}
+
+#if WITH_EDITOR
+void UBoarAudioSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	// Project Settingsで表を編集したら、次の再生から新しい値を使う。
+	bSoundVolumeCacheBuilt = false;
+}
+#endif
+
 const FBoarLevelBGMEntry* UBoarAudioSettings::FindLevelBGM(const FString& LevelPackageName) const
 {
 	for (const FBoarLevelBGMEntry& Entry : LevelBGMs)

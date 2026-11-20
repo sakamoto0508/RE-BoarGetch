@@ -134,14 +134,25 @@ FVector ACage::GetCapturedBoarLocation(int32 SlotIndex, const ABoarBase* Boar) c
 //檻へのダメージ。イノシシが呼び出す関数。
 void ACage::ApplyDamage(float Damage)
 {
+	ApplyDamageInternal(Damage, nullptr, FVector::ZeroVector);
+}
+
+void ACage::ApplyAttackDamage(float Damage, const FVector& HitLocation, const FVector& HitDirection)
+{
+	ApplyDamageInternal(Damage, &HitLocation, HitDirection);
+}
+
+bool ACage::ApplyDamageInternal(float Damage, const FVector* HitLocation, const FVector& HitDirection)
+{
 	if (!CanAdvance() || bIsDestroyed || Damage <= 0.0f)
-		return;
+		return false;
 
 	SecondsSinceDamage = 0.0f;
 
 	const float PreviousRatio = CurrentHp / FMath::Max(MaxHp, 1.0f);
 	CurrentHp = FMath::Clamp(CurrentHp - Damage, 0.0f, MaxHp);
 	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
+	UE_LOG(LogTemp, Log, TEXT("[Cage] %s Damage %.0f -> HP %.0f/%.0f"), *GetName(), Damage, CurrentHp, MaxHp);
 
 	// 命中音は攻撃が通った時だけ。危険域の警告はしきい値をまたいだ時と、再警告間隔ごとに限る。
 	PlayCageSound(HitSound, false);
@@ -156,10 +167,16 @@ void ACage::ApplyDamage(float Damage)
 		}
 	}
 
+	// 攻撃が通った瞬間の衝撃波（演出のみ）。破壊になる一撃は破壊VFXに任せ、重ねない。
+	if (CurrentHp > 0.0f && Presentation)
+		Presentation->PlayHitVFX(HitLocation ? *HitLocation : Presentation->GetCageCenter(), HitDirection);
+
 	if (CurrentHp <= 0.0f)
 	{
 		DestroyCage();
 	}
+
+	return true;
 }
 
 //檻が破壊された時に呼ばれる処理。破壊された檻に捕まっていたイノシシを解放する。
@@ -172,6 +189,10 @@ void ACage::DestroyCage()
 
 	OnCageDestroyed.Broadcast();
 	PlayCageSound(DestroyedSound, true);
+
+	// 破壊演出（演出のみ）。Actorを隠す前に、見た目のMeshの大きさから位置を決めて出す。
+	if (Presentation)
+		Presentation->PlayBreakVFX();
 
 	// Actor自体はDestroyせず、非表示にして当たり判定を停止する。
 	// Destroy()すると、このActor自身から復活処理を呼べなくなる。

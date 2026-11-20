@@ -11,6 +11,7 @@
 #include "Cage/Cage.h"
 #include "Component/CaptureComponent.h"
 #include "Component/CapturePresentationComponent.h"
+#include "Component/FootstepDustComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -106,6 +107,19 @@ ABoarBase::ABoarBase(const FObjectInitializer& ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	CaptureComponent = CreateDefaultSubobject<UCaptureComponent>(TEXT("CaptureComponent"));
+
+	// 走行の土煙（演出のみ）。既定はBlue Boar（EscapeSpecialist）だけ。通常移動（約450cm/s）ではほぼ出さず、
+	// 逃走（約675cm/s）で量を増やし、後方へ流れる薄いストリークを足して速さを見せる。
+	FootstepDustComponent = CreateDefaultSubobject<UFootstepDustComponent>(TEXT("FootstepDustComponent"));
+	FootstepDustComponent->BoarArchetypes = {EBoarArchetype::EscapeSpecialist};
+	FootstepDustComponent->MinSpeed = 420.0f;
+	FootstepDustComponent->FullStrengthSpeed = 650.0f;
+	FootstepDustComponent->MinStrength = {4, 0.60f, 0.40f, 120.0f, 40.0f, 0};
+	FootstepDustComponent->FullStrength = {8, 0.90f, 0.55f, 260.0f, 55.0f, 2};
+	FootstepDustComponent->StreakMinSpeed = 560.0f;
+	FootstepDustComponent->StreakLength = 90.0f;
+	FootstepDustComponent->Spread = 0.45f;
+	FootstepDustComponent->MinIntervalPerFoot = 0.08f;
 }
 
 // Blueprintの既定値を含めてActorが完成した後にDataAsset設定を適用する。
