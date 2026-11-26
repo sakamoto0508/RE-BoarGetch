@@ -2,6 +2,7 @@
 
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Boar/BoarBase.h"
+#include "Component/FootstepDustComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/GameInstance.h"
@@ -26,6 +27,10 @@ void UAnimNotify_BoarFootstep::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
 	// BlendSpaceの重なりで空中に残ったNotifyは鳴らさない。
 	if (const UCharacterMovementComponent* Move = Character->GetCharacterMovement(); Move && !Move->IsMovingOnGround())
 		return;
+
+	// 走行の土煙（演出のみ）。足音の有無・音量設定とは独立に、所有者のComponentが条件（速度・種別・地面）を判定する。
+	if (UFootstepDustComponent* Dust = Character->FindComponentByClass<UFootstepDustComponent>())
+		Dust->HandleFootstep(MeshComp, FootBone);
 
 	USoundBase* Sound = nullptr;
 	float Volume = 1.0f;

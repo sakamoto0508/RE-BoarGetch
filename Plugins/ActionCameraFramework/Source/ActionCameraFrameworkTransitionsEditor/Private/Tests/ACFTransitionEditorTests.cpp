@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "ACFTransitionPreset.h"
 #include "ACFTransitionSubsystem.h"
 #include "ACFTransitionView.h"
 #include "Editor.h"
@@ -10,6 +11,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "SACFTransitionPreviewPanel.h"
 #include "Tests/AutomationEditorCommon.h"
+#include "ToolMenus.h"
 #include "UObject/Package.h"
 
 /** Phase 7D: the Transition Preview tab and level transitions in PIE (README 33 章「検証」). Editor context. */
@@ -21,6 +23,9 @@ namespace ACFTransitionEditorTests
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFTransitionPreviewPanelTest, "ActionCameraFramework.Editor.Transitions.PreviewPanel", ACFTransitionEditorTests::Flags)
 bool FACFTransitionPreviewPanelTest::RunTest(const FString&)
 {
+	UToolMenu* Toolbar = UToolMenus::Get()->FindMenu("AssetEditor.BlueprintEditor.ToolBar");
+	const FToolMenuSection* Section = Toolbar ? Toolbar->FindSection("ACF") : nullptr;
+	TestTrue(TEXT("Blueprint toolbar includes a transition preview entry"), Section && Section->FindEntry("ACFTransitionPreview"));
 	TSharedRef<SACFTransitionPreviewPanel> Panel = SNew(SACFTransitionPreviewPanel);
 	for (int32 Id = 1; Id <= ACFTransition::NumEffects; ++Id)
 	{
@@ -53,6 +58,16 @@ bool FACFTransitionPreviewPanelTest::RunTest(const FString&)
 	Panel->Advance(0.2f);
 	TestEqual(TEXT("Close only: covered and stopped"), Panel->GetCoverage(), 1.f);
 	TestFalse(TEXT("Close only stops"), Panel->IsPlaying());
+	UACFTransitionPreset* Preset = NewObject<UACFTransitionPreset>();
+	Preset->Close = ACFTransition::MakeDefaultSettings(EACFTransitionEffect::SpiralClose);
+	Preset->Close.Duration = 0.25f;
+	Preset->Open = ACFTransition::MakeDefaultSettings(EACFTransitionEffect::BlackFade, EACFTransitionPhase::Open);
+	Panel->LoadPreset(*Preset);
+	TestTrue(TEXT("Loading a preset starts the preview"), Panel->IsPlaying());
+	TestEqual(TEXT("Custom close duration"), Panel->GetSettings()->Close.Duration, 0.25f);
+	TestEqual(TEXT("Separate open effect"), Panel->GetSettings()->Open.Effect, EACFTransitionEffect::BlackFade);
+	Panel->GetSettings()->Close.Duration = 0.5f;
+	TestEqual(TEXT("Editing preview settings leaves the preset intact"), Preset->Close.Duration, 0.25f);
 	TestFalse(TEXT("Play in PIE without PIE"), Panel->PlayInPie());
 	return true;
 }

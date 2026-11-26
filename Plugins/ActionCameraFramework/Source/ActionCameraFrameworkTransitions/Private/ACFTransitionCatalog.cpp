@@ -78,6 +78,14 @@ namespace ACFTransition
 			{ 40, TEXT("Whip Pan"), C::CameraScreenshot, true, false, TEXT("The capture pans away with a 12-tap motion blur; Open: fast horizontal streak rows."), 0.4f, EZ::EaseIn, FLinearColor(0.12f, 0.12f, 0.14f), FLinearColor(0.5f, 0.5f, 0.55f), 0, 1, 1, 0, false },
 			{ 41, TEXT("Spiral Close"), C::IrisSpiral, false, false, TEXT("Spiral wipe: a hand turns around Center and blacks out everything beyond its shrinking radius, so the scene closes in one smooth spiral to a point. Same mask as 42."), 1.0f, EZ::Linear, Black, White, 0, 1.0f, 1, 0, false },
 			{ 42, TEXT("Spiral Open"), C::IrisSpiral, false, false, TEXT("The exact reverse of 41 Spiral Close: the scene opens from a point along the same spiral while the hand turns back."), 0.9f, EZ::Linear, Black, White, 0, 1.0f, 1, 0, false },
+			{ 43, TEXT("Focus Pull"), C::Fade, false, false, TEXT("Defocuses the live viewport before coverage, then brings the incoming scene back into focus."), 0.75f, EZ::EaseInOut, FLinearColor(0.008f, 0.014f, 0.022f), White, 0, 1, 1, 0, false },
+			{ 44, TEXT("Luma Dissolve"), C::CameraScreenshot, true, true, TEXT("Bright pixels of the outgoing capture dissolve first on Open. Reverse makes dark pixels dissolve first."), 0.85f, EZ::Linear, Black, White, 0, 1, 1, 0.36f, false },
+			{ 45, TEXT("Page Turn"), C::WipeMask, false, false, TEXT("An angled paper fold and its shadow sweep across the frame. Direction sets the travel direction."), 0.8f, EZ::EaseInOut, FLinearColor(0.68f, 0.49f, 0.28f), FLinearColor(0.97f, 0.83f, 0.56f), 158, 1, 1, 0, false },
+			{ 46, TEXT("Quick Cross Dissolve"), C::CameraScreenshot, true, true, TEXT("A short Close limits the freeze. Open starts the blend immediately and reveals more of the live scene early."), 0.14f, EZ::Linear, Black, White, 0, 1, 1, 0, false },
+			{ 47, TEXT("Crisp Wipe"), C::WipeMask, false, false, TEXT("A horizontal wipe with a crisp edge, antialiased to screen pixels."), 0.55f, EZ::EaseInOut, Black, White, 0, 1, 0, 0, false },
+			{ 48, TEXT("Soft Wipe"), C::WipeMask, false, false, TEXT("A wide, feathered diagonal edge. Softness controls the width of the feather."), 0.6f, EZ::EaseInOut, Black, White, 35, 1, 0, 0.57f, false },
+			{ 49, TEXT("Glow Wipe"), C::WipeMask, false, false, TEXT("A diagonal wipe with a luminous accent line. Intensity sets the glow strength and Secondary Color sets its colour."), 0.6f, EZ::EaseInOut, Black, FLinearColor(0.31f, 1.f, 0.73f), 35, 1, 1, 0.15f, false },
+			{ 50, TEXT("Subject Iris"), C::IrisSpiral, false, false, TEXT("A flat diaphragm mask frames a subject. Set Center separately in Close and Open to frame the outgoing and incoming subjects."), 0.7f, EZ::EaseInOut, Black, White, 0, 6, 1, 0.08f, false },
 		};
 
 		TArray<FACFTransitionEffectInfo> BuildInfos()
@@ -150,6 +158,19 @@ namespace ACFTransition
 		S.Intensity = Row.Intensity;
 		S.Softness = Row.Softness;
 		S.bReverse = Row.bReverse;
+		if (Effect == EACFTransitionEffect::LumaDissolve || Effect == EACFTransitionEffect::QuickCrossDissolve)
+		{
+			// Acquire the outgoing frame shortly before the cut, then spend the longer phase revealing the new scene.
+			S.Duration = Phase == EACFTransitionPhase::Close ? 0.14f : Row.Duration;
+			if (Effect == EACFTransitionEffect::QuickCrossDissolve && Phase == EACFTransitionPhase::Open)
+			{
+				S.Duration = 0.52f;
+			}
+		}
+		if (Effect == EACFTransitionEffect::SubjectIris)
+		{
+			S.Center = Phase == EACFTransitionPhase::Close ? FVector2D(0.61, 0.44) : FVector2D(0.32, 0.34);
+		}
 		if (Effect == EACFTransitionEffect::LoadingCard)
 		{
 			S.LoadingText = NSLOCTEXT("ACFTransition", "Loading", "NOW LOADING");

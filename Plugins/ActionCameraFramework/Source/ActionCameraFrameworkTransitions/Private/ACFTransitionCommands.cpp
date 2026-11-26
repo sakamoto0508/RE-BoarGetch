@@ -25,7 +25,7 @@ namespace ACFTransitionCommands
 		const EACFTransitionEffect Effect = ACFTransition::ParseEffect(Text);
 		if (Effect == EACFTransitionEffect::None)
 		{
-			UE_LOG(LogACFTransition, Warning, TEXT("ACF.Transition: unknown effect '%s' (1..42 or a name, see ACF.Transition.List)."), *Text);
+			UE_LOG(LogACFTransition, Warning, TEXT("ACF.Transition: unknown effect '%s' (ID or name, see ACF.Transition.List)."), *Text);
 		}
 		return Effect;
 	}
@@ -36,7 +36,7 @@ namespace ACFTransitionCommands
 		UACFTransitionSubsystem* S = Get(World);
 		if (!S || Args.IsEmpty())
 		{
-			UE_LOG(LogACFTransition, Display, TEXT("Usage: ACF.Transition.Play <1..42|Name> [Both|Close|Open] [Duration] [HoldSeconds]"));
+			UE_LOG(LogACFTransition, Display, TEXT("Usage: ACF.Transition.Play <ID|Name> [Both|Close|Open] [Duration] [HoldSeconds]"));
 			return;
 		}
 		const EACFTransitionEffect Effect = ParseOrWarn(Args[0]);
@@ -105,7 +105,7 @@ namespace ACFTransitionCommands
 		UACFTransitionSubsystem* S = Get(World);
 		if (!S || Args.IsEmpty())
 		{
-			UE_LOG(LogACFTransition, Display, TEXT("Usage: ACF.Transition.Travel <Map> [Close 1..42] [Open 1..42]   e.g. ACF.Transition.Travel /ActionCameraFramework/Transitions/Samples/L_ACFTransitionB 41 42"));
+			UE_LOG(LogACFTransition, Display, TEXT("Usage: ACF.Transition.Travel <Map> [Close ID] [Open ID]   e.g. ACF.Transition.Travel /ActionCameraFramework/Transitions/Samples/L_ACFTransitionB 41 42"));
 			return;
 		}
 		const EACFTransitionEffect C = Args.IsValidIndex(1) ? ParseOrWarn(Args[1]) : EACFTransitionEffect::BlackFade;
@@ -123,7 +123,7 @@ namespace ACFTransitionCommands
 		UACFTransitionSubsystem* S = Get(World);
 		if (!S || Args.Num() < 2)
 		{
-			UE_LOG(LogACFTransition, Display, TEXT("Usage: ACF.Transition.Still <1..42|Name> <Coverage 0..1> [Close|Open]"));
+			UE_LOG(LogACFTransition, Display, TEXT("Usage: ACF.Transition.Still <ID|Name> <Coverage 0..1> [Close|Open]"));
 			return;
 		}
 		const EACFTransitionEffect Effect = ParseOrWarn(Args[0]);
@@ -163,11 +163,11 @@ namespace ACFTransitionCommands
 		}
 	}
 
-	static FAutoConsoleCommandWithWorldAndArgs PlayCmd(TEXT("ACF.Transition.Play"), TEXT("Plays a transition: ACF.Transition.Play <1..42|Name> [Both|Close|Open] [Duration]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Play));
-	static FAutoConsoleCommandWithWorldAndArgs PreviewAllCmd(TEXT("ACF.Transition.PreviewAll"), TEXT("Plays all 42 transitions (close + open) in order: ACF.Transition.PreviewAll [Duration] [First] [Last]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&PreviewAll));
+	static FAutoConsoleCommandWithWorldAndArgs PlayCmd(TEXT("ACF.Transition.Play"), TEXT("Plays a transition: ACF.Transition.Play <ID|Name> [Both|Close|Open] [Duration]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Play));
+	static FAutoConsoleCommandWithWorldAndArgs PreviewAllCmd(TEXT("ACF.Transition.PreviewAll"), TEXT("Plays all transitions (close + open) in order: ACF.Transition.PreviewAll [Duration] [First] [Last]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&PreviewAll));
 	static FAutoConsoleCommandWithWorldAndArgs TravelCmd(TEXT("ACF.Transition.Travel"), TEXT("Level transition: ACF.Transition.Travel <Map> [CloseId] [OpenId]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Travel));
-	static FAutoConsoleCommandWithWorldAndArgs StillCmd(TEXT("ACF.Transition.Still"), TEXT("Shows one effect frozen: ACF.Transition.Still <1..42|Name> <Coverage> [Close|Open]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Still));
-	static FAutoConsoleCommandWithWorldAndArgs ListCmd(TEXT("ACF.Transition.List"), TEXT("Lists the 42 transitions."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&List));
+	static FAutoConsoleCommandWithWorldAndArgs StillCmd(TEXT("ACF.Transition.Still"), TEXT("Shows one effect frozen: ACF.Transition.Still <ID|Name> <Coverage> [Close|Open]"), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Still));
+	static FAutoConsoleCommandWithWorldAndArgs ListCmd(TEXT("ACF.Transition.List"), TEXT("Lists the transitions."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&List));
 	static FAutoConsoleCommandWithWorldAndArgs StatusCmd(TEXT("ACF.Transition.Status"), TEXT("Prints the transition state."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Status));
 	static FAutoConsoleCommandWithWorldAndArgs ClearCmd(TEXT("ACF.Transition.Clear"), TEXT("Cancels all transitions and clears the screen."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&Clear));
 }

@@ -189,6 +189,12 @@ bool FACFTuningPanelModelTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Show original"), Model.ToggleCompare(), EResult::Ok);
 	TestTrue(TEXT("Showing original"), Model.IsShowingOriginal());
 	TestEqual(TEXT("Original FOV on screen"), Driver.Step(Director.Get()).Pose.FieldOfView, 80.f);
+	Model.CaptureAll();
+	TestTrue(TEXT("Comparing keeps the tuned FOV in the pending preset changes"),
+		Model.GetChangeSet().GetChanges().ContainsByPredicate([](const FACFCameraTuningChangeSet::FChange& Change)
+		{
+			return Change.Parameter == EParam::FieldOfView && Change.IsChanged() && Change.Value.X == 60.0;
+		}));
 	TestEqual(TEXT("Editing is blocked while showing the original"), Model.SetValue(EParam::FieldOfView, FVector(70.0, 0.0, 0.0)), EResult::NotTuning);
 	TestEqual(TEXT("Show tuned"), Model.ToggleCompare(), EResult::Ok);
 	TestEqual(TEXT("Tuned FOV back"), Driver.Step(Director.Get()).Pose.FieldOfView, 60.f);

@@ -189,9 +189,9 @@ struct REBOARGETCH_API FBoarArchetypeSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bCanAttackCage = true;
 
-	/** 檻への攻撃が1回命中した際に与えるダメージ量です。 */
+	/** 檻への攻撃が1回命中した際に与えるダメージ量です（檻のHPは既定100。25なら4回で破壊）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat", meta = (ClampMin = "0.0"))
-	float CageAttackDamage = 10.0f;
+	float CageAttackDamage = 25.0f;
 
 	/** 攻撃予兆に使用するアニメーションです。指定時はクリップ長を予兆時間に使用します。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Charge")

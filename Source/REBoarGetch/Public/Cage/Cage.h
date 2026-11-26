@@ -86,9 +86,15 @@ public:
 	float GetHP() const { return CurrentHp; }
 	float GetMaxHP() const { return MaxHp; }
 
-	/** 檻へダメージを与えます。 */
+	/** 檻へダメージを与えます。HPが減ったときは檻の中心で命中VFXを出します。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
 	void ApplyDamage(float Damage);
+
+	/**
+	 * Boarの突進など、命中位置が分かる攻撃でダメージを与えます（判定・HP処理はApplyDamageと同じ）。
+	 * 実際にHPが減ったときだけ、HitLocationで命中VFX（プレイヤー被弾と同じ衝撃波）を出します。HitDirectionは押し込む向きです。
+	 */
+	void ApplyAttackDamage(float Damage, const FVector& HitLocation, const FVector& HitDirection);
 
 	/** 檻が破壊状態かどうかを返します。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")
@@ -148,6 +154,9 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cage|Capture Layout",
 		meta = (AllowPrivateAccess = "true"))
 	float CapturedBoarFloorOffset = 2.0f;
+
+	/** ダメージ処理の本体です。HitLocationがnullなら命中VFXを檻の中心に出します。HPが減ったらtrueを返します。 */
+	bool ApplyDamageInternal(float Damage, const FVector* HitLocation, const FVector& HitDirection);
 
 	/** 檻を破壊状態にします。 */
 	UFUNCTION(BlueprintCallable, Category = "Cage")

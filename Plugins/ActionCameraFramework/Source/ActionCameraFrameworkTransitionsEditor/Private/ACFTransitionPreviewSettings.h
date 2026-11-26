@@ -12,9 +12,11 @@ class UACFTransitionPreviewSettings : public UObject
 	GENERATED_BODY()
 
 public:
+	/** Effect that covers the current scene. */
 	UPROPERTY(EditAnywhere, Category = "Transition")
 	FACFTransitionSettings Close;
 
+	/** Effect that reveals the scene after the hold. Can be a different effect from Close. */
 	UPROPERTY(EditAnywhere, Category = "Transition")
 	FACFTransitionSettings Open;
 
@@ -22,6 +24,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Preview", meta = (ClampMin = "0", ClampMax = "3"))
 	float HoldSeconds = 0.4f;
 
+	/** Repeat Close, Hold and Open in this preview until Stop is pressed. */
 	UPROPERTY(EditAnywhere, Category = "Preview")
 	bool bLoop = false;
 };

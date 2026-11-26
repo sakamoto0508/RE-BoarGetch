@@ -9,6 +9,7 @@
 #include "Component/GadgetComponent.h"
 #include "Component/CaptureComponent.h"
 #include "Component/PlayerHitReactionComponent.h"
+#include "Component/FootstepDustComponent.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -56,6 +57,14 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 
 	// 被弾・Stunの演出はGameplay結果のEventを受けて再生する（AKI-163）。
 	HitReactionComponent = CreateDefaultSubobject<UPlayerHitReactionComponent>(TEXT("HitReactionComponent"));
+
+	// 走行の土煙（演出のみ）。Walk（〜250cm/s）では出さず、Run（500）で軽く、Dash（900）でやや強く。
+	FootstepDustComponent = CreateDefaultSubobject<UFootstepDustComponent>(TEXT("FootstepDustComponent"));
+	FootstepDustComponent->MinSpeed = 250.0f;
+	FootstepDustComponent->FullStrengthSpeed = 900.0f;
+	FootstepDustComponent->MinStrength = {3, 0.40f, 0.30f, 70.0f, 30.0f, 0};
+	FootstepDustComponent->FullStrength = {6, 0.62f, 0.42f, 150.0f, 50.0f, 0};
+	FootstepDustComponent->Spread = 0.6f;
 
 	/// TPS移動の基本設定
 	bUseControllerRotationPitch = false;

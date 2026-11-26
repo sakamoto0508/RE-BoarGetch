@@ -64,7 +64,7 @@ Phase 6B の範囲と順序は、Phase 6A の監査結果で確定していま�
 | `ActionCameraFramework` | カメラ本体（Runtime） | すべて |
 | `ActionCameraFrameworkSequencer` | Level Sequencer 連携（Runtime） | すべて |
 | `ActionCameraFrameworkLevel` | Camera Zone（Runtime、32 章） | すべて |
-| `ActionCameraFrameworkTransitions` | 画面・レベルの切り替え演出 42 種類（Runtime、33 章。カメラの Core に依存しない） | すべて |
+| `ActionCameraFrameworkTransitions` | 画面・レベルの切り替え演出 50 種類（Runtime、33 章。カメラの Core に依存しない） | すべて |
 | `ActionCameraFrameworkTests` | 自動テスト（DeveloperTool） | Editor と Debug / Development のゲーム（UE の `bBuildDeveloperTools` が有効な構成）。Test / Shipping には入らない |
 | `ActionCameraFrameworkEditor` | Editor 用（Camera Tuning パネル・アセットへの反映・Profiler / Debugger / Composition、Data Validation とパネル・反映のテスト） | Editor のみ |
 | `ActionCameraFrameworkTransitionsEditor` | Editor 用（ACF Transition Preview タブとそのテスト、33 章） | Editor のみ |
@@ -990,9 +990,9 @@ Scripts/RunTests.sh --context samples
 | `Source/ActionCameraFrameworkSequencer/` | Level Sequencer 連携（Phase 5A）。`ACFSequencerCameraSubsystem`（検出・復帰処理）、`ACFSequencerBlueprintLibrary`、`ACFSequencerSettings`、`ACFSequencerTypes`、`ACF.Sample.Sequencer` コマンド（`ACFSequencerSampleCommands`）。LevelSequence / MovieScene に依存するのはこのモジュールだけです |
 | `Source/ActionCameraFrameworkTests/` | 自動テスト（Phase 6B / B-10、23 章）。Core のテスト（`Private/Core/`）、Sequencer のテスト（`Private/Sequencer/`）、テスト専用のクラス（テスト用 Shake、Sequencer のリスナー・プローブ Modifier・テスト用 PCM）、`ACFCameraTestEnvironment.h`（22 章）。Type = DeveloperTool で、Test / Shipping ではビルドされません |
 | `Source/ActionCameraFrameworkEditor/` | Editor モジュール（Phase 7A の Editor 専用機能の置き場。Camera Tuning パネル（25 章: `ACFCameraTuningPanelModel` は Slate を使わないモデル、`SACFCameraTuningPanel` は表示、`ACFCameraTuningChangeSet` はアセットへの反映（26 章）、`ACFCameraDiagnosticsModel` と `SACFCameraTuningPanelDiagnostics.cpp` は診断のビュー（27 章））と、Data Validation・パネルのテスト（`Private/Tests/`）。Preset の検証の本体は `ACFCameraPresetValidation`（ランタイムモジュール、`WITH_EDITOR` のみ） |
-| `Source/ActionCameraFrameworkTransitions/` | 画面・レベルの切り替え（Phase 7D、33 章）。`ACFTransitionSubsystem`（入口）、`ACFTransitionTypes`、`ACFTransitionCatalog`（42 種類の ID・既定値）、`ACFTransitionPreset`、`ACFTransitionView`（描画の Widget と Material、画面キャプチャ）、`ACFTransitionLibrary`（Blueprint・非同期ノード）、`ACFTransitionSettings`（Project Settings）、`ACFTransitionSampleDirector`（サンプル）、`ACFTransitionCommands.cpp`（`ACF.Transition.*`） |
+| `Source/ActionCameraFrameworkTransitions/` | 画面・レベルの切り替え（Phase 7D、33 章）。`ACFTransitionSubsystem`（入口）、`ACFTransitionTypes`、`ACFTransitionCatalog`（50 種類の ID・既定値）、`ACFTransitionPreset`、`ACFTransitionView`（描画の Widget と Material、画面キャプチャ）、`ACFTransitionLibrary`（Blueprint・非同期ノード）、`ACFTransitionSettings`（Project Settings）、`ACFTransitionSampleDirector`（サンプル）、`ACFTransitionCommands.cpp`（`ACF.Transition.*`） |
 | `Source/ActionCameraFrameworkTransitionsEditor/` | ACF Transition Preview タブ（`SACFTransitionPreviewPanel`）と Editor のテスト（Preview、PIE の OpenLevel） |
-| `Content/Transitions/` | `M_ACFTransition`（42 種類を描く UI Material）、`Presets/`（標準 Preset 42 個）、`Samples/`（`L_ACFTransitionA` / `L_ACFTransitionB` と色の Material Instance） |
+| `Content/Transitions/` | `M_ACFTransition`（画面演出を描く UI Material）、`Presets/`（標準 Preset 50 個）、`Samples/`（`L_ACFTransitionA` / `L_ACFTransitionB` と色の Material Instance） |
 | `Content/Verification/` | 自動テスト用アセット |
 | `Content/Samples/` | 手動確認用のサンプル Preset（Shot 用を含む）、Effect Preset、Camera Sequence、Level Sequence（`LS_ACFSample_Cut` / `LS_ACFSample_Blend`）とテストマップ `L_ACFCameraTest` |
 | `Scripts/` | 上記アセットの生成スクリプト。`Scripts/Transitions/` は 33 章の Material の HLSL（`ACFTransitionEffects.hlsl`）と Material・Preset・サンプルマップの生成（`CreateTransitionAssets.py`） |
@@ -1539,7 +1539,7 @@ Camera Preset の設定の誤りを、保存のとき・Validate Assets のと�
 | `ActionCameraFramework` | Runtime | カメラ本体（Director・Node・Preset・Subsystem・Effects・Sequence）、診断（16 章の健全性、`ACF.Debug.*`、`ACF.Profile.*`）、サンプル用コマンド `ACF.Sample.*`（`ACFCameraSampleCommands.cpp`） | 本体だけ。`ACF.Debug.*` / `ACF.Profile.*` / `ACF.Sample.*` は入らない |
 | `ActionCameraFrameworkSequencer` | Runtime | Level Sequencer 連携、`ACF.Sample.Sequencer`（`ACFSequencerSampleCommands.cpp`） | 連携だけ |
 | `ActionCameraFrameworkLevel` | Runtime | Phase 7C: レベル用の Camera Zone（Zone Actor / Component、Zone Subsystem、Resolver、Zone のカメラの要求、Zone の設定、Editor のときだけの Zone の検証）、`ACF.Zone.Status`・`ACF.Sample.Zone`（32 章） | Zone だけ。`ACF.Zone.Status` / `ACF.Sample.Zone` と検証は入らない |
-| `ActionCameraFrameworkTransitions` | Runtime | Phase 7D: 画面・レベルの切り替え（Subsystem、42 種類の演出、Preset、Blueprint、サンプルの Director）、`ACF.Transition.*`（33 章）。エンジンのモジュールだけに依存し、Core とは相互に依存しない | 本体とサンプルの Director。`ACF.Transition.*` は入らない |
+| `ActionCameraFrameworkTransitions` | Runtime | Phase 7D: 画面・レベルの切り替え（Subsystem、50 種類の演出、Preset、Blueprint、サンプルの Director）、`ACF.Transition.*`（33 章）。エンジンのモジュールだけに依存し、Core とは相互に依存しない | 本体とサンプルの Director。`ACF.Transition.*` は入らない |
 | `ActionCameraFrameworkTests` | DeveloperTool | Core と Sequencer の自動テスト、テスト専用のクラス、テスト環境（22 章）。Phase 7D のテスト（`Private/Transitions/`）も含む | 入らない（Test / Shipping ではビルドされない） |
 | `ActionCameraFrameworkEditor` | Editor | Camera Tuning パネル（25 章）、アセットへの反映（26 章）、Profiler / Debugger / Composition（27 章）、Data Validation 経由の検証テスト（21 章）とパネルのテスト | 入らない |
 | `ActionCameraFrameworkTransitionsEditor` | Editor | ACF Transition Preview タブ、Transition のアセットをクックに追加（ModifyCook）、Editor テスト（33 章） | 入らない |
@@ -2756,12 +2756,12 @@ Camera Tuning パネル（25 章）の Debugger（27 章）に **[Zone]** の行
 
 ## 33. Screen / Level Transition（Phase 7D）
 
-画面の切り替え演出（フェード・ワイプ・螺旋など 42 種類）と、レベルの読み込みをまたぐ切り替えの仕組みです。
+画面の切り替え演出（フェード・ワイプ・螺旋など 50 種類）と、レベルの読み込みをまたぐ切り替えの仕組みです。
 カメラの要求（Camera Request）とは独立していて、カメラの機能を使わないゲームでも使えます。ゲームの OpenLevel・Level Streaming・ステージ管理は置き換えず、「画面が完全に隠れた」「新しい World の準備ができた」というタイミングをゲームに渡します。
 
 ### できること
 
-- 42 種類の演出を ID（1〜42）、名前、または Preset（Data Asset）で選んで再生します。Close（画面 → 覆う）と Open（覆う → 画面）を別々に、または続けて再生できます。
+- 50 種類の演出を ID（1〜50）、名前、または Preset（Data Asset）で選んで再生します。Close（画面 → 覆う）と Open（覆う → 画面）を別々に、または続けて再生できます。
 - 完全に覆った状態で止めておき（Hold）、あとで Open できます（ワープ、カメラのカット、Game Over、UI の切り替え）。
 - レベルの切り替え: Close → 完全被覆 → ゲームがロード → 新しい World の準備完了 → Open。ロード中も画面は覆われたままです。
 - 長さ・色・方向・強さ・数・中心・Easing（Curve も可）・Texture / Material の差し替え・Sound・Loading Text を設定できます。
@@ -2774,9 +2774,9 @@ Camera Tuning パネル（25 章）の Debugger（27 章）に **[Zone]** の行
 | モジュール `ActionCameraFrameworkTransitions`（Runtime） | 依存はエンジンのモジュールだけ（Core / CoreUObject / Engine / DeveloperSettings / Slate / SlateCore / RenderCore / RHI / MoviePlayer / ApplicationCore）。カメラの Core（`ActionCameraFramework`）には依存せず、Core もこのモジュールを知りません |
 | `UACFTransitionSubsystem`（GameInstance Subsystem） | 入口。World をまたいで生きるので、レベルの読み込みの前後で同じ状態を持てます。再生中だけ Tick します（`FTickableGameObject`、Conditional） |
 | `FACFTransitionView` + `SACFTransitionOverlay` | 1 フレームの描画。Slate の Widget に `M_ACFTransition` の Dynamic Material Instance と任意の文字を載せたもの。Subsystem はこれを Game Viewport に `AddViewportWidgetContent`（Z Order 10000）で追加します。Editor の Preview とテストも同じものを使います |
-| `M_ACFTransition`（UI Material、Translucent） | 42 種類すべてを 1 つの Custom ノード（HLSL）で手続き的に描きます。元のソースは `Scripts/Transitions/ACFTransitionEffects.hlsl`、アセットは `Scripts/Transitions/CreateTransitionAssets.py` で作ります。Texture は使いません（任意の差し替え用を除く） |
-| `ACFTransitionCatalog` | 42 種類の固定 ID・名前・系統・画面キャプチャの要否・説明・既定値 |
-| `UACFTransitionPreset`（Primary Data Asset） | Close と Open の設定の組。標準 Preset 42 個が `Content/Transitions/Presets/DA_ACFTransition_<ID>_<Name>` にあります |
+| `M_ACFTransition`（UI Material、Translucent） | 1 つの Custom ノード（HLSL）でカバーを描きます。Focus Pull は Slate 背景ブラーも使います。元のソースは `Scripts/Transitions/ACFTransitionEffects.hlsl`、アセットは `Scripts/Transitions/CreateTransitionAssets.py` で作ります。Texture は使いません（任意の差し替え用を除く） |
+| `ACFTransitionCatalog` | 50 種類の固定 ID・名前・系統・画面キャプチャの要否・説明・既定値 |
+| `UACFTransitionPreset`（Primary Data Asset） | Close と Open の設定の組。標準 Preset 50 個が `Content/Transitions/Presets/DA_ACFTransition_<ID>_<Name>` にあります |
 | `UACFTransitionLibrary` / `UACFPlayTransitionAction` | Blueprint 用の関数と、Covered / Load Completed / Completed / Failed のピンを持つ非同期ノード |
 | `AACFTransitionSampleDirector` | サンプルマップに置く Actor。ゲームが Level Transition をどう呼ぶかの例で、パッケージ版の自動確認にも使います |
 | モジュール `ActionCameraFrameworkTransitionsEditor`（Editor） | 「ACF Transition Preview」タブとその自動テスト |
@@ -2925,7 +2925,7 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 
 ロード中にアニメーションを続けられないこと（Game Thread が止まる）が前提です。任意の `bUseMoviePlayerDuringLoad`（既定オフ）を有効にすると、スタンドアロン / パッケージ版では MoviePlayer の Loading Screen（被覆の色と Loading Text の Slate、Loading Thread で描画）をロード中に出します。PIE では MoviePlayer は動かないので使われません（最後の覆ったフレームが残る）。オフでもロード中に画面が露出することはありません。
 
-### 42 種類の演出と実装方法
+### 50 種類の演出と実装方法
 
 すべて `M_ACFTransition` の 1 つの Custom ノード（HLSL）で描きます。共通の部品: 方向に沿った座標（Wipe 系）、中心からの距離・角度（Iris / Spiral 系）、値ノイズと fBm（Burn / Smoke / Ink）、Voronoi、SDF の形（蹄の跡・箱・線分）、1 ピクセルのアンチエイリアス、画面キャプチャの読み出し（歪み系）。各 ID は別の関数で、名前だけ違う同じ絵はありません（自動テストで全ペアの差を確認、後述）。
 
@@ -2975,6 +2975,14 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 | 40 | Whip Pan | Camera / Screenshot | キャプチャが 12 タップのモーションブラーで横に流れる | 速い横の筋 |
 | 41 | Spiral Close | Iris / Spiral | 下記 | 同じ |
 | 42 | Spiral Open | Iris / Spiral | 下記 | 同じ |
+| 43 | Focus Pull | Fade | ライブ画面のピントをぼかしてカバーへ | 開きながら新画面のピントが戻る |
+| 44 | Luma Dissolve | Camera / Screenshot | 旧画面を捕まえて保持 | 旧画面の明部から新画面に溶ける。Reverse で暗部から。キャプチャ無しではノイズディゾルブ |
+| 45 | Page Turn | Wipe / Mask | 斜めの折り目と影が走り、紙の裏面で覆う | 紙がめくれて新画面が現れる |
+| 46 | Quick Cross Dissolve | Camera / Screenshot | 0.14 秒の Close で旧画面を短く保持 | 0.52 秒の Open。早い段階から新画面を見せる |
+| 47 | Crisp Wipe | Wipe / Mask | 硬い水平境界のワイプ | 同じ |
+| 48 | Soft Wipe | Wipe / Mask | 広くぼかした斜め境界のワイプ | 同じ |
+| 49 | Glow Wipe | Wipe / Mask | 縁が光る斜めワイプ。光量は Intensity、色は Secondary Color | 同じ |
+| 50 | Subject Iris | Iris / Spiral | Close の Center に向かって絞り、対象を最後まで見せる | Open の Center から絞りを広げる |
 
 **41 Spiral Close / 42 Spiral Open**
 
@@ -2989,7 +2997,7 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 
 | 項目 | 内容 |
 |---|---|
-| Effect | 1〜42 |
+| Effect | 1〜50 |
 | Duration / Easing / Curve | 秒（0 = すぐ）、Linear / Ease In / Ease Out / Ease In Out / Curve（`UCurveFloat`、0..1 → 0..1） |
 | Color / Secondary Color | 覆う色 / アクセントの色（縁・光・ロープ・柵など、演出ごと） |
 | Direction Degrees / Reverse | ワイプ・スイープ・斬撃の方向（0 = 左から右）/ 回転・順序の反転 |
@@ -3000,24 +3008,28 @@ Transitions->PlayLevelTransition(Close, ACFTransition::MakeDefaultSettings(EACFT
 | Sound Stop / Sound Fade Out Seconds | 音を止めるかどうかと、止めるときのフェードの秒数（下の「音」） |
 | Loading Text | 覆っている間の文字（Loading Card は右下、Stage Card は中央） |
 
-Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPreset**。標準の 42 個は複製して使ってください（`CreateTransitionAssets.py` を再実行すると標準の値に戻ります）。
+Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPreset**。標準プリセットは複製して使ってください（`CreateTransitionAssets.py` を再実行すると標準の値に戻ります）。
 
 **プロジェクトの設定**（Project Settings > Plugins > ACF Transitions）: Transition Material、Overlay Z Order（10000）、Capture Screen（オン）、Capture On Gpu（オン）と Max Capture Wait Frames（6）、Max Capture Width（1920。同期の読み出しのときだけ）、Covered Frames（2）、World Ready Frames（3）、Level Timeout Seconds（30）、Use Movie Player During Load（オフ）、Max Delta Seconds（0.1。ヒッチや再開で演出が飛ばない）。
 
 ### Editor Preview
 
-- Window > Developer Tools > Debug > **ACF Transition Preview**（ACF Camera Tuning と同じ場所）、またはコンソールで `ACF.Transition.OpenPreview`。
-- 左の一覧で ID を選ぶと再生します（Close → 保持 → Open）。右の Details で Close / Open の値を変えて `Play`。`Close` / `Open` だけの再生、`Preview All 42`（ID 順に全部）、`Stop`、Loop、`Reset to Defaults`。
+- Blueprint エディターのツールバーにある **Transition Preview** で開けます。右側の **Preview Preset** に ACF Transition Preset を選ぶと、その Close / Open の設定で再生します。試しに値を変更する場合はプレビュー内のコピーを調整します。
+- 通常の Blueprint グラフからは **Preview Transition Preset**（ACF > Transition > Preview）を実行します。PIE などのゲーム画面で Close → Hold Seconds → Open を再生し、レベル切り替えは行いません。画面が別の演出で使用中、または Preset / ビューポートが無効な場合は無効な Handle が返ります。
+- レベルエディターでは Tools > Debug > **ACF Transition Preview**、またはコンソールで `ACF.Transition.OpenPreview`。
+- 左の一覧で ID を選ぶと再生します（Close → 保持 → Open）。右の Details で Close / Open の値を変えて `Play`。`Close` / `Open` だけの再生、`Preview All`（ID 順に全部）、`Stop`、Loop、`Reset to Defaults`。
 - プレビューはゲームと同じ Widget と Material を、テスト用の絵（空・地面・色の箱・太陽）の上に描きます。キャプチャを使う演出は、その絵をキャプチャとして使います。PIE は不要です。
 - `Play in PIE`: PIE の実行中に、その設定を PIE の画面で再生します。`Save as Preset...`: 今の Close / Open の値で Preset を作ります。
 
 ### コマンドとサンプル
 
+Quick Cross Dissolve の試写では **Hold Seconds** を 0 にすると、短い Close の直後から Open が始まります。Subject Iris の **Center** は Close / Open で個別に設定します。Focus Pull のぼけはビューポートの Slate 背景ブラーを使い、Intensity で強さを調整します。
+
 コマンド（Shipping 以外。`ACF.Transition.*`）
 
 | コマンド | 内容 |
 |---|---|
-| `ACF.Transition.Play <1..42 / 名前> [Both / Close / Open] [Duration]` | 1 つ再生（既定は Close → Open） |
+| `ACF.Transition.Play <ID / 名前> [Both / Close / Open] [Duration]` | 1 つ再生（既定は Close → Open） |
 | `ACF.Transition.PreviewAll [Duration] [First] [Last]` | 全部を ID 順に（Queue） |
 | `ACF.Transition.Travel <Map> [CloseId] [OpenId]` | レベルの切り替え |
 | `ACF.Transition.Still <ID> <被覆率> [Close / Open]` | 止め絵（スクリーンショット・GPU の計測） |
@@ -3026,13 +3038,13 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 サンプルマップ: `/ActionCameraFramework/Transitions/Samples/L_ACFTransitionA` と `L_ACFTransitionB`（エンジンの形だけ、色・配置・空・文字「LEVEL A / B」が違う。World Settings の GameMode はエンジンの `GameModeBase`。ホストプロジェクトのマップやクラスは使いません）。どちらにも `AACFTransitionSampleDirector`（Next Level = もう一方）が置いてあります。
 
 - PIE: `L_ACFTransitionA` を開いて Play → コンソールで `ACF.Transition.Travel /ActionCameraFramework/Transitions/Samples/L_ACFTransitionB 41 42`、`ACF.Transition.PreviewAll`。
-- パッケージ版（Development / Shipping、コマンドが無い構成も）: 起動オプション `-ACFTransitionDemo=Travel:4`（A → B → A → B → A。`-ACFTransitionClose=41 -ACFTransitionOpen=42` で演出を指定、`-ACFTransitionDemoExit` で終わったら終了）または `-ACFTransitionDemo=All`（42 種類を順に）。結果は `<Saved>/ACFTransitionDemo.log`（Shipping でも書く）に、各ロードの開始・終了時の被覆率とオーバーレイの有無、イベントの順序、最後に `DEMO DONE ... PASS / FAIL` を出します。
+- パッケージ版（Development / Shipping、コマンドが無い構成も）: 起動オプション `-ACFTransitionDemo=Travel:4`（A → B → A → B → A。`-ACFTransitionClose=41 -ACFTransitionOpen=42` で演出を指定、`-ACFTransitionDemoExit` で終わったら終了）または `-ACFTransitionDemo=All`（50 種類を順に）。結果は `<Saved>/ACFTransitionDemo.log`（Shipping でも書く）に、各ロードの開始・終了時の被覆率とオーバーレイの有無、イベントの順序、最後に `DEMO DONE ... PASS / FAIL` を出します。
 
 ### 検証
 
 | テスト | 内容 |
 |---|---|
-| `.Transitions.Catalog` | 42 個・ID 1〜42・名前は重複なし・既定値が正しい・ID / 名前の解析・Material と標準 Preset 42 個が読み込める |
+| `.Transitions.Catalog` | 50 個・ID 1〜50・名前は重複なし・既定値が正しい・ID / 名前の解析・Material と標準 Preset 50 個が読み込める |
 | `.Transitions.Lifecycle.CloseHoldOpen` | Close → Started, Covered, Finished・覆ったまま保持（Tick なし）・Open → Started, Finished・オーバーレイとビューの解放・何も無い画面からの Open |
 | `.Transitions.Lifecycle.CancelSkipNoHold` | 途中の Cancel（すぐ消える）・二重 Cancel・Skip・Hold なし・長さ 0・覆った画面への Close |
 | `.Transitions.Lifecycle.InterruptQueueReject` | 割り込み（被覆率が飛ばない）・Queue の順序・Reject（Failed）・1 フレームに 42 個の割り込み |
@@ -3050,10 +3062,10 @@ Preset は Content Browser の Miscellaneous > Data Asset > **ACFTransitionPrese
 | `.Transitions.Capture.SkipWhilePending`（描画ありで完全） | キャプチャ待ちの Close を同じフレームで Skip → 次の Tick で被覆率 1・読み出しなし、Skip → Cancel、Skip → Interrupt、失敗するキャプチャ + Skip、フレームを経て Covered → Finished、コピーが GPU にできた直後の Skip はそのコピーを使う |
 | `.Transitions.Sound.StopPolicy`（音声デバイスが要る: `Scripts/RunTests.sh --with-sound`。通常の実行ではスキップ） | 下の「音」の確認です。<br>・Play To End: Cancel の後も鳴り続ける（以前と同じ）。<br>・Stop If Aborted: Cancel / Interrupt / ClearScreen / ロードのタイムアウトで止まり、Close の正常終了では鳴り続ける。<br>・Stop With Transition: Close の終了で止まる。レベルの切り替えでは、ロードの間は Close の音が鳴り、Open の音が加わり、遷移の終わりで両方止まる。<br>・最後に追跡中の音が残らない。<br>無音のループ（`USoundWaveProcedural`）を使い、フェードは 0 で確認します |
 | `.Transitions.Capture.RenderThreadLifetime`（描画あり） | 要求直後の Cancel（同じフレームに 3 回）、要求の破棄、開始と ClearScreen を同じフレームに 20 回、1 フレーム後の Cancel × 10、連続のキャプチャ × 15、コピー待ちのウィンドウのリサイズ → Render Thread のリスナー・要求・Render Target が残らない |
-| `.Transitions.Render.AllEffects`（描画あり） | ゲームと同じ Widget + Material を Slate でオフスクリーンに描き（FWidgetRenderer）、42 種類 × 9 枚（Close 0 / 25 / 50 / 75 / 100%、Open 0 / 35 / 70 / 100%）を読み出す。被覆率 0 で何も描かない（Alpha ≤ 2/255）、1 で全ピクセルを覆う（Alpha ≥ 253/255）、42 種類の全 861 ペアの中間フレームの差が 3/255 以上（最も近いペアも表示）。コンタクトシートを `Saved/ACFTransitions/` に保存 |
-| `.Transitions.Render.ViewportFullCover`（描画あり） | 実際の Game Viewport で、42 種類それぞれを被覆率 1 で表示し、World の描画を止めても画面が変わらない（= World が 1 ピクセルも見えない）こと。何も出ていないときは変わること |
+| `.Transitions.Render.AllEffects`（描画あり） | ゲームと同じ Widget + Material を Slate でオフスクリーンに描き（FWidgetRenderer）、50 種類 × 9 枚（Close 0 / 25 / 50 / 75 / 100%、Open 0 / 35 / 70 / 100%）を読み出す。被覆率 0 で何も描かない（Alpha ≤ 2/255）、1 で全ピクセルを覆う（Alpha ≥ 253/255）、中間フレームで演出間の差を比較。通常は 3/255、同じ水平境界の 05 / 47 は 1/255 以上。螺旋 41 / 42 は逆再生の一致を別に検証。コンタクトシートを `Saved/ACFTransitions/` に保存 |
+| `.Transitions.Render.ViewportFullCover`（描画あり） | 実際の Game Viewport で、50 種類それぞれを被覆率 1 で表示し、World の描画を止めても画面が変わらない（= World が 1 ピクセルも見えない）こと。何も出ていないときは変わること |
 | `.Transitions.Profile.Cost`（描画あり） | 下の「性能」 |
-| `.Editor.Transitions.PreviewPanel` | Preview の 42 種類の再生・完全被覆に達する・終わると消える・Material の Effect の値 |
+| `.Editor.Transitions.PreviewPanel` | Preview の全種類の再生・完全被覆に達する・終わると消える・Material の Effect の値 |
 | `.Transitions.Capture.Profile`（描画あり） | 下の「キャプチャ」: 同期の読み出しと GPU のコピーを同じ条件で 10 回ずつ計測し、GPU のコピーの色が読み出しと同じこと（生の値、Material を通した絵） |
 | `.Transitions.Capture.FailureRecovers` | `ACF.Transition.Debug.FailCapture 1` で全キャプチャを失敗させても、キャプチャを使う Close / Open が Finished まで進み、何も残らない |
 | `.Transitions.Capture.CancelWhilePending` | キャプチャを待っている間の Cancel / Interrupt / Skip で、待ちのキャプチャ・キャプチャ・オーバーレイが残らない |
@@ -3125,7 +3137,7 @@ GPU のコピーと同期の読み出しの同じ画面の差: 生の値で平�
 
 実際の UE の描画（Game Viewport のスクリーンショット: 3D・ゲームの UI・オーバーレイ）を、番号と名前つきで確認する手順です。
 
-1. `ACF_RECORD_TRANSITIONS=1 Scripts/RunTests.sh --context samples ActionCameraFramework.Transitions.Record`（`41,42` のように番号でも可）→ `Saved/ACFTransitions/Record/<ID>_<C|O>_<NN>.png`（42 種類 × Close 17 点 + Open 17 点 = 1428 枚、480×270）。演出を ShowStill で各点に止め、そのときの実際の画面を保存します。
+1. `ACF_RECORD_TRANSITIONS=1 Scripts/RunTests.sh --context samples ActionCameraFramework.Transitions.Record`（`41,42` のように番号でも可）→ `Saved/ACFTransitions/Record/<ID>_<C|O>_<NN>.png`（50 種類 × Close 17 点 + Open 17 点 = 1700 枚、480×270）。演出を ShowStill で各点に止め、そのときの実際の画面を保存します。
 2. `powershell -ExecutionPolicy Bypass -File Scripts/Transitions/MakeTransitionReview.ps1 -Project <プロジェクト>`（Windows 標準の Media Foundation を使い、追加のツールは不要）→ `Saved/ACFTransitions/Review/`:
    - `Frames/`: 全フレームに番号・名前・Close / Open と %
    - `Sheet_01-14.png` / `Sheet_15-28.png` / `Sheet_29-42.png`: 1 行 1 演出、Close 0 / 25 / 50 / 75 / 100 %、Open 25 / 50 / 75 / 100 %（開始・中間・終了）
@@ -3146,7 +3158,7 @@ GPU のコピーと同期の読み出しの同じ画面の差: 生の値で平�
 
 `RunUAT BuildCookRun -build -cook -stage -pak`（Win64）で Development と Shipping を作り、パッケージ版で実際に `OpenLevel` を使うデモを実行しました（2026-11-15、計測した環境: RTX 4060 Laptop、1280×720 のウィンドウ）。
 
-| 構成 | `-ACFTransitionDemo=Travel:4`（41 → 42、A ⇄ B を 4 回） | `-ACFTransitionDemo=All`（42 種類を順に Close → Open） |
+| 構成 | `-ACFTransitionDemo=Travel:4`（41 → 42、A ⇄ B を 4 回） | `-ACFTransitionDemo=All`（50 種類を順に Close → Open） |
 | --- | --- | --- |
 | Development | PASS（毎回 `PreLoadMap` / `PostLoadMap` で被覆率 1.000・オーバーレイあり、イベント Started → Covered → LoadStarted → LoadCompleted → Finished、1 往復 約 2.4 秒） | PASS（42 / 42、失敗 0、終了後にオーバーレイ・View が残っていない） |
 | Shipping | PASS（同上、1 往復 2.36〜2.62 秒） | PASS（42 / 42、失敗 0、残りなし） |

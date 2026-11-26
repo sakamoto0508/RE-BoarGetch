@@ -167,6 +167,24 @@ FACFTransitionHandle UACFTransitionSubsystem::PlayLevelTransitionPreset(const UA
 	return PlayLevelTransition(Close, Open, Options, LevelName, TravelOptions);
 }
 
+FACFTransitionHandle UACFTransitionSubsystem::PlayPreview(const FACFTransitionSettings& Close, const FACFTransitionSettings& Open, float HoldSeconds)
+{
+	const UWorld* World = GetGameWorld();
+	if (!World || !World->GetGameViewport() || IsTransitionActive() || bStill
+		|| GetScreenState() != EACFTransitionScreenState::Clear || !Close.IsValid() || !Open.IsValid())
+	{
+		return FACFTransitionHandle();
+	}
+
+	FRequest Request;
+	Request.Kind = EACFTransitionKind::Preview;
+	Request.Close = Close;
+	Request.Open = Open;
+	Request.PreviewHoldSeconds = FMath::IsFinite(HoldSeconds) ? FMath::Max(0.f, HoldSeconds) : 0.f;
+	Request.Options.Concurrency = EACFTransitionConcurrency::Reject;
+	return Submit(MoveTemp(Request));
+}
+
 FACFTransitionHandle UACFTransitionSubsystem::Submit(FRequest&& Request)
 {
 	Request.Handle = FACFTransitionHandle(NextHandleId++);
@@ -669,6 +687,12 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 				Emit(Done, EACFTransitionEvent::Finished);
 				return; // then Settle: what the listeners requested, then the queue
 			}
+			if (Active->Kind == EACFTransitionKind::Preview)
+			{
+				SetStage(EStage::PreviewHold);
+				Emit(*Active, EACFTransitionEvent::Covered);
+				break;
+			}
 			SetStage(EStage::WaitingForLoad);
 			if (Settings->bUseMoviePlayerDuringLoad && !GIsEditor && IsMoviePlayerEnabled() && !Active->Options.bManualLoad && GetMoviePlayer())
 			{
@@ -707,6 +731,13 @@ void UACFTransitionSubsystem::TickTransitions(float DeltaSeconds)
 					NotifyLoadFailed(Handle);
 				}
 			}
+		}
+		break;
+	case EStage::PreviewHold:
+		StageWait += Delta;
+		if (StageWait >= Active->PreviewHoldSeconds)
+		{
+			BeginOpening(false);
 		}
 		break;
 	case EStage::WaitingForLoad:
@@ -788,7 +819,7 @@ void UACFTransitionSubsystem::BeginOpening(bool bFailed)
 		return;
 	}
 	bOpeningAfterFailure = bFailed;
-	DrawSettings = Active->Kind == EACFTransitionKind::Open ? Active->Open : (Active->Kind == EACFTransitionKind::Level ? Active->Open : Active->Close);
+	DrawSettings = Active->Open;
 	DrawPhase = EACFTransitionPhase::Open;
 	if (!ACFTransition::GetEffectInfo(DrawSettings.Effect).bOpenUsesSnapshot)
 	{

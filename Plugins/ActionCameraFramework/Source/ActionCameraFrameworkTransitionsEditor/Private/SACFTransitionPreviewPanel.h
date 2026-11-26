@@ -11,9 +11,11 @@
 class FACFTransitionView;
 class IDetailsView;
 class UTexture2D;
+class UACFTransitionPreset;
+struct FAssetData;
 
 /**
- * The "ACF Transition Preview" tab (README 33 章「Editor Preview」): the 42 effects in a list; select one, press Play (Close ->
+ * The "ACF Transition Preview" tab (README 33 章「Editor Preview」): the effects in a list; select one, press Play (Close ->
  * hold -> Open), change the look in the details view and play again. The preview draws the same widget and material as the
  * game (FACFTransitionView) over a test picture that is also the screen capture of the capture-based effects. "Play in
  * PIE" plays the settings in the running PIE session; "Save as Preset" writes a UACFTransitionPreset.
@@ -30,6 +32,7 @@ public:
 
 	// Model (also used by the tests)
 	void SelectEffect(EACFTransitionEffect Effect);
+	void LoadPreset(const UACFTransitionPreset& Preset);
 	EACFTransitionEffect GetSelectedEffect() const { return Selected; }
 	void Play(bool bClose, bool bOpen);
 	void PlayAll();
@@ -46,6 +49,8 @@ private:
 	enum class EMode : uint8 { Idle, Closing, Holding, Opening };
 
 	TSharedRef<ITableRow> MakeRow(TSharedPtr<FACFTransitionEffectInfo> Item, const TSharedRef<STableViewBase>& Owner);
+	void OnPresetSelected(const FAssetData& Asset);
+	void SyncEffectSelection();
 	void OnListSelection(TSharedPtr<FACFTransitionEffectInfo> Item, ESelectInfo::Type Type);
 	EActiveTimerReturnType OnTimer(double CurrentTime, float DeltaTime);
 	void EnsureTimer();
@@ -58,6 +63,7 @@ private:
 	TSharedPtr<SListView<TSharedPtr<FACFTransitionEffectInfo>>> List;
 	TSharedPtr<IDetailsView> Details;
 	TStrongObjectPtr<UACFTransitionPreviewSettings> Settings;
+	FString PreviewPresetPath;
 	TStrongObjectPtr<UTexture2D> Picture;
 	FSlateBrush PictureBrush;
 	TSharedPtr<FACFTransitionView> View;

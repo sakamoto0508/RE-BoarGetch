@@ -11,7 +11,7 @@ public class ActionCameraFrameworkTransitionsEditor : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new[]
 		{
 			"ActionCameraFrameworkTransitions", "UnrealEd", "Slate", "SlateCore", "InputCore", "PropertyEditor",
-			"WorkspaceMenuStructure", "AssetTools", "ContentBrowser", "AssetRegistry",
+			"WorkspaceMenuStructure", "AssetTools", "ContentBrowser", "AssetRegistry", "ToolMenus",
 		});
 	}
 }

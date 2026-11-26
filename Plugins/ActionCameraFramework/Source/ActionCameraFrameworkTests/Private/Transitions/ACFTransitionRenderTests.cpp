@@ -21,7 +21,7 @@
 #endif
 
 /**
- * Phase 7D: the real frames of the 42 effects (README 33 章「検証」). Needs a renderer (skipped with -NullRHI); run with
+ * Phase 7D: the real frames of all effects (README 33 章「検証」). Needs a renderer (skipped with -NullRHI); run with
  * Scripts/RunTests.sh --context samples ActionCameraFramework.Transitions.Render.
  *
  *  - AllEffects: the transition widget (the same widget + M_ACFTransition as in the game) is rendered off-screen by Slate
@@ -246,7 +246,7 @@ bool FACFTransitionRenderAllTest::RunTest(const FString&)
 		{ EACFTransitionPhase::Open, 1.f, TEXT("Open100") },
 	};
 	constexpr int32 NumShots = UE_ARRAY_COUNT(Shots);
-	const int32 Cols = 7, Rows = 6;
+	const int32 Cols = 7, Rows = FMath::DivideAndRoundUp(ACFTransition::NumEffects, Cols);
 	const int32 SheetW = Cols * (CellW + 4), SheetH = Rows * (CellH + 4);
 	TArray<TArray<FColor>> Sheets;
 	Sheets.SetNum(NumShots);
@@ -325,9 +325,14 @@ bool FACFTransitionRenderAllTest::RunTest(const FString&)
 			}
 			const float D = MeanDiff(Signatures[a], Signatures[b]);
 			if (D < MinDiff) { MinDiff = D; MinA = a + 1; MinB = b + 1; }
-			if (D < Threshold)
+			// Crisp Wipe intentionally shares the direction and silhouette of Horizontal Wipe.
+			// Its accent-free edge changes only a narrow strip, so check that pair at a smaller threshold.
+			const bool bCrispVariant = ACFTransition::FromId(a + 1) == EACFTransitionEffect::HorizontalWipe
+				&& ACFTransition::FromId(b + 1) == EACFTransitionEffect::CrispWipe;
+			const float PairThreshold = bCrispVariant ? 1.0f : Threshold;
+			if (D < PairThreshold)
 			{
-				AddError(FString::Printf(TEXT("%02d and %02d look the same (mean difference %.2f < %.1f)."), a + 1, b + 1, D, Threshold));
+				AddError(FString::Printf(TEXT("%02d and %02d look the same (mean difference %.2f < %.1f)."), a + 1, b + 1, D, PairThreshold));
 			}
 			if (D < 12.f)
 			{
@@ -335,8 +340,8 @@ bool FACFTransitionRenderAllTest::RunTest(const FString&)
 			}
 		}
 	}
-	AddInfo(FString::Printf(TEXT("42 effects x %d frames rendered in %.1f s; most similar pair %02d / %02d (mean difference %.2f); pairs under 12: %s"),
-		NumShots, FPlatformTime::Seconds() - T0, MinA, MinB, MinDiff, Close.IsEmpty() ? TEXT("none") : *FString::Join(Close, TEXT(", "))));
+	AddInfo(FString::Printf(TEXT("%d effects x %d frames rendered in %.1f s; most similar pair %02d / %02d (mean difference %.2f); pairs under 12: %s"),
+		ACFTransition::NumEffects, NumShots, FPlatformTime::Seconds() - T0, MinA, MinB, MinDiff, Close.IsEmpty() ? TEXT("none") : *FString::Join(Close, TEXT(", "))));
 	AddInfo(FString::Printf(TEXT("Contact sheets: %s"), *FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("ACFTransitions")))));
 
 	// Spiral strips: 41 and 42 at 12 points each (shape review), plus the checks of the shared spiral mask:
@@ -494,7 +499,7 @@ bool FACFTransitionViewportCoverTest::RunTest(const FString&)
 			Grab(VC, Without);
 			VC->bDisableWorldRendering = false;
 			TestTrue(TEXT("Sanity: the world is visible when the screen is clear"), CountDifferent(Ctx->WithWorld, Without) > Ctx->WithWorld.Num() / 10);
-			AddInfo(FString::Printf(TEXT("42 effects checked in the game viewport at coverage 1: %d failed."), Ctx->Failures));
+			AddInfo(FString::Printf(TEXT("%d effects checked in the game viewport at coverage 1: %d failed."), ACFTransition::NumEffects, Ctx->Failures));
 			return true;
 		}
 		default: return true;

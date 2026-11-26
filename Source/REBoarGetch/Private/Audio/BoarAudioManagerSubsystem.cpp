@@ -9,6 +9,15 @@
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundBase.h"
 
+namespace
+{
+	// Project Settings > Mix の音源ごとの音量。全ての再生経路で同じ倍率を掛ける。
+	float SoundGain(const USoundBase* Sound)
+	{
+		return GetDefault<UBoarAudioSettings>()->GetSoundVolume(Sound);
+	}
+}
+
 void UBoarAudioManagerSubsystem::PlayBGM(
 	UObject* WorldContextObject,
 	USoundBase* BGM,
@@ -49,7 +58,8 @@ void UBoarAudioManagerSubsystem::ApplyLevelBGM(
 	if (BGMComponent && BGMComponent->IsPlaying() && CurrentBGM == BGM && !bRestartIfAlreadyPlaying)
 		return;
 
-	StartBGM(WorldContextObject, BGM, FadeInDuration, FadeOutDuration);
+	// Level / Stage BGMはループ再生する（音源アセットのLooping設定に依存しない）。
+	StartBGM(WorldContextObject, BGM, FadeInDuration, FadeOutDuration, true);
 }
 
 void UBoarAudioManagerSubsystem::StopBGMUnless(USoundBase* KeepBGM, float FadeOutDuration)
@@ -64,7 +74,8 @@ void UBoarAudioManagerSubsystem::StartBGM(
 	UObject* WorldContextObject,
 	USoundBase* BGM,
 	float FadeInDuration,
-	float OldFadeOutDuration)
+	float OldFadeOutDuration,
+	bool bLoop)
 {
 	// 曲を切り替える前に旧ComponentのDelegateを外し、終了通知の競合を防ぐ。
 	ReleaseCurrentBGM(OldFadeOutDuration);
@@ -72,10 +83,11 @@ void UBoarAudioManagerSubsystem::StartBGM(
 	// PersistAcrossLevelTransitionをtrueにし、Level遷移でBGMが途切れないようにする。
 	// 2D Sound（UI扱い）なのでゲームのPause中も再生を続ける。終了時は自動で破棄する。
 	CurrentBGM = BGM;
+	bLoopCurrentBGM = bLoop;
 	BGMComponent = UGameplayStatics::SpawnSound2D(
 		WorldContextObject,
 		BGM,
-		MasterVolume * BGMVolume,
+		MasterVolume * BGMVolume * SoundGain(BGM),
 		1.0f,
 		0.0f,
 		nullptr,
@@ -85,12 +97,13 @@ void UBoarAudioManagerSubsystem::StartBGM(
 	if (!BGMComponent)
 	{
 		CurrentBGM = nullptr;
+		bLoopCurrentBGM = false;
 		return;
 	}
 
 	// 自然終了時やFadeOut完了時に参照を解放できるよう通知を購読する。
 	BGMComponent->OnAudioFinished.AddUniqueDynamic(this, &UBoarAudioManagerSubsystem::HandleBGMFinished);
-	BGMComponent->FadeIn(FMath::Max(0.0f, FadeInDuration), MasterVolume * BGMVolume);
+	BGMComponent->FadeIn(FMath::Max(0.0f, FadeInDuration), MasterVolume * BGMVolume * SoundGain(BGM));
 }
 
 void UBoarAudioManagerSubsystem::ReleaseCurrentBGM(float FadeOutDuration)
@@ -108,6 +121,7 @@ void UBoarAudioManagerSubsystem::ReleaseCurrentBGM(float FadeOutDuration)
 
 	BGMComponent = nullptr;
 	CurrentBGM = nullptr;
+	bLoopCurrentBGM = false;
 }
 
 void UBoarAudioManagerSubsystem::StopBGM(float FadeOutDuration)
@@ -131,7 +145,7 @@ void UBoarAudioManagerSubsystem::PlaySoundEffect2D(
 	UGameplayStatics::PlaySound2D(
 		WorldContextObject,
 		Sound,
-		MasterVolume * SoundEffectVolume * FMath::Max(0.0f, VolumeMultiplier),
+		MasterVolume * SoundEffectVolume * SoundGain(Sound) * FMath::Max(0.0f, VolumeMultiplier),
 		FMath::Max(0.01f, PitchMultiplier));
 }
 
@@ -141,7 +155,7 @@ UAudioComponent* UBoarAudioManagerSubsystem::SpawnSoundEffect2D(
 	if (!WorldContextObject || !Sound)
 		return nullptr;
 
-	const float BaseVolume = FMath::Max(0.f, VolumeMultiplier);
+	const float BaseVolume = FMath::Max(0.f, VolumeMultiplier) * SoundGain(Sound);
 	UAudioComponent* Component = UGameplayStatics::CreateSound2D(
 		WorldContextObject, Sound, MasterVolume * SoundEffectVolume * BaseVolume,
 		FMath::Max(.01f, PitchMultiplier));
@@ -170,7 +184,7 @@ void UBoarAudioManagerSubsystem::PlaySoundEffectAtLocation(
 		WorldContextObject,
 		Sound,
 		Location,
-		MasterVolume * SoundEffectVolume * FMath::Max(0.0f, VolumeMultiplier),
+		MasterVolume * SoundEffectVolume * SoundGain(Sound) * FMath::Max(0.0f, VolumeMultiplier),
 		FMath::Max(0.01f, PitchMultiplier));
 }
 
@@ -202,7 +216,7 @@ void UBoarAudioManagerSubsystem::PlayWorldSoundEffect(
 	if (!Sound || (!WorldContextObject && !AttachTo))
 		return;
 
-	const float Volume = MasterVolume * SoundEffectVolume * FMath::Max(0.0f, VolumeMultiplier);
+	const float Volume = MasterVolume * SoundEffectVolume * SoundGain(Sound) * FMath::Max(0.0f, VolumeMultiplier);
 	const float Pitch = FMath::Max(0.01f, PitchMultiplier);
 	USoundAttenuation* ResolvedAttenuation = ResolveWorldAttenuation(Attenuation);
 
@@ -229,7 +243,7 @@ UAudioComponent* UBoarAudioManagerSubsystem::SpawnManagedSoundAttached(
 	if (!Sound || !AttachTo)
 		return nullptr;
 
-	const float BaseVolume = FMath::Max(0.0f, VolumeMultiplier);
+	const float BaseVolume = FMath::Max(0.0f, VolumeMultiplier) * SoundGain(Sound);
 	const float Volume = MasterVolume * SoundEffectVolume * BaseVolume;
 	UAudioComponent* Component = UGameplayStatics::SpawnSoundAttached(Sound, AttachTo, NAME_None,
 		FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, true, Volume,
@@ -337,7 +351,7 @@ void UBoarAudioManagerSubsystem::ApplyBGMVolume()
 	// BGMの実効音量はMasterとBGMカテゴリの積で決定する。
 	if (BGMComponent)
 	{
-		BGMComponent->SetVolumeMultiplier(MasterVolume * BGMVolume);
+		BGMComponent->SetVolumeMultiplier(MasterVolume * BGMVolume * SoundGain(CurrentBGM));
 	}
 }
 
@@ -359,6 +373,14 @@ void UBoarAudioManagerSubsystem::ApplyManagedSoundEffectVolume()
 void UBoarAudioManagerSubsystem::HandleBGMFinished()
 {
 	// 再生Componentが終了した時点で、現在BGMの管理状態も空へ戻す。
+	// 停止・曲の切替・フェードアウトでは先に通知を外しているので、ここへ来るのは最後まで再生し終えた時だけ。
+	USoundBase* Finished = CurrentBGM;
+	const bool bLoop = bLoopCurrentBGM;
 	BGMComponent = nullptr;
 	CurrentBGM = nullptr;
+	bLoopCurrentBGM = false;
+
+	// Level / Stage BGMは頭から再生し直す（フェードなし）。継ぎ目なしで繋ぐには音源側のLoopingも有効にする。
+	if (bLoop && Finished)
+		StartBGM(GetGameInstance(), Finished, 0.0f, 0.0f, true);
 }

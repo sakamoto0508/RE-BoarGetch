@@ -11,12 +11,9 @@ class ULocalPlayer;
 class UWorld;
 
 /**
- * Phase 7A-2: what the tuning panel shows and does, without any Slate (SACFCameraTuningPanel is only the view; the tests
- * drive this class). It only OBSERVES the game and calls the runtime tuning API (UACFCameraDirector Start / Set / Reset /
- * Stop, ACFCameraTuning): it never writes a preset, never creates requests / rigs, never changes the pipeline.
- *
- * The target is (PIE World, local player, request handle, node index + class). Everything is held weakly / by value and
- * re-resolved on every use, so a stale target (PIE ended, player removed, request released) is detected, never touched.
+ * Owns the editor's camera selection, runtime tuning session controls and pending preset changes.
+ * The target is resolved from a weak PIE world and local player, a request handle and the node's index and class.
+ * Preset writes are explicit operations delegated to the change set.
  */
 class FACFCameraTuningPanelModel
 {
@@ -92,7 +89,7 @@ public:
 	/**
 	 * A / B comparison without a second request or rig: "Show Original" remembers the tuned values of every node and
 	 * resets them (the request keeps its rig state), "Show Tuned" writes them back. Editing is blocked while showing the
-	 * original. Ends by itself when the target changes or tuning stops.
+	 * original. The comparison ends when the target changes, tuning stops or the panel closes.
 	 */
 	EACFCameraTuningResult ToggleCompare();
 	bool IsShowingOriginal() const { return bShowingOriginal; }
@@ -108,6 +105,7 @@ public:
 	/**
 	 * Records the tuned values of every tuned request of every PIE player (or of the test director). Read-only; the panel
 	 * calls it with its refresh, and it runs once more just before PIE ends (the tuning copies are gone afterwards).
+	 * A request previewing original values retains its previously captured tuned values.
 	 */
 	int32 CaptureAll();
 	FACFCameraTuningChangeSet& GetChangeSet() { return ChangeSet; }

@@ -51,11 +51,23 @@ struct FBoarAttackTaskInstanceData
 	/** タスク開始前の移動速度です。 */
 	float OriginalWalkSpeed = 0.0f;
 
+	/** タスク開始前の、移動方向へ自動回転する設定です。 */
+	bool bOriginalOrientRotationToMovement = false;
+
+	/** タスク開始前の、Controllerの向きへ自動回転する設定です。 */
+	bool bOriginalUseControllerDesiredRotation = false;
+
+	/** 突進終了通知を送信済みかです。 */
+	bool bChargeFinishedNotified = false;
+
 	/** 終了処理の重複実行を防ぎます。 */
-	bool bCleanupCompleted = false;
+	bool bCleanupCompleted = true;
 };
 
-/** 予兆・突進・後退の順で檻への攻撃を制御するStateTreeタスクです。 */
+/**
+ * 予兆・直線突進・後退・硬直の順で檻への攻撃を制御するStateTreeタスクです。
+ * プレイヤー攻撃（Attack Player）と同じ流れで、後退中も檻の方を向き続けます。
+ */
 USTRUCT(meta=(DisplayName="Attack Cage", Category="Boar"))
 struct FStateTreeBoarAttackTask : public FStateTreeTaskCommonBase
 {
@@ -83,7 +95,7 @@ struct FStateTreeBoarAttackTask : public FStateTreeTaskCommonBase
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
 		const FStateTreeTransitionResult& Transition) const override;
 
-	/** 予兆・突進・後退を順に更新します。 */
+	/** 予兆・突進・後退・硬直を順に更新します。 */
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, float DeltaTime) const override;
 
 	/** 中断時を含めて移動速度を元へ戻します。 */
@@ -91,6 +103,12 @@ struct FStateTreeBoarAttackTask : public FStateTreeTaskCommonBase
 		const FStateTreeTransitionResult& Transition) const override;
 
 private:
+	/** 突進を終了して後退へ移ります。 */
+	void BeginRetreat(FInstanceDataType& InstanceData, class ABoarBase* Boar) const;
+
+	/** 後退中に変更した自動回転の設定を元へ戻します。 */
+	void RestoreRotationSettings(const FInstanceDataType& InstanceData, class ABoarBase* Boar) const;
+
 	/** タスク終了時の共通復元処理です。 */
 	void FinishAttack(FInstanceDataType& InstanceData, class ABoarBase* Boar) const;
 };

@@ -8,6 +8,8 @@
 #include "Framework/Docking/TabManager.h"
 #include "Modules/ModuleManager.h"
 #include "SACFTransitionPreviewPanel.h"
+#include "Styling/AppStyle.h"
+#include "ToolMenus.h"
 #include "WorkspaceMenuStructure.h"
 #include "WorkspaceMenuStructureModule.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -41,9 +43,10 @@ public:
 				return SNew(SDockTab).TabRole(ETabRole::NomadTab)[SNew(SACFTransitionPreviewPanel)];
 			}))
 			.SetDisplayName(LOCTEXT("Tab", "ACF Transition Preview"))
-			.SetTooltipText(LOCTEXT("TabTip", "Preview the 42 Action Camera Framework screen transitions and tune their settings."))
+			.SetTooltipText(LOCTEXT("TabTip", "Preview the Action Camera Framework screen transitions and tune their settings."))
 			.SetGroup(WorkspaceMenu::GetMenuStructure().GetDeveloperToolsDebugCategory());
 		bRegistered = true;
+		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FActionCameraFrameworkTransitionsEditorModule::RegisterBlueprintToolbar));
 	}
 
 	virtual void ShutdownModule() override
@@ -51,11 +54,33 @@ public:
 		UE::Cook::FDelegates::ModifyCook.Remove(ModifyCookHandle);
 		if (bRegistered && FSlateApplication::IsInitialized())
 		{
+			UToolMenus::UnRegisterStartupCallback(this);
+			UToolMenus::UnregisterOwner(this);
 			FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(TabName);
 		}
 	}
 
+	static void OpenPreview()
+	{
+		if (FSlateApplication::IsInitialized())
+		{
+			FGlobalTabmanager::Get()->TryInvokeTab(TabName);
+		}
+	}
+
 private:
+	void RegisterBlueprintToolbar()
+	{
+		FToolMenuOwnerScoped Owner(this);
+		UToolMenu* Toolbar = UToolMenus::Get()->ExtendMenu("AssetEditor.BlueprintEditor.ToolBar");
+		FToolMenuEntry Button = FToolMenuEntry::InitToolBarButton("ACFTransitionPreview",
+			FUIAction(FExecuteAction::CreateStatic(&FActionCameraFrameworkTransitionsEditorModule::OpenPreview)),
+			LOCTEXT("BlueprintPreview", "Transition Preview"),
+			LOCTEXT("BlueprintPreviewTip", "Preview an ACF screen transition or preset while editing this Blueprint."),
+			FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Play"));
+		Toolbar->FindOrAddSection("ACF").AddEntry(Button);
+	}
+
 	static void AddTransitionContentToCook(UE::Cook::ICookInfo&, TArray<UE::Cook::FPackageCookRule>& Rules)
 	{
 		IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
@@ -86,7 +111,7 @@ private:
 
 static FAutoConsoleCommand GACFOpenTransitionPreview(TEXT("ACF.Transition.OpenPreview"), TEXT("Opens the ACF Transition Preview tab (editor)."), FConsoleCommandDelegate::CreateLambda([]()
 {
-	FGlobalTabmanager::Get()->TryInvokeTab(FActionCameraFrameworkTransitionsEditorModule::TabName);
+	FActionCameraFrameworkTransitionsEditorModule::OpenPreview();
 }));
 
 IMPLEMENT_MODULE(FActionCameraFrameworkTransitionsEditorModule, ActionCameraFrameworkTransitionsEditor)

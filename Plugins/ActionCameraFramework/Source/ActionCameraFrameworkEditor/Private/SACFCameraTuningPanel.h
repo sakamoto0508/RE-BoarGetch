@@ -10,11 +10,9 @@ template <typename OptionType> class SComboBox;
 class SVerticalBox;
 
 /**
- * Phase 7A-2: the "ACF Camera Tuning" editor tab (Window > Developer Tools > Debug). A thin view over
- * FACFCameraTuningPanelModel: target selection (PIE World, local player, request), the request's nodes, and the tunable
- * parameters of the selected node (original / current / difference / valid range / reset), plus Start / Stop / Reset All /
- * Compare. It polls the model a few times per second while open (never per camera frame) and writes nothing but through
- * the runtime tuning API. Room is left below the parameters for the 7A-4 debugger.
+ * Editor tab for tuning and diagnosing a PIE camera. The views share one selected world, player and request.
+ * A Slate timer polls the model while the tab is open. Runtime tuning and preset Check / Apply / Save are
+ * routed through the model.
  */
 class SACFCameraTuningPanel : public SCompoundWidget
 {
@@ -75,6 +73,9 @@ public:
 	int32 GetNumProfileComputations() const { return NumProfileComputations; }
 
 private:
+	TSharedRef<SWidget> MakeTargetSelectors();
+	TSharedRef<SWidget> MakeTuningActions();
+	TSharedRef<SWidget> MakeTuningView();
 	TSharedRef<SWidget> MakeProfilerView();
 	TSharedRef<SWidget> MakeDebuggerView();
 	TSharedRef<SWidget> MakeCompositionView();
@@ -90,6 +91,7 @@ private:
 
 	TSharedRef<SWidget> MakeChangesSection();
 	void RebuildChangesBox();
+	FText GetChangeDescription(int32 Index) const;
 	void ShowReport(const FACFCameraTuningChangeSet::FReport& Report);
 	TSharedPtr<SVerticalBox> ChangesBox;
 	FString ChangesShape;
@@ -99,7 +101,7 @@ private:
 
 	EActiveTimerReturnType OnTimer(double CurrentTime, float DeltaTime);
 	void RebuildParameterBox();
-	TSharedRef<SWidget> MakeParameterRow(int32 RowIndex);
+	TSharedRef<SWidget> MakeParameterRow(int32 RowIndex, const FText& Tooltip);
 	TSharedRef<ITableRow> MakeRequestRow(TSharedPtr<FACFCameraRequestInfo> Item, const TSharedRef<STableViewBase>& Owner);
 	TSharedRef<ITableRow> MakeNodeRow(TSharedPtr<FACFCameraTuningNodeInfo> Item, const TSharedRef<STableViewBase>& Owner);
 	bool CanStart() const;

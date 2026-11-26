@@ -416,6 +416,8 @@ EACFCameraTuningResult FACFCameraTuningPanelModel::ToggleCompare()
 	{
 		return Report(EACFCameraTuningResult::NotTuning, TEXT("Show original values"));
 	}
+	// Record the tuned values before the preview replaces them with the preset values.
+	CaptureAll();
 	CompareStash.Reset();
 	TArray<FACFCameraTuningNodeInfo> Nodes;
 	Director->GetRequestNodes(Request, Nodes);
@@ -451,6 +453,11 @@ FACFCameraTuningPanelModel::FACFCameraTuningPanelModel()
 FACFCameraTuningPanelModel::~FACFCameraTuningPanelModel()
 {
 	FEditorDelegates::PrePIEEnded.Remove(PrePIEEndedHandle);
+	if (bShowingOriginal)
+	{
+		// The preview belongs to this panel. Restore the tuned values when it closes during PIE.
+		ToggleCompare();
+	}
 }
 
 void FACFCameraTuningPanelModel::OnPrePIEEnded(bool bIsSimulating)
@@ -488,13 +495,14 @@ FString FACFCameraTuningPanelModel::MakeSourceLabel(const FACFCameraRequestInfo&
 int32 FACFCameraTuningPanelModel::CaptureAll()
 {
 	int32 NumChanged = 0;
-	auto CaptureDirector = [this, &NumChanged](UACFCameraDirector& Director)
+	auto CaptureDirector = [this, &NumChanged](UACFCameraDirector& Director, bool bSelectedPlayer)
 	{
 		TArray<FACFCameraRequestInfo> Infos;
 		Director.GetRequestInfos(Infos);
 		for (const FACFCameraRequestInfo& Info : Infos)
 		{
-			if (Info.bTuning)
+			// The selected request is displaying temporary originals while its tuned values are stashed.
+			if (Info.bTuning && !(bShowingOriginal && bSelectedPlayer && Info.Handle == Request))
 			{
 				NumChanged += ChangeSet.Capture(Director, Info.Handle, MakeSourceKey(Info.Handle), MakeSourceLabel(Info));
 			}
@@ -502,7 +510,7 @@ int32 FACFCameraTuningPanelModel::CaptureAll()
 	};
 	if (UACFCameraDirector* Director = TestDirector.Get())
 	{
-		CaptureDirector(*Director);
+		CaptureDirector(*Director, true);
 		return NumChanged;
 	}
 	// Every PIE player, not only the selected one: the key / label are built from the selection, so select each in turn.
@@ -521,7 +529,7 @@ int32 FACFCameraTuningPanelModel::CaptureAll()
 			UACFCameraSubsystem* Subsystem = PlayerEntry.Player.IsValid() ? PlayerEntry.Player->GetSubsystem<UACFCameraSubsystem>() : nullptr;
 			if (UACFCameraDirector* Director = Subsystem ? Subsystem->GetDirector() : nullptr)
 			{
-				CaptureDirector(*Director);
+				CaptureDirector(*Director, World == SavedWorld && Player == SavedPlayer);
 			}
 		}
 	}

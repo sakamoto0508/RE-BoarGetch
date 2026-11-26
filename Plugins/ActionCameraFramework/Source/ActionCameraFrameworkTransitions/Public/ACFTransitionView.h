@@ -85,6 +85,7 @@ private:
 	void EnsureMaterial(const FACFTransitionSettings& Settings);
 
 	TSharedPtr<SACFTransitionOverlay> Widget;
+	float BackgroundBlurStrength = 0.f;
 	TObjectPtr<UMaterialInstanceDynamic> MaterialInstance = nullptr;
 	TObjectPtr<UMaterialInterface> BaseMaterial = nullptr;
 	FVector2D FallbackSize = FVector2D(1920.0, 1080.0);

@@ -34,6 +34,24 @@ struct REBOARGETCH_API FBoarLevelBGMEntry
 	float PreviousBGMFadeOutSeconds = 1.0f;
 };
 
+/** 音源ごとの音量（ミックス）。音源アセットを変えずに、どの再生箇所でもこの倍率を掛けます。 */
+USTRUCT()
+struct REBOARGETCH_API FBoarSoundVolumeEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(Config, EditAnywhere, Category = "Mix")
+	TSoftObjectPtr<USoundBase> Sound;
+
+	/** 1.0で音源そのままの音量。BGM・SEどちらにも使えます。 */
+	UPROPERTY(Config, EditAnywhere, Category = "Mix", meta = (ClampMin = "0.0", ClampMax = "4.0"))
+	float Volume = 1.0f;
+
+	/** 用途と調整理由のメモ（再生には使いません）。 */
+	UPROPERTY(Config, EditAnywhere, Category = "Mix")
+	FString Note;
+};
+
 /**
  * 複数の画面・Actorが共有するSEと距離減衰の設定です（Project Settings > Game > REBoarGetch Audio。DefaultGame.iniに保存）。
  * Stage BGMはStageConfig、それ以外のLevel（Lobby等）のBGMはここのLevel BGMs、Player・Boar・Cage・Gadget固有のSEは各BP / DataAssetで設定します。
@@ -134,4 +152,20 @@ public:
 	USoundBase* GetAmbienceSound(EBoarAmbienceType Type) const;
 	USoundAttenuation* GetDefaultWorldAttenuation() const { return DefaultWorldAttenuation.LoadSynchronous(); }
 	USoundAttenuation* GetDefaultAmbienceAttenuation() const { return DefaultAmbienceAttenuation.LoadSynchronous(); }
+
+	// ---- Mix（音源ごとの音量） ----
+	/** 音源ごとの音量倍率です。InportAssets等のGit管理外の音源も、アセットを変えずにここで音量を揃えます。一覧に無い音源は1.0です。 */
+	UPROPERTY(Config, EditAnywhere, Category = "Mix", meta = (TitleProperty = "Sound"))
+	TArray<FBoarSoundVolumeEntry> SoundVolumes;
+
+	/** SoundVolumesに登録した倍率を返します（未登録は1.0）。 */
+	float GetSoundVolume(const USoundBase* Sound) const;
+
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
+private:
+	mutable TMap<FSoftObjectPath, float> SoundVolumeCache;
+	mutable bool bSoundVolumeCacheBuilt = false;
 };
