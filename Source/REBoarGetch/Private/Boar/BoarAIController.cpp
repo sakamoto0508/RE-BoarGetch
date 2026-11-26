@@ -19,10 +19,8 @@ void ABoarAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
-
 	// Preparing中はGameModeのPlaying遷移で開始します。
-	if (StateTreeAI && (!Mode || Mode->CanAdvanceStage()))
+	if (StateTreeAI && ABoarGameMode::IsStageProgressAllowed(this))
 	{
 		StateTreeAI->StartLogic();
 	}

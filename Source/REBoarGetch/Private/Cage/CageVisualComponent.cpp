@@ -1,4 +1,5 @@
 #include "Cage/CageVisualComponent.h"
+#include "REBoarGetch.h"
 
 #include "Cage/Cage.h"
 #include "UI/CageHealthWidget.h"
@@ -123,7 +124,7 @@ void UCageVisualComponent::BeginPlay()
 	// 代替の見た目は作らない。未設定なら見た目（ランプ含む）だけを無効化し、HP・破壊処理は継続する。
 	if (!CageMesh)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[CageVisual] %s.%s: CageMesh（SM_Cage）が未設定です。檻の見た目とランプを省きます（HP・破壊処理は継続します）。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[CageVisual] %s.%s: CageMesh（SM_Cage）が未設定です。檻の見た目とランプを省きます（HP・破壊処理は継続します）。"),
 			*GetNameSafe(GetOwner()), *GetName());
 	}
 	else
@@ -176,7 +177,7 @@ void UCageVisualComponent::InitGauge()
 
 	if (!Missing.IsEmpty())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[CageVisual] %s.%s: %s がありません。HPゲージを省きます（HP・破壊処理は継続します）。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[CageVisual] %s.%s: %s がありません。HPゲージを省きます（HP・破壊処理は継続します）。"),
 			*GetNameSafe(GetOwner()), *GetName(), *Missing);
 		Gauge->SetWidget(nullptr);
 		Gauge->SetVisibility(false);

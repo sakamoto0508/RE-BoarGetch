@@ -1,4 +1,5 @@
 #include "Component/GameOverPresentationComponent.h"
+#include "REBoarGetch.h"
 #include "Core/BoarGameMode.h"
 #include "Engine/World.h"
 #include "Player/BoarPlayerController.h"
@@ -44,7 +45,7 @@ bool UGameOverPresentationComponent::StartPresentation()
 	Phase = EGameOverPresentationPhase::Playing;
 	StartRealTime = GetWorld()->GetRealTimeSeconds();
 	SetComponentTickEnabled(true);
-	UE_LOG(LogTemp, Log, TEXT("[GameOver] 演出開始（%s）"), *GetNameSafe(DirectorClass));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[GameOver] 演出開始（%s）"), *GetNameSafe(DirectorClass));
 	Director->BeginPresentation(PC, FSimpleDelegate::CreateUObject(this, &UGameOverPresentationComponent::Finish));
 	return true;
 }
@@ -57,7 +58,7 @@ void UGameOverPresentationComponent::TickComponent(float DeltaTime, ELevelTick T
 	// 演出BPが完了報告しない・破棄された場合も必ずUIへ進めます（ヒットストップの影響を受けない実時間）。
 	if (Phase == EGameOverPresentationPhase::Playing && (GetPresentationAge() >= SafetyTimeout || !IsValid(Director)))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GameOver] 演出がタイムアウトしたかDirectorが失われたため、GameOver UIを表示します。"));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[GameOver] 演出がタイムアウトしたかDirectorが失われたため、GameOver UIを表示します。"));
 		Finish();
 	}
 }
@@ -69,7 +70,7 @@ void UGameOverPresentationComponent::Finish()
 
 	Phase = EGameOverPresentationPhase::Finished;
 	SetComponentTickEnabled(false);
-	UE_LOG(LogTemp, Log, TEXT("[GameOver] 演出終了（%.2f秒）"), GetPresentationAge());
+	UE_LOG(LogREBoarGetch, Log, TEXT("[GameOver] 演出終了（%.2f秒）"), GetPresentationAge());
 
 	// 演出BPはUI表示中も残し、倒れた姿勢・カメラ・警告ラインを保持します（Level遷移で破棄）。
 	if (auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)

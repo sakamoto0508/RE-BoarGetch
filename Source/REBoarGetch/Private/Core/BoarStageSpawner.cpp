@@ -1,4 +1,5 @@
 #include "Core/BoarStageSpawner.h"
+#include "REBoarGetch.h"
 
 #include "Boar/BoarBase.h"
 #include "BoarSaveGame.h"
@@ -60,7 +61,7 @@ bool BoarStageSpawner::SpawnConfiguredBoars(UWorld* World, const UStageConfig* S
 			|| !Point || DuplicatePoints.Contains(Entry.SpawnPointId))
 		{
 			// 自動テスト（AddExpectedError）がこの文言を照合しているため英語のまま。
-			UE_LOG(LogTemp, Error, TEXT("[Stage] Invalid/duplicate identity or spawn point: %s / %s"),
+			UE_LOG(LogREBoarGetch, Error, TEXT("[Stage] Invalid/duplicate identity or spawn point: %s / %s"),
 				*Entry.BoarUniqueId.ToString(), *Entry.SpawnPointId.ToString());
 			bSucceeded = false;
 			continue;
@@ -87,7 +88,7 @@ bool BoarStageSpawner::SpawnConfiguredSpecialCoins(UWorld* World, const UStageCo
 		return true;
 	if (!SpecialCoinClass)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Stage] SpecialCoinDefinitions を使うには SpecialCoinClass が必要です。"));
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Stage] SpecialCoinDefinitions を使うには SpecialCoinClass が必要です。"));
 		return false;
 	}
 
@@ -124,7 +125,7 @@ bool BoarStageSpawner::SpawnConfiguredSpecialCoins(UWorld* World, const UStageCo
 		if (Entry.SpecialCoinId.IsNone() || IdCounts.FindRef(Entry.SpecialCoinId) != 1
 			|| !Point || DuplicatePoints.Contains(Entry.SpawnPointId))
 		{
-			UE_LOG(LogTemp, Error, TEXT("[Stage] コインのIDかSpawn地点が無効・重複しています: %s / %s"),
+			UE_LOG(LogREBoarGetch, Error, TEXT("[Stage] コインのIDかSpawn地点が無効・重複しています: %s / %s"),
 				*Entry.SpecialCoinId.ToString(), *Entry.SpawnPointId.ToString());
 			bSucceeded = false;
 			continue;

@@ -1,4 +1,5 @@
 #include "Stage/HubPortal.h"
+#include "REBoarGetch.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Audio/BoarLoopingSoundComponent.h"
 #include "Engine/GameInstance.h"
@@ -99,7 +100,7 @@ void AHubPortal::Activate(ABoarPlayerController* PC)
 	const FString PackageName = GetTravelPackage(TravelDestination);
 	if (!HasTravelMap(PackageName))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[HubPortal] %s: 遷移先のLevel '%s' が無効です"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[HubPortal] %s: 遷移先のLevel '%s' が無効です"),
 			*GetActorNameOrLabel(), *TravelDestination.ToString());
 		// Test対象未選択のGadget Test Portalもここへ来る。遷移しない操作であることを音で返す。
 		PlayPortalSound(EBoarPortalSound::Reject);
@@ -138,7 +139,7 @@ void AHubPortal::BeginPlay()
 		{
 			// 不正な看板設定はクラッシュさせず、該当看板を非表示にしたうえで原因をログへ出す。
 			for (const FString& Problem : FindGadgetLabelProblems(GadgetLabels, GI))
-				UE_LOG(LogTemp, Warning, TEXT("[HubPortal] %s GadgetLabels: %s"), *GetActorNameOrLabel(), *Problem);
+				UE_LOG(LogREBoarGetch, Warning, TEXT("[HubPortal] %s GadgetLabels: %s"), *GetActorNameOrLabel(), *Problem);
 
 			GI->OnTestGadgetChanged.AddUniqueDynamic(this, &AHubPortal::RefreshTestTarget);
 			GI->OnGadgetsUnlocked.AddUniqueDynamic(this, &AHubPortal::RefreshTestTarget);
@@ -208,7 +209,7 @@ void AHubPortal::RefreshTestTarget()
 	const TSoftObjectPtr<UWorld> TestLevel = bShow ? GI->GetSelectedTestLevel() : TSoftObjectPtr<UWorld>();
 	const bool bHasLevel = bShow && HasTravelMap(GetTravelPackage(TestLevel));
 	if (bShow && !TestLevel.IsNull() && !bHasLevel)
-		UE_LOG(LogTemp, Warning, TEXT("[HubPortal] %s: ガジェットテストのLevel '%s' が無効です"),
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[HubPortal] %s: ガジェットテストのLevel '%s' が無効です"),
 			*GetActorNameOrLabel(), *TestLevel.ToString());
 	for (const auto& A : TestVisualActors)
 		if (A)

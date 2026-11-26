@@ -1,4 +1,5 @@
 #include "Component/CapturePresentationComponent.h"
+#include "REBoarGetch.h"
 
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraSubsystem.h"
@@ -211,7 +212,7 @@ void UCapturePresentationComponent::ReportMissingVisualAssets() const
 
 	if (!Missing.IsEmpty())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Capture] %s.%s: %s が未設定です。該当する演出だけを省きます（捕獲処理は継続します）。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Capture] %s.%s: %s が未設定です。該当する演出だけを省きます（捕獲処理は継続します）。"),
 			*GetNameSafe(GetOwner()), *GetName(), *FString::Join(Missing, TEXT("、")));
 	}
 }
@@ -732,7 +733,7 @@ bool UCapturePresentationComponent::IsOrbitFeasible(const UACFCameraSequence* Se
 	const float Fraction = static_cast<float>(Blocked) / Samples;
 	const bool bFeasible = Fraction <= OrbitMaxBlockedFraction;
 
-	UE_LOG(LogTemp, Log, TEXT("[CaptureOrbit] 事前確認: %d/%d 点が塞がり（%.0f%%、上限 %.0f%%）-> %s"),
+	UE_LOG(LogREBoarGetch, Log, TEXT("[CaptureOrbit] 事前確認: %d/%d 点が塞がり（%.0f%%、上限 %.0f%%）-> %s"),
 		Blocked, Samples, Fraction * 100.f, OrbitMaxBlockedFraction * 100.f,
 		bFeasible ? TEXT("Orbitを再生") : TEXT("省略（通常カメラ）"));
 
@@ -852,7 +853,7 @@ void UCapturePresentationComponent::UpdateFocusCamera(float RealDelta)
 		// Shotが終わりReturn BlendでTPSへ戻り始めた（またはACF側で終了した）。実カメラの計測結果を1行残す。
 		const float MinHeight = OrbitMinHeight == TNumericLimits<float>::Max() ? 0.f : OrbitMinHeight;
 		const float MaxHeight = OrbitMaxHeight == TNumericLimits<float>::Lowest() ? 0.f : OrbitMaxHeight;
-		UE_LOG(LogTemp, Log, TEXT("[CaptureOrbit] 終了: カメラは注視点の周りを %.0f 度移動、高さ %.0f -> %.0f cm、%.2f 秒（実時間）"),
+		UE_LOG(LogREBoarGetch, Log, TEXT("[CaptureOrbit] 終了: カメラは注視点の周りを %.0f 度移動、高さ %.0f -> %.0f cm、%.2f 秒（実時間）"),
 			OrbitActualDegrees, MinHeight, MaxHeight, OrbitRealAge);
 
 		ReleaseFocusCamera(false);

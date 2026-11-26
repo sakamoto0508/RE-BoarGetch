@@ -1,4 +1,5 @@
 #include "Stage/BoarLevelTransitionLibrary.h"
+#include "REBoarGetch.h"
 #include "ACFTransitionCatalog.h"
 #include "ACFTransitionPreset.h"
 #include "ACFTransitionSubsystem.h"
@@ -57,7 +58,7 @@ void UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(const UObject* Wo
 		else
 		{
 			if (!Entry.Preset.IsNull())
-				UE_LOG(LogTemp, Warning, TEXT("[LevelTransition] Preset %s を読み込めないため、Effect %d を使います。"),
+				UE_LOG(LogREBoarGetch, Warning, TEXT("[LevelTransition] Preset %s を読み込めないため、Effect %d を使います。"),
 					*Entry.Preset.ToString(), static_cast<int32>(Entry.Effect));
 			Handle = Subsystem->PlayLevelTransition(
 				ACFTransition::MakeDefaultSettings(Entry.Effect, EACFTransitionPhase::Close),
@@ -68,7 +69,7 @@ void UBoarLevelTransitionLibrary::OpenLevelWithTransitionEntry(const UObject* Wo
 		if (Handle.IsValid())
 			return;
 
-		UE_LOG(LogTemp, Warning, TEXT("[LevelTransition] ACFが %s への遷移を拒否したため、演出なしで開きます。"), *LevelName.ToString());
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[LevelTransition] ACFが %s への遷移を拒否したため、演出なしで開きます。"), *LevelName.ToString());
 	}
 
 	UGameplayStatics::OpenLevel(WorldContextObject, LevelName, bAbsolute, Options);

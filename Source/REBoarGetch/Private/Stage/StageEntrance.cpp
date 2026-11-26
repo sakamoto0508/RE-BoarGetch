@@ -1,4 +1,5 @@
 #include "Stage/StageEntrance.h"
+#include "REBoarGetch.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Audio/BoarLoopingSoundComponent.h"
 #include "Engine/GameInstance.h"
@@ -122,7 +123,7 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 	UBoarUIFlowComponent* UIFlow = BoarPC ? BoarPC->GetUIFlow() : nullptr;
 	if (!UIFlow)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[StageEntrance] %s: %s にUIFlowが無いため、ステージ選択を開きません。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[StageEntrance] %s: %s にUIFlowが無いため、ステージ選択を開きません。"),
 			*GetName(), *GetNameSafe(PlayerController));
 		return;
 	}
@@ -164,7 +165,7 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 	// 引き受けられなかった場合は、入力を奪わない空の画面を残さないよう、生成したWidgetとDelegateを片付ける。
 	if (!UIFlow->OpenStageSelection(LobbyWidget))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StageEntrance] %s: UIFlowがステージ選択を拒否したため、Widgetを閉じます。"), *GetName());
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[StageEntrance] %s: UIFlowがステージ選択を拒否したため、Widgetを閉じます。"), *GetName());
 		CloseStageSelection();
 	}
 }
@@ -210,7 +211,7 @@ void AStageEntrance::HandleStageStartRequested(UStageConfig* RequestedStageConfi
 			if (LobbyWidget)
 				LobbyWidget->ShowTravelError(NSLOCTEXT("StageSelect", "SaveFailed", "保存に失敗しました。出発を選んで再試行してください。"));
 
-			UE_LOG(LogTemp, Error, TEXT("[StageEntrance] 最後に選んだステージを保存できないため、遷移を中止しました。"));
+			UE_LOG(LogREBoarGetch, Error, TEXT("[StageEntrance] 最後に選んだステージを保存できないため、遷移を中止しました。"));
 			return;
 		}
 	}

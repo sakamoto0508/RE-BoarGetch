@@ -1,4 +1,5 @@
 #include "Presentation/GameOverPresentationDirector.h"
+#include "REBoarGetch.h"
 
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraSubsystem.h"
@@ -97,7 +98,7 @@ UBoarGameOverEffectWidget* AGameOverPresentationDirector::EnsureEffectWidget()
 	// GameOverの進行・カメラ・Result表示はWidgetの有無に関係なく続行する。
 	auto Skip = [this](const FString& Reason)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: %s。画面効果を省きます。"), *GetName(), *Reason);
+		UE_LOG(LogREBoarGetch, Error, TEXT("[GameOver] %s: %s。画面効果を省きます。"), *GetName(), *Reason);
 		bEffectWidgetUnavailable = true;
 		return nullptr;
 	};
@@ -118,7 +119,7 @@ UBoarGameOverEffectWidget* AGameOverPresentationDirector::EnsureEffectWidget()
 
 	if (!Missing.IsEmpty())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: %s にLayerのBindingがありません（%s）。該当するLayerを省きます。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[GameOver] %s: %s にLayerのBindingがありません（%s）。該当するLayerを省きます。"),
 			*GetName(), *EffectWidgetClass->GetName(), *FString::Join(Missing, TEXT(", ")));
 	}
 
@@ -268,7 +269,7 @@ float AGameOverPresentationDirector::PlayDownAnimation()
 		return DownAnimation->GetPlayLength() / Rate;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("[GameOver] ダウンアニメーションが未設定のため、カメラとUIだけで続行します。"));
+	UE_LOG(LogREBoarGetch, Warning, TEXT("[GameOver] ダウンアニメーションが未設定のため、カメラとUIだけで続行します。"));
 	return 0.f;
 }
 
@@ -305,7 +306,7 @@ void AGameOverPresentationDirector::UpdateDown()
 			Player->GetMesh()->SetPlayRate(FMath::Max(MinDownPlayRate, DownPlayRate));
 			bSingleNode = bDownHeld = true;
 
-			UE_LOG(LogTemp, Log,
+			UE_LOG(LogREBoarGetch, Log,
 				TEXT("[GameOver] Slot '%s' がAnimGraphで有効ではないため、%s を単体ノードとして再生します。"),
 				*Slot.ToString(), *GetNameSafe(Sequence));
 			return;
@@ -478,7 +479,7 @@ void AGameOverPresentationDirector::BeginCameraPullBack(float Duration, float Ri
 
 	if (!Arm.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GameOver] PlayerにSpringArmが無いため、カメラは動かしません。"));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[GameOver] PlayerにSpringArmが無いため、カメラは動かしません。"));
 		return;
 	}
 

@@ -38,9 +38,8 @@ bool UHealthComponent::InitializeHealth()
  */
 void UHealthComponent::TakeDamage(float DamageAmount)
 {
-	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage())
-			return;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return;
 	if (DamageAmount <= 0.0f || IsDead())
 		return;
 
@@ -56,9 +55,8 @@ void UHealthComponent::TakeDamage(float DamageAmount)
  */
 void UHealthComponent::Heal(float HealAmount)
 {
-	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage())
-			return;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return;
 	if (HealAmount <= 0.0f || IsDead())
 		return;
 

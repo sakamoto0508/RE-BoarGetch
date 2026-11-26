@@ -1,4 +1,5 @@
 #include "Animation/AnimNotify_NetCaptureWindow.h"
+#include "REBoarGetch.h"
 
 #include "Animation/ActiveMontageInstanceScope.h"
 #include "Component/GadgetComponent.h"
@@ -33,7 +34,7 @@ void UAnimNotify_NetCaptureWindow::Notify(USkeletalMeshComponent* MeshComp, UAni
 		const int32 MontageInstanceID = MontageContext ? MontageContext->MontageInstanceID : INDEX_NONE;
 		if (!PlayerCharacter->CanOpenNetCaptureWindow(NetGadget, MontageInstanceID))
 		{
-			UE_LOG(LogTemp, Log, TEXT("[Net] ガジェット使用中ではないため、捕獲判定窓のONを無視しました"));
+			UE_LOG(LogREBoarGetch, Log, TEXT("[Net] ガジェット使用中ではないため、捕獲判定窓のONを無視しました"));
 			return;
 		}
 

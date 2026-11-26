@@ -1,4 +1,5 @@
 #include "Player/BoarPlayerCharacter.h"
+#include "REBoarGetch.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Engine/GameInstance.h"
 
@@ -131,12 +132,11 @@ void ABoarPlayerCharacter::BeginPlay()
 
 	// ステージではBeginPlay前にGameModeがPlayerを準備済み。GameModeの管理外のLobbyや、
 	// 実行中にSpawnされたPlayerは、ここで同じ初期化を明示的なContextで行う。
-	const auto* Stage = GetWorld()->GetAuthGameMode<ABoarGameMode>();
-	if (!bStageInitialized && (!Stage || Stage->CanAdvanceStage()) &&
+	if (!bStageInitialized && ABoarGameMode::IsStageProgressAllowed(this) &&
 		!InitializeForPlay(BoarGadgetLoadoutInitializer::ResolveContext(GetWorld())))
 	{
 		GetCharacterMovement()->DisableMovement();
-		UE_LOG(LogTemp, Error, TEXT("[WorldInit] Playerの準備に失敗しました: %s"), *GetName());
+		UE_LOG(LogREBoarGetch, Error, TEXT("[WorldInit] Playerの準備に失敗しました: %s"), *GetName());
 	}
 }
 
@@ -149,7 +149,7 @@ bool ABoarPlayerCharacter::InitializeForPlay(const FBoarGadgetLoadoutContext& Co
 		return false;
 
 	bStageInitialized = true;
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] Playerの準備完了: %s"), *GetName());
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageInit] Playerの準備完了: %s"), *GetName());
 	return true;
 }
 
@@ -308,7 +308,7 @@ void ABoarPlayerCharacter::StartGadgetUse()
 		// 使用開始・Cooldown・速度変更より前に拒否し、通常の空中移動をそのまま保つ。
 		if (bAirNetDrop && !HasAirNetDropPresentation())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] 必要なアニメーションかAnimInstanceが無いため、移動とクールダウンを変えずに使用を却下しました。"));
+			UE_LOG(LogREBoarGetch, Warning, TEXT("[AirNetDrop] 必要なアニメーションかAnimInstanceが無いため、移動とクールダウンを変えずに使用を却下しました。"));
 			return;
 		}
 
@@ -346,7 +346,7 @@ void ABoarPlayerCharacter::StartGadgetUse()
 			// 空中用AnimationはC++側でFullBodyスロットへ再生する（BPの地上用Montageは再生しない）。
 			if (!BeginAirNetDrop())
 			{
-				UE_LOG(LogTemp, Warning, TEXT("[AirNetDrop] アニメーションを再生できないため、ガジェットの使用を終了します"));
+				UE_LOG(LogREBoarGetch, Warning, TEXT("[AirNetDrop] アニメーションを再生できないため、ガジェットの使用を終了します"));
 				EndGadgetUse(true);
 			}
 
@@ -400,7 +400,7 @@ void ABoarPlayerCharacter::FinishGadgetUseAnimation(bool bWasInterrupted)
 			AnimInstance ? AnimInstance->GetMontageInstanceForID(GadgetUseMontageInstanceID) : nullptr;
 		if (Instance && Instance->IsActive())
 		{
-			UE_LOG(LogTemp, Verbose, TEXT("[Gadget] 古いガジェットMontageからの終了通知を無視しました"));
+			UE_LOG(LogREBoarGetch, Verbose, TEXT("[Gadget] 古いガジェットMontageからの終了通知を無視しました"));
 			return;
 		}
 	}
@@ -415,10 +415,8 @@ bool ABoarPlayerCharacter::CanOpenNetCaptureWindow(const ANetGadget* Gadget, int
 	// 中断済み（Stun・Downed・装備解除・Stage終了）の後に届いたNotifyでは開かない。
 	if (!bIsGadgetInUse || bIsStunned || bIsDowned)
 		return false;
-	if (const UWorld* World = GetWorld())
-		if (const ABoarGameMode* Mode = World->GetAuthGameMode<ABoarGameMode>())
-			if (!Mode->CanAdvanceStage())
-				return false;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return false;
 	// Notifyの対象と現在使用中のガジェットが同じ網であること。
 	if (GadgetComponent->GetCurrentGadget() != Gadget)
 		return false;
@@ -475,7 +473,7 @@ void ABoarPlayerCharacter::SwitchGadgetSlot(int32 SlotIndex)
 	{
 		// 装備に失敗した場合、GadgetComponentは旧Gadgetを装備したまま残す。
 		// Hold使用は終了済みで入力ロックも残らず、旧Gadgetを再度押せば通常どおり使用できる。
-		UE_LOG(LogTemp, Warning, TEXT("[Gadget] スロット %d への素早い切替に失敗したため、前のガジェットを装備したままにします"), SlotIndex);
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[Gadget] スロット %d への素早い切替に失敗したため、前のガジェットを装備したままにします"), SlotIndex);
 	}
 }
 
@@ -676,9 +674,8 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 	// 攻撃（突進）中のイノシシに当たったときだけ被弾する。逃走・徘徊中などにぶつかっただけではスタンしない。
 	if (!Boar->IsPlayerAttackHitActive())
 		return;
-	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage())
-			return;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return;
 
 	// 命中情報は被弾が成立する前の位置・移動状態から確定する（Gadget中断やノックバックで変わる前）。
 	FBoarPlayerHitInfo HitInfo;
@@ -928,9 +925,8 @@ void ABoarPlayerCharacter::FinishStun(bool bInterrupted)
 
 	if (bInterrupted || bIsDowned || !GetWorld())
 		return;
-	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage())
-			return;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return;
 
 	// 起き上がった直後の再被弾を防ぐ。被弾から数えた無敵がまだ長く残っていれば、そちらを優先する。
 	FTimerManager& Timers = GetWorldTimerManager();
@@ -1059,9 +1055,8 @@ void ABoarPlayerCharacter::SetPlayerActionState(EPlayerActionState NewState)
 
 bool ABoarPlayerCharacter::IsGameplayActionBlocked() const
 {
-	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage())
-			return true;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return true;
 
 	return bIsStunned || bIsDowned;
 }

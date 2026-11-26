@@ -1,4 +1,5 @@
 #include "Core/BoarFacilityGameMode.h"
+#include "REBoarGetch.h"
 #include "Core/BoarGadgetLoadoutInitializer.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Player/BoarPlayerController.h"
@@ -19,7 +20,7 @@ void ABoarFacilityGameMode::StartPlay()
 	if (!bReady)
 	{
 		const FText Reason = NSLOCTEXT("WorldInit", "FacilityFailed", "プレイヤーの装備を準備できませんでした。");
-		UE_LOG(LogTemp, Error, TEXT("[WorldInit] 施設のPlayer・装備構成の準備に失敗しました: %s"), *Reason.ToString());
+		UE_LOG(LogREBoarGetch, Error, TEXT("[WorldInit] 施設のPlayer・装備構成の準備に失敗しました: %s"), *Reason.ToString());
 
 		if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
 			PC->HandleStageInitializationFailed(Reason);

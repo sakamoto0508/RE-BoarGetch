@@ -1,4 +1,5 @@
 #include "UI/BoarResultWidget.h"
+#include "REBoarGetch.h"
 
 #include "Components/TextBlock.h"
 #include "Blueprint/WidgetTree.h"
@@ -45,13 +46,13 @@ void UBoarResultWidget::ResolveWidgetReferences()
 
 	if (!CapturedCountText)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: CapturedCountTextWidgetNameが未設定か、TextBlockを指していません。"),
+		UE_LOG(LogREBoarGetch, Warning, TEXT("%s: CapturedCountTextWidgetNameが未設定か、TextBlockを指していません。"),
 			*GetName());
 	}
 
 	if (!TargetCountText)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: TargetCountTextWidgetNameが未設定か、TextBlockを指していません。"),
+		UE_LOG(LogREBoarGetch, Warning, TEXT("%s: TargetCountTextWidgetNameが未設定か、TextBlockを指していません。"),
 			*GetName());
 	}
 }

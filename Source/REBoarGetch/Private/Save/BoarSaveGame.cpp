@@ -1,4 +1,5 @@
 #include "Save/BoarSaveGame.h"
+#include "REBoarGetch.h"
 
 void UBoarSaveGame::FreezeRunResult(FStageRunData& Run) const
 {
@@ -10,7 +11,7 @@ void UBoarSaveGame::FreezeRunResult(FStageRunData& Run) const
 
 	// 登録対象はClear確定時の収容個体だけ。捕獲履歴（解放された個体を含む）からは判定しない。
 	if (!Run.bHousedSnapshotTaken)
-		UE_LOG(LogTemp, Warning, TEXT("[Save] Run %s に収容済みBoarの記録が無いため、Boarを登録しません。"), *Run.StageId.ToString());
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[Save] Run %s に収容済みBoarの記録が無いため、Boarを登録しません。"), *Run.StageId.ToString());
 
 	const TArray<FName> Housed = Run.bHousedSnapshotTaken ? Run.GetHousedIdsOldestFirst() : TArray<FName>();
 

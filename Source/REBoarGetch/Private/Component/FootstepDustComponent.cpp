@@ -43,11 +43,7 @@ bool UFootstepDustComponent::IsAllowedForOwner() const
 	}
 
 	// Capture演出・クリア・GameOver・中断中は出さない（GameModeが無いテスト用Levelでは出す）。
-	const UWorld* World = GetWorld();
-	if (const ABoarGameMode* Mode = World ? World->GetAuthGameMode<ABoarGameMode>() : nullptr; Mode && !Mode->CanAdvanceStage())
-		return false;
-
-	return true;
+	return ABoarGameMode::IsStageProgressAllowed(this);
 }
 
 void UFootstepDustComponent::HandleFootstep(USkeletalMeshComponent* MeshComp, FName FootBone)

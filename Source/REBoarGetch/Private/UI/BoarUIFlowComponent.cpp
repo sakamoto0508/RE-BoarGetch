@@ -1,4 +1,5 @@
 #include "UI/BoarUIFlowComponent.h"
+#include "REBoarGetch.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Player/BoarPlayerController.h"
@@ -654,7 +655,7 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 
 	if (!ArchiveSelectionWidget)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: ArchiveSelectionWidgetClassが未設定か生成できません。展示選択画面を省きます。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Archive] %s: ArchiveSelectionWidgetClassが未設定か生成できません。展示選択画面を省きます。"),
 			*GetNameSafe(PC->GetClass()));
 		return;
 	}
@@ -663,7 +664,7 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 
 	if (!ArchiveSelectionWidget->IsReadyForDisplay())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s（%s.ArchiveSelectionWidgetClass）: WBPで Status / SlotsPanel / Grid / BackButton が未Bindです。展示選択画面を省きます。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Archive] %s（%s.ArchiveSelectionWidgetClass）: WBPで Status / SlotsPanel / Grid / BackButton が未Bindです。展示選択画面を省きます。"),
 			*GetNameSafe(ArchiveSelectionWidget->GetClass()), *GetNameSafe(PC->GetClass()));
 		ArchiveSelectionWidget = nullptr;
 		return;

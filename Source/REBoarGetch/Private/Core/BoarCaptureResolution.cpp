@@ -1,4 +1,5 @@
 #include "Core/BoarCaptureResolution.h"
+#include "REBoarGetch.h"
 #include "Boar/BoarBase.h"
 #include "Cage/Cage.h"
 #include "Item/HealPickup.h"
@@ -42,13 +43,13 @@ void BoarCaptureResolution::Resolve(UWorld* World, ABoarBase* Boar, FStageRunDat
 	if (!Boar->BoarUniqueId.IsNone())
 		Run.CapturedBoarUniqueIds.AddUnique(Boar->BoarUniqueId);
 	else
-		UE_LOG(LogTemp, Warning, TEXT("[Stage] %s に永続的な BoarUniqueId がありません。"), *GetNameSafe(Boar));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[Stage] %s に永続的な BoarUniqueId がありません。"), *GetNameSafe(Boar));
 
 	if (ACage* Cage = Destination)
 		Cage->CollectBoar(Boar);
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Stage] 檻が無いため、捕獲したBoarを解放します。"));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[Stage] 檻が無いため、捕獲したBoarを解放します。"));
 		Boar->ReleaseBoar();
 	}
 

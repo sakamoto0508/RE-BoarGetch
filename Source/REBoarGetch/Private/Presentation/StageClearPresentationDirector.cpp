@@ -1,4 +1,5 @@
 #include "Presentation/StageClearPresentationDirector.h"
+#include "REBoarGetch.h"
 
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraSubsystem.h"
@@ -120,7 +121,7 @@ void AStageClearPresentationDirector::BeginPlay()
 
 	if (!Missing.IsEmpty())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[StageClear] %s: %s が未設定です。該当する演出を省きます。"), *GetName(),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[StageClear] %s: %s が未設定です。該当する演出を省きます。"), *GetName(),
 			*FString::Join(Missing, TEXT(", ")));
 	}
 }
@@ -279,7 +280,7 @@ void AStageClearPresentationDirector::BeginVictoryShot()
 		PC->SetViewTargetWithBlend(VictoryCamera, CameraBlendTime, VTBlend_Cubic);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[StageClear] 勝利演出開始 Focus=%s RetreatScale=%.2f"), *VictoryFocusPoint.ToString(), Scale);
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageClear] 勝利演出開始 Focus=%s RetreatScale=%.2f"), *VictoryFocusPoint.ToString(), Scale);
 }
 
 FVector AStageClearPresentationDirector::ComputeCameraLocation(float A) const
@@ -325,7 +326,7 @@ void AStageClearPresentationDirector::PlayVictoryMontage()
 
 	if (bFallbackJump)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StageClear] 勝利Montageが使えないため、代替のジャンプを使います。"));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[StageClear] 勝利Montageが使えないため、代替のジャンプを使います。"));
 	}
 }
 
@@ -362,7 +363,7 @@ void AStageClearPresentationDirector::UpdateMontage()
 			bSingleNodePlayback = true;
 			bMontageHeld = true; // 非ループのSingle Nodeは最終フレームで停止し、掲げた姿勢を保持します。
 
-			UE_LOG(LogTemp, Log,
+			UE_LOG(LogREBoarGetch, Log,
 				TEXT("[StageClear] Slot '%s' がAnimGraphで有効ではないため、%s を単体ノードとして再生します。"),
 				*Slot.ToString(), *GetNameSafe(Sequence));
 		}
@@ -603,7 +604,7 @@ void AStageClearPresentationDirector::FinishDissolve()
 		TransferComponent->Deactivate();
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[StageClear] Playerと装備を消しました（%d個のMeshを非表示）"), HiddenMeshes.Num());
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageClear] Playerと装備を消しました（%d個のMeshを非表示）"), HiddenMeshes.Num());
 }
 
 void AStageClearPresentationDirector::BeginCameraRetreat(float Duration, float InParticleFadeDuration)

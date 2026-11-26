@@ -1,4 +1,5 @@
 #include "Component/CaptureComponent.h"
+#include "REBoarGetch.h"
 #include "Core/BoarGameMode.h"
 #include "Engine/World.h"
 #include "AIController.h"
@@ -13,12 +14,11 @@ UCaptureComponent::UCaptureComponent()
 /** 捕獲を実行します。 */
 bool UCaptureComponent::Capture(AActor* Capturer)
 {
-	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage())
-			return false;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return false;
 	if (bIsCaptured || GetOwner() == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Capture] 捕獲に失敗しました。Owner=%s IsCaptured=%s"),
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[Capture] 捕獲に失敗しました。Owner=%s IsCaptured=%s"),
 			*GetNameSafe(GetOwner()),
 			bIsCaptured ? TEXT("true") : TEXT("false"));
 		return false;
@@ -42,7 +42,7 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 	}
 
 	OnCaptured.Broadcast(Capturer);
-	UE_LOG(LogTemp, Log, TEXT("[Capture] 捕獲しました。Owner=%s Capturer=%s"),
+	UE_LOG(LogREBoarGetch, Log, TEXT("[Capture] 捕獲しました。Owner=%s Capturer=%s"),
 		*GetNameSafe(GetOwner()), *GetNameSafe(Capturer));
 	return true;
 }
@@ -50,12 +50,11 @@ bool UCaptureComponent::Capture(AActor* Capturer)
 /** 捕獲解除を実行します。 */
 bool UCaptureComponent::Release()
 {
-	if (const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
-		if (!Mode->CanAdvanceStage())
-			return false;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return false;
 	if (!bIsCaptured || GetOwner() == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Capture] 解放に失敗しました。Owner=%s IsCaptured=%s"),
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[Capture] 解放に失敗しました。Owner=%s IsCaptured=%s"),
 			*GetNameSafe(GetOwner()),
 			bIsCaptured ? TEXT("true") : TEXT("false"));
 		return false;
@@ -72,6 +71,6 @@ bool UCaptureComponent::Release()
 	}
 
 	OnReleased.Broadcast();
-	UE_LOG(LogTemp, Log, TEXT("[Capture] 解放しました。Owner=%s"), *GetNameSafe(GetOwner()));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[Capture] 解放しました。Owner=%s"), *GetNameSafe(GetOwner()));
 	return true;
 }

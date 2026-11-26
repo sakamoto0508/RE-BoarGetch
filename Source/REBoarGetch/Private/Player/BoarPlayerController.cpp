@@ -1,4 +1,5 @@
 #include "Player/BoarPlayerController.h"
+#include "REBoarGetch.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -69,11 +70,11 @@ void ABoarPlayerController::BeginPlay()
 		// Priority 0をゲームプレイ入力の基準レイヤーとして使用する。
 		// 将来、メニュー等を追加する場合は、より高いPriorityのContextで上書きできる。
 		AddOwnedMappingContext(DefaultMappingContext, DefaultMappingPriority);
-		UE_LOG(LogTemp, Log, TEXT("[Input] MappingContextを追加しました: %s"), *GetNameSafe(DefaultMappingContext));
+		UE_LOG(LogREBoarGetch, Log, TEXT("[Input] MappingContextを追加しました: %s"), *GetNameSafe(DefaultMappingContext));
 	}
 	else if (IsLocalController())
 	{
-		UE_LOG(LogTemp, Warning,
+		UE_LOG(LogREBoarGetch, Warning,
 			TEXT("[Input] MappingContextを登録できませんでした。LocalPlayer=%s Subsystem=%s Context=%s"),
 			*GetNameSafe(LocalPlayer), *GetNameSafe(InputSubsystem), *GetNameSafe(DefaultMappingContext));
 	}
@@ -175,7 +176,7 @@ void ABoarPlayerController::SetupInputComponent()
 	UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent);
 	if (EnhancedInput == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Input] InputComponentがUEnhancedInputComponentではありません: %s"),
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[Input] InputComponentがUEnhancedInputComponentではありません: %s"),
 			*GetNameSafe(InputComponent));
 		return;
 	}
@@ -281,7 +282,7 @@ void ABoarPlayerController::CreatePlayerHUD()
 	PlayerHUDWidget = CreateWidget<UBoarHUDWidget>(this, PlayerHUDWidgetClass);
 	if (PlayerHUDWidget == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[HUD] PlayerのHUD Widgetを生成できませんでした"));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[HUD] PlayerのHUD Widgetを生成できませんでした"));
 		return;
 	}
 
@@ -491,7 +492,7 @@ void ABoarPlayerController::HandleStageCleared(const FStageRunData& Run, int32 T
 	if (!ResultWidget)
 	{
 		// C++で代替画面は作りません。Actor停止済みのStageは再開せず、そのままLobbyへ戻します。
-		UE_LOG(LogTemp, Error, TEXT("[Result] %s: ResultWidgetClassが未設定か生成できません。Result画面を省いてLobbyへ戻ります。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Result] %s: ResultWidgetClassが未設定か生成できません。Result画面を省いてLobbyへ戻ります。"),
 			*GetNameSafe(GetClass()));
 		ReturnToLobby();
 		return;
@@ -537,7 +538,7 @@ void ABoarPlayerController::ReturnToLobby()
 	const TSoftObjectPtr<UWorld> Destination = GetLobbyLevel();
 	if (Destination.IsNull())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Lobby] %s: 有効なLobbyのLevelがありません（LobbyLevelとGameDefaultMapがどちらも未設定か存在しません）。Lobbyへの遷移を中止します。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Lobby] %s: 有効なLobbyのLevelがありません（LobbyLevelとGameDefaultMapがどちらも未設定か存在しません）。Lobbyへの遷移を中止します。"),
 			*GetNameSafe(GetClass()));
 		return;
 	}
@@ -578,7 +579,7 @@ TSoftObjectPtr<UWorld> ABoarPlayerController::GetLobbyLevel() const
 			? FString(TEXT("GameDefaultMapも未設定か存在しません。"))
 			: FString::Printf(TEXT("代わりにGameDefaultMap '%s' を使います。"), *Destination.ToString());
 		// 自動テスト（AddExpectedError）が「LobbyLevel is unset」を照合しているため、この部分は英語のまま。
-		UE_LOG(LogTemp, Error, TEXT("[Lobby] %s: LobbyLevel is unset. %s"), *GetNameSafe(GetClass()), *Detail);
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Lobby] %s: LobbyLevel is unset. %s"), *GetNameSafe(GetClass()), *Detail);
 	}
 
 	return Destination;
@@ -625,12 +626,12 @@ void ABoarPlayerController::HandleStageGameOver()
 		// UE_LOGは複文に展開されるため、if/elseは波括弧で囲む。
 		if (!Widget)
 		{
-			UE_LOG(LogTemp, Error, TEXT("[GameOver] %s: GameOverWidgetClass（%s）が未設定か生成できません。GameOver画面は表示しません。"),
+			UE_LOG(LogREBoarGetch, Error, TEXT("[GameOver] %s: GameOverWidgetClass（%s）が未設定か生成できません。GameOver画面は表示しません。"),
 				*GetNameSafe(GetClass()), *GetNameSafe(GameOverWidgetClass.Get()));
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("[GameOver] %s（%s.GameOverWidgetClass）: 必須のWidgetがありません: %s。GameOver画面は表示しません。"),
+			UE_LOG(LogREBoarGetch, Error, TEXT("[GameOver] %s（%s.GameOverWidgetClass）: 必須のWidgetがありません: %s。GameOver画面は表示しません。"),
 				*GetNameSafe(Widget->GetClass()), *GetNameSafe(GetClass()), *FString::Join(Missing, TEXT(", ")));
 		}
 
@@ -678,7 +679,7 @@ void ABoarPlayerController::HandleStageInitializationFailed(const FText& Reason)
 	if (PlayerHUDWidget)
 		PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
 	// 理由の文言は呼び出し元（GameMode / FacilityGameMode）が直前にErrorで出力済みなので、ここでは状態だけを記録します。
-	UE_LOG(LogTemp, Error, TEXT("[WorldInit] %s: 初期化に失敗しました。エラー画面は出さず、ゲームは停止したままにします（自動リトライやLevel遷移はしません）。"),
+	UE_LOG(LogREBoarGetch, Error, TEXT("[WorldInit] %s: 初期化に失敗しました。エラー画面は出さず、ゲームは停止したままにします（自動リトライやLevel遷移はしません）。"),
 		*GetNameSafe(GetClass()));
 }
 
@@ -823,7 +824,7 @@ void ABoarPlayerController::GadgetStarted()
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
-		UE_LOG(LogTemp, Log, TEXT("[Input] ガジェット入力開始"));
+		UE_LOG(LogREBoarGetch, Log, TEXT("[Input] ガジェット入力開始"));
 		PlayerCharacter->StartGadgetUse();
 	}
 }
@@ -836,7 +837,7 @@ void ABoarPlayerController::GadgetCompleted()
 
 	if (ABoarPlayerCharacter* PlayerCharacter = GetBoarCharacter())
 	{
-		UE_LOG(LogTemp, Log, TEXT("[Input] ガジェット入力終了"));
+		UE_LOG(LogREBoarGetch, Log, TEXT("[Input] ガジェット入力終了"));
 		PlayerCharacter->StopGadgetUse();
 	}
 }

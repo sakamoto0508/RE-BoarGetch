@@ -1,4 +1,5 @@
 #include "Component/StageClearPresentationComponent.h"
+#include "REBoarGetch.h"
 #include "Component/CapturePresentationComponent.h"
 #include "Core/BoarGameMode.h"
 #include "Engine/World.h"
@@ -36,7 +37,7 @@ bool UStageClearPresentationComponent::StartPresentation()
 	Phase = EStageClearPresentationPhase::WaitingCapture;
 	PhaseAge = TotalAge = 0.f;
 	SetComponentTickEnabled(true);
-	UE_LOG(LogTemp, Log, TEXT("[StageClear] 演出を要求しました"));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageClear] 演出を要求しました"));
 	return true;
 }
 
@@ -54,7 +55,7 @@ void UStageClearPresentationComponent::BeginDirector()
 
 	if (!Director)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StageClear] 演出Directorを生成できないため、Resultを表示します。"));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[StageClear] 演出Directorを生成できないため、Resultを表示します。"));
 		Finish();
 		return;
 	}
@@ -90,7 +91,7 @@ void UStageClearPresentationComponent::TickComponent(float DeltaTime, ELevelTick
 	// 演出BPが完了報告しない・Playerが消えた場合も、残りを省略してResultへ進めます。
 	if (Phase == EStageClearPresentationPhase::Playing && (TotalAge > SafetyTimeout || !IsValid(Director)))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StageClear] 演出がタイムアウトしたかDirectorが失われたため、Resultを表示します。"));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[StageClear] 演出がタイムアウトしたかDirectorが失われたため、Resultを表示します。"));
 		Finish();
 	}
 }
@@ -102,7 +103,7 @@ void UStageClearPresentationComponent::Finish()
 
 	Phase = EStageClearPresentationPhase::Finished;
 	SetComponentTickEnabled(false);
-	UE_LOG(LogTemp, Log, TEXT("[StageClear] 演出終了（%.2f秒）"), TotalAge);
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageClear] 演出終了（%.2f秒）"), TotalAge);
 
 	// 演出BPはResult表示中も残し、勝利カメラ・消失状態を保持します（Level遷移で破棄）。
 	if (auto* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)

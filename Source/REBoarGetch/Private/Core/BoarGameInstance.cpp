@@ -1,4 +1,5 @@
 #include "Core/BoarGameInstance.h"
+#include "REBoarGetch.h"
 #include "Save/BoarSaveGame.h"
 #include "Stage/StageConfig.h"
 #include "Gadget/GadgetBase.h"
@@ -23,7 +24,7 @@ void UBoarGameInstance::Init()
 	UpdateUnlockedGadgets(Progress);
 
 	if (bSaveLoadFailed)
-		UE_LOG(LogTemp, Error, TEXT("[Save] 既存のセーブを読み込めないため、上書き保存を無効にします。"));
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Save] 既存のセーブを読み込めないため、上書き保存を無効にします。"));
 }
 
 bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
@@ -32,7 +33,7 @@ bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
 	if (!Candidate || bSaveLoadFailed || !UGameplayStatics::SaveGameToSlot(Candidate, SaveSlotName, SaveUserIndex))
 	{
 		// 自動テスト（AddExpectedError）がこの文言を照合しているため英語のまま。
-		UE_LOG(LogTemp, Error, TEXT("[Save] Progress could not be saved."));
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Save] Progress could not be saved."));
 		return false;
 	}
 
@@ -100,7 +101,7 @@ const TArray<TObjectPtr<UStageConfig>>& UBoarGameInstance::ResolveStageCatalog(
 	if (!LegacyCatalog.IsEmpty() && !bWarned)
 	{
 		bWarned = true;
-		UE_LOG(LogTemp, Warning,
+		UE_LOG(LogREBoarGetch, Warning,
 			TEXT("[Stage] GameInstanceのStageCatalogが未設定のため、%sの個別StageCatalogを使用します。BP_BoarGameInstanceへ移してください。"),
 			*GetNameSafe(WorldContext));
 	}

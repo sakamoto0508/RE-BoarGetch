@@ -51,7 +51,7 @@ void UAnimNotify_BoarBrakeDust::Notify(USkeletalMeshComponent* MeshComp, UAnimSe
 	{
 		if (const ABoarBase* Boar = Cast<ABoarBase>(Owner); Boar != nullptr && Boar->IsCaptured())
 			return;
-		if (const ABoarGameMode* Mode = World->GetAuthGameMode<ABoarGameMode>(); Mode != nullptr && !Mode->CanAdvanceStage())
+		if (!ABoarGameMode::IsStageProgressAllowed(World))
 			return;
 	}
 

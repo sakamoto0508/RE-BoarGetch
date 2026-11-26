@@ -1,4 +1,5 @@
 #include "Gadget/BoarGadgetSubsystem.h"
+#include "REBoarGetch.h"
 #include "Core/BoarGameInstance.h"
 #include "Core/BoarFacilityGameMode.h"
 #include "Save/BoarSaveGame.h"
@@ -155,7 +156,7 @@ void UBoarGadgetSubsystem::RestoreSavedLoadout(TArray<TSubclassOf<AGadgetBase>> 
 	else
 	{
 		// 自動テスト（AddExpectedError）がこの文言を照合しているため英語のまま。
-		UE_LOG(LogTemp, Error, TEXT("[Gadget] Saved loadout has unresolved IDs; defaults retained, save unchanged."));
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Gadget] Saved loadout has unresolved IDs; defaults retained, save unchanged."));
 	}
 }
 bool UBoarGadgetSubsystem::CanEquipGadgetClass(TSubclassOf<AGadgetBase> Class) const

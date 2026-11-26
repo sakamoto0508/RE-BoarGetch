@@ -186,12 +186,17 @@ void ABoarBase::LogAnimDebugEvent(const TCHAR* Trigger) const
 	{
 		if (const UStateTreeComponent* StateTree = OwnerController->FindComponentByClass<UStateTreeComponent>())
 		{
+			// GetActiveStateNamesはGameplay Debuggerがあるビルド（Shipping以外）にだけ存在する。
+#if WITH_GAMEPLAY_DEBUGGER
 			TArray<FString> Names;
 
 			for (const FName& Name : StateTree->GetActiveStateNames())
 				Names.Add(Name.ToString());
 
 			StateText = FString::Join(Names, TEXT("/"));
+#else
+			(void)StateTree;
+#endif
 		}
 	}
 
@@ -221,9 +226,8 @@ void ABoarBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage())
-			return;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return;
 
 	UpdateStamina(DeltaSeconds);
 	TickEscapeTurn(DeltaSeconds);
@@ -245,9 +249,8 @@ void ABoarBase::Capture()
 
 bool ABoarBase::CaptureWithFeedback(bool bSharedFeedback)
 {
-	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage())
-			return false;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return false;
 	if (!CaptureComponent || !CaptureComponent->Capture(nullptr))
 		return false;
 	// デバッグ：どの段階で捕まったか（切り返しの好機で捕まえられたか、通常走行中か）を残す。
@@ -556,9 +559,8 @@ void ABoarBase::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitive
 /** 檻が破壊されたときに、捕獲中のイノシシを解放して周囲へ移動させる。 */
 void ABoarBase::ReleaseBoar()
 {
-	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage())
-			return;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return;
 	// 捕獲済みの個体だけを解放対象にし、二重解放を防止する。
 	if (CaptureComponent == nullptr || !CaptureComponent->IsCaptured())
 		return;
@@ -624,7 +626,7 @@ void ABoarBase::ReleaseBoar()
 	if (AIController == nullptr || !bFoundReleaseLocation)
 	{
 		FinishReleaseMovement();
-		UE_LOG(LogTemp, Warning, TEXT("[Boar] %s を解放しました（解放後の移動先なし）。"),
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[Boar] %s を解放しました（解放後の移動先なし）。"),
 			*GetNameSafe(this));
 		return;
 	}
@@ -643,7 +645,7 @@ void ABoarBase::ReleaseBoar()
 		FinishReleaseMovement();
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[Boar] Released %s. MoveTarget=%s"),
+	UE_LOG(LogREBoarGetch, Log, TEXT("[Boar] Released %s. MoveTarget=%s"),
 		*GetNameSafe(this), *ReleaseLocation.ToCompactString());
 }
 
@@ -669,8 +671,7 @@ void ABoarBase::FinishReleaseMovement()
 		if (UBrainComponent* BrainComponent = AIController->GetBrainComponent())
 		{
 			// 解放移動後は既存のStateTreeに制御を戻し、通常の徘徊を再開する。
-			const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>();
-			if (!Mode || Mode->CanAdvanceStage())
+			if (ABoarGameMode::IsStageProgressAllowed(this))
 				BrainComponent->RestartLogic();
 		}
 	}
@@ -781,9 +782,8 @@ void ABoarBase::PlayBoarSound(USoundBase* Sound, float VolumeMultiplier, bool bA
 		return;
 
 	// Clear / GameOver / 開始前など、Stageが進行していない間はAIの中断で発生する通知を鳴らさない。
-	if (const ABoarGameMode* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		if (!Mode->CanAdvanceStage())
-			return;
+	if (!ABoarGameMode::IsStageProgressAllowed(this))
+		return;
 
 	auto* Audio = GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>();
 	if (!Audio)

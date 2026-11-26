@@ -1,4 +1,5 @@
 #include "Archive/BoarArchiveDisplay.h"
+#include "REBoarGetch.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimSequence.h"
@@ -122,7 +123,7 @@ void ABoarArchiveDisplay::RefreshDisplay()
 	BoarVisual->SetRelativeRotation(FRotator::ZeroRotator);
 	SetActorTickEnabled(Source && Source->GetSkeletalMeshAsset());
 
-	if (!Id.IsNone() && !Source)UE_LOG(LogTemp, Warning,
+	if (!Id.IsNone() && !Source)UE_LOG(LogREBoarGetch, Warning,
 		TEXT("[Archive] スロット %d: 捕獲済みBoarのID %s を解決できないため空欄にします。"),
 		SlotIndex, *Id.ToString());
 	// 名札は本編定義の図鑑名だけを使い、未登録の名前をIDなどから推測しない。

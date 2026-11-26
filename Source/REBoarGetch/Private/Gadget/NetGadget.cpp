@@ -1,4 +1,5 @@
 #include "Gadget/NetGadget.h"
+#include "REBoarGetch.h"
 
 #include "Boar/BoarBase.h"
 #include "Player/BoarPlayerCharacter.h"
@@ -148,7 +149,7 @@ bool ANetGadget::TryCaptureBoar(ABoarBase* Boar)
 		return false;
 
 	bSuccessFeedbackPlayedThisUse = true;
-	UE_LOG(LogTemp, Log, TEXT("[Net] Captured %s"), *GetNameSafe(Boar));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[Net] Captured %s"), *GetNameSafe(Boar));
 	return true;
 }
 

@@ -1,4 +1,5 @@
 #include "UI/BoarArchiveCard.h"
+#include "REBoarGetch.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Image.h"
@@ -17,7 +18,7 @@ UBoarArchiveCard::UBoarArchiveCard(const FObjectInitializer& O) : Super(O)
 TSharedRef<SWidget> UBoarArchiveCard::RebuildWidget()
 {
 	if (WidgetTree && !WidgetTree->RootWidget)
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: WBPにレイアウトがありません（RootWidgetが空）。カードを表示しません。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Archive] %s: WBPにレイアウトがありません（RootWidgetが空）。カードを表示しません。"),
 			*GetNameSafe(GetClass()));
 	if (FocusFrame && FlowGlowMaterial)
 		FocusFrame->SetBrushFromMaterial(FlowGlowMaterial);

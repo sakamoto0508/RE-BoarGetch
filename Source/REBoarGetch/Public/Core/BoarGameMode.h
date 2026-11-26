@@ -64,6 +64,11 @@ public:
 	/** Clear要求後のダメージ・解放を即時遮断します。GameOver要求だけでは同フレームClearを妨げません。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")
 	bool CanAdvanceStage() const { return StageState == EBoarStageState::Playing && !bStageClearRequested; }
+	/**
+	 * WorldContextのWorldでStageが進行中（CanAdvanceStage）かを返します。ABoarGameModeがないWorld（Lobby・施設・
+	 * テスト用World）では、進行を止める理由がないためtrueです。各Actor・ComponentはGameModeを個別に探さずこれを使います。
+	 */
+	static bool IsStageProgressAllowed(const UObject* WorldContextObject);
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")
 	EBoarStageState GetStageState() const { return StageState; }
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")

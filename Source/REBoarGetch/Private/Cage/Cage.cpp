@@ -1,4 +1,5 @@
 #include "Cage/Cage.h"
+#include "REBoarGetch.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Cage/CageVisualComponent.h"
@@ -48,7 +49,7 @@ void ACage::InitializeForStage()
 	CurrentHp = MaxHp;
 	bIsDestroyed = false;
 	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] 檻の準備完了: %s"), *GetName());
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageInit] 檻の準備完了: %s"), *GetName());
 }
 
 void ACage::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -94,7 +95,7 @@ void ACage::CollectBoar(ABoarBase* Boar)
 		false,
 		nullptr,
 		ETeleportType::TeleportPhysics);
-	UE_LOG(LogTemp, Log, TEXT("[Cage] Collected %s Total=%d"), *GetNameSafe(Boar), CapturedBoars.Num());
+	UE_LOG(LogREBoarGetch, Log, TEXT("[Cage] Collected %s Total=%d"), *GetNameSafe(Boar), CapturedBoars.Num());
 	NotifyHousedCountChanged();
 }
 
@@ -152,7 +153,7 @@ bool ACage::ApplyDamageInternal(float Damage, const FVector* HitLocation, const 
 	const float PreviousRatio = CurrentHp / FMath::Max(MaxHp, 1.0f);
 	CurrentHp = FMath::Clamp(CurrentHp - Damage, 0.0f, MaxHp);
 	OnHealthChanged.Broadcast(CurrentHp, MaxHp);
-	UE_LOG(LogTemp, Log, TEXT("[Cage] %s Damage %.0f -> HP %.0f/%.0f"), *GetName(), Damage, CurrentHp, MaxHp);
+	UE_LOG(LogREBoarGetch, Log, TEXT("[Cage] %s Damage %.0f -> HP %.0f/%.0f"), *GetName(), Damage, CurrentHp, MaxHp);
 
 	// 命中音は攻撃が通った時だけ。危険域の警告はしきい値をまたいだ時と、再警告間隔ごとに限る。
 	PlayCageSound(HitSound, false);
@@ -269,8 +270,7 @@ void ACage::PlayCageSound(USoundBase* Sound, bool bAs2D) const
 
 bool ACage::CanAdvance() const
 {
-	const ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
-	return !bStageStopped && (!Mode || Mode->CanAdvanceStage());
+	return !bStageStopped && ABoarGameMode::IsStageProgressAllowed(this);
 }
 
 int32 ACage::GetCapturedBoarCount() const

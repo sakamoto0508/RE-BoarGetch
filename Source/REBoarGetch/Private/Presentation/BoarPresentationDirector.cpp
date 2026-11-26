@@ -1,4 +1,5 @@
 #include "Presentation/BoarPresentationDirector.h"
+#include "REBoarGetch.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -26,7 +27,7 @@ void ABoarPresentationDirector::FinishPresentation()
 		return;
 
 	bFinished = true;
-	UE_LOG(LogTemp, Log, TEXT("[Presentation] %s 終了（%.2f秒）"), *GetClass()->GetName(), Age);
+	UE_LOG(LogREBoarGetch, Log, TEXT("[Presentation] %s 終了（%.2f秒）"), *GetClass()->GetName(), Age);
 	OnFinished.ExecuteIfBound();
 }
 

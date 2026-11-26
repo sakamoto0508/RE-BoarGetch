@@ -1,4 +1,5 @@
 #include "UI/BoarArchiveSelectionWidget.h"
+#include "REBoarGetch.h"
 #include "UI/BoarArchiveCard.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/HorizontalBox.h"
@@ -50,7 +51,7 @@ TSharedRef<SWidget> UBoarArchiveSelectionWidget::RebuildWidget()
 {
 	// WBPのレイアウトとBindWidgetOptionalの参照をそのまま使います。C++で代替レイアウトは作りません。
 	if (WidgetTree && !WidgetTree->RootWidget)
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: WBPにレイアウトがありません（RootWidgetが空）。展示選択画面を表示しません。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Archive] %s: WBPにレイアウトがありません（RootWidgetが空）。展示選択画面を表示しません。"),
 			*GetNameSafe(GetClass()));
 	return Super::RebuildWidget();
 }
@@ -62,7 +63,7 @@ void UBoarArchiveSelectionWidget::NativeConstruct()
 
 	if (!IsReadyForDisplay())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: Status / SlotsPanel / Grid / BackButton が見つかりません。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Archive] %s: Status / SlotsPanel / Grid / BackButton が見つかりません。"),
 			*GetNameSafe(GetClass()));
 		return;
 	}
@@ -94,7 +95,7 @@ void UBoarArchiveSelectionWidget::NativeConstruct()
 	// カードもWBPで作成します。未設定時はC++のカードで代替せず、Errorを出してカードを並べません。
 	const TSubclassOf<UBoarLoadoutEntry> CardClass = EntryClass;
 	if (!CardClass)
-		UE_LOG(LogTemp, Error, TEXT("[Archive] %s: EntryClassが未設定です。展示カードを表示しません。"),
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Archive] %s: EntryClassが未設定です。展示カードを表示しません。"),
 			*GetNameSafe(GetClass()));
 	for (int32 I = 0; CardClass && I < UBoarSaveGame::ArchiveDisplaySlotCount; ++I)
 	{

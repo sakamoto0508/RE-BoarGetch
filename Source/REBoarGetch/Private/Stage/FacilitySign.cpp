@@ -1,4 +1,5 @@
 #include "Stage/FacilitySign.h"
+#include "REBoarGetch.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/WidgetComponent.h"
@@ -236,7 +237,7 @@ void AFacilitySign::BeginPlay()
 	Super::BeginPlay();
 
 	if (!HasSignWidgetClass())
-		UE_LOG(LogTemp, Error,
+		UE_LOG(LogREBoarGetch, Error,
 		TEXT("[FacilitySign] %s.%s: WidgetClass（WBP_FacilitySign）が未設定のため、看板の文字を省きます。"),
 		*GetActorNameOrLabel(), *LabelWidget->GetName());
 	ApplyLayout(ShownTitle, bShownDimmed);

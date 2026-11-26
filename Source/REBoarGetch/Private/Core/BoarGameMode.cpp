@@ -1,4 +1,5 @@
 #include "Core/BoarGameMode.h"
+#include "REBoarGetch.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 
 #include "Boar/BoarBase.h"
@@ -160,7 +161,7 @@ void ABoarGameMode::StartPlay()
 	}
 
 	bStageInitializationComplete = true;
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] 準備中: 初期化完了"));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageInit] 準備中: 初期化完了"));
 	WorldTickEndHandle = FWorldDelegates::OnWorldTickEnd.AddUObject(this, &ABoarGameMode::HandleWorldTickEnd);
 
 	if (bWaitForStageIntroduction && StageConfig)
@@ -177,13 +178,13 @@ void ABoarGameMode::StartPlay()
 
 bool ABoarGameMode::PrepareStage()
 {
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] 1/4 設定と進行データを検証"));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageInit] 1/4 設定と進行データを検証"));
 
 	if (!ValidateStageSetup())
 		return false;
 
 	SetStageActorsStopped(true);
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] 2/4 設定されたActorをSpawn"));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageInit] 2/4 設定されたActorをSpawn"));
 
 	// 生成方法はBoarStageSpawnerへ委譲し、GameModeは順序と成否だけを判断します。
 	const UBoarGameInstance* Instance = GetGameInstance<UBoarGameInstance>();
@@ -193,12 +194,12 @@ bool ABoarGameMode::PrepareStage()
 			Instance ? Instance->GetProgress() : nullptr))
 		return FailInitialization(NSLOCTEXT("StageInit", "SpawnFailed", "ステージの配置を準備できませんでした。"));
 
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] 3/4 檻・Boar・PlayerのHP・装備構成を初期化"));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageInit] 3/4 檻・Boar・PlayerのHP・装備構成を初期化"));
 
 	if (!InitializeStageActors())
 		return false;
 
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] 4/4 BeginPlayと導入演出の準備完了"));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageInit] 4/4 BeginPlayと導入演出の準備完了"));
 	return true;
 }
 
@@ -258,7 +259,7 @@ bool ABoarGameMode::InitializeStageActors()
 bool ABoarGameMode::FailInitialization(const FText& Reason)
 {
 	InitializationError = Reason;
-	UE_LOG(LogTemp, Error, TEXT("[StageInit] %s"), *Reason.ToString());
+	UE_LOG(LogREBoarGetch, Error, TEXT("[StageInit] %s"), *Reason.ToString());
 	return false;
 }
 
@@ -281,6 +282,13 @@ void ABoarGameMode::HandlePlayerDeath(ABoarPlayerCharacter* PlayerCharacter)
 {
 	(void)PlayerCharacter;
 	RequestGameOver();
+}
+
+bool ABoarGameMode::IsStageProgressAllowed(const UObject* WorldContextObject)
+{
+	const UWorld* World = WorldContextObject ? WorldContextObject->GetWorld() : nullptr;
+	const ABoarGameMode* Mode = World ? World->GetAuthGameMode<ABoarGameMode>() : nullptr;
+	return !Mode || Mode->CanAdvanceStage();
 }
 
 void ABoarGameMode::RefreshHousedBoarCount()
@@ -391,7 +399,7 @@ bool ABoarGameMode::RetryClearSave()
 	{
 		UBoarGameInstance* Instance = GetGameInstance<UBoarGameInstance>();
 		bClearSaveSucceeded = Instance && Instance->CommitClearedRun(StageRunData);
-		if (!bClearSaveSucceeded) UE_LOG(LogTemp, Error,
+		if (!bClearSaveSucceeded) UE_LOG(LogREBoarGetch, Error,
 			TEXT(
 				"[Stage] Clear save pending. Configure BoarGameInstance / StageId or retry saving."
 			));
@@ -418,7 +426,7 @@ void ABoarGameMode::CompleteStageIntroduction()
 	if (StageConfig && StageConfig->StageBGM)
 		if (auto* Audio = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>() : nullptr)
 			Audio->ApplyLevelBGM(this, StageConfig->StageBGM, StageConfig->StageBGMFadeInSeconds, 0.0f, true);
-	UE_LOG(LogTemp, Log, TEXT("[StageInit] プレイ中: ステージ進行を有効化"));
+	UE_LOG(LogREBoarGetch, Log, TEXT("[StageInit] プレイ中: ステージ進行を有効化"));
 	RefreshHousedBoarCount();
 }
 
@@ -450,7 +458,7 @@ void ABoarGameMode::HandleIntroductionTimeout()
 	if (!bStageInitializationComplete || StageState != EBoarStageState::Preparing)
 		return;
 
-	UE_LOG(LogTemp, Warning, TEXT("[Stage] 導入演出がタイムアウトしたため、ゲームを続行します。"));
+	UE_LOG(LogREBoarGetch, Warning, TEXT("[Stage] 導入演出がタイムアウトしたため、ゲームを続行します。"));
 	OnStagePresentationTimedOut(true);
 	CompleteStageIntroduction();
 }
@@ -461,7 +469,7 @@ void ABoarGameMode::HandleEndPresentationTimeout()
 		EBoarStageState::GameOver))
 		return;
 
-	UE_LOG(LogTemp, Warning, TEXT("[Stage] 終了演出がタイムアウトしたため、終了UIへ進みます。"));
+	UE_LOG(LogREBoarGetch, Warning, TEXT("[Stage] 終了演出がタイムアウトしたため、終了UIへ進みます。"));
 	OnStagePresentationTimedOut(false);
 	CompleteStageEndPresentation();
 }

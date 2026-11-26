@@ -1,4 +1,5 @@
 #include "UI/BoarGameOverWidget.h"
+#include "REBoarGetch.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
@@ -20,7 +21,7 @@ void UBoarGameOverWidget::NativeConstruct()
 
 	if (!RetryButton || !LobbyButton)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GameOver] Retry／LobbyのWidget参照を設定してください。"));
+		UE_LOG(LogREBoarGetch, Warning, TEXT("[GameOver] Retry／LobbyのWidget参照を設定してください。"));
 	}
 
 	// 選択表示はボタン背面の枠Image・アイコン・ラベルを切り替えて行います（初期選択はRetry）。
