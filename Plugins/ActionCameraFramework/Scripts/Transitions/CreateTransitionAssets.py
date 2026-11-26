@@ -1,9 +1,9 @@
 """Action Camera Framework, Phase 7D (README 33 章): creates the plugin content of the transition system.
 
-    Scripts/RunEditorPython.sh Scripts/Transitions/CreateTransitionAssets.py [--only material|presets|maps]
+    Scripts/RunEditorPython.sh Scripts/Transitions/CreateTransitionAssets.py [--only material|material-code|presets|maps] [--min-id N]
 
   /ActionCameraFramework/Transitions/M_ACFTransition          UI material; its Custom node is ACFTransitionEffects.hlsl
-  /ActionCameraFramework/Transitions/Presets/DA_ACFTransition_<ID>_<Name>   42 standard presets (catalog defaults)
+  /ActionCameraFramework/Transitions/Presets/DA_ACFTransition_<ID>_<Name>   standard presets (catalog defaults)
   /ActionCameraFramework/Transitions/Samples/L_ACFTransitionA, _B            two test maps + MI_ACFTransitionSample_*
 
 Re-running replaces the assets. Results: <Project>/Saved/ACFTransitionAssets.json.
@@ -101,20 +101,42 @@ def build_material():
     OUT['material_code_chars'] = len(code)
 
 
-def build_presets():
+def update_material_code():
+    """Refresh the supplied shader in place, keeping the material graph and its connections."""
+    mat = unreal.load_asset(MATERIAL)
+    if mat is None:
+        raise RuntimeError('Transition material not found. Use --only material to create it.')
+    rgb = MEL.get_material_property_input_node(mat, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    inputs = MEL.get_inputs_for_material_expression(mat, rgb) if rgb is not None else []
+    custom_nodes = [node for node in inputs if isinstance(node, unreal.MaterialExpressionCustom)]
+    if len(custom_nodes) != 1:
+        raise RuntimeError('Expected one transition Custom node upstream of Emissive Color.')
+    with open(HLSL, 'r', encoding='utf-8') as shader:
+        code = shader.read()
+    custom_nodes[0].set_editor_property('code', code)
+    MEL.recompile_material(mat)
+    OUT['material_saved'] = E.save_loaded_asset(mat, False)
+    if not OUT['material_saved']:
+        raise RuntimeError('Failed to save the transition material.')
+    OUT['material_code_chars'] = len(code)
+
+
+def build_presets(min_id):
     factory = unreal.DataAssetFactory()
     factory.set_editor_property('data_asset_class', unreal.ACFTransitionPreset)
     made = []
     for info in unreal.ACFTransitionLibrary.get_all_transition_effects():
         effect = info.get_editor_property('effect')
         ident = info.get_editor_property('id')
+        if ident < min_id:
+            continue
         clean = ''.join(ch for ch in info.get_editor_property('name') if ch.isalnum())
         name = 'DA_ACFTransition_%02d_%s' % (ident, clean)
-        path = PRESETS + '/' + name
         preset = ensure(name, PRESETS, unreal.ACFTransitionPreset, factory)
         preset.set_editor_property('close', unreal.ACFTransitionLibrary.make_default_transition_settings(effect, unreal.ACFTransitionPhase.CLOSE))
         preset.set_editor_property('open', unreal.ACFTransitionLibrary.make_default_transition_settings(effect, unreal.ACFTransitionPhase.OPEN))
-        E.save_loaded_asset(preset, False)
+        if not E.save_loaded_asset(preset, False):
+            raise RuntimeError('Failed to save ' + name)
         made.append(name)
     OUT['presets'] = len(made)
 
@@ -193,15 +215,20 @@ def build_map(letter, other, floor_color, colors, text_color):
 def main():
     # Plugin content is not in the asset registry of a pythonscript commandlet until it is scanned.
     unreal.AssetRegistryHelpers.get_asset_registry().scan_paths_synchronous(['/ActionCameraFramework'], True)
-    only = ''
+    only = set()
+    min_id = 1
     for i, a in enumerate(sys.argv):
         if a == '--only' and i + 1 < len(sys.argv):
-            only = sys.argv[i + 1]
-    if only in ('', 'material'):
+            only.add(sys.argv[i + 1])
+        elif a == '--min-id' and i + 1 < len(sys.argv):
+            min_id = int(sys.argv[i + 1])
+    if 'material-code' in only:
+        update_material_code()
+    if not only or 'material' in only:
         build_material()
-    if only in ('', 'presets'):
-        build_presets()
-    if only in ('', 'maps'):
+    if not only or 'presets' in only:
+        build_presets(min_id)
+    if not only or 'maps' in only:
         build_map('A', 'B', (0.32, 0.30, 0.27, 1), [(0.9, 0.35, 0.05, 1), (0.05, 0.3, 0.9, 1), (0.95, 0.85, 0.1, 1)], (255, 140, 40, 255))
         build_map('B', 'A', (0.18, 0.24, 0.2, 1), [(0.1, 0.8, 0.3, 1), (0.6, 0.1, 0.8, 1), (0.9, 0.9, 0.9, 1)], (90, 255, 140, 255))
 

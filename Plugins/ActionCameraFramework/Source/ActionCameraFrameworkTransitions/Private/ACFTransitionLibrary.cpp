@@ -31,6 +31,12 @@ FACFTransitionHandle UACFTransitionLibrary::PlayTransitionById(const UObject* Wo
 	return PlayTransitionEffect(WorldContextObject, ACFTransition::FromId(EffectId), Phase, Duration, false);
 }
 
+FACFTransitionHandle UACFTransitionLibrary::PreviewTransitionPreset(const UObject* WorldContextObject, const UACFTransitionPreset* Preset, float HoldSeconds)
+{
+	UACFTransitionSubsystem* Subsystem = UACFTransitionSubsystem::Get(WorldContextObject);
+	return Subsystem && IsValid(Preset) ? Subsystem->PlayPreview(Preset->Close, Preset->Open, HoldSeconds) : FACFTransitionHandle();
+}
+
 FACFTransitionSettings UACFTransitionLibrary::MakeDefaultTransitionSettings(EACFTransitionEffect Effect, EACFTransitionPhase Phase)
 {
 	return ACFTransition::MakeDefaultSettings(Effect, Phase);

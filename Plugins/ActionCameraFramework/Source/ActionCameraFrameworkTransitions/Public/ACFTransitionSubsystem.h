@@ -77,6 +77,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ACF|Transition", meta = (AutoCreateRefTerm = "Options,TravelOptions"))
 	FACFTransitionHandle PlayLevelTransitionPreset(const UACFTransitionPreset* Preset, const FACFTransitionOptions& Options, FName LevelName, const FString& TravelOptions);
 
+	/** Plays Close and Open with one handle. Preview starts only when the viewport is clear and idle. */
+	FACFTransitionHandle PlayPreview(const FACFTransitionSettings& Close, const FACFTransitionSettings& Open, float HoldSeconds);
+
 	// -- Control
 
 	/** Ends a playing or queued transition with Cancelled. bClearScreen: remove the overlay at once (otherwise the screen
@@ -193,6 +196,7 @@ private:
 		None,
 		Closing,
 		CoveredWait,      // covered; waiting CoveredFrames presented frames
+		PreviewHold,      // preview: timed hold in the current world
 		WaitingForLoad,   // level: covered, the game has not started loading yet
 		Loading,          // level: PreLoadMap / NotifyLoadStarted seen
 		WaitingWorld,     // level: loaded; waiting for begun play + frames + ready signal
@@ -208,6 +212,7 @@ private:
 		FACFTransitionOptions Options;
 		FName LevelName;
 		FString TravelOptions;
+		float PreviewHoldSeconds = 0.f;
 		EACFTransitionEvent LastEvent = EACFTransitionEvent::Started;
 	};
 

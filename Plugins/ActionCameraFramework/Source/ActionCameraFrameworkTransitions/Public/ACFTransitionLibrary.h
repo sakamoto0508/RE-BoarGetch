@@ -24,9 +24,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ACF|Transition", meta = (WorldContext = "WorldContextObject"))
 	static FACFTransitionHandle PlayTransitionEffect(const UObject* WorldContextObject, EACFTransitionEffect Effect, EACFTransitionPhase Phase, float Duration = -1.f, bool bLockInput = false);
 
-	/** The same with the fixed number (1..42). */
+	/** The same with the fixed catalog ID. */
 	UFUNCTION(BlueprintCallable, Category = "ACF|Transition", meta = (WorldContext = "WorldContextObject"))
 	static FACFTransitionHandle PlayTransitionById(const UObject* WorldContextObject, int32 EffectId, EACFTransitionPhase Phase, float Duration = -1.f);
+
+	/** Plays the preset's Close, hold and Open in the current viewport. Returns an invalid handle if the preset or viewport is unavailable, or a transition already occupies the screen. */
+	UFUNCTION(BlueprintCallable, Category = "ACF|Transition|Preview", meta = (WorldContext = "WorldContextObject", DisplayName = "Preview Transition Preset", Keywords = "camera screen effect test fade wipe"))
+	static FACFTransitionHandle PreviewTransitionPreset(const UObject* WorldContextObject, const UACFTransitionPreset* Preset, float HoldSeconds = 0.4f);
 
 	/** The default look of an effect, to change and pass to the subsystem. */
 	UFUNCTION(BlueprintPure, Category = "ACF|Transition")

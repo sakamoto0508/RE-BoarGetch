@@ -11,7 +11,7 @@ class UTexture;
 ACTIONCAMERAFRAMEWORKTRANSITIONS_API DECLARE_LOG_CATEGORY_EXTERN(LogACFTransition, Log, All);
 
 /**
- * The 42 screen transitions (README 33 章). The numeric values are fixed IDs: never renumber them (presets, console
+ * The screen transitions (README 33 章). The numeric values are fixed IDs: never renumber them (presets, console
  * commands and saved settings use them). Every ID draws its own pattern in M_ACFTransition (Scripts/Transitions/
  * ACFTransitionEffects.hlsl); the catalog (ACFTransitionCatalog.h) lists names, categories and defaults.
  */
@@ -61,6 +61,14 @@ enum class EACFTransitionEffect : uint8
 	WhipPan = 40,
 	SpiralClose = 41,
 	SpiralOpen = 42,
+	FocusPull = 43,
+	LumaDissolve = 44,
+	PageTurn = 45,
+	QuickCrossDissolve = 46,
+	CrispWipe = 47,
+	SoftWipe = 48,
+	GlowWipe = 49,
+	SubjectIris = 50,
 };
 
 /** Which way a transition plays. Close: the scene is visible at the start and fully covered at the end. Open: the reverse. */
@@ -146,7 +154,7 @@ struct ACTIONCAMERAFRAMEWORKTRANSITIONS_API FACFTransitionSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Transition")
 	EACFTransitionEasing Easing = EACFTransitionEasing::EaseInOut;
 
-	/** Used when Easing is Curve. */
+	/** Custom easing (normalized time 0..1 to progress 0..1). If unset, the phase runs at a constant speed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Transition", meta = (EditCondition = "Easing == EACFTransitionEasing::Curve"))
 	TObjectPtr<UCurveFloat> Curve = nullptr;
 
@@ -182,11 +190,11 @@ struct ACTIONCAMERAFRAMEWORKTRANSITIONS_API FACFTransitionSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Look", meta = (ClampMin = "0.25", UIMin = "1", UIMax = "120"))
 	float Count = 1.f;
 
-	/** Screen point (0..1) of irises, portals, beams, shockwaves, spirals, match cuts. */
+	/** Center for irises, portals, beams, shockwaves, spirals and match cuts. (0, 0) is top-left, (1, 1) is bottom-right. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Look")
 	FVector2D Center = FVector2D(0.5, 0.5);
 
-	/** Random seed of the noise-based effects. */
+	/** Change the noise pattern of effects such as ink, smoke or film burn. The same seed repeats the same pattern. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Look")
 	float Seed = 0.f;
 
@@ -301,6 +309,8 @@ enum class EACFTransitionKind : uint8
 	Open,
 	/** Close -> (load) -> Open. */
 	Level,
+	/** Close, hold, then Open on the same scene. */
+	Preview,
 };
 
 /** Read-only state of one handle (UACFTransitionSubsystem::GetTransitionInfo). */

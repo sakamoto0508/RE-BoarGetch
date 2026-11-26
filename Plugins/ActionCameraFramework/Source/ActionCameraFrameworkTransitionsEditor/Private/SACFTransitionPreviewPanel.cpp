@@ -4,6 +4,7 @@
 #include "ACFTransitionSubsystem.h"
 #include "ACFTransitionView.h"
 #include "AssetToolsModule.h"
+#include "AssetRegistry/AssetData.h"
 #include "Editor.h"
 #include "Engine/GameInstance.h"
 #include "Engine/Texture2D.h"
@@ -11,11 +12,13 @@
 #include "IDetailsView.h"
 #include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
+#include "PropertyCustomizationHelpers.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SScaleBox.h"
 #include "Widgets/Layout/SSplitter.h"
+#include "Widgets/Layout/SWrapBox.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Views/STableRow.h"
@@ -77,24 +80,40 @@ void SACFTransitionPreviewPanel::Construct(const FArguments&)
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(4.f)
 			[
-				SNew(STextBlock).Text(this, &SACFTransitionPreviewPanel::GetStatusText)
+				SNew(STextBlock).Text(this, &SACFTransitionPreviewPanel::GetStatusText).AutoWrapText(true)
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(4.f)
 			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[Button(LOCTEXT("Play", "Play (Close + Open)"), LOCTEXT("PlayTip", "Close, hold, then Open."), [this]() { Play(true, true); return FReply::Handled(); })]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[Button(LOCTEXT("Close", "Close"), LOCTEXT("CloseTip", "Only the Close (stays covered)."), [this]() { Play(true, false); return FReply::Handled(); })]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[Button(LOCTEXT("Open", "Open"), LOCTEXT("OpenTip", "Only the Open (from covered)."), [this]() { Play(false, true); return FReply::Handled(); })]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[Button(LOCTEXT("All", "Preview All 42"), LOCTEXT("AllTip", "Plays every effect in ID order."), [this]() { PlayAll(); return FReply::Handled(); })]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[Button(LOCTEXT("Stop", "Stop"), LOCTEXT("StopTip", "Stops and clears the preview."), [this]() { Stop(); return FReply::Handled(); })]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[Button(LOCTEXT("Pie", "Play in PIE"), LOCTEXT("PieTip", "Plays these settings in the running PIE session (start PIE first)."), [this]() { PlayInPie(); return FReply::Handled(); })]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[Button(LOCTEXT("Save", "Save as Preset..."), LOCTEXT("SaveTip", "Creates a Transition Preset asset with these Close / Open settings."), [this]() { return SaveAsPreset(); })]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[Button(LOCTEXT("Reset", "Reset to Defaults"), LOCTEXT("ResetTip", "The catalog defaults of the selected effect."), [this]() { SelectEffect(Selected); return FReply::Handled(); })]
+				SNew(SWrapBox).UseAllottedSize(true).InnerSlotPadding(FVector2D(4.0, 4.0))
+				+ SWrapBox::Slot()[Button(LOCTEXT("Play", "Play (Close + Open)"), LOCTEXT("PlayTip", "Close, hold, then Open."), [this]() { Play(true, true); return FReply::Handled(); })]
+				+ SWrapBox::Slot()[Button(LOCTEXT("Close", "Close"), LOCTEXT("CloseTip", "Only the Close (stays covered)."), [this]() { Play(true, false); return FReply::Handled(); })]
+				+ SWrapBox::Slot()[Button(LOCTEXT("Open", "Open"), LOCTEXT("OpenTip", "Only the Open (from covered)."), [this]() { Play(false, true); return FReply::Handled(); })]
+				+ SWrapBox::Slot()[Button(LOCTEXT("All", "Preview All"), LOCTEXT("AllTip", "Plays every effect in ID order."), [this]() { PlayAll(); return FReply::Handled(); })]
+				+ SWrapBox::Slot()[Button(LOCTEXT("Stop", "Stop"), LOCTEXT("StopTip", "Stop and clear the preview in this tab."), [this]() { Stop(); return FReply::Handled(); })]
+				+ SWrapBox::Slot()[Button(LOCTEXT("Pie", "Play in PIE"), LOCTEXT("PieTip", "Play Close, Hold and Open in the running PIE viewport. Wait for any active transition to finish first."), [this]() { PlayInPie(); return FReply::Handled(); })]
+				+ SWrapBox::Slot()[Button(LOCTEXT("Save", "Save as Preset..."), LOCTEXT("SaveTip", "Creates a Transition Preset asset with these Close / Open settings."), [this]() { return SaveAsPreset(); })]
+				+ SWrapBox::Slot()[Button(LOCTEXT("Reset", "Reset to Defaults"), LOCTEXT("ResetTip", "The catalog defaults of the selected effect."), [this]() { SelectEffect(Selected); return FReply::Handled(); })]
 			]
 		]
 		+ SSplitter::Slot().Value(0.28f)
 		[
-			Details.ToSharedRef()
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().Padding(4.f)
+			[
+				SNew(STextBlock).Text(LOCTEXT("PreviewPreset", "Preview Preset"))
+				.ToolTipText(LOCTEXT("PreviewPresetTip", "Copy Close and Open from a preset into this preview. The preset asset is unchanged when you adjust the preview."))
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(4.f, 0.f, 4.f, 4.f)
+			[
+				SNew(SObjectPropertyEntryBox)
+				.AllowedClass(UACFTransitionPreset::StaticClass())
+				.ObjectPath_Lambda([this]() { return PreviewPresetPath; })
+				.OnObjectChanged(this, &SACFTransitionPreviewPanel::OnPresetSelected)
+			]
+			+ SVerticalBox::Slot().FillHeight(1.f)
+			[
+				Details.ToSharedRef()
+			]
 		]
 	];
 	SelectEffect(EACFTransitionEffect::BlackFade);
@@ -129,21 +148,52 @@ void SACFTransitionPreviewPanel::OnListSelection(TSharedPtr<FACFTransitionEffect
 
 void SACFTransitionPreviewPanel::SelectEffect(EACFTransitionEffect Effect)
 {
+	PreviewPresetPath.Reset();
 	Selected = Effect;
 	Settings->Close = ACFTransition::MakeDefaultSettings(Effect, EACFTransitionPhase::Close);
 	Settings->Open = ACFTransition::MakeDefaultSettings(Effect, EACFTransitionPhase::Open);
+	SyncEffectSelection();
+	Mode = EMode::Idle;
+	Coverage = 0.f;
+	ApplyFrame();
+}
+
+void SACFTransitionPreviewPanel::OnPresetSelected(const FAssetData& Asset)
+{
+	if (const UACFTransitionPreset* Preset = Cast<UACFTransitionPreset>(Asset.GetAsset()))
+	{
+		LoadPreset(*Preset);
+	}
+	else
+	{
+		Stop();
+		SelectEffect(Selected);
+	}
+}
+
+void SACFTransitionPreviewPanel::LoadPreset(const UACFTransitionPreset& Preset)
+{
+	bPlayingAll = false;
+	PreviewPresetPath = Preset.GetPathName();
+	Selected = Preset.Close.Effect;
+	Settings->Close = Preset.Close;
+	Settings->Open = Preset.Open;
+	SyncEffectSelection();
+	Play(true, true);
+}
+
+void SACFTransitionPreviewPanel::SyncEffectSelection()
+{
 	if (Details.IsValid())
 	{
 		Details->ForceRefresh();
 	}
-	if (List.IsValid() && Items.IsValidIndex(static_cast<int32>(Effect) - 1))
+	const int32 EffectIndex = static_cast<int32>(Selected) - 1;
+	if (List.IsValid() && Items.IsValidIndex(EffectIndex))
 	{
-		List->SetSelection(Items[static_cast<int32>(Effect) - 1], ESelectInfo::Direct);
-		List->RequestScrollIntoView(Items[static_cast<int32>(Effect) - 1]);
+		List->SetSelection(Items[EffectIndex], ESelectInfo::Direct);
+		List->RequestScrollIntoView(Items[EffectIndex]);
 	}
-	Mode = EMode::Idle;
-	Coverage = 0.f;
-	ApplyFrame();
 }
 
 void SACFTransitionPreviewPanel::Play(bool bClose, bool bOpen)
@@ -281,10 +331,11 @@ bool SACFTransitionPreviewPanel::PlayInPie()
 	{
 		return false;
 	}
-	Subsystem->PlayClose(Settings->Close, FACFTransitionOptions());
-	FACFTransitionOptions Queued;
-	Queued.Concurrency = EACFTransitionConcurrency::Queue;
-	Subsystem->PlayOpen(Settings->Open, Queued);
+	if (!Subsystem->PlayPreview(Settings->Close, Settings->Open, Settings->HoldSeconds).IsValid())
+	{
+		UE_LOG(LogACFTransition, Warning, TEXT("ACF Transition Preview: Play in PIE needs valid Close and Open effects and a clear, idle viewport."));
+		return false;
+	}
 	return true;
 }
 

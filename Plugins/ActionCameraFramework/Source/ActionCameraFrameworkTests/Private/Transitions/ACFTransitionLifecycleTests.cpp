@@ -4,9 +4,11 @@
 
 #include "ACFTransitionLibrary.h"
 #include "ACFTransitionPreset.h"
+#include "ACFTransitionSettings.h"
 #include "ACFTransitionTestUtils.h"
 #include "ACFTransitionView.h"
 #include "Engine/Texture2D.h"
+#include "Misc/ScopeExit.h"
 #include "GameFramework/PlayerController.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/UObjectGlobals.h"
@@ -21,7 +23,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFTransitionCatalogTest, "ActionCameraFramewo
 bool FACFTransitionCatalogTest::RunTest(const FString&)
 {
 	const TArray<FACFTransitionEffectInfo>& All = ACFTransition::GetAllEffects();
-	TestEqual(TEXT("42 effects"), All.Num(), 42);
+	TestEqual(TEXT("All catalog effects"), All.Num(), ACFTransition::NumEffects);
 	TSet<FString> Names;
 	for (int32 i = 0; i < All.Num(); ++i)
 	{
@@ -39,14 +41,14 @@ bool FACFTransitionCatalogTest::RunTest(const FString&)
 		TestEqual(*FString::Printf(TEXT("parse id %d"), Info.Id), ACFTransition::ParseEffect(FString::FromInt(Info.Id)), Info.Effect);
 		TestEqual(*FString::Printf(TEXT("parse name %s"), *Info.Name), ACFTransition::ParseEffect(Info.Name), Info.Effect);
 	}
-	TestEqual(TEXT("unique names"), Names.Num(), 42);
+	TestEqual(TEXT("unique names"), Names.Num(), ACFTransition::NumEffects);
 	TestEqual(TEXT("41 is Spiral Close"), ACFTransition::GetEffectInfo(EACFTransitionEffect::SpiralClose).Name, FString(TEXT("Spiral Close")));
 	TestEqual(TEXT("42 is Spiral Open"), ACFTransition::GetEffectInfo(EACFTransitionEffect::SpiralOpen).Name, FString(TEXT("Spiral Open")));
 	TestEqual(TEXT("parse SpiralOpen"), ACFTransition::ParseEffect(TEXT("spiralopen")), EACFTransitionEffect::SpiralOpen);
 	TestEqual(TEXT("parse unknown"), ACFTransition::ParseEffect(TEXT("Nope")), EACFTransitionEffect::None);
-	TestEqual(TEXT("parse 43"), ACFTransition::ParseEffect(TEXT("43")), EACFTransitionEffect::None);
+	TestEqual(TEXT("parse beyond the catalog"), ACFTransition::ParseEffect(FString::FromInt(ACFTransition::NumEffects + 1)), EACFTransitionEffect::None);
 
-	// The plugin content: material and the 42 standard presets.
+	// The plugin content: material and the standard presets.
 	TestNotNull(TEXT("M_ACFTransition loads"), FACFTransitionView::LoadDefaultMaterial());
 	for (const FACFTransitionEffectInfo& Info : All)
 	{
@@ -60,6 +62,54 @@ bool FACFTransitionCatalogTest::RunTest(const FString&)
 			TestEqual(*FString::Printf(TEXT("preset %d open effect"), Info.Id), Preset->Open.Effect, Info.Effect);
 		}
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FACFTransitionBlueprintPreviewTest, "ActionCameraFramework.Transitions.BlueprintPreview", Flags)
+bool FACFTransitionBlueprintPreviewTest::RunTest(const FString&)
+{
+	UWorld* World = FindGameWorld();
+	UACFTransitionSubsystem* Subsystem = FindSubsystem();
+	if (!World || !Subsystem)
+	{
+		AddWarning(TEXT("Skipped: requires a game world."));
+		return true;
+	}
+	Subsystem->ClearScreen();
+	ON_SCOPE_EXIT { Subsystem->ClearScreen(); };
+	// Test the preview timer without advancing the editor's global frame counter.
+	TGuardValue<int32> CoveredFrames(GetMutableDefault<UACFTransitionProjectSettings>()->CoveredFrames, 0);
+
+	UACFTransitionPreset* Preset = NewObject<UACFTransitionPreset>();
+	Preset->Close = Settings(EACFTransitionEffect::BlackFade, 0.f);
+	Preset->Open = Settings(EACFTransitionEffect::SpiralOpen, 0.1f, EACFTransitionPhase::Open);
+	FRecorder Recorder;
+	Recorder.Bind(Subsystem);
+	const FACFTransitionHandle Handle = UACFTransitionLibrary::PreviewTransitionPreset(World, Preset, 0.4f);
+	TestTrue(TEXT("Preview starts from a Blueprint world context"), Handle.IsValid());
+	TestFalse(TEXT("Busy viewport rejects a second preview"), UACFTransitionLibrary::PreviewTransitionPreset(World, Preset).IsValid());
+
+	Subsystem->AdvanceForTest(0.f); // instant Close
+	Subsystem->AdvanceForTest(0.f); // issue Covered
+	TestEqual(TEXT("The preview covers the screen"), Subsystem->GetCoverage(), 1.f);
+	for (int32 Tick = 0; Tick < 20; ++Tick)
+	{
+		Subsystem->AdvanceForTest(0.01f);
+	}
+	TestEqual(TEXT("Preview stays covered for the requested hold"), Subsystem->GetTransitionInfo(Handle).Phase, EACFTransitionPhase::Close);
+	for (int32 Tick = 0; Tick < 60 && Subsystem->GetTransitionInfo(Handle).Phase == EACFTransitionPhase::Close && Subsystem->IsTransitionActive(); ++Tick)
+	{
+		Subsystem->AdvanceForTest(0.01f);
+	}
+	TestEqual(TEXT("Preview opens after the hold"), Subsystem->GetTransitionInfo(Handle).Phase, EACFTransitionPhase::Open);
+	TestEqual(TEXT("Open uses the preset's Open effect"), Subsystem->GetTransitionInfo(Handle).Effect, EACFTransitionEffect::SpiralOpen);
+	for (int32 Tick = 0; Tick < 60 && Subsystem->IsTransitionActive(); ++Tick)
+	{
+		Subsystem->AdvanceForTest(0.01f);
+	}
+	TestEqual(TEXT("One handle covers and finishes without any load events"), Recorder.Of(Handle), FString(TEXT("Started,Covered,Finished")));
+	TestEqual(TEXT("The same world is still active"), FindGameWorld(), World);
+	TestEqual(TEXT("Preview leaves the viewport clear"), Subsystem->GetCoverage(), 0.f);
 	return true;
 }
 

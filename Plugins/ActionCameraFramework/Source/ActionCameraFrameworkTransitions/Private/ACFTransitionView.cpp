@@ -20,6 +20,7 @@
 #include "Styling/CoreStyle.h"
 #include "TextureResource.h"
 #include "Widgets/Images/SImage.h"
+#include "Widgets/Layout/SBackgroundBlur.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/SOverlay.h"
@@ -67,6 +68,11 @@ public:
 			SNew(SOverlay)
 			+ SOverlay::Slot()
 			[
+				SAssignNew(BackgroundBlur, SBackgroundBlur)
+				.BlurStrength(0.f).bApplyAlphaToBlur(false).Visibility(EVisibility::Collapsed)
+			]
+			+ SOverlay::Slot()
+			[
 				SAssignNew(Image, SImage).Image(&Brush)
 			]
 			+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(FMargin(0.f, 0.f, 96.f, 64.f))
@@ -85,6 +91,12 @@ public:
 	{
 		SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
 		LastSize = AllottedGeometry.GetLocalSize();
+	}
+
+	void SetBackgroundBlur(float Strength)
+	{
+		BackgroundBlur->SetBlurStrength(Strength);
+		BackgroundBlur->SetVisibility(Strength > 0.f ? EVisibility::HitTestInvisible : EVisibility::Collapsed);
 	}
 
 	void SetMaterial(UMaterialInterface* Material)
@@ -127,6 +139,7 @@ public:
 
 private:
 	FSlateBrush Brush;
+	TSharedPtr<SBackgroundBlur> BackgroundBlur;
 	TSharedPtr<SImage> Image;
 	TSharedPtr<STextBlock> CornerText;
 	TSharedPtr<STextBlock> CenterText;
@@ -153,6 +166,7 @@ TSharedRef<SWidget> FACFTransitionView::GetWidget()
 	if (!Widget.IsValid())
 	{
 		Widget = SNew(SACFTransitionOverlay);
+		Widget->SetBackgroundBlur(BackgroundBlurStrength);
 		if (MaterialInstance)
 		{
 			Widget->SetMaterial(MaterialInstance);
@@ -235,8 +249,12 @@ void FACFTransitionView::Apply(const FACFTransitionSettings& Settings, EACFTrans
 			MID->SetTextureParameterValue(OverlayTex, Settings.OverlayTexture);
 		}
 	}
+	// Slate blurs whatever is behind this overlay, including the live incoming scene during Open.
+	BackgroundBlurStrength = Settings.Effect == EACFTransitionEffect::FocusPull && Coverage < 1.f && FMath::IsFinite(Settings.Intensity)
+		? 16.f * FMath::Clamp(Settings.Intensity, 0.f, 2.f) * FMath::Clamp(Coverage, 0.f, 1.f) : 0.f;
 	if (Widget.IsValid())
 	{
+		Widget->SetBackgroundBlur(BackgroundBlurStrength);
 		const bool bCard = Settings.Effect == EACFTransitionEffect::StageCard;
 		// The text appears in the last fifth of the coverage (readable only once the screen is covered).
 		const float TextOpacity = FMath::Clamp((Coverage - 0.8f) / 0.2f, 0.f, 1.f);
@@ -252,6 +270,7 @@ void FACFTransitionView::Release()
 		Widget->SetMaterial(nullptr);
 	}
 	Widget.Reset();
+	BackgroundBlurStrength = 0.f;
 	MaterialInstance = nullptr;
 	BaseMaterial = nullptr;
 }

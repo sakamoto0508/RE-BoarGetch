@@ -4,7 +4,7 @@
 #include "ACFTransitionTypes.h"
 #include "ACFTransitionCatalog.generated.h"
 
-/** Families of the 42 effects (how they are built, README 33 章). */
+/** Families of the screen effects (how they are built, README 33 章). */
 UENUM(BlueprintType)
 enum class EACFTransitionCategory : uint8
 {
@@ -27,7 +27,7 @@ struct ACTIONCAMERAFRAMEWORKTRANSITIONS_API FACFTransitionEffectInfo
 	UPROPERTY(BlueprintReadOnly, Category = "Transition")
 	EACFTransitionEffect Effect = EACFTransitionEffect::None;
 
-	/** The fixed number (1..42). */
+	/** The fixed catalog ID. */
 	UPROPERTY(BlueprintReadOnly, Category = "Transition")
 	int32 Id = 0;
 
@@ -53,12 +53,12 @@ struct ACTIONCAMERAFRAMEWORKTRANSITIONS_API FACFTransitionEffectInfo
 
 namespace ACFTransition
 {
-	inline constexpr int32 NumEffects = 42;
+	inline constexpr int32 NumEffects = static_cast<int32>(EACFTransitionEffect::SubjectIris);
 
 	/** Info of an effect; a None entry for invalid values. */
 	ACTIONCAMERAFRAMEWORKTRANSITIONS_API const FACFTransitionEffectInfo& GetEffectInfo(EACFTransitionEffect Effect);
 
-	/** All 42 in ID order. */
+	/** All effects in ID order. */
 	ACTIONCAMERAFRAMEWORKTRANSITIONS_API const TArray<FACFTransitionEffectInfo>& GetAllEffects();
 
 	/** The tuned default look of an effect (the standard presets are made from it). */
