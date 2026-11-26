@@ -390,6 +390,13 @@ private:
 	 */
 	void FinishStun(bool bInterrupted);
 
+	/**
+	 * CharacterMovementのbOrientRotationToMovement（移動方向への自動回転）を、現在の状態から決めて適用します。
+	 * この値を書く唯一の経路です。Stun中と、移動を止めるガジェット使用中（空中アミを含む）はfalse、それ以外はtrueです。
+	 * Stun・ガジェット使用の状態を変えた直後に呼びます。新しく向きを固定する状態を増やすときは、ここに条件を足します。
+	 */
+	void RefreshOrientRotationToMovement();
+
 	/** 被弾直後の無敵時間を終了します。 */
 	void EndInvincible();
 
@@ -755,8 +762,6 @@ private:
 	FTimerHandle StunAirborneWaitTimerHandle;
 	/** 空中被弾で、着地（残り時間の計測開始）を待っている間trueです。 */
 	bool bStunAwaitingLanding = false;
-	/** Stun開始前のbOrientRotationToMovementです。Stun中は向きを固定し、終了時にこの値へ戻します。 */
-	bool bStunSavedOrientRotationToMovement = true;
 	/** 無敵時間終了処理を実行するTimerの識別子です。 */
 	FTimerHandle InvincibleTimerHandle;
 };

@@ -322,22 +322,15 @@ void ABoarPlayerCharacter::StartGadgetUse()
 		bGadgetUseAllowsMovement = !bAirNetDrop && CurrentGadget->CanMoveWhileUsing();
 		bIsGadgetInUse = true;
 
-		if (bAirNetDrop)
-		{
-			// 空中アミは鉛直速度を残したまま急降下へ移るため、StopMovementImmediatelyを通さない。
-			if (UCharacterMovementComponent* Move = GetCharacterMovement())
-			{
-				Move->bOrientRotationToMovement = false;
-			}
-		}
-		else if (UCharacterMovementComponent* Move = GetCharacterMovement();
-				Move && !bGadgetUseAllowsMovement)
+		// 移動を止める使用（空中アミを含む）では、移動方向への自動回転を止める。
+		RefreshOrientRotationToMovement();
+
+		// 空中アミは鉛直速度を残したまま急降下へ移るため、StopMovementImmediatelyを通さない。
+		if (UCharacterMovementComponent* Move = GetCharacterMovement();
+				Move && !bAirNetDrop && !bGadgetUseAllowsMovement)
 		{
 				// ガジェット使用中は移動入力を受けても動かないようにする。
 				Move->StopMovementImmediately();
-
-				// 移動方向へキャラクターを自動回転させる機能をオフ。
-				Move->bOrientRotationToMovement = false;
 		}
 
 		// 移動を止める使用だけ入力記録を消す。移動可能な使用では現在の入力を維持する。
@@ -756,7 +749,6 @@ void ABoarPlayerCharacter::BeginStun(const FBoarPlayerHitInfo& HitInfo)
 	if (bIsDowned)
 		return;
 
-	const bool bWasStunned = bIsStunned;
 	bIsStunned = true;
 	SetPlayerActionState(EPlayerActionState::Stun);
 
@@ -771,14 +763,11 @@ void ABoarPlayerCharacter::BeginStun(const FBoarPlayerHitInfo& HitInfo)
 	ConsumeMovementInputVector();
 	bHadMoveInput = false;
 
+	// ノックバックの速度方向へ振り向かないよう、Stun中は向きを固定する。
+	RefreshOrientRotationToMovement();
+
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
-		// 連続Stunで2回目以降に保存し直すと、Stun中に固定したfalseを本来の値として覚えてしまう。
-		if (!bWasStunned)
-			bStunSavedOrientRotationToMovement = Move->bOrientRotationToMovement;
-		// ノックバックの速度方向へ振り向かないよう、Stun中は向きを固定する。
-		Move->bOrientRotationToMovement = false;
-
 		const FVector Push = HitInfo.HitDirection.GetSafeNormal2D();
 		if (bFaceAttackerOnStun && !Push.IsNearlyZero())
 		{
@@ -933,8 +922,7 @@ void ABoarPlayerCharacter::FinishStun(bool bInterrupted)
 		return;
 
 	// Stunが変更したのは向きの自動追従だけ。移動モード・IgnoreMoveInput等の他の所有者のロックには触れない。
-	if (UCharacterMovementComponent* Move = GetCharacterMovement())
-		Move->bOrientRotationToMovement = bStunSavedOrientRotationToMovement;
+	RefreshOrientRotationToMovement();
 
 	OnStunEnded.Broadcast(bInterrupted);
 
@@ -959,6 +947,18 @@ void ABoarPlayerCharacter::FinishStun(bool bInterrupted)
 		SetPlayerActionState(JumpCurrentCount >= 2 ? EPlayerActionState::DoubleJump : EPlayerActionState::Fall);
 	else
 		UpdateGroundActionState(bHadMoveInput);
+}
+
+void ABoarPlayerCharacter::RefreshOrientRotationToMovement()
+{
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	if (!Move)
+		return;
+
+	// 書き手を一か所にし、状態フラグから毎回決め直す。保存・復元の順序に依存しないので、連続Stunや
+	// ガジェット使用中の被弾（BeginStun内のEndGadgetUse）でも、固定中の値を「本来の値」として覚え込まない。
+	const bool bGadgetLocksFacing = bIsGadgetInUse && !bGadgetUseAllowsMovement;
+	Move->bOrientRotationToMovement = !bIsStunned && !bGadgetLocksFacing;
 }
 
 void ABoarPlayerCharacter::EndInvincible()
@@ -1007,10 +1007,7 @@ void ABoarPlayerCharacter::EndGadgetUse(bool bWasInterrupted)
 		GadgetUseMontageInstanceID = INDEX_NONE;
 	}
 
-	if (UCharacterMovementComponent* Move = GetCharacterMovement())
-	{
-		Move->bOrientRotationToMovement = true;
-	}
+	RefreshOrientRotationToMovement();
 
 	// AnimBPへ通常終了または中断終了したことを通知する。
 	OnGadgetUseStopped(CurrentGadgetUseStyle, CurrentGadget);
