@@ -8,6 +8,7 @@
 class UTextBlock;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnResultDismissRequested);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnResultSaveRetryRequested);
 
 /** ステージ終了時のプレイ結果を表示する基底Widgetです。 */
 UCLASS(Blueprintable)
@@ -41,6 +42,33 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Result")
 	void OnRevealFinished();
 
+	// ---- Clear時の保存失敗（S-1、2026-11-27決定） ----
+	// 保存に失敗してもResultは通常どおり表示し、警告と［再試行］［保存せず戻る］を出す。
+	// ［保存せず戻る］は確認を挟んでからOnDismissRequested（Lobbyへ戻る）を通知する。保存できなかった結果は進行データに反映されない。
+
+	/** 保存失敗の状態を設定します。falseにすると警告を消し、通常の「任意の入力で戻る」操作に戻します。 */
+	void SetSaveFailed(bool bFailed);
+	/** ［再試行］しても保存できなかったことを表示します。 */
+	void NotifySaveRetryFailed();
+	/**
+	 * 保存失敗中の入力を1つ処理します。bDecide = 決定（○ / Enter / Space / クリック）、false = 取消（× / Esc / BackSpace）。
+	 * 警告中：決定で再試行、取消で破棄の確認へ。確認中：決定でLobbyへ戻る、取消で警告へ戻る。保存失敗中でなければ何もせずfalseを返します。
+	 */
+	bool ProcessSaveFailureInput(bool bDecide);
+
+	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Result")
+	bool IsSaveFailed() const { return bSaveFailed; }
+	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Result")
+	bool IsConfirmingDiscard() const { return bConfirmingDiscard; }
+
+	/** ［再試行］の要求です。PlayerControllerがGameModeの保存再試行へつなぎます。 */
+	UPROPERTY(BlueprintAssignable, Category = "REBoarGetch|Result")
+	FOnResultSaveRetryRequested OnSaveRetryRequested;
+
+	/** 保存失敗の表示状態が変わったときにBPへ通知します（見た目の演出用。文面はText_SaveWarningにC++が設定します）。 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Result")
+	void OnSaveStateChanged(bool bFailed, bool bConfirming);
+
 protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
@@ -62,6 +90,23 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result Reveal", meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> Text_CoinLine;
+
+	/** 保存失敗の警告・破棄の確認を表示するTextBlockです。保存に成功している間は非表示です。 */
+	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result Save", meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_SaveWarning;
+
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Save", meta = (MultiLine = "true"))
+	FText SaveFailedText = NSLOCTEXT("Result", "SaveFailed", "進行を保存できませんでした\n○ / Enter：再試行　　× / Esc：保存せず戻る");
+
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Save", meta = (MultiLine = "true"))
+	FText SaveRetryFailedText = NSLOCTEXT("Result", "SaveRetryFailed", "再試行しましたが保存できませんでした\n○ / Enter：再試行　　× / Esc：保存せず戻る");
+
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Save", meta = (MultiLine = "true"))
+	FText DiscardConfirmText = NSLOCTEXT("Result", "DiscardConfirm", "今回の記録は失われます。よろしいですか？\n○ / Enter：保存せず戻る　　× / Esc：やめる");
+
+	/** 保存失敗中は隠すWidget名（「任意の入力で戻る」の案内）。保存できたら元に戻します。 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Save")
+	TArray<FName> SaveFailureHiddenWidgetNames = { TEXT("ContinueGuideGroup"), TEXT("Text_ContinueGuide") };
 
 	/** 前の項目のアニメ終了から次の項目を出すまでの間隔（秒）。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Reveal", meta = (ClampMin = "0"))
@@ -189,6 +234,13 @@ private:
 	/** ステップIの表示対象（Text_*があればそれ、無ければRevealStepWidgetNames[I]）。 */
 	UWidget* GetRevealStepWidget(int32 Index) const;
 	FReply RequestDismiss();
+	/** 保存失敗中のキー入力を決定・取消へ振り分けます。どちらでもないキーは無視（消費）します。 */
+	FReply HandleSaveFailureKey(const FKey& Key);
+	void UpdateSaveWarning();
+	bool bSaveFailed = false;
+	bool bConfirmingDiscard = false;
+	bool bSaveRetryFailed = false;
+	bool bReportedMissingSaveWarning = false;
 	void StartReveal();
 	void StartRevealStep(int32 Index);
 	bool bDismissInputAccepted = false;

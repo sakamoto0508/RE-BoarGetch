@@ -330,6 +330,14 @@ void UBoarResultWidget::SetGuideDevice(bool bGamepad)
 
 	GuideDevice = int32(bGamepad);
 
+	// 保存失敗中は「任意の入力で戻る」の案内を出さない（警告の文面に操作を書いている）。
+	if (bSaveFailed)
+	{
+		if (auto* BoarPC = Cast<ABoarPlayerController>(GetOwningPlayer()))
+			BoarPC->NotifyInputDevice(bGamepad);
+		return;
+	}
+
 	if (UWidget* Pad = ResolveNamedWidget<UWidget>(WidgetTree, PadGuideWidgetName))
 		Pad->SetVisibility(bGamepad ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 
@@ -344,6 +352,8 @@ FReply UBoarResultWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKe
 {
 	(void)InGeometry;
 	SetGuideDevice(InKeyEvent.GetKey().IsGamepadKey());
+	if (bSaveFailed)
+		return HandleSaveFailureKey(InKeyEvent.GetKey());
 	return RequestDismiss();
 }
 
@@ -360,6 +370,8 @@ FReply UBoarResultWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, c
 	(void)InGeometry;
 	(void)InMouseEvent;
 	SetGuideDevice(false);
+	if (bSaveFailed)
+		return HandleSaveFailureKey(EKeys::LeftMouseButton);
 	return RequestDismiss();
 }
 
@@ -372,4 +384,114 @@ FReply UBoarResultWidget::RequestDismiss()
 
 	OnDismissRequested.Broadcast();
 	return FReply::Handled();
+}
+
+void UBoarResultWidget::SetSaveFailed(bool bFailed)
+{
+	const bool bWasFailed = bSaveFailed;
+	bSaveFailed = bFailed;
+	bConfirmingDiscard = false;
+	bSaveRetryFailed = false;
+	UpdateSaveWarning();
+
+	// 保存できたら、隠していた「任意の入力で戻る」の案内を元へ戻す。
+	if (bWasFailed && !bFailed)
+	{
+		for (const FName Name : SaveFailureHiddenWidgetNames)
+			if (UWidget* Hidden = ResolveNamedWidget<UWidget>(WidgetTree, Name))
+				Hidden->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+
+		const bool bGamepad = GuideDevice == 1;
+		GuideDevice = INDEX_NONE;
+		SetGuideDevice(bGamepad);
+	}
+}
+
+void UBoarResultWidget::NotifySaveRetryFailed()
+{
+	if (!bSaveFailed)
+		return;
+
+	bSaveRetryFailed = true;
+	UpdateSaveWarning();
+}
+
+bool UBoarResultWidget::ProcessSaveFailureInput(bool bDecide)
+{
+	if (!bSaveFailed)
+		return false;
+
+	if (!bConfirmingDiscard)
+	{
+		if (bDecide)
+		{
+			// 成功すればPlayerController経由でSetSaveFailed(false)、失敗すればNotifySaveRetryFailedが呼ばれる。
+			OnSaveRetryRequested.Broadcast();
+			return true;
+		}
+
+		bConfirmingDiscard = true;
+		UpdateSaveWarning();
+		return true;
+	}
+
+	if (bDecide)
+	{
+		// 保存せずLobbyへ戻る。保存に失敗した結果は進行データへ反映されていない（GameInstanceは成功時だけ正本を更新する）。
+		OnDismissRequested.Broadcast();
+		return true;
+	}
+
+	bConfirmingDiscard = false;
+	UpdateSaveWarning();
+	return true;
+}
+
+FReply UBoarResultWidget::HandleSaveFailureKey(const FKey& Key)
+{
+	// 順表示の途中は通常の終了入力と同じく受け付けない。
+	if (!bDismissInputAccepted)
+		return FReply::Handled();
+
+	static const FKey DecideKeys[] = { EKeys::Gamepad_FaceButton_Right, EKeys::Enter, EKeys::SpaceBar, EKeys::LeftMouseButton };
+	static const FKey CancelKeys[] = { EKeys::Gamepad_FaceButton_Bottom, EKeys::Escape, EKeys::BackSpace };
+
+	for (const FKey& Decide : DecideKeys)
+		if (Key == Decide)
+		{
+			ProcessSaveFailureInput(true);
+			return FReply::Handled();
+		}
+
+	for (const FKey& Cancel : CancelKeys)
+		if (Key == Cancel)
+		{
+			ProcessSaveFailureInput(false);
+			return FReply::Handled();
+		}
+
+	// 誤操作で保存せず戻らないよう、ほかのキーは無視する。
+	return FReply::Handled();
+}
+
+void UBoarResultWidget::UpdateSaveWarning()
+{
+	if (bSaveFailed)
+		for (const FName Name : SaveFailureHiddenWidgetNames)
+			if (UWidget* Hidden = ResolveNamedWidget<UWidget>(WidgetTree, Name))
+				Hidden->SetVisibility(ESlateVisibility::Collapsed);
+
+	if (Text_SaveWarning)
+	{
+		Text_SaveWarning->SetText(bConfirmingDiscard ? DiscardConfirmText : bSaveRetryFailed ? SaveRetryFailedText : SaveFailedText);
+		Text_SaveWarning->SetVisibility(bSaveFailed ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
+	else if (bSaveFailed && !bReportedMissingSaveWarning)
+	{
+		// 代替の表示は作らない。操作（決定で再試行・取消で破棄の確認）は文面がなくても受け付ける。
+		bReportedMissingSaveWarning = true;
+		UE_LOG(LogREBoarGetch, Error, TEXT("[Result] %s: Text_SaveWarning（TextBlock）がないため、保存失敗の警告を表示できません。"), *GetNameSafe(GetClass()));
+	}
+
+	OnSaveStateChanged(bSaveFailed, bConfirmingDiscard);
 }

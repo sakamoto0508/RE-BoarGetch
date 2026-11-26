@@ -7,6 +7,20 @@
 #include "Kismet/GameplayStatics.h"
 #include "Core/BoarFacilityGameMode.h"
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
+
+#if !UE_BUILD_SHIPPING
+namespace BoarSaveDebug
+{
+	/** PIEでの保存失敗の確認用（S-1）。1にすると、ディスクへ書く前に保存を失敗させます。Shippingには含まれません。 */
+	static int32 SimulateSaveFailure = 0;
+	static FAutoConsoleVariableRef CVarSimulateSaveFailure(
+		TEXT("Boar.Save.SimulateFailure"),
+		SimulateSaveFailure,
+		TEXT("保存失敗の確認用：1 = すべての保存を失敗させる（ディスクには書かない）、0 = 通常。"),
+		ECVF_Cheat);
+}
+#endif
 
 void UBoarGameInstance::Init()
 {
@@ -30,7 +44,12 @@ void UBoarGameInstance::Init()
 bool UBoarGameInstance::SaveCandidate(UBoarSaveGame* Candidate)
 {
 	// ディスク保存が成功してから正本と購読者へ公開する。失敗した候補は現在の進行へ混ぜない。
-	if (!Candidate || bSaveLoadFailed || !UGameplayStatics::SaveGameToSlot(Candidate, SaveSlotName, SaveUserIndex))
+#if !UE_BUILD_SHIPPING
+	const bool bSimulatedFailure = BoarSaveDebug::SimulateSaveFailure != 0;
+#else
+	constexpr bool bSimulatedFailure = false;
+#endif
+	if (!Candidate || bSaveLoadFailed || bSimulatedFailure || !UGameplayStatics::SaveGameToSlot(Candidate, SaveSlotName, SaveUserIndex))
 	{
 		// 自動テスト（AddExpectedError）がこの文言を照合しているため英語のまま。
 		UE_LOG(LogREBoarGetch, Error, TEXT("[Save] Progress could not be saved."));

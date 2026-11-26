@@ -80,10 +80,12 @@ public:
 	/** 任意の開始演出を実装した場合、完了時に呼びます。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage")
 	void CompleteStageIntroduction();
-	/** 演出を待つ設定時に呼びます。Clearは保存成功後だけResultへ進みます。 */
+	/**
+	 * 演出を待つ設定時に呼びます。Clearは保存に失敗してもResultへ進み、Result上で警告と再試行を出します（S-1、2026-11-27決定）。
+	 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage")
 	void CompleteStageEndPresentation();
-	/** 保存失敗から再試行する入口です。失敗時UIの見た目は固定しません。 */
+	/** Clear時の保存を再試行します。Result表示後に成功した場合は、Resultの警告を消すよう通知します。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage")
 	bool RetryClearSave();
 	bool RecordSpecialCoin(FName CoinId);

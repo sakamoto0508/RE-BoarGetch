@@ -460,7 +460,7 @@ void ABoarPlayerController::HandleStaminaChanged(float CurrentStamina, float Max
 	}
 }
 
-void ABoarPlayerController::HandleStageCleared(const FStageRunData& Run, int32 TargetCount)
+void ABoarPlayerController::HandleStageCleared(const FStageRunData& Run, int32 TargetCount, bool bSaveSucceeded)
 {
 	// Server側、二重通知、Widget Class未設定ではResult画面を生成しない。
 	if (!IsLocalController() || ResultWidget || !Run.bResultFrozen)
@@ -500,10 +500,12 @@ void ABoarPlayerController::HandleStageCleared(const FStageRunData& Run, int32 T
 
 	// Widgetは任意入力だけを通知し、実際のLobby遷移はControllerが担当する。
 	ResultWidget->OnDismissRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToLobby);
+	ResultWidget->OnSaveRetryRequested.AddUniqueDynamic(this, &ABoarPlayerController::HandleSaveRetryRequested);
 
 	// 通常HUDより前面へ表示し、確定した捕獲数を渡す。
 	ResultWidget->AddToViewport(EndScreenZOrder);
 	ResultWidget->InitializeResult(Run, TargetCount);
+	ResultWidget->SetSaveFailed(!bSaveSucceeded);
 
 	// Gameplay入力をUI Onlyへ切り替え、任意入力を受け取るResult WidgetへFocusを設定する。
 	FInputModeUIOnly InputMode;
@@ -527,6 +529,22 @@ void ABoarPlayerController::SetPlayerHUDOpacity(float Opacity)
 {
 	if (PlayerHUDWidget)
 		PlayerHUDWidget->SetRenderOpacity(FMath::Clamp(Opacity, 0.f, 1.f));
+}
+
+void ABoarPlayerController::HandleSaveRetryRequested()
+{
+	ABoarGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr;
+	const bool bSaved = Mode && Mode->RetryClearSave();
+
+	// 成功時はRetryClearSave経由でHandleClearSaveRecoveredが呼ばれる。失敗時だけ「まだ保存できない」を伝える。
+	if (!bSaved && ResultWidget)
+		ResultWidget->NotifySaveRetryFailed();
+}
+
+void ABoarPlayerController::HandleClearSaveRecovered()
+{
+	if (ResultWidget)
+		ResultWidget->SetSaveFailed(false);
 }
 
 void ABoarPlayerController::ReturnToLobby()

@@ -70,7 +70,10 @@ public:
 	void CloseArchiveDisplaySelection();
 
 	/** ステージクリア時に操作を停止し、リザルト画面を表示します。 */
-	void HandleStageCleared(const FStageRunData& Run, int32 TargetCount);
+	/** bSaveSucceededがfalseなら、Resultに保存失敗の警告と再試行・保存せず戻るの操作を出します（S-1）。 */
+	void HandleStageCleared(const FStageRunData& Run, int32 TargetCount, bool bSaveSucceeded = true);
+	/** Result表示後の再試行で保存できたときにGameModeから呼ばれます。 */
+	void HandleClearSaveRecovered();
 	/** 終了演出からUIまでゲーム入力を遮断します（Stage進行による入力禁止。メニュー表示による禁止はUIFlowが管理します）。 */
 	void SetStageInputBlocked(bool bBlocked);
 	/** ローカルメニューの入力状態を管理するUIFlow。ステージ選択画面などActor側のUIもここへ入力管理を委ねます。 */
@@ -273,6 +276,10 @@ private:
 
 	UFUNCTION()
 	void ReturnToLobby();
+
+	/** Resultの［再試行］から呼ばれ、GameModeでClear時の保存を再試行します（S-1）。 */
+	UFUNCTION()
+	void HandleSaveRetryRequested();
 
 	/** BeginPlay時にPriority 0で登録するMapping Contextです。Controller Blueprintで設定します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))

@@ -408,6 +408,11 @@ bool ABoarGameMode::RetryClearSave()
 	if (bClearSaveSucceeded && bEndPresentationCompleted)
 		CompleteStageEndPresentation();
 
+	// Result表示後の再試行で保存できた場合は、Resultの警告を消して通常の操作へ戻す。
+	if (bClearSaveSucceeded && bEndUIShown)
+		if (auto* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController()))
+			PC->HandleClearSaveRecovered();
+
 	return bClearSaveSucceeded;
 }
 
@@ -438,7 +443,8 @@ void ABoarGameMode::CompleteStageEndPresentation()
 	GetWorldTimerManager().ClearTimer(EndPresentationTimeoutHandle);
 	bEndPresentationCompleted = true;
 
-	if (bEndUIShown || (StageState == EBoarStageState::Cleared && !bClearSaveSucceeded))
+	// S-1：保存に失敗してもResultは出す。警告と再試行・保存せず戻るの操作はResult側が持つ。
+	if (bEndUIShown)
 		return;
 
 	ABoarPlayerController* PC = Cast<ABoarPlayerController>(GetWorld()->GetFirstPlayerController());
@@ -448,7 +454,16 @@ void ABoarGameMode::CompleteStageEndPresentation()
 	bEndUIShown = true;
 
 	if (StageState == EBoarStageState::Cleared)
-		PC->HandleStageCleared(StageRunData, StageConfig->TargetCaptureCount);
+	{
+		// 保存前の段階で失敗するとNEW判定が固定されていない。表示のために固定済み扱いにする（NEWは空のまま、保存もしない）。
+		if (!StageRunData.bResultFrozen)
+		{
+			UE_LOG(LogREBoarGetch, Error, TEXT("[Stage] Clear結果を確定できなかったため、NEW表示なしでResultを出します（保存は失敗扱い）。"));
+			StageRunData.bResultFrozen = true;
+		}
+
+		PC->HandleStageCleared(StageRunData, StageConfig->TargetCaptureCount, bClearSaveSucceeded);
+	}
 	else
 		PC->HandleStageGameOver();
 }
