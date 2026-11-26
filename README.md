@@ -30,13 +30,6 @@
 
 ロビーからステージへ入り、クリアまたはゲームオーバー後に再挑戦・ロビーへ戻る進行を構築しています。捕獲記録、ステージ達成状況、装備など、ラン中だけの状態と継続保存する状態を区別しています。
 
-## 自動テストの実装例
-
-- [StageProgressTests.cpp](Source/REBoarGetch/Private/Tests/StageProgressTests.cpp)：終了優先順位、入力ロック、挑戦中データ・セーブのシリアライズ、出現定義を検証
-- [CaptureResolutionTests.cpp](Source/REBoarGetch/Private/Tests/CaptureResolutionTests.cpp)：捕獲個体の送致先選択と、檻の状態による選択の変化を検証
-
-上記は**テストコードの実装箇所**です。このREADMEの作成時にUE Editor上で全テストの実行結果を確認したものではありません。
-
 ## プロジェクトを開く際の注意
 
 1. Unreal Engine `5.8`系とC++ビルド環境を用意します。
@@ -44,7 +37,6 @@
 3. `.uproject`には`StateTree`、`GameplayStateTree`、`ModelContextProtocol`、`RetroRender`などのプラグイン指定があります。環境によってはプラグインの導入・無効化・修復が必要です。
 4. Editorで対象マップやBlueprintの参照を確認したうえでビルド・PIEを行ってください。
 
-> 本リポジトリのソースだけで、第三者の環境での完全な再現を保証するものではありません。
 
 ## 今後の改善項目
 
