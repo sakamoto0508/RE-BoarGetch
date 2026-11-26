@@ -517,6 +517,12 @@ void ABoarGameMode::SetStageActorsStopped(bool bStopped)
 	for (TActorIterator<ACage> It(GetWorld()); It; ++It)
 		It->SetStageStopped(bStopped);
 
+	// Cooldownの正本は各PawnのGadgetComponent（AKI-154）。装備していないガジェットのCooldownも一緒に止める。
+	for (TActorIterator<APawn> It(GetWorld()); It; ++It)
+		if (UGadgetComponent* Gadgets = It->FindComponentByClass<UGadgetComponent>())
+			Gadgets->SetCooldownsStopped(bStopped);
+
+	// Componentを持たない所有者のガジェットは、従来どおりActor自身のTimerを止める。
 	for (TActorIterator<AGadgetBase> It(GetWorld()); It; ++It)
 		It->SetStageStopped(bStopped);
 }

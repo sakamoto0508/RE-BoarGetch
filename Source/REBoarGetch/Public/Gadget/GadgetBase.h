@@ -5,6 +5,7 @@
 #include "GadgetBase.generated.h"
 
 class UGadgetDataAsset;
+class UGadgetComponent;
 
 /** 入力に対してガジェット効果を単発実行するか、押下中継続するかを表します。 */
 UENUM(BlueprintType)
@@ -28,7 +29,10 @@ class REBOARGETCH_API AGadgetBase : public AActor
 public:
 	/** Tickを使用しないガジェットActorの初期状態を構築します。 */
 	AGadgetBase();
-	/** 終了演出中はCooldownを停止します。通常PauseはWorld側で停止します。 */
+	/**
+	 * 終了演出中はCooldownを停止します。通常PauseはWorld側で停止します。
+	 * 所有者のUGadgetComponentがCooldownを持つ場合はComponent側（GameModeが直接止める）に任せ、ここでは何もしません。
+	 */
 	void SetStageStopped(bool bStopped);
 
 	/**
@@ -52,10 +56,12 @@ public:
 	bool CanMoveWhileUsing() const { return bCanMoveWhileUsing; }
 
 	/**
-	 * 使用可能かどうかを返します。
+	 * 使用可能（Cooldown中でない）かどうかを返します。
+	 * Cooldownは所有者のUGadgetComponentがGadgetId単位で持つため、装備し直しても残ります（AKI-154）。
+	 * Componentを持たない所有者（単体で置いたガジェット等）では、このActor自身のTimerで判定します。
 	 */
 	UFUNCTION(BlueprintPure, Category="Gadget")
-	bool CanUse() const { return !bIsOnCooldown; }
+	bool CanUse() const;
 
 	/**
 	 * 現在使用中かどうかを返します。
@@ -140,19 +146,13 @@ protected:
 	float UseSoundVolume = 1.0f;
 
 	/**
-	 * クールタイム中かどうかです。
-	 */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
-	bool bIsOnCooldown = false;
-
-	/**
 	 * 使用中かどうかです。
 	 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	bool bIsUsing = false;
 
 	/**
-	 * クールタイム解除用のタイマーです。
+	 * 所有者がUGadgetComponentを持たない場合だけ使う、このActor自身のCooldown Timerです。
 	 */
 	FTimerHandle CooldownTimerHandle = FTimerHandle(); //明示的初期化。
 
@@ -161,10 +161,8 @@ protected:
 	 */
 	void StartCooldown();
 
-	/**
-	 * クールタイム終了処理です。
-	 */
-	void FinishCooldown();
+	/** Cooldownの正本を持つ所有者のUGadgetComponentです。ないときはnullptrです。 */
+	UGadgetComponent* GetOwningGadgetComponent() const;
 
 	/**
 	 * 攻撃ヒット対象に起動通知を送ります（ダメージ系ガジェット用）。

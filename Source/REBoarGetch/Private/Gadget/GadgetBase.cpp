@@ -1,4 +1,5 @@
 #include "Gadget/GadgetBase.h"
+#include "Component/GadgetComponent.h"
 #include "Interaction/AttackActivatable.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
@@ -10,6 +11,9 @@ AGadgetBase::AGadgetBase()
 
 void AGadgetBase::SetStageStopped(bool bStopped)
 {
+	if (GetOwningGadgetComponent())
+		return;
+
 	if (bStopped)
 		GetWorldTimerManager().PauseTimer(CooldownTimerHandle);
 	else
@@ -61,7 +65,7 @@ void AGadgetBase::EndUse_Implementation(AActor* TargetActor)
 
 	bIsUsing = false;
 
-	if (UseStyle == EGadgetUseStyle::Hold && !bIsOnCooldown)
+	if (UseStyle == EGadgetUseStyle::Hold && CanUse())
 	{
 		StartCooldown();
 	}
@@ -75,28 +79,34 @@ void AGadgetBase::StartCooldown()
 	if (CooldownSeconds <= 0.0f)
 		return;
 
+	if (UGadgetComponent* Gadgets = GetOwningGadgetComponent())
+	{
+		Gadgets->StartGadgetCooldown(this, CooldownSeconds);
+		return;
+	}
+
 	UWorld* World = GetWorld();
 	if (World == nullptr)
 		return;
 
-	bIsOnCooldown = true;
-
+	// Componentを持たない所有者向け。終了は「Timerが存在しない」ことで判定するので、終了処理は空でよい。
 	World->GetTimerManager().ClearTimer(CooldownTimerHandle);
-	World->GetTimerManager().SetTimer(
-		CooldownTimerHandle,
-		this,
-		&AGadgetBase::FinishCooldown,
-		CooldownSeconds,
-		false
-	);
+	World->GetTimerManager().SetTimer(CooldownTimerHandle, FTimerDelegate::CreateWeakLambda(this, [] {}), CooldownSeconds, false);
 }
 
-/**
- * クールタイム終了処理です。
- */
-void AGadgetBase::FinishCooldown()
+bool AGadgetBase::CanUse() const
 {
-	bIsOnCooldown = false;
+	if (const UGadgetComponent* Gadgets = GetOwningGadgetComponent())
+		return !Gadgets->IsGadgetOnCooldown(this);
+
+	const UWorld* World = GetWorld();
+	return !World || !World->GetTimerManager().TimerExists(CooldownTimerHandle);
+}
+
+UGadgetComponent* AGadgetBase::GetOwningGadgetComponent() const
+{
+	const AActor* GadgetOwner = GetOwner();
+	return GadgetOwner ? GadgetOwner->FindComponentByClass<UGadgetComponent>() : nullptr;
 }
 
 /**

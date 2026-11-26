@@ -70,11 +70,24 @@ bool FBoarNetStunInterruptTest::RunTest(const FString& Parameters)
 	const FAnimNotifyEventReference NoEvent;
 	auto FireNotify = [&](UAnimNotify_NetCaptureWindow* N) { N->Notify(Player->GetMesh(), nullptr, NoEvent); };
 
-	// Cooldownはこの検証Worldでは進まないため、使用ごとに新しい網へ持ち替える（装備解除経路の検証も兼ねる）。
+	// 使用ごとに新しい網へ持ち替える（装備解除経路の検証も兼ねる）。CooldownはGadgetId単位でComponentに残るため（AKI-154）、
+	// 持ち替えだけでは消えない。残りを極短く置き換え、Timerを0.01秒だけ進めて使用可能に戻す（他のTimerはほぼ進めない）。
 	auto FreshNet = [&]() -> ANetGadget*
 	{
 		Gadgets->SwitchGadget(NetClass);
-		return Cast<ANetGadget>(Gadgets->GetCurrentGadget());
+		auto* NewNet = Cast<ANetGadget>(Gadgets->GetCurrentGadget());
+		if (NewNet && !NewNet->CanUse())
+		{
+			Gadgets->StartGadgetCooldown(NewNet, KINDA_SMALL_NUMBER);
+			// まだTickしていないフレームで設定したTimerは保留扱いで、次のTickの終わりに有効になる。
+			// そのため1回目のTickで有効化し、2回目で発火させる。
+			for (const float DeltaSeconds : {0.f, .01f})
+			{
+				++GFrameCounter;
+				World->GetTimerManager().Tick(DeltaSeconds);
+			}
+		}
+		return NewNet;
 	};
 	auto StartGroundUse = [&](ANetGadget* Net) -> bool
 	{
@@ -129,6 +142,7 @@ bool FBoarNetStunInterruptTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("通常終了で網のCooldownを消さない"), Net->CanUse());
 
 	// 2) Notify ON前にStun: Montageを止め、後から届くNotify ONでも判定窓を開かない。
+	Net = FreshNet();
 	Net = FreshNet();
 	if (!TestTrue(TEXT("Stun検証の使用開始"), StartGroundUse(Net)))
 		return false;

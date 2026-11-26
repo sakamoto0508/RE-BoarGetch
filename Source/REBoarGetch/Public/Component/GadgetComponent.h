@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Engine/TimerHandle.h"
 #include "GadgetComponent.generated.h"
 
 class AGadgetBase;
@@ -129,7 +130,25 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Gadget")
 	EGadgetUseStyle GetCurrentGadgetUseStyle() const;
 
+	/**
+	 * Cooldownの正本です。Gadget Actorはスロット切替・装備変更のたびに作り直されるため、
+	 * 状態はActorではなくこのComponentがガジェットのID（GadgetId）単位で持ちます（AKI-154）。
+	 * Timerはゲーム時間で進むので、通常のPause中は止まります。Stage停止はSetCooldownsStoppedで止めます。
+	 */
+	bool IsGadgetOnCooldown(const AGadgetBase* Gadget) const;
+	/** 指定ガジェットのCooldownを開始します（すでにCooldown中なら残り時間をSecondsで置き換えます）。0以下なら何もしません。 */
+	void StartGadgetCooldown(const AGadgetBase* Gadget, float Seconds);
+	/** Clear・GameOver等でStageが停止している間、すべてのCooldownを止めます。停止中に始まったCooldownも止まった状態で始まります。 */
+	void SetCooldownsStopped(bool bStopped);
+
 private:
+	/** CooldownのKeyです。GadgetDefinitionのGadgetIdを使い、未設定ならClass名で代用します。 */
+	static FName GetCooldownKey(const AGadgetBase* Gadget);
+	/** GadgetIdごとのCooldown Timerです。Timerが終われば（TimerExistsがfalse）使用可能です。 */
+	TMap<FName, FTimerHandle> CooldownTimers;
+	/** Stage停止中かどうかです。停止中に始まったCooldownもこの状態に合わせて止めます。 */
+	bool bCooldownsStopped = false;
+
 	bool SaveCurrentLoadout();
 	bool bLastLoadoutSaveSuccessful = false;
 	/** プレイヤーが使用できるガジェットスロットの最大数です。 */

@@ -3,6 +3,8 @@
 
 #include "Engine/World.h"
 #include "Gadget/GadgetBase.h"
+#include "Gadget/GadgetDataAsset.h"
+#include "TimerManager.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
@@ -304,4 +306,60 @@ EGadgetUseStyle UGadgetComponent::GetCurrentGadgetUseStyle() const
 {
 	// 未装備時は押下終了処理を要求しない安全な既定値としてOneShotを返す。
 	return CurrentGadget ? CurrentGadget->GetUseStyle() : EGadgetUseStyle::OneShot;
+}
+
+FName UGadgetComponent::GetCooldownKey(const AGadgetBase* Gadget)
+{
+	if (!Gadget)
+		return NAME_None;
+
+	// 同じガジェットを別スロットへ移しても、別ガジェット経由で戻しても同じKeyになるよう、保存用の固定IDを使う。
+	const UGadgetDataAsset* Definition = Gadget->GetGadgetDefinition();
+	return Definition && !Definition->GadgetId.IsNone() ? Definition->GadgetId : Gadget->GetClass()->GetFName();
+}
+
+bool UGadgetComponent::IsGadgetOnCooldown(const AGadgetBase* Gadget) const
+{
+	const UWorld* World = GetWorld();
+	const FTimerHandle* Handle = CooldownTimers.Find(GetCooldownKey(Gadget));
+	return World && Handle && World->GetTimerManager().TimerExists(*Handle);
+}
+
+void UGadgetComponent::StartGadgetCooldown(const AGadgetBase* Gadget, float Seconds)
+{
+	UWorld* World = GetWorld();
+	const FName Key = GetCooldownKey(Gadget);
+	if (!World || Key.IsNone() || Seconds <= 0.0f)
+		return;
+
+	FTimerManager& Timers = World->GetTimerManager();
+	FTimerHandle& Handle = CooldownTimers.FindOrAdd(Key);
+	Timers.ClearTimer(Handle);
+
+	// 終了時にKeyを消すだけ。Componentが先に破棄された場合は呼ばれない（WeakLambda）。
+	Timers.SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this, Key]
+	{
+		CooldownTimers.Remove(Key);
+	}), Seconds, false);
+
+	if (bCooldownsStopped)
+		Timers.PauseTimer(Handle);
+}
+
+void UGadgetComponent::SetCooldownsStopped(bool bStopped)
+{
+	bCooldownsStopped = bStopped;
+
+	UWorld* World = GetWorld();
+	if (!World)
+		return;
+
+	FTimerManager& Timers = World->GetTimerManager();
+	for (const TPair<FName, FTimerHandle>& Pair : CooldownTimers)
+	{
+		if (bStopped)
+			Timers.PauseTimer(Pair.Value);
+		else
+			Timers.UnPauseTimer(Pair.Value);
+	}
 }
