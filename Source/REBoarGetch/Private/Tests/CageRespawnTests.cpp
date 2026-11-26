@@ -46,6 +46,12 @@ bool FCageRespawnTest::RunTest(const FString& Parameters)
 	}
 
 	FTimerManager& Timers = World->GetTimerManager();
+	// FTimerManager::Tickは同じGFrameCounterで2回目以降を無視するため、手動Tickごとにフレームを進める。
+	const auto TickTimers = [&Timers](float DeltaSeconds)
+	{
+		++GFrameCounter;
+		Timers.Tick(DeltaSeconds);
+	};
 	Cage->ApplyDamage(Cage->GetMaxHP());
 	TestTrue(TEXT("HP0で破壊"), Cage->GetIsCageDestroyed());
 	TestEqual(TEXT("破壊で収容数0"), Cage->GetCapturedBoarCount(), 0);
@@ -58,12 +64,12 @@ bool FCageRespawnTest::RunTest(const FString& Parameters)
 
 	// Stage停止中（Clear／GameOver）は復旧待ちが進まない。
 	Cage->SetStageStopped(true);
-	Timers.Tick(10.f);
+	TickTimers(10.f);
 	TestTrue(TEXT("Stage停止中は復旧しない"), Cage->GetIsCageDestroyed());
 	Cage->SetStageStopped(false);
-	Timers.Tick(4.f);
+	TickTimers(4.f);
 	TestTrue(TEXT("設定時間前は復旧しない"), Cage->GetIsCageDestroyed());
-	Timers.Tick(1.5f);
+	TickTimers(1.5f);
 	TestFalse(TEXT("設定時間後に復旧"), Cage->GetIsCageDestroyed());
 	TestEqual(TEXT("HP全快"), Cage->GetHP(), Cage->GetMaxHP());
 	TestFalse(TEXT("表示が戻る"), Cage->IsHidden());

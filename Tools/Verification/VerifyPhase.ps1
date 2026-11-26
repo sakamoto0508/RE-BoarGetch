@@ -96,9 +96,13 @@ foreach ($asset in $assets) {
 if ($missing.Count -gt 0) { throw "Allow-listed assets not found: $($missing -join ', ')" }
 if ($blueprints.Count -eq 0) { throw "BlueprintAllowList.txt contains no Blueprints: $allowList" }
 
+# CompileAllBlueprintsはAllowListFileをProjectDirに連結して読むため、絶対パスではなくプロジェクトからの相対パスで渡す。
+# 読めないとAllowListを無視して全Blueprintをコンパイルしてしまう（"Failed to Load AllowList File"）。
+# Windows PowerShell 5.1（.NET Framework）にはPath.GetRelativePathがないため、ScriptRootからの相対で組み立てる。
+$allowListArgument = (Join-Path (Split-Path -Leaf (Split-Path -Parent $PSScriptRoot)) (Join-Path (Split-Path -Leaf $PSScriptRoot) 'BlueprintAllowList.txt')) -replace '\\', '/'
 $bpProcess = Start-Process -FilePath $engineExecutable -ArgumentList @(
     "`"$projectFile`"", '-run=CompileAllBlueprints',
-    "`"-AllowListFile=$allowList`"",
+    "`"-AllowListFile=$allowListArgument`"",
     '-unattended', '-NullRHI', '-nosplash', "`"-abslog=$blueprintLog`""
 ) -WindowStyle Hidden -PassThru -Wait
 if (-not (Test-Path -LiteralPath $blueprintLog)) { throw "Blueprint log was not written: $blueprintLog" }

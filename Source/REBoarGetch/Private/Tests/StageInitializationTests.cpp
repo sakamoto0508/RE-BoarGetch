@@ -103,6 +103,10 @@ bool FBoarStageInitializationTest::RunTest(const FString& Parameters)
 
 		TestFalse(TEXT("Player is not initialized by construction"), Player->IsReadyForPlay());
 		TestFalse(TEXT("Health awaits startup"), Player->GetHealthComponent()->IsHealthInitialized());
+		// C++のACageを直接置くため、BP_Cageで設定する見た目Asset（SM_Cage・WBP_CageHealth）は未設定になる。
+		// 見た目は代替を作らずErrorで知らせる仕様なので、この2件は想定どおりのErrorとして扱う。
+		AddExpectedError(TEXT("CageMesh（SM_Cage）が未設定"), EAutomationExpectedErrorFlags::Contains, 1);
+		AddExpectedError(TEXT("GaugeWidgetClass（WBP_CageHealth）"), EAutomationExpectedErrorFlags::Contains, 1);
 		Fixture.World->BeginPlay();
 		TestTrue(TEXT("Coordinator completes startup"), Mode->bStageInitializationComplete);
 		TestTrue(TEXT("Player dependencies prepared"), Player->IsReadyForPlay());
