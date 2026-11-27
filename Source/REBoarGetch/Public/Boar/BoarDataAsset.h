@@ -22,8 +22,8 @@ enum class EBoarArchetype : uint8
 };
 
 /**
- * 逃走開始の旋回と、逃走中の大きな切り返し（減速→踏ん張りながら旋回→停止→加速。その場旋回の段階は無い）の調整値です（AKI-152）。
- * 逃走方向はN秒間（DirectionCommitDuration）維持し、N秒ごとに認識中のプレイヤーから方向を再評価します（AKI-172）。
+ * 逃走開始の旋回と、逃走中の大きな切り返し（減速→踏ん張りながら旋回→停止→加速。その場旋回の段階は無い）の調整値です。
+ * 逃走方向はN秒間（DirectionCommitDuration）維持し、N秒ごとに認識中のプレイヤーから方向を再評価します。
  * 逃走中に向きを変えるのは、逃走開始の旋回・切り返し・障害物復帰だけです。再評価で方向差がPivotAngleThreshold以上なら切り返し、未満なら向きを変えずに走り続けます。
  * 逃走は最短EscapeMinDuration秒続け、プレイヤーをEscapeLoseDuration秒認識できなくなったら（逃げ切ったら）終えます。
  * bEnabledがfalseの種別は従来どおりCharacterMovementの向き追従だけで逃走します。
@@ -56,7 +56,7 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	/**
 	 * 大きな方向転換と判定する角度です。方向維持時間（DirectionCommitDuration）の終わりの再評価で、
 	 * プレイヤーから離れる新しい方向と維持方向の差がこの角度以上なら切り返します。未満なら向きを変えず、今の方向へ走り続けます（走りながら曲がらない）。
-	 * 障害物ではObstaclePivotAngleThresholdを使います。比較候補：70〜90°（AKI-172）。
+	 * 障害物ではObstaclePivotAngleThresholdを使います。比較候補：70〜90°。
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Pivot", meta = (ClampMin = "0.0", ClampMax = "180.0", Units = "Degrees"))
 	float PivotAngleThreshold = 100.0f;
@@ -66,7 +66,7 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	float DecelerateDuration = 0.25f;
 
 	/**
-	 * 切り返しで止まっている時間（捕獲の隙）です（AKI-172）。減速して止まってから走り出すまでの秒数で、
+	 * 切り返しで止まっている時間（捕獲の隙）です。減速して止まってから走り出すまでの秒数で、
 	 * この間に踏ん張りながら切り返し先へ向きを変えます（180°なら 180÷この秒数 °/秒で回ります）。
 	 * 長くすると捕まえやすく、向き変えもゆっくりになります。踏ん張りの後はEscapePivotSwing Montage（BP）で脚を踏み替えながら回ります。
 	 */
@@ -78,7 +78,7 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	float BraceDuration = 0.2f;
 
 	/**
-	 * 有効時は踏ん張り（BraceDuration）の間は向きを変えず、残りの停止時間（PivotStopDuration−BraceDuration）で旋回します（AKI-172）。
+	 * 有効時は踏ん張り（BraceDuration）の間は向きを変えず、残りの停止時間（PivotStopDuration−BraceDuration）で旋回します。
 	 * 踏ん張りの間は前脚を地面に突っ張った姿勢のため、ここで体ごと回すと前脚が地面を大きく滑って見えるためです。
 	 * 停止時間・旋回を終える時刻（捕獲の隙）は変わりません。無効にすると従来どおり停止中ずっと等速で旋回します。
 	 */
@@ -109,7 +109,7 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	float ObstaclePivotAngleThreshold = 70.0f;
 
 	/**
-	 * 逃走方向の維持時間（N秒、AKI-172）です。逃走開始・切り返し・障害物復帰・再評価で方向を確定してからこの秒数は、
+	 * 逃走方向の維持時間（N秒）です。逃走開始・切り返し・障害物復帰・再評価で方向を確定してからこの秒数は、
 	 * プレイヤーが横や背後へ動いても逃走方向を引き直しません（NavMeshに沿う±20°の小さな修正と障害物復帰だけ行います）。
 	 * 経過したら認識中のプレイヤーの位置から方向を再評価します。経過しても必ず止まるわけではありません。
 	 */
@@ -131,7 +131,7 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	float SegmentEndCheckDistance = 300.0f;
 
 	/**
-	 * 逃走Stateを別Stateへの遷移で抜けてから、同じ逃走として再開できる最大秒数です（AKI-172）。
+	 * 逃走Stateを別Stateへの遷移で抜けてから、同じ逃走として再開できる最大秒数です。
 	 * 再開には「停止・捕獲で終えていない」「同じプレイヤーから逃げている」も必要です。再開時は逃走方向と方向維持の残り時間を引き継ぎ、
 	 * 方向を計算し直しません。超えた場合・条件を満たさない場合は新しい逃走として開始します。
 	 */
@@ -146,21 +146,21 @@ struct REBOARGETCH_API FBoarEscapeTurnSettings
 	float RunTurnRateDegreesPerSecond = 180.0f;
 
 	/**
-	 * 逃走を続ける最短の時間です（AKI-172）。逃げ始めてからこの秒数は、プレイヤーを見失っても逃走を終えません。
+	 * 逃走を続ける最短の時間です。逃げ始めてからこの秒数は、プレイヤーを見失っても逃走を終えません。
 	 * 逃走と徘徊を短い間隔で繰り返さないためのものです。
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Session", meta = (ClampMin = "0.0", Units = "Seconds"))
 	float EscapeMinDuration = 3.0f;
 
 	/**
-	 * 逃げ切ったと判定するまでの時間です（AKI-172）。逃走中、プレイヤーを認識できない状態（視界外かつThreatMemoryRange外）が
+	 * 逃げ切ったと判定するまでの時間です。逃走中、プレイヤーを認識できない状態（視界外かつThreatMemoryRange外）が
 	 * この秒数続いたら逃げ切りとして逃走を終え、徘徊へ戻ります。それまでは見失っても同じ相手から逃げ続けます。
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Session", meta = (ClampMin = "0.0", Units = "Seconds"))
 	float EscapeLoseDuration = 2.0f;
 
 	/**
-	 * 進めなくなったとき（Stuck）、プレイヤーがこの距離以内にいれば障害物ではなくプレイヤーに阻まれたとみなします（AKI-172）。
+	 * 進めなくなったとき（Stuck）、プレイヤーがこの距離以内にいれば障害物ではなくプレイヤーに阻まれたとみなします。
 	 * その場合は障害物復帰の走行旋回をせず、離れる方向との差がPivotAngleThreshold以上なら切り返します。
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "EscapeTurn|Session", meta = (ClampMin = "0.0", Units = "Centimeters"))

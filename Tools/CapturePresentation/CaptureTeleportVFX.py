@@ -1,4 +1,4 @@
-"""AKI-164: 青白いテレポート（捕獲転送）VFX を NiagaraToolsets の JSON ツールで作る。
+"""青白いテレポート（捕獲転送）VFX を NiagaraToolsets の JSON ツールで作る。
 Usage: run_ue_py.sh <this file> -- (args via env CTV_STEP=create|configure|inspect|schema)
   create    -> NS_CaptureTeleportImpact / NS_CaptureTeleport を雛形 Emitter から作る（既存なら何もしない）
   configure -> CaptureTeleportVFXConfigure.py を実行（Material 作成・各 Emitter の設定・User Parameter）

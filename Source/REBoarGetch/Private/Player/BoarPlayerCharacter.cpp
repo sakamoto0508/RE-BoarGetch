@@ -66,7 +66,7 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	GadgetComponent = CreateDefaultSubobject<UGadgetComponent>(TEXT("GadgetComponent"));
 	CaptureComponent = CreateDefaultSubobject<UCaptureComponent>(TEXT("CaptureComponent"));
 
-	// 被弾・Stunの演出はGameplay結果のEventを受けて再生する（AKI-163）。
+	// 被弾・Stunの演出はGameplay結果のEventを受けて再生する。
 	HitReactionComponent = CreateDefaultSubobject<UPlayerHitReactionComponent>(TEXT("HitReactionComponent"));
 
 	// 走行の土煙（演出のみ）。Walk（〜250cm/s）では出さず、Run（500）で軽く、Dash（900）でやや強く。

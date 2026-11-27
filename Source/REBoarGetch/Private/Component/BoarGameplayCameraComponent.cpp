@@ -72,21 +72,21 @@ namespace BoarGameplayCamera
 	static FAutoConsoleVariableRef CVarTestPivot(
 		TEXT("Boar.Camera.Test.PivotDamping"),
 		TestPivotDamping,
-		TEXT("AKI-160 Damping検証: Orbital FollowのPivot Damping（秒）をACFのRuntime Tuningで変更します。負の値 = アセットの値。"),
+		TEXT("Damping検証: Orbital FollowのPivot Damping（秒）をACFのRuntime Tuningで変更します。負の値 = アセットの値。"),
 		FConsoleVariableDelegate::CreateLambda([](IConsoleVariable*) { RefreshAll(); }),
 		ECVF_Cheat);
 
 	static FAutoConsoleVariableRef CVarTestRotation(
 		TEXT("Boar.Camera.Test.RotationDamping"),
 		TestRotationDamping,
-		TEXT("AKI-160 Damping検証: Orbital FollowのRotation Damping（秒、Yaw・Pitch共通）をPresetの一時複製で変更します。負の値 = アセットの値。"),
+		TEXT("Damping検証: Orbital FollowのRotation Damping（秒、Yaw・Pitch共通）をPresetの一時複製で変更します。負の値 = アセットの値。"),
 		FConsoleVariableDelegate::CreateLambda([](IConsoleVariable*) { RefreshAll(); }),
 		ECVF_Cheat);
 
 	static FAutoConsoleVariableRef CVarTestReturn(
 		TEXT("Boar.Camera.Test.ReturnDamping"),
 		TestReturnDamping,
-		TEXT("AKI-160 Damping検証: CollisionのReturn Damping Time（秒）をPresetの一時複製で変更します。Pull Inはアセットのまま。負の値 = アセットの値。"),
+		TEXT("Damping検証: CollisionのReturn Damping Time（秒）をPresetの一時複製で変更します。Pull Inはアセットのまま。負の値 = アセットの値。"),
 		FConsoleVariableDelegate::CreateLambda([](IConsoleVariable*) { RefreshAll(); }),
 		ECVF_Cheat);
 

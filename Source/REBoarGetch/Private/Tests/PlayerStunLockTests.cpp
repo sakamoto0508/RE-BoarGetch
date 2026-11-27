@@ -15,7 +15,7 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
-// AKI-163: 赤ボア（突進攻撃）被弾時のStun操作ロック・復帰・演出通知の回帰テスト。
+// 赤ボア（突進攻撃）被弾時のStun操作ロック・復帰・演出通知の回帰テスト。
 // 演出の見た目はPIEで確認する。ここではGameplayの状態とEvent（演出が受け取る結果）だけを検証する。
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarPlayerStunLockTest, "REBoarGetch.Spec.PlayerStunLock",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

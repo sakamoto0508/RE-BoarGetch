@@ -57,7 +57,7 @@ public:
 
 	/**
 	 * 使用可能（Cooldown中でない）かどうかを返します。
-	 * Cooldownは所有者のUGadgetComponentがGadgetId単位で持つため、装備し直しても残ります（AKI-154）。
+	 * Cooldownは所有者のUGadgetComponentがGadgetId単位で持つため、装備し直しても残ります。
 	 * Componentを持たない所有者（単体で置いたガジェット等）では、このActor自身のTimerで判定します。
 	 */
 	UFUNCTION(BlueprintPure, Category="Gadget")

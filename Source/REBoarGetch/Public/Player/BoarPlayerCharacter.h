@@ -28,7 +28,7 @@ struct FHitResult;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPlayerStaminaChanged, float, CurrentStamina, float, MaxStamina, bool, bDashLocked);
 
 /**
- * ダメージが成立した被弾の情報です（AKI-163）。Gameplay側が確定した結果だけを演出側へ渡します。
+ * ダメージが成立した被弾の情報です。Gameplay側が確定した結果だけを演出側へ渡します。
  * 無敵中・攻撃判定外・Stage停止中など、ダメージが成立しなかった接触では作られません。
  */
 USTRUCT(BlueprintType)

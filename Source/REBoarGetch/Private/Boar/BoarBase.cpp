@@ -42,19 +42,19 @@ namespace
 	/** 切り返し中の旋回ループMontageの再生速度の下限。 */
 	constexpr float MinEscapeTurnLoopPlayRate = 0.1f;
 
-	/** 逃走・切り返しのデバッグログ（AKI-152）。0=無効、1=Output Log、2=Output Log＋画面表示。 */
+	/** 逃走・切り返しのデバッグログ。0=無効、1=Output Log、2=Output Log＋画面表示。 */
 	int32 GBoarEscapeTurnDebug = 0;
 	FAutoConsoleVariableRef CVarBoarEscapeTurnDebug(
 		TEXT("Boar.AI.EscapeTurnDebug"),
 		GBoarEscapeTurnDebug,
-		TEXT("AKI-152: 通常Boarの逃走・切り返しのデバッグログ。0 = 無効、1 = Output Log（LogREBoarGetch）、2 = Output Log＋画面表示。"),
+		TEXT("通常Boarの逃走・切り返しのデバッグログ。0 = 無効、1 = Output Log（LogREBoarGetch）、2 = Output Log＋画面表示。"),
 		ECVF_Cheat);
 
 	int32 GBoarAnimDebug = 0;
 	FAutoConsoleVariableRef CVarBoarAnimDebug(
 		TEXT("Boar.AI.AnimDebug"),
 		GBoarAnimDebug,
-		TEXT("AKI-172: Boarの移動アニメーションのデバッグログ（0.2秒ごと）。0 = 無効、1 = Output Log（LogREBoarGetch）。"),
+		TEXT("Boarの移動アニメーションのデバッグログ（0.2秒ごと）。0 = 無効、1 = Output Log（LogREBoarGetch）。"),
 		ECVF_Cheat);
 
 	/** AnimBP（ABP_NormalBoar）の変数を名前で読む（デバッグ表示用。無ければNaN）。 */
@@ -364,7 +364,7 @@ bool ABoarBase::RefreshPerceptionTargets()
 		}
 	}
 
-	// 逃走中（EscapeTurn有効の種別）は、逃げ切るまで逃げている相手を認識し続ける（AKI-172）。
+	// 逃走中（EscapeTurn有効の種別）は、逃げ切るまで逃げている相手を認識し続ける。
 	// 見失ってすぐ徘徊へ戻り、また見つけて逃げ始める…の繰り返しを防ぐ。
 	UpdateEscapeThreatHold();
 
@@ -909,7 +909,7 @@ void ABoarBase::StopForStaminaRecovery()
 	}
 }
 
-// ---- 逃走開始の旋回と逃走中の大きな切り返し（AKI-152） ----
+// ---- 逃走開始の旋回と逃走中の大きな切り返し ----
 // 判断（いつ切り返すか・旋回先）はEscape Taskが渡す方向で一度だけ決め、ここでは段階の進行と移動・向きの制御だけを持つ。
 // 停止中はMaxWalkSpeedを0にしてMove Toの経路追従は続けたままにするため、障害物回避・到達不能時の再計画は既存の流れを使う。
 
@@ -1254,7 +1254,7 @@ const TCHAR* ABoarBase::GetEscapePivotRejectReason(const FVector& EscapeDirectio
 	if (EscapeTurnPhase != EBoarEscapeTurnPhase::None && EscapeTurnPhase != EBoarEscapeTurnPhase::Accelerate)
 		return TEXT("TurnInProgress");
 	// 抑制の基準は「前回の切り返しを終えて走り出した時刻」。開始時刻基準だと切り返し自体（約2秒）で抑制が切れてしまうため。
-	// 再評価（Reevaluate）は切り返し後にDirectionCommitDuration走ってから行うので、抑制は障害物・再入だけに掛ける（AKI-172）。
+	// 再評価（Reevaluate）は切り返し後にDirectionCommitDuration走ってから行うので、抑制は障害物・再入だけに掛ける。
 	if (Reason != EBoarEscapePivotReason::Reevaluate && IsEscapePivotCoolingDown())
 		return TEXT("CooldownActive");
 
@@ -1641,7 +1641,7 @@ void ABoarBase::OnEscapeTurnPhaseChanged_Implementation(EBoarEscapeTurnPhase New
 	auto StopOwnMontages = [&](const UAnimMontage* Keep)
 	{
 		// 踏ん張りMontageは自動Blend Out無効のため、再生し終えると再生停止（Montage_IsPlaying=false）のまま
-		// weight 1で最終フレームを保持し続ける。保持中も含めて止めるためIsActive（Blend Out中でない）で判定する（AKI-172）。
+		// weight 1で最終フレームを保持し続ける。保持中も含めて止めるためIsActive（Blend Out中でない）で判定する。
 		for (const UAnimMontage* Montage : OwnMontages)
 		{
 			if (Montage != nullptr && Montage != Keep && AnimInstance->Montage_IsActive(Montage))

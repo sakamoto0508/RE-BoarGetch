@@ -29,7 +29,7 @@ struct FBoarEscapeTaskInstanceData
 	UPROPERTY()
 	float ReplanTimeRemaining = 0.0f;
 
-	/** 切り返し中に保留している新しい逃走先です。停止してから経路へ反映します（AKI-152）。 */
+	/** 切り返し中に保留している新しい逃走先です。停止してから経路へ反映します。 */
 	UPROPERTY()
 	FVector PendingEscapeLocation = FVector::ZeroVector;
 
@@ -40,7 +40,7 @@ struct FBoarEscapeTaskInstanceData
 	UPROPERTY()
 	bool bSegmentEndChecked = false;
 
-	/** 走行中なのに止まっている秒数です（壁・Actorへの詰まりの検出、AKI-172）。 */
+	/** 走行中なのに止まっている秒数です（壁・Actorへの詰まりの検出）。 */
 	UPROPERTY()
 	float StuckTime = 0.0f;
 };
@@ -50,7 +50,7 @@ struct FBoarEscapeTaskInstanceData
  * 真後ろが塞がっている場合は左右へ角度をずらした候補、さらにランダム地点の順に代替先を探します。
  * State中は逃走フラグを立て、DataAssetの逃走速度とスタミナ消費を有効にします。
  * EscapeTurnが有効な種別（Normal）は、逃走開始の旋回の後、決めた方向をN秒（DirectionCommitDuration）維持し、
- * N秒ごとに認識中のプレイヤーから方向を再評価して、角度しきい値以上なら切り返しをABoarBaseへ依頼します（AKI-172）。
+ * N秒ごとに認識中のプレイヤーから方向を再評価して、角度しきい値以上なら切り返しをABoarBaseへ依頼します。
  * 直進できない・詰まった場合はN秒を待たず障害物復帰します。切り返しの新しい逃走先は停止するまで保留します。
  * ST_Boar_Normalの構成（このタスク→Move To）は変えません。
  */

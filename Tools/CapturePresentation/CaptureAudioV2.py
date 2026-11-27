@@ -1,4 +1,4 @@
-"""AKI-166 capture audio import and clean-process verification (no PIE)."""
+"""Capture audio (V2) import and clean-process verification (no PIE)."""
 import json, os
 from pathlib import Path
 import unreal
@@ -16,7 +16,7 @@ legacy = ('impact_sound', 'transfer_start_sound', 'capture_success_sound', 'mult
           'camera_presentation', 'teleport_vfx', 'hit_stop_duration', 'slow_duration',
           'capture_dissolve_duration', 'transfer_finish_duration', 'teleport_lead_time')
 source = Path(unreal.Paths.project_dir()).resolve() / 'SourceArt/Capture/Audio/AKI166'
-step = os.environ.get('AKI166_STEP', 'verify')
+step = os.environ.get('CAPTURE_AUDIO_STEP', 'verify')
 report = {'step': step, 'waves': {}, 'controllers': {}}
 
 def component(path):
@@ -91,6 +91,6 @@ if step in ('apply', 'wire', 'verify'):
 
 with open(Path(os.environ['TEMP']) / ('aki166_' + step + '.json'), 'w', encoding='utf-8') as f:
     json.dump(report, f, indent=2, ensure_ascii=False)
-unreal.log('AKI-166 ' + step + ' OK')
+unreal.log('CaptureAudioV2 ' + step + ' OK')
 
 

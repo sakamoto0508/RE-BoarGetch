@@ -332,7 +332,7 @@ bool FBoarPendingCaptureTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("確定済みとして記録"), Mode->HandledCapturedBoars.Contains(First));
 	TestEqual(TEXT("同じ通知が重なっても二重確定しない"), Mode->CompletePendingCaptures(Batch).Num(), 0);
 
-	// AKI-45：最近捕獲順は使用単位（アミの一振り）。同じ使用の2体目以降はbStartsNewCaptureUse=falseで届く。
+	// 最近捕獲順は使用単位（アミの一振り）。同じ使用の2体目以降はbStartsNewCaptureUse=falseで届く。
 	{
 		const TMap<FName, int32>& Orders = Mode->StageRunData.LastCaptureOrderByBoar;
 		ABoarBase* UseA = SpawnCaptured(TEXT("Order_A"));

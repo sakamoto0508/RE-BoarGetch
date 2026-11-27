@@ -16,7 +16,7 @@ class UAnimMontage;
 class UAudioComponent;
 class USoundBase;
 
-/** 逃走開始の旋回と、逃走中の大きな切り返しの段階です（AKI-152）。AnimBPはこれを読んで見た目を切り替えます。 */
+/** 逃走開始の旋回と、逃走中の大きな切り返しの段階です。AnimBPはこれを読んで見た目を切り替えます。 */
 UENUM(BlueprintType)
 enum class EBoarEscapeTurnPhase : uint8
 {
@@ -34,7 +34,7 @@ enum class EBoarEscapeTurnPhase : uint8
 	Accelerate,
 };
 
-/** 切り返し（BrakeAndPivot）を始めた理由です。処理は共通で、デバッグと調整の区別にだけ使います（AKI-152／AKI-172）。 */
+/** 切り返し（BrakeAndPivot）を始めた理由です。処理は共通で、デバッグと調整の区別にだけ使います。 */
 UENUM(BlueprintType)
 enum class EBoarEscapePivotReason : uint8
 {
@@ -246,21 +246,21 @@ public:
 	void BeginEscapeMotion(const FVector& EscapeDirection);
 
 	/**
-	 * 逃走Stateを別Stateへの遷移で抜けるときに呼びます（AKI-172）。速度・回転・Montageは通常の逃走終了と同じく元に戻し、
+	 * 逃走Stateを別Stateへの遷移で抜けるときに呼びます。速度・回転・Montageは通常の逃走終了と同じく元に戻し、
 	 * 逃走方向・方向維持の経過秒数・旋回の段階だけを控えて、同じ逃走へすぐ戻ったときに再開できるようにします。
 	 * StateTreeの停止（StopLogic）・捕獲・EndPlayでは呼ばず、SetEscaping(false)で完全に終えます。
 	 */
 	void SuspendEscape();
 
 	/**
-	 * 逃走中（EscapeTurn有効の種別）は、逃げ切るまで逃げている相手を認識し続けます（AKI-172）。
+	 * 逃走中（EscapeTurn有効の種別）は、逃げ切るまで逃げている相手を認識し続けます。
 	 * 最短EscapeMinDuration秒、かつ見失ってからEscapeLoseDuration秒は、視界外・記憶範囲外でもPerceivedPlayerに残します。
 	 * RefreshPerceptionTargetsの中で、通常の認識の後に呼びます。
 	 */
 	void UpdateEscapeThreatHold();
 
 	/**
-	 * 逃走Stateに再Enter（Changed）したとき、控えた逃走を再開できれば再開してtrueを返します（AKI-172）。
+	 * 逃走Stateに再Enter（Changed）したとき、控えた逃走を再開できれば再開してtrueを返します。
 	 * 再開の条件：別Stateへの遷移で抜けた（停止・捕獲・EndPlayで終えていない）、同じプレイヤーから逃げている、
 	 * 抜けてからContinueEscapeGraceDuration以内。再開時はプレイヤーの位置で方向を計算し直さず、
 	 * 逃走方向と方向維持の残り時間をそのまま引き継ぎます（別State中の時間は数えません）。
@@ -270,14 +270,14 @@ public:
 
 	/**
 	 * 維持している逃走方向（逃走の大方向）です。逃走開始・切り返し・障害物復帰・N秒ごとの再評価のときだけ更新し、
-	 * NavMesh経路の小さな曲がりやActorの向きの揺れでは変えません。切り返し角度の比較基準にも使います（AKI-152）。
+	 * NavMesh経路の小さな曲がりやActorの向きの揺れでは変えません。切り返し角度の比較基準にも使います。
 	 */
 	bool HasEscapeHeading() const { return bHasEscapeHeading; }
 	FVector GetEscapeHeading() const { return EscapeHeading; }
 	/** 維持方向を変えます。方向維持時間は変えません（新しい方向を確定するときはCommitEscapeHeadingを使います）。 */
 	void SetEscapeHeading(const FVector& Direction);
 	/**
-	 * 新しい逃走方向を確定し、方向維持時間（DirectionCommitDuration）をここから始め直します（AKI-172）。
+	 * 新しい逃走方向を確定し、方向維持時間（DirectionCommitDuration）をここから始め直します。
 	 * 障害物復帰・再評価で止まらずに方向を変えたときに使います。切り返し・逃走開始では再加速の開始時に自動で始まります。
 	 */
 	void CommitEscapeHeading(const FVector& Direction, const TCHAR* DebugReason);
@@ -449,7 +449,7 @@ private:
 	TObjectPtr<UAnimMontage> EscapeTurnRightMontage;
 
 	/**
-	 * 切り返しで止まったまま旋回する間（Hold）のループMontageです（左右、AKI-172）。頭→肩→腰の順に旋回先へ向きながら脚を踏み替えます。
+	 * 切り返しで止まったまま旋回する間（Hold）のループMontageです（左右）。頭→肩→腰の順に旋回先へ向きながら脚を踏み替えます。
 	 * EscapeTurnAnimationRateの旋回速度で足滑り0になるよう作り、実際の旋回速度との比で再生速度を合わせます。未設定なら踏ん張りの最終ポーズのまま回ります。
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
@@ -458,7 +458,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapePivotSwingRightMontage;
 
-	/** 切り返しの旋回を終えて再加速を始めるときに1回再生する、後脚で地面を蹴るMontageです（自動Blend OutでLocomotionへ戻る、AKI-172）。 */
+	/** 切り返しの旋回を終えて再加速を始めるときに1回再生する、後脚で地面を蹴るMontageです（自動Blend OutでLocomotionへ戻る）。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapePushOffMontage;
 
@@ -506,7 +506,7 @@ private:
 	double EscapeSessionStartTime = -1.0;
 	double EscapeThreatLostTime = -1.0;
 	/**
-	 * SuspendEscapeで控えた逃走です（AKI-172）。再開できるか（bEscapeSuspended）、逃走方向、方向維持の経過秒数（旋回中は負）、
+	 * SuspendEscapeで控えた逃走です。再開できるか（bEscapeSuspended）、逃走方向、方向維持の経過秒数（旋回中は負）、
 	 * 抜けたときの旋回段階です。ResetEscapeMotion（捕獲・EndPlay・逃走終了）で破棄します。
 	 */
 	bool bEscapeSuspended = false;

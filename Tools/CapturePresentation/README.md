@@ -1,4 +1,4 @@
-# Capture presentation asset scripts (AKI-164 / AKI-165)
+# Capture presentation asset scripts
 
 Headless `-run=pythonscript` scripts that (re)generate the capture camera and teleport VFX assets. Close the editor first.
 

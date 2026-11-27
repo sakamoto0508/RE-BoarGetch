@@ -6,7 +6,7 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
-// AKI-158：檻の破壊→全解放→設定時間後の自動復旧（HP全快・表示／Collision復帰・自動再収容なし）。
+// 檻の破壊→全解放→設定時間後の自動復旧（HP全快・表示／Collision復帰・自動再収容なし）。
 // Stage停止中（Clear／GameOver／開始前）は復旧待ちが進まないことも確認する。Timerは手動で進める。
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCageRespawnTest, "REBoarGetch.Spec.CageRespawn",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -58,7 +58,7 @@ bool FCageRespawnTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("収容個体は解放される"), Boar->IsCaptured());
 	TArray<FName> Housed;
 	Cage->AppendHousedBoarUniqueIds(Housed);
-	TestTrue(TEXT("AKI-45のスナップショットに解放個体が残らない"), Housed.IsEmpty());
+	TestTrue(TEXT("収容個体のスナップショット（Clear時の登録に使う）に解放個体が残らない"), Housed.IsEmpty());
 	TestTrue(TEXT("破壊中は非表示"), Cage->IsHidden());
 	TestFalse(TEXT("破壊中はCollision無効"), Cage->GetActorEnableCollision());
 

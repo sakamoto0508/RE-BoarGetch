@@ -23,7 +23,7 @@ class UACFCameraSubsystem;
  * 比較用の切替は Console Variable `Boar.Camera.ACF`（-1 = Componentの既定値 / 0 = SpringArm / 1 = ACF）です。
  * Level遷移後も同じ値が使われます。`Boar.Camera.Dump` で現在のカメラとRequestの状態をLogへ出力します。
  *
- * Damping検証用（Shipping以外、AKI-160）。どれもアセットを書き換えず、-1でアセットの値へ戻ります。
+ * Damping検証用（Shipping以外）。どれもアセットを書き換えず、-1でアセットの値へ戻ります。
  * - `Boar.Camera.Test.PivotDamping <秒>`：ACF既存のRuntime Tuning（Follow Damping）で通常カメラのPivot Dampingを変更
  * - `Boar.Camera.Test.RotationDamping <秒>` / `Boar.Camera.Test.ReturnDamping <秒>`：Presetの一時複製（Transient）の値を変えて差し替え
  * - `Boar.Camera.Test.Reset`：上の3つをすべて-1へ戻す

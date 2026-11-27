@@ -213,7 +213,7 @@ namespace
 		NewHeading,
 	};
 
-	/** どの時点の判断かです（AKI-172）。 */
+	/** どの時点の判断かです。 */
 	enum class EPlanContext : uint8
 	{
 		/** 走行中、逃走先の手前（SegmentEndCheckDistance）に来た。維持方向へ延長するだけで方向は判断しない。 */
@@ -251,7 +251,7 @@ namespace
 	}
 
 	/**
-	 * EscapeTurn有効な種別（Normal）の逃走方向の判断（AKI-172：N秒間方向維持方式）。切り返しの処理は理由によらず共通（TryStartEscapePivot）。
+	 * EscapeTurn有効な種別（Normal）の逃走方向の判断（N秒間方向維持方式）。切り返しの処理は理由によらず共通（TryStartEscapePivot）。
 	 * - 方向維持中（SegmentEnd）：維持方向（±20°の小さな修正まで）へ次の区間を延長するだけ。プレイヤーの位置では引き直さない。
 	 * - 方向維持時間の終わり（Reevaluate、または到着時に経過済み）：認識中のプレイヤーから離れる方向と維持方向の角度差を見る。
 	 *   PivotAngleThreshold以上なら切り返し（減速→踏ん張りながら旋回→停止→再加速）、未満なら止まらず新しい方向で次のN秒を確定する。
@@ -376,7 +376,7 @@ namespace
 		// 直進できない：到達可能な次の逃走方向を確定してから向きを変える（N秒の終了は待たない）。
 		ComputeAway();
 
-		// 進めない原因がすぐ近くのプレイヤー（体がぶつかって止まった）なら障害物として扱わない（AKI-172）。
+		// 進めない原因がすぐ近くのプレイヤー（体がぶつかって止まった）なら障害物として扱わない。
 		// 走行旋回で回り込まず、離れる方向との差が大きければ切り返す。差が小さければ通常の障害物復帰へ進む。
 		if (Context == EPlanContext::Stuck && Threat != nullptr && bHasAway
 			&& FVector::Dist2D(BoarLocation, Threat->GetActorLocation()) <= Settings.PlayerBlockDistance)
@@ -465,7 +465,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 	InstanceData.ReplanTimeRemaining = ReplanInterval;
 	InstanceData.StuckTime = 0.0f;
 
-	// 逃走先へ到着→Rootから同じEscape Stateが再選択された場合（Sustained）は、同じ逃走の継続として扱う（AKI-152）。
+	// 逃走先へ到着→Rootから同じEscape Stateが再選択された場合（Sustained）は、同じ逃走の継続として扱う。
 	// 逃走開始の高速旋回はやり直さず、方向維持（N秒）もそのまま続ける。
 	if (bSustained && Boar->IsEscapeTurnEnabled())
 	{
@@ -525,7 +525,7 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::EnterState(FStateTreeExecutionCont
 		return EStateTreeRunStatus::Running;
 	}
 
-	// 別Stateを挟んで同じ逃走へ戻った場合（Changed）：控えた逃走方向と方向維持の残り時間を引き継ぐ（AKI-172）。
+	// 別Stateを挟んで同じ逃走へ戻った場合（Changed）：控えた逃走方向と方向維持の残り時間を引き継ぐ。
 	// プレイヤーの位置で方向を計算し直さず、再入を理由に切り返し・走行旋回・逃走開始旋回をしない。
 	if (!bSustained && Boar->IsEscapeTurnEnabled() && Boar->TryResumeEscape(InstanceData.TargetPlayer))
 	{
@@ -637,11 +637,11 @@ EStateTreeRunStatus FStateTreeBoarEscapeTask::Tick(FStateTreeExecutionContext& C
 
 	const bool bDebug = ABoarBase::IsEscapeTurnDebugEnabled();
 
-	// Normal（EscapeTurn有効）：決めた方向をN秒維持し、N秒ごとに再評価する（AKI-172）。
+	// Normal（EscapeTurn有効）：決めた方向をN秒維持し、N秒ごとに再評価する。
 	// 毎フレームの処理は時刻・距離・速度の比較だけで、NavMesh検索は判断が必要なときだけ行う。
 	if (Boar->IsEscapeTurnEnabled())
 	{
-		// 逃げ切った（認識が逃走相手を手放した）：逃走Stateを完了し、徘徊へ戻す（AKI-172）。
+		// 逃げ切った（認識が逃走相手を手放した）：逃走Stateを完了し、徘徊へ戻す。
 		// 逃げ切るまではUpdateEscapeThreatHoldが相手を認識し続けるため、見失った瞬間には終わらない。
 		if (InstanceData.TargetPlayer == nullptr)
 		{
@@ -814,7 +814,7 @@ void FStateTreeBoarEscapeTask::ExitState(FStateTreeExecutionContext& Context,
 	if (ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get()))
 	{
 		// 同じEscape Stateがすぐ再選択される（Sustained）ときは逃走を終えない。
-		// ここで終えると切り返しが中断され、次のEnterで逃走開始扱いの高速旋回や再発動間隔による素の向き追従になるため（AKI-152）。
+		// ここで終えると切り返しが中断され、次のEnterで逃走開始扱いの高速旋回や再発動間隔による素の向き追従になるため。
 		// 別Stateへ移る・StopLogic・捕獲などはChangedなので従来どおり速度・向き追従を復元する。
 		if (Transition.ChangeType == EStateTreeStateChangeType::Sustained)
 		{
@@ -826,7 +826,7 @@ void FStateTreeBoarEscapeTask::ExitState(FStateTreeExecutionContext& Context,
 
 		// StateTreeの停止（StopLogic：Stage Clear／GameOver／Retry等。遷移先が完了状態）は逃走を完全に終える。
 		// 別Stateへの遷移（プレイヤーを見失ってPatrolへ等）は、速度・回転・Montageを戻したうえで逃走方向と方向維持を控え、
-		// すぐ同じ相手の逃走へ戻ったときに再開できるようにする（AKI-172）。捕獲はCaptureWithFeedbackで控えごと破棄する。
+		// すぐ同じ相手の逃走へ戻ったときに再開できるようにする。捕獲はCaptureWithFeedbackで控えごと破棄する。
 		const bool bTreeStopping = Transition.TargetState.IsCompletionState();
 
 		if (ABoarBase::IsEscapeTurnDebugEnabled())

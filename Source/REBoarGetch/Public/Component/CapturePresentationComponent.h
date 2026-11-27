@@ -64,7 +64,7 @@ struct FCaptureVisualTarget
 	UPROPERTY()
 	TObjectPtr<UNiagaraComponent> DataVFX;
 
-	/** 青白いテレポート（TeleportVFX）。データ化の少し前から転送完了まで、実時間で年齢を指定して進めます（AKI-164）。 */
+	/** 青白いテレポート（TeleportVFX）。データ化の少し前から転送完了まで、実時間で年齢を指定して進めます。 */
 	UPROPERTY()
 	TObjectPtr<UNiagaraComponent> TeleportVFX;
 
@@ -105,7 +105,7 @@ struct FCaptureSlowedBoar
 	bool bAnimOwnershipLost = false;
 };
 
-/** 捕獲確定（対象の後片付け）の後も、余韻の光粒子だけを短く残すテレポートVFX（AKI-164）。 */
+/** 捕獲確定（対象の後片付け）の後も、余韻の光粒子だけを短く残すテレポートVFX。 */
 USTRUCT()
 struct FCaptureLingeringVFX
 {
@@ -120,7 +120,7 @@ struct FCaptureLingeringVFX
 };
 
 /**
- * 捕獲Orbitカメラの注視点（AKI-165）。Boarが非表示・破棄されても演出の終わりまで位置を保つ軽量な演出用Actor。
+ * 捕獲Orbitカメラの注視点。Boarが非表示・破棄されても演出の終わりまで位置を保つ軽量な演出用Actor。
  * Gameplayには一切関与しない（Collision・Tick・Replicationなし）。CapturePresentationComponentだけが生成・破棄する。
  */
 UCLASS(NotBlueprintable, Transient)
@@ -310,7 +310,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera")
 	TSubclassOf<UCameraShakeBase> CameraShake;
 
-	// ---- 命中インパクト（AKI-137）。捕獲の確定とは別に、命中した瞬間だけを短く強調します。 ----
+	// ---- 命中インパクト。捕獲の確定とは別に、命中した瞬間だけを短く強調します。 ----
 
 	/** 網が命中した瞬間にBoarの体の位置で1回だけ出す短いNiagara（星形の弾け）。捕獲したBoarごとに出ます。粒子数・大きさ・寿命はこのSystemで調整します。未設定なら出しません。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Impact")
@@ -356,7 +356,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera")
 	TObjectPtr<class UACFCameraEffectPreset> MultiCaptureCameraEffect;
 
-	// ---- 捕獲Focusカメラ（AKI-165）。ACFのCamera Sequenceで、命中した瞬間だけ短くBoarと網へ寄せてから通常のTPSカメラへ戻します。 ----
+	// ---- 捕獲Focusカメラ。ACFのCamera Sequenceで、命中した瞬間だけ短くBoarと網へ寄せてから通常のTPSカメラへ戻します。 ----
 
 	/** ONなら、ACFの通常カメラが出ているときにNet 1回につき1回、捕獲Focusカメラ（Capture Focus Sequence）を再生します。ACFが無効・未要求のときは再生せず、従来のFOV Punch Inを使います。Playerの操作・入力は止めません。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera")
@@ -374,7 +374,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera")
 	TObjectPtr<class UACFCameraSequence> MultiCaptureFocusSequence;
 
-	// ---- 青白いテレポート（AKI-164）。データ化（Dissolve）に合わせてBoarを光で包み、上方へ収束させて消します。 ----
+	// ---- 青白いテレポート。データ化（Dissolve）に合わせてBoarを光で包み、上方へ収束させて消します。 ----
 
 	/** 転送の青白いテレポートNiagara（NS_CaptureTeleport）。Boarの足元に出し、Teleport Lead Time前からCapture Dissolve Duration＋Transfer Finish Durationの終わりまで実時間で進めます。長さはUser.TransferDurationとして渡すので、Niagara内の発生時間はその割合で決まります。粒子数・大きさ・速さ・寿命はSystemのUser Parameterで調整します。未設定なら出しません。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Teleport")
@@ -388,7 +388,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Teleport", meta=(ClampMin="0", ClampMax="2", Units="s"))
 	float TeleportTailDuration = .85f;
 
-	// ---- Orbitカメラの注視点と安全確認（AKI-165） ----
+	// ---- Orbitカメラの注視点と安全確認 ----
 
 	/** 注視点の高さ（Boarの足元=0、頭頂=1）。命中時のBoundsから計算し、Focus Proxyに保持します（Boarが消えても注視点は動きません）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Focus Camera", meta=(ClampMin="0", ClampMax="1"))

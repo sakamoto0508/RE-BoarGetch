@@ -9,7 +9,7 @@
 #include "Player/BoarPlayerCharacter.h"
 #include "TimerManager.h"
 
-// AKI-154：Gadget Actorはスロット切替・装備変更のたびに作り直される。CooldownがActorと一緒に消えず、
+// Gadget Actorはスロット切替・装備変更のたびに作り直される。CooldownがActorと一緒に消えず、
 // GadgetId単位でUGadgetComponentに残ること、Stage停止中は進まないことを確認する。Timerは手動で進める。
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarGadgetCooldownTest, "REBoarGetch.Spec.GadgetCooldown",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

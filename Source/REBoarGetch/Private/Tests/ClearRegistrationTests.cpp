@@ -3,7 +3,7 @@
 #include "Save/BoarSaveGame.h"
 #include "Kismet/GameplayStatics.h"
 
-// AKI-45：Clear時の収容個体だけを登録・NEW・最近捕獲順の対象にする（SaveGame単体のデータ検証。PIEは不要）。
+// Clear時の収容個体だけを登録・NEW・最近捕獲順の対象にする（SaveGame単体のデータ検証。PIEは不要）。
 namespace
 {
 	FStageRunData MakeClearRun(const TArray<FName>& History, const TMap<FName, int32>& Orders, const TArray<FName>& Housed)

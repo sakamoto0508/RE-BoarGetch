@@ -1,4 +1,4 @@
-"""AKI-165: 捕獲カメラ演出を1つの DataAsset（DA_CaptureCameraPresentation）にまとめ、CapturePresentation に接続する。
+"""捕獲カメラ演出を1つの DataAsset（DA_CaptureCameraPresentation）にまとめ、CapturePresentation に接続する。
 回転（Spiral Orbit）・揺れ（Camera Effect Layer）・壁際（Collision）・時間と Blend を1か所で調整できる。
 回転・時間・揺れの初期値はこのスクリプトの定数、Collision は通常 TPS（DA_BoarCamera_ThirdPerson）から写す。
 Usage: UnrealEditor-Cmd <uproject> -run=pythonscript -script="<this file>"   (CCP_STEP=apply|verify)

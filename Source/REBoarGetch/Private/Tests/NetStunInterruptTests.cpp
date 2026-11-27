@@ -15,7 +15,7 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 
-// AKI-146で見つかった「Stunで中断した後も地上アミのMontageが続き、Notify ONで捕獲窓が開き直る」不具合の回帰テスト。
+// 「Stunで中断した後も地上アミのMontageが続き、Notify ONで捕獲窓が開き直る」不具合の回帰テスト。
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarNetStunInterruptTest, "REBoarGetch.Spec.NetStunInterrupt",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
@@ -70,7 +70,7 @@ bool FBoarNetStunInterruptTest::RunTest(const FString& Parameters)
 	const FAnimNotifyEventReference NoEvent;
 	auto FireNotify = [&](UAnimNotify_NetCaptureWindow* N) { N->Notify(Player->GetMesh(), nullptr, NoEvent); };
 
-	// 使用ごとに新しい網へ持ち替える（装備解除経路の検証も兼ねる）。CooldownはGadgetId単位でComponentに残るため（AKI-154）、
+	// 使用ごとに新しい網へ持ち替える（装備解除経路の検証も兼ねる）。CooldownはGadgetId単位でComponentに残るため、
 	// 持ち替えだけでは消えない。残りを極短く置き換え、Timerを0.01秒だけ進めて使用可能に戻す（他のTimerはほぼ進めない）。
 	auto FreshNet = [&]() -> ANetGadget*
 	{
@@ -186,7 +186,7 @@ bool FBoarNetStunInterruptTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Stun前は判定窓が開く"), Net->IsCaptureWindowActive());
 	const float HealthBefore = Player->GetHealthComponent()->GetCurrentHealth();
 
-	// AKI-163: Stun解除（起き上がり）直後は短い無敵が続く。ここでは解除直後の再被弾ではなく接触経路の中断を検証する。
+	// Stun解除（起き上がり）直後は短い無敵が続く。ここでは解除直後の再被弾ではなく接触経路の中断を検証する。
 	Player->bIsInvincible = false;
 	Boar->BeginChargeHitTracking();	// 被弾は突進中の接触だけ
 	Player->HandleBoarContact(Boar);

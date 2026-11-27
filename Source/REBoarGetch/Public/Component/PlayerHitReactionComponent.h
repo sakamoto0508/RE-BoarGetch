@@ -17,7 +17,7 @@ class UNiagaraSystem;
 class USoundBase;
 
 /**
- * プレイヤー被弾・Stunの演出だけを担当するComponentです（AKI-163）。
+ * プレイヤー被弾・Stunの演出だけを担当するComponentです。
  *
  * ABoarPlayerCharacterがGameplay（ダメージ成立・Stun開始・残り時間・終了）を確定してから発火するEventを受け、
  * 命中インパクト（衝撃波Niagara・Hit Flash・SE・ACF Camera Effect）、しりもち→起き上がりAnimation、頭上のStun VFXを再生します。

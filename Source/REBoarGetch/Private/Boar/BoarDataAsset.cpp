@@ -26,7 +26,7 @@ namespace
 			// MakeSettingsの引数: Player優先度, 檻優先度, 逃走優先度, 檻を攻撃できるか, スタミナを使うか
 			FBoarArchetypeSettings NormalSettings = MakeSettings(0.8f, 0.9f, 1.4f, true, false);
 
-			// 逃走中の大きな切り返しを捕獲好機にするのはNormalだけ（AKI-152）。
+			// 逃走中の大きな切り返しを捕獲好機にするのはNormalだけ。
 			NormalSettings.EscapeTurn.bEnabled = true;
 			Result.Add(EBoarArchetype::Normal, NormalSettings);
 			Result.Add(EBoarArchetype::PlayerAttacker, MakeSettings(1.8f, 0.8f, 0.4f, true, false));

@@ -1,4 +1,4 @@
-# exec'd from CaptureTeleportVFX.py (step configure). AKI-164 青白いテレポート。
+# exec'd from CaptureTeleportVFX.py (step configure). 青白いテレポート。
 # 参考（YouTube「Unity 3d VFX Particle System Портал」冒頭 0:00〜0:13 の完成デモ）で確認した要素を、
 # Material と Niagara で独自に組み直す：白い中心光＋シアン／淡い青の外周、螺旋に巻き上がる細い光線、
 # 上方へ昇る小さな光粒、最後に一点へ凝縮して消える。オレンジのリングは採用しない（青白のみ）。
@@ -179,7 +179,7 @@ def add_user(system, variables, refresh=False):
 
 ONCE = enum('/Niagara/Enums/ENiagara_EmitterStateOptions.ENiagara_EmitterStateOptions', 'ENiagara_EmitterStateOptions::NewEnumerator1')
 ROT_UNSET = enum('/Niagara/Enums/ENiagara_SpriteRotationMode.ENiagara_SpriteRotationMode', 'ENiagara_SpriteRotationMode::NewEnumerator0')
-D = 'AKI-164 teleport'
+D = 'Capture teleport'
 SIZE_UNIFORM = enum('/Niagara/Enums/SpriteRenderer/ENiagara_ScaleSpriteSize.ENiagara_ScaleSpriteSize', 'ENiagara_ScaleSpriteSize::NewEnumerator0')
 
 # ------------------------------------------------------------------ 命中（NS_CaptureTeleportImpact）
@@ -222,7 +222,7 @@ for em, cnt, size, spd, life, grav, drag, mat, al, col in [
     setin(IMPACT, em, 'ParticleUpdateScript', 'ScaleColor', 'Scale Alpha', h('1.0 - Particles.NormalizedAge * Particles.NormalizedAge'))
     renderer(IMPACT, em, mat, al)
 
-# ------------------------------------------------------------------ 転送（NS_CaptureTeleport）v2（AKI-164 / 165 改修）
+# ------------------------------------------------------------------ 転送（NS_CaptureTeleport）v2
 # 年齢は C++ が実時間で指定する。0 = テレポート開始（命中の約0.3秒後）、User.CommitTime = 捕獲確定（Boar 消失・Cage 収容、
 # Gameplay の時刻のまま）、その後 User.TailDuration で光柱が弱まり、光粒子が上空へ抜けて消える。
 # 構成（どの角度・上からも立体的に見えるよう、カメラを向く Ribbon・縦の光柱・床の光円・球状の核を重ねる）：

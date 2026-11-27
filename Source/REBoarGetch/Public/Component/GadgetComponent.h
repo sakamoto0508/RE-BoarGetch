@@ -132,7 +132,7 @@ public:
 
 	/**
 	 * Cooldownの正本です。Gadget Actorはスロット切替・装備変更のたびに作り直されるため、
-	 * 状態はActorではなくこのComponentがガジェットのID（GadgetId）単位で持ちます（AKI-154）。
+	 * 状態はActorではなくこのComponentがガジェットのID（GadgetId）単位で持ちます。
 	 * Timerはゲーム時間で進むので、通常のPause中は止まります。Stage停止はSetCooldownsStoppedで止めます。
 	 */
 	bool IsGadgetOnCooldown(const AGadgetBase* Gadget) const;
