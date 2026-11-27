@@ -799,7 +799,60 @@ bool UCapturePresentationComponent::PlayFocusCamera(UACFCameraSequence* Sequence
 	bOrbitHasPrevYaw = false;
 	OrbitTrail.Reset();
 
+	StartOrbitSound(Orbit);
+
 	return true;
+}
+
+void UCapturePresentationComponent::StartOrbitSound(const UACFCameraNode_SpiralOrbit* Orbit)
+{
+	StopOrbitSound(false);
+
+	if (!OrbitSound)
+		return;
+
+	CaptureOrbitVoice = SpawnCaptureAudio(OrbitSound, OrbitSoundVolume);
+
+	// フェードアウトはOrbitの終わりで無音になるように始める。OrbitのPresetが読めないときはフェードせず、Orbitの終了で止める。
+	const float OrbitDuration = Orbit ? Orbit->Duration : 0.f;
+	OrbitSoundFadeStart = OrbitDuration > 0.f ? FMath::Max(0.f, OrbitDuration - OrbitSoundFadeOutTime) : TNumericLimits<float>::Max();
+	bOrbitSoundFading = false;
+}
+
+void UCapturePresentationComponent::UpdateOrbitSound()
+{
+	UAudioComponent* Voice = CaptureOrbitVoice.Get();
+	if (!Voice || bOrbitSoundFading || OrbitRealAge < OrbitSoundFadeStart)
+		return;
+
+	bOrbitSoundFading = true;
+	if (OrbitSoundFadeOutTime > 0.f)
+	{
+		Voice->FadeOut(OrbitSoundFadeOutTime, 0.f);
+	}
+	else
+	{
+		Voice->Stop();
+	}
+}
+
+void UCapturePresentationComponent::StopOrbitSound(bool bFade)
+{
+	if (UAudioComponent* Voice = CaptureOrbitVoice.Get())
+	{
+		// 自然終了ではフェード中ならそのまま消えるのを待つ。中断はすぐに止める。
+		if (!bFade)
+		{
+			Voice->Stop();
+		}
+		else if (!bOrbitSoundFading)
+		{
+			Voice->FadeOut(FMath::Max(KINDA_SMALL_NUMBER, OrbitSoundFadeOutTime), 0.f);
+		}
+	}
+
+	CaptureOrbitVoice.Reset();
+	bOrbitSoundFading = false;
 }
 
 void UCapturePresentationComponent::ReleaseFocusCamera(bool bCancel)
@@ -820,6 +873,8 @@ void UCapturePresentationComponent::ReleaseFocusCamera(bool bCancel)
 
 		ActiveFocus.Invalidate();
 	}
+
+	StopOrbitSound(!bCancel);
 
 	// Return Blend中もACFはRequestの最後の注視点を保持するので、Proxyは再生の終了と同時に破棄してよい。
 	if (IsValid(FocusProxy))
@@ -861,6 +916,7 @@ void UCapturePresentationComponent::UpdateFocusCamera(float RealDelta)
 	}
 
 	OrbitRealAge += RealDelta;
+	UpdateOrbitSound();
 	const FVector Focus = IsValid(FocusProxy) ? FocusProxy->GetActorLocation() : OrbitFocusAtStart;
 
 	// 実際に描画されたカメラ位置を注視点基準の円柱座標で測る（Yawは巻き戻して累積する）。

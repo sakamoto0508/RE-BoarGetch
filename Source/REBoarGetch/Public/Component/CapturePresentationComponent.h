@@ -294,6 +294,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio")
 	TObjectPtr<USoundBase> CaptureSuccessSound;
 
+	/** 捕獲Orbitカメラ（カメラがBoarの周りを回る間）の効果音。Orbitを再生したときだけ開始と同時に鳴らし、Spiral OrbitのDurationの終わりに合わせてフェードアウトします。Orbitを省略したとき・ACFが無いときは鳴らしません。従来版・Audio V2のどちらでも鳴ります。未設定なら無音です。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio")
+	TObjectPtr<USoundBase> OrbitSound;
+
+	/** Orbit Soundの音量倍率（共通のSE音量に掛けます）。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ClampMin="0", ClampMax="2"))
+	float OrbitSoundVolume = 1.f;
+
+	/** Orbitの終わりに向けてOrbit Soundを消すフェードアウトの長さ（秒）。Orbitの終わりちょうどで無音になります。Orbitが中断されたときはすぐに止めます。 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio", meta=(ClampMin="0", ClampMax="2", Units=s))
+	float OrbitSoundFadeOutTime = .25f;
+
 	/** 網の命中時に再生する小さなCamera Shake。Net 1回につき1回だけ再生します。振幅・周波数・Blend時間はBP_CaptureSuccessCameraShakeのClass Defaults（Root Shake Pattern）で調整します。未設定なら揺れません。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Camera")
 	TSubclassOf<UCameraShakeBase> CameraShake;
@@ -613,6 +625,14 @@ private:
 	float OrbitMaxHeight = 0.f;
 	bool bOrbitHasPrevYaw = false;
 	TArray<FVector> OrbitTrail;
+
+	/** Orbit Soundの再生。Orbitの開始で鳴らし、Orbitの終わり・中断で止める（捕獲音とは別の寿命）。 */
+	void StartOrbitSound(const class UACFCameraNode_SpiralOrbit* Orbit);
+	void UpdateOrbitSound();
+	void StopOrbitSound(bool bFade);
+	TWeakObjectPtr<UAudioComponent> CaptureOrbitVoice;
+	float OrbitSoundFadeStart = 0.f;
+	bool bOrbitSoundFading = false;
 
 	/** 捕獲確定後に余韻を残すテレポートVFX。 */
 	UPROPERTY(Transient)
