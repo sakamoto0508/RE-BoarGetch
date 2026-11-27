@@ -6,11 +6,8 @@
 
 class UTextBlock;
 
-/**
- * AFacilitySignの文字面。WBP_FacilitySignを親として使い、文字の配置・書体・字間はDesigner、
- * 階層ごとの文字サイズ・色・余白・発光・パネル厚はClass Defaults（TierStyles）で調整します。
- * このクラスは受け取った文字と色・サイズを表示へ反映するだけです。
- */
+// WBP_FacilitySignを親として使い、文字の配置・書体・字間はDesigner、階層ごとの文字サイズ・色・余白・発光・パネル厚はClass Defaults（TierStyles）で調整します。このクラスは受け取った文字と色・サイズを表示へ反映するだけです。
+/** AFacilitySignの文字面。 */
 UCLASS(Blueprintable)
 class REBOARGETCH_API UFacilitySignWidget : public UUserWidget
 {
@@ -29,6 +26,7 @@ public:
     FSlateFontInfo MakeTitleFont(int32 Points) const;
     FSlateFontInfo MakeSubtitleFont(int32 Points) const;
 
+    /** サインの階層ごとに使う文字・色・余白の設定。 */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style")
     TMap<EFacilitySignTier, FFacilitySignStyle> TierStyles;
 
@@ -48,9 +46,11 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(ClampMin="0"))
     float AccentLineHeightRatio=.06f;
 
+    /** サインのアクセントラインに確保する最小高さ。 */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm", ClampMin="0"))
     float AccentLineMinHeight=1.5f;
 
+    /** サインのアクセントラインの奥行き。 */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm", ClampMin="0.01"))
     float AccentLineDepth=.6f;
 
@@ -58,13 +58,16 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style|Accent Line", meta=(Units="cm"))
     float AccentLineOffset=.3f;
 
+    /** サインの表面から文字面までのオフセット。 */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sign Style", meta=(Units="cm"))
     float TextSurfaceOffset=.5f;
 
 protected:
+    /** サインの見出しを表示するテキスト。 */
     UPROPERTY(BlueprintReadOnly, Category="Sign", meta=(BindWidgetOptional))
     TObjectPtr<UTextBlock> TitleText;
 
+    /** サインの補助文字を表示するテキスト。 */
     UPROPERTY(BlueprintReadOnly, Category="Sign", meta=(BindWidgetOptional))
     TObjectPtr<UTextBlock> SubtitleText;
 };

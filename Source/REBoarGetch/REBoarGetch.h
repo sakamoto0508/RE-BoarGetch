@@ -4,5 +4,5 @@
 
 #include "CoreMinimal.h"
 
-/** Main log category used across the project */
+/** プロジェクト全体で使うLogカテゴリ。 */
 DECLARE_LOG_CATEGORY_EXTERN(LogREBoarGetch, Log, All);

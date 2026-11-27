@@ -48,25 +48,27 @@ public:
 
 	virtual FName GetCategoryName() const override { return TEXT("Game"); }
 
+	/** 施設ポータルを通るときの遷移演出。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Transitions")
 	FBoarLevelTransitionEntry Portal;
 
+	/** メニュー操作による遷移演出。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Transitions")
 	FBoarLevelTransitionEntry Menu;
 
+	/** 挑戦ステージへ出発するときの遷移演出。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Transitions")
 	FBoarLevelTransitionEntry StageDeparture;
 
+	/** ロビーへ戻るときの遷移演出。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Transitions")
 	FBoarLevelTransitionEntry ReturnToLobby;
 
 	const FBoarLevelTransitionEntry& GetEntry(EBoarLevelTransitionStyle Style) const;
 };
 
-/**
- * OpenLevelの代わりに、ACFのLevel Transition（Close → OpenLevel → Open）で遷移します。
- * ACFのSubsystemが無い・要求が通らないときは、演出なしのOpenLevelで必ず遷移します。
- */
+// ACFのSubsystemが無い・要求が通らないときは、演出なしのOpenLevelで必ず遷移します。
+/** OpenLevelの代わりに、ACFのLevel Transition（Close → OpenLevel → Open）で遷移します。 */
 UCLASS()
 class REBOARGETCH_API UBoarLevelTransitionLibrary : public UBlueprintFunctionLibrary
 {

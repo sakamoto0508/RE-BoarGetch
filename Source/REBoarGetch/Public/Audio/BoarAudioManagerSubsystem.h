@@ -10,15 +10,13 @@ class USceneComponent;
 class USoundAttenuation;
 class USoundBase;
 
-/**
- * @brief ゲーム全体のBGMと共通SEを一元管理するGameInstance Subsystemです。
- *
- * GameInstanceと同じ寿命を持つため、Level遷移中もBGM再生状態と各音量設定を保持します。
- * Blueprintからは Get Game Instance Subsystem で取得し、BGM、2D SE、位置付きSEを再生します。
- * Master／BGM／SE音量は0～1に制限し、BGM音量の変更は再生中のAudio Componentへ即時反映します。
- * Spawn系（ループ・追従SE）で生成したComponentも登録し、SE音量の変更を再生中の音へ反映します。
- * BGMはUI扱いの2D音声のため、Pause中も止まらず、Pause解除で頭から再生し直すこともありません。
- */
+// @brief ゲーム全体のBGMと共通SEを一元管理するGameInstance Subsystemです。
+// GameInstanceと同じ寿命を持つため、Level遷移中もBGM再生状態と各音量設定を保持します。
+// Blueprintからは Get Game Instance Subsystem で取得し、BGM、2D SE、位置付きSEを再生します。
+// Master／BGM／SE音量は0～1に制限し、BGM音量の変更は再生中のAudio Componentへ即時反映します。
+// Spawn系（ループ・追従SE）で生成したComponentも登録し、SE音量の変更を再生中の音へ反映します。
+// BGMはUI扱いの2D音声のため、Pause中も止まらず、Pause解除で頭から再生し直すこともありません。
+/** ゲーム全体のBGMとSEの再生・音量を管理する。 */
 UCLASS(BlueprintType)
 class REBOARGETCH_API UBoarAudioManagerSubsystem : public UGameInstanceSubsystem
 {
@@ -135,6 +133,7 @@ private:
 	/** @brief Stage以外のLevelが初期化されたとき、Project SettingsのLevel BGMを適用します（StageはABoarGameModeが担当）。 */
 	void HandleWorldActorsInitialized(const FActorsInitializedParams& Params);
 
+	/** World初期化通知を解除するために保持するハンドル。 */
 	FDelegateHandle WorldInitializedHandle;
 
 	/** @brief 位置付きSEのAttenuationを解決します（未指定ならProject Settingsの既定値）。 */

@@ -17,10 +17,8 @@ struct FBoarPreferPlayerConditionInstanceData
 	TObjectPtr<APawn> NPC;
 };
 
-/**
- * Global Senseの認識結果に対して、種別がプレイヤーの追跡・攻撃を優先するか判定するStateTree条件です。
- * Sense Taskの bPreferPlayer と同じ ABoarBase::GetTargetPreference を使用します。
- */
+// Sense Taskの bPreferPlayer と同じ ABoarBase::GetTargetPreference を使用します。
+/** Global Senseの認識結果に対して、種別がプレイヤーの追跡・攻撃を優先するか判定するStateTree条件です。 */
 USTRUCT(meta=(DisplayName="Boar Prefers Player", Category="Boar"))
 struct FStateTreeBoarPreferPlayerCondition : public FStateTreeConditionCommonBase
 {

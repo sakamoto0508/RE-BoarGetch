@@ -53,7 +53,7 @@ void BoarCaptureResolution::Resolve(UWorld* World, ABoarBase* Boar, FStageRunDat
 		Boar->ReleaseBoar();
 	}
 
-	// 檻へ移動した後の座標ではなく、捕獲地点にドロップします。
+	// 回復アイテムは捕獲した場所で回収できるようにする。
 	if (HealPickupClass && FMath::FRand() <= HealItemDropChance)
 	{
 		// 地面へ埋まらないよう、捕獲地点から少し浮かせて出す（cm）。

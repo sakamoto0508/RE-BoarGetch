@@ -45,6 +45,7 @@ enum class EBoarEscapePivotReason : uint8
 	NaturalObstacle,
 };
 
+/** 種別設定に従って知覚・行動・スタミナ・捕獲状態を管理する。 */
 UCLASS()
 class REBOARGETCH_API ABoarBase : public ACharacter
 {
@@ -399,6 +400,7 @@ public:
 
 private:
 	friend class FBoarGameplayRegressionTest;
+	/** 種別設定を初期化済みか。 */
 	bool bSettingsInitialized = false;
 	/** 距離・視野角・遮蔽・絶対発見距離から対象を認識できるか判定します。 */
 	bool CanDetectTarget(const AActor* TargetActor, float Distance) const;
@@ -445,16 +447,17 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapeTurnLeftMontage;
 
+	/** 逃走開始時に右へ旋回するMontage。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapeTurnRightMontage;
 
-	/**
-	 * 切り返しで止まったまま旋回する間（Hold）のループMontageです（左右）。頭→肩→腰の順に旋回先へ向きながら脚を踏み替えます。
-	 * EscapeTurnAnimationRateの旋回速度で足滑り0になるよう作り、実際の旋回速度との比で再生速度を合わせます。未設定なら踏ん張りの最終ポーズのまま回ります。
-	 */
+	// 踏み替えの足滑りを抑えるため、設定の基準旋回速度と実際の旋回速度の比で再生速度を調整する。
+	// 左右いずれも未設定の場合は、踏ん張りの終端ポーズを保ったまま旋回する。
+	/** 切り返し中に左へ踏み替えるループMontage。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapePivotSwingLeftMontage;
 
+	/** 逃走中に右へ踏み替えるMontage。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Boar|Animation|EscapeTurn", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> EscapePivotSwingRightMontage;
 
@@ -483,18 +486,23 @@ private:
 	float EscapeTurnPhaseElapsed = 0.0f;
 	/** 旋回開始時に固定した目標Yawと回転方向（+1右 / -1左）です。旋回中に再抽選しません。 */
 	float EscapeTurnTargetYaw = 0.0f;
+	/** 現在の逃走旋回の向きを表す符号。 */
 	float EscapeTurnSign = 0.0f;
 	/** 加速を始める速度割合と加速時間です（逃走開始と切り返しで異なる）。 */
 	float EscapeAccelerationStartRatio = 1.0f;
+	/** 逃走時に目標速度まで加速する時間（秒）。 */
 	float EscapeAccelerationDuration = 0.0f;
 	/** 向き追従を止める前の値です。 */
 	bool bSavedOrientRotationToMovement = true;
+	/** 逃走演出中に移動方向への自動回転を抑制しているか。 */
 	bool bOrientRotationHeld = false;
 	/** 方向維持（N秒）の開始時刻と開始位置です。旋回中は-1です。 */
 	double EscapeCommitStartTime = -1.0;
+	/** 現在の逃走方向を採用したワールド座標。 */
 	FVector EscapeCommitStartLocation = FVector::ZeroVector;
 	/** 前回の切り返し開始時刻と、前回逃走Stateを抜けた時刻です。 */
 	double LastEscapePivotTime = -1.0e9;
+	/** 前回の逃走状態を抜けた世界時刻（秒）。 */
 	double LastEscapeExitTime = -1.0e9;
 	/** 今の逃走を始めた時刻と、逃走相手を見失った時刻です（逃げ切り判定。負の値は未設定）。 */
 	/** アニメ診断ログ（Boar.AI.AnimDebug）を0.2秒ごとに出すTimerです。 */
@@ -503,15 +511,18 @@ private:
 	/** アニメ診断ログを1行出します（Boar.AI.AnimDebug有効時のみ）。Triggerは出力のきっかけ（tick／phase）です。 */
 	void LogAnimDebugEvent(const TCHAR* Trigger) const;
 
+	/** 今回の逃走を開始した世界時刻（秒）。 */
 	double EscapeSessionStartTime = -1.0;
+	/** 最後に脅威を失った世界時刻（秒）。 */
 	double EscapeThreatLostTime = -1.0;
-	/**
-	 * SuspendEscapeで控えた逃走です。再開できるか（bEscapeSuspended）、逃走方向、方向維持の経過秒数（旋回中は負）、
-	 * 抜けたときの旋回段階です。ResetEscapeMotion（捕獲・EndPlay・逃走終了）で破棄します。
-	 */
+	// 逃走方向・維持時間・旋回段階を再開時に復元する。捕獲・EndPlay・逃走終了時に破棄する。
+	/** 中断した逃走を再開できる状態か。 */
 	bool bEscapeSuspended = false;
+	/** 逃走中断から復帰するときに使う退避済みの方向。 */
 	FVector SuspendedEscapeHeading = FVector::ForwardVector;
+	/** 逃走中断時点の方向維持の経過時間（秒）。 */
 	float SuspendedEscapeCommitElapsed = -1.0f;
+	/** 中断前に進行していた逃走旋回の段階。 */
 	EBoarEscapeTurnPhase SuspendedEscapeTurnPhase = EBoarEscapeTurnPhase::None;
 	/** 前回の切り返し・逃走開始旋回を終えて再加速を始めた時刻です。連続切り返しの抑制（MinPivotInterval）の基準です。 */
 	double LastEscapePivotEndTime = -1.0e9;
@@ -523,7 +534,9 @@ private:
 	TWeakObjectPtr<const AActor> EscapeThreat;
 	/** デバッグ：今回の切り返しの開始時刻、開始時と最接近時のプレイヤー距離です（捕獲チャンスが届く距離だったかの検証用）。 */
 	double EscapePivotStartTime = -1.0;
+	/** 切り返し開始時の脅威との水平距離（cm）。 */
 	float EscapePivotStartThreatDistance = -1.0f;
+	/** 切り返し中に記録した脅威との最短水平距離（cm）。 */
 	float EscapePivotMinThreatDistance = -1.0f;
 	/** デバッグ：今回の切り返しで「止まってから」の経過秒数の計測開始時刻（踏ん張り開始）です。 */
 	double EscapePivotHeldStartTime = -1.0;
@@ -531,14 +544,14 @@ private:
 	void ApplyEscapeRotationRate();
 	/** 維持している逃走方向（水平の単位ベクトル）です。ResetEscapeMotionで消します。 */
 	FVector EscapeHeading = FVector::ForwardVector;
+	/** 現在の逃走方向が設定済みか。 */
 	bool bHasEscapeHeading = false;
 	/** デバッグ用：逃走開始の旋回と切り返しの発動回数です。 */
 	int32 EscapeStartTurnCount = 0;
+	/** 今回の逃走で成立した切り返しの回数。 */
 	int32 EscapePivotCount = 0;
 
-	/**
-	 * 捕獲状態を管理するコンポーネントです。
-	 */
+	/** 捕獲状態を管理するコンポーネントです。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boar|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCaptureComponent> CaptureComponent;
 
@@ -619,5 +632,6 @@ private:
 
 	/** 警戒音を「認識していない→認識した」の変化でだけ鳴らすための前回状態です。 */
 	bool bPlayerAwareForAudio = false;
+	/** 警戒音の再生間隔を制御する最終再生時刻（秒）。 */
 	double LastAlertSoundTime = -1.0e9;
 };

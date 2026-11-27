@@ -27,10 +27,7 @@ struct FHitResult;
  */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPlayerStaminaChanged, float, CurrentStamina, float, MaxStamina, bool, bDashLocked);
 
-/**
- * ダメージが成立した被弾の情報です。Gameplay側が確定した結果だけを演出側へ渡します。
- * 無敵中・攻撃判定外・Stage停止中など、ダメージが成立しなかった接触では作られません。
- */
+/** ダメージが成立した被弾の情報です。Gameplay側が確定した結果だけを演出側へ渡します。無敵中・攻撃判定外・Stage停止中など、ダメージが成立しなかった接触では作られません。 */
 USTRUCT(BlueprintType)
 struct REBOARGETCH_API FBoarPlayerHitInfo
 {
@@ -122,18 +119,16 @@ enum class EPlayerActionState : uint8
 	Down
 };
 
-/**
- * プレイヤーキャラクターを管理するクラスです。
- *
- * 主に以下の処理を担当します。
- * ・カメラ基準のキャラクター移動
- * ・ジャンプと二段ジャンプ
- * ・ダッシュ
- * ・ガジェットの使用と切り替え
- * ・イノシシの捕獲
- * ・イノシシ接触時のダメージ、スタン、無敵時間
- * ・プレイヤー行動状態の管理
- */
+// プレイヤーキャラクターを管理するクラスです。
+// 主に以下の処理を担当します。
+// ・カメラ基準のキャラクター移動
+// ・ジャンプと二段ジャンプ
+// ・ダッシュ
+// ・ガジェットの使用と切り替え
+// ・イノシシの捕獲
+// ・イノシシ接触時のダメージ、スタン、無敵時間
+// ・プレイヤー行動状態の管理
+/** プレイヤーの移動・ガジェット使用・被弾に伴う行動状態を管理する。 */
 UCLASS()
 class REBOARGETCH_API ABoarPlayerCharacter : public ACharacter
 {
@@ -151,6 +146,7 @@ private:
 	friend class FBoarGameplayRegressionTest;
 	friend class FBoarNetStunInterruptTest;
 	friend class FBoarPlayerStunLockTest;
+	/** ステージ開始時のキャラクター初期化を済ませたか。 */
 	bool bStageInitialized = false;
 
 protected:
@@ -348,6 +344,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Audio", meta = (AllowPrivateAccess = "true"))
 	FBoarPlayerAudioSettings PlayerAudio;
 
+	/** メニュー表示中としてゲームプレイ入力を抑止するか。 */
 	bool bMenuOpen = false;
 	/** 被弾判定用。イノシシ接触時にダメージ/スタン/無敵を開始します。 */
 	UFUNCTION()
@@ -546,10 +543,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.05"))
 	float AirNetDropLandingRecoveryDuration = 0.35f;
 
-	/**
-	 * 捕獲判定窓が閉じた後（引き戻し中）に着地した場合の、着地Animationの開始位置（秒）です。
-	 * 冒頭の叩き付けNotify(ON/OFF)より後ろから始め、閉じた判定窓を再び開かないようにします。
-	 */
+	/** 捕獲判定窓が閉じた後（引き戻し中）に着地した場合の、着地Animationの開始位置（秒）です。冒頭の叩き付けNotify(ON/OFF)より後ろから始め、閉じた判定窓を再び開かないようにします。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|AirNetDrop", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float AirNetDropLandingSkipCaptureTime = 0.15f;
 
@@ -655,16 +649,11 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
 	float DashRestartThresholdRatio = 0.25f;
 
-	/**
-	 * 消費対象とみなす最低の水平速度(cm/s)です。壁に向かって押し付けているだけ・停止中は実速度がこれを下回り、消費しません。
-	 */
+	/** 消費対象とみなす最低の水平速度(cm/s)です。壁に向かって押し付けているだけ・停止中は実速度がこれを下回り、消費しません。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Stamina", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float DashDrainMinSpeed = 50.0f;
 
-	/**
-	 * 被弾時のスタン秒数です（地上被弾は被弾から、空中被弾は着地から数えます）。
-	 * しりもち→起き上がりのAnimationはこの秒数に合わせて再生速度を変えるため、起き上がり完了と操作復帰が一致します。
-	 */
+	/** 被弾時のスタン秒数です（地上被弾は被弾から、空中被弾は着地から数えます）。しりもち→起き上がりのAnimationはこの秒数に合わせて再生速度を変えるため、起き上がり完了と操作復帰が一致します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Stun",meta = (AllowPrivateAccess = "true", ClampMin = "0.0", Units = "s"))
 	float StunDuration = 1.6f;
 
@@ -709,10 +698,7 @@ private:
 	float CameraArmLength = 350.0f;
 
 	// 一時状態フラグ。入力・被弾処理のガード条件として使う。
-	/**
-	 * 現在ダッシュ速度を適用しているかを表します（Dash入力の押下状態とは別）。
-	 * スタミナ切れではキーを押したままでもfalseへ戻り、押し直し（StartDash）以外では再びtrueになりません。
-	 */
+	/** 現在ダッシュ速度を適用しているかを表します（Dash入力の押下状態とは別）。スタミナ切れではキーを押したままでもfalseへ戻り、押し直し（StartDash）以外では再びtrueになりません。 */
 	bool bIsDashing = false;
 
 	/** 現在のスタミナです。PostInitializeComponentsでMaxStaminaに初期化します。 */
@@ -723,6 +709,7 @@ private:
 	bool bDashExhausted = false;
 	/** 最後に通知した値です。変化したときだけOnStaminaChangedを発火します。 */
 	float LastBroadcastStamina = -1.0f;
+	/** 通知の重複を避けるために保持する直近のダッシュロック状態。 */
 	bool bLastBroadcastDashLocked = false;
 
 	/** スタミナの消費・回復・枯渇判定を1フレーム分進めます。 */
@@ -749,10 +736,8 @@ private:
 	bool bHadMoveInput = false;
 	/** 現在使用しているガジェットの使用形式です。 */
 	EGadgetUseStyle CurrentGadgetUseStyle = EGadgetUseStyle::OneShot;
-	/**
-	 * 今回の使用が移動・ジャンプ・ダッシュを許可するかです。使用開始時にAGadgetBase::CanMoveWhileUsingから確定し、
-	 * 使用中に装備が入れ替わっても判定が変わらないようCharacter側へ保存します。空中アミでは常にfalseです。
-	 */
+	// 使用開始時にAGadgetBase::CanMoveWhileUsingから確定し、使用中に装備が入れ替わっても判定が変わらないようCharacter側へ保存します。空中アミでは常にfalseです。
+	/** 今回の使用が移動・ジャンプ・ダッシュを許可するかです。 */
 	bool bGadgetUseAllowsMovement = false;
 	/** 現在のプレイヤー行動状態です。 */
 	EPlayerActionState CurrentActionState = EPlayerActionState::Idle;

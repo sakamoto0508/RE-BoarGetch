@@ -17,10 +17,7 @@ enum class EGadgetUseStyle : uint8
 	Hold
 };
 
-/**
- * ガチャメカの基底クラスです。
- * Net / Radar / Jet などはここから派生します。
- */
+/** ガジェット共通の装備・使用・クールダウンを管理する。 */
 UCLASS()
 class REBOARGETCH_API AGadgetBase : public AActor
 {
@@ -112,29 +109,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget")
 	TObjectPtr<UGadgetDataAsset> GadgetDefinition;
 
-	/**
-	 * 装備時に接続するプレイヤーMeshのSocket名です。
-	 */
+	/** 装備時に接続するプレイヤーMeshのSocket名です。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Equip", meta = (AllowPrivateAccess = "true"))
 	FName EquipSocketName = TEXT("GadgetSocket");
 
-	/**
-	 * 使用タイプです。
-	 * OneShotは押下時に完結、Holdは押している間継続します。
-	 */
+	/** 使用タイプです。OneShotは押下時に完結、Holdは押している間継続します。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	EGadgetUseStyle UseStyle = EGadgetUseStyle::OneShot;
 
-	/**
-	 * クールタイムです。
-	 */
+	/** クールタイムです。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget",
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float CooldownSeconds = 1.0f;
 
-	/**
-	 * 使用中に移動可能かどうかです。
-	 */
+	/** 使用中に移動可能かどうかです。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget", meta =(AllowPrivateAccess = "true"))
 	bool bCanMoveWhileUsing = false;
 
@@ -142,18 +130,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Audio", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USoundBase> UseSound;
 
+	/** ガジェット使用SEに掛ける音量倍率。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gadget|Audio", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float UseSoundVolume = 1.0f;
 
-	/**
-	 * 使用中かどうかです。
-	 */
+	/** 使用中かどうかです。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	bool bIsUsing = false;
 
-	/**
-	 * 所有者がUGadgetComponentを持たない場合だけ使う、このActor自身のCooldown Timerです。
-	 */
+	/** 所有者がUGadgetComponentを持たない場合だけ使う、このActor自身のCooldown Timerです。 */
 	FTimerHandle CooldownTimerHandle = FTimerHandle(); //明示的初期化。
 
 	/**

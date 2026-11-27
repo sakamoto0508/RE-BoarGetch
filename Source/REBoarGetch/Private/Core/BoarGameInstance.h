@@ -21,6 +21,7 @@ class REBOARGETCH_API UBoarGameInstance : public UGameInstance
 public:
 	/** 読み取り専用のUIへは、保存に成功した候補を公開した後にだけ通知します。 */
 	FOnBoarProgressChanged OnProgressChanged;
+	/** ガジェット解放時に装備画面へ更新を通知する。 */
 	UPROPERTY(BlueprintAssignable)
 	FOnGadgetsUnlocked OnGadgetsUnlocked;
 	virtual void Init() override;
@@ -43,6 +44,7 @@ public:
 	bool AssignArchiveDisplay(int32 Slot, FName Id);
 	UFUNCTION(BlueprintPure)
 	TArray<FName> GetArchiveDisplayIds() const;
+	/** 展示枠の保存内容が変わったことを通知する。 */
 	UPROPERTY(BlueprintAssignable)
 	FOnGadgetsUnlocked OnArchiveDisplaysChanged;
 	UFUNCTION(BlueprintPure)
@@ -60,6 +62,7 @@ public:
 	static const TArray<TObjectPtr<UStageConfig>>& ResolveStageCatalog(const UObject* WorldContext,
 		const TArray<TObjectPtr<UStageConfig>>&
 		LegacyCatalog);
+	/** 試用対象の変更を施設へ通知する。 */
 	UPROPERTY(BlueprintAssignable)
 	FOnGadgetsUnlocked OnTestGadgetChanged;
 	UFUNCTION(BlueprintPure)
@@ -82,12 +85,15 @@ private:
 	friend class FBoarHubPortalGadgetLabelTest;
 	bool SaveCandidate(UBoarSaveGame* Candidate);
 	void UpdateUnlockedGadgets(UBoarSaveGame* Candidate) const;
+	/** 読み込み済みの永続進行データの正本。保存成功時に差し替える。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UBoarSaveGame> Progress;
 	/** 既存セーブの読込失敗時は上書きを禁止します。 */
 	bool bSaveLoadFailed = false;
+	/** 進行データを保存するスロット名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Progress")
 	FString SaveSlotName = TEXT("REBoarGetch_Progress");
+	/** 進行データを保存するローカルユーザー番号。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Progress")
 	int32 SaveUserIndex = 0;
 };

@@ -10,25 +10,21 @@ class APlayerController;
 class UACFCameraPreset;
 class UACFCameraSubsystem;
 
-/**
- * 通常TPSカメラをAction Camera Framework（ACF）で動かすための、ローカルプレイヤー単位のRequest所有者です。
- * ABoarPlayerControllerに付き、ControllerのBeginPlay〜EndPlayの間だけ通常カメラのRequestを1つだけ保持します。
- *
- * - ACFが無効、Preset未設定、Pawn未Possessのときは何もせず、CharacterのSpringArm / FollowCameraがそのまま映ります（Fallback）。
- * - Possessが変わると追従対象だけを差し替えます（Requestは作り直さない）。
- * - EndPlay（OpenLevel / Retry / PIE終了）でカット解除します。ACFのSubsystemはLocalPlayerと共にLevelをまたいで残るため、
- *   ここで解除しないと古いRequestが次のLevelへ残ります。Instigator = Controllerも設定し、EndPlayを経ない破棄でも自動解除されます。
- * - 共有Preset（DataAsset）は読むだけで、実行中に書き換えません。
- *
- * 比較用の切替は Console Variable `Boar.Camera.ACF`（-1 = Componentの既定値 / 0 = SpringArm / 1 = ACF）です。
- * Level遷移後も同じ値が使われます。`Boar.Camera.Dump` で現在のカメラとRequestの状態をLogへ出力します。
- *
- * Damping検証用（Shipping以外）。どれもアセットを書き換えず、-1でアセットの値へ戻ります。
- * - `Boar.Camera.Test.PivotDamping <秒>`：ACF既存のRuntime Tuning（Follow Damping）で通常カメラのPivot Dampingを変更
- * - `Boar.Camera.Test.RotationDamping <秒>` / `Boar.Camera.Test.ReturnDamping <秒>`：Presetの一時複製（Transient）の値を変えて差し替え
- * - `Boar.Camera.Test.Reset`：上の3つをすべて-1へ戻す
- * - `Boar.Camera.Trace.Start [ラベル]` / `Boar.Camera.Trace.Stop`：毎フレームのPivot／回転の誤差をCSV（Saved/BoarCameraTrace）へ記録し、停止時に要約をLogへ出力
- */
+// 通常TPSカメラをAction Camera Framework（ACF）で動かすための、ローカルプレイヤー単位のRequest所有者です。
+// ABoarPlayerControllerに付き、ControllerのBeginPlay〜EndPlayの間だけ通常カメラのRequestを1つだけ保持します。
+// - ACFが無効、Preset未設定、Pawn未Possessのときは何もせず、CharacterのSpringArm / FollowCameraがそのまま映ります（Fallback）。
+// - Possessが変わると追従対象だけを差し替えます（Requestは作り直さない）。
+// - EndPlay（OpenLevel / Retry / PIE終了）でカット解除します。ACFのSubsystemはLocalPlayerと共にLevelをまたいで残るため、
+// ここで解除しないと古いRequestが次のLevelへ残ります。Instigator = Controllerも設定し、EndPlayを経ない破棄でも自動解除されます。
+// - 共有Preset（DataAsset）は読むだけで、実行中に書き換えません。
+// 比較用の切替は Console Variable `Boar.Camera.ACF`（-1 = Componentの既定値 / 0 = SpringArm / 1 = ACF）です。
+// Level遷移後も同じ値が使われます。`Boar.Camera.Dump` で現在のカメラとRequestの状態をLogへ出力します。
+// Damping検証用（Shipping以外）。どれもアセットを書き換えず、-1でアセットの値へ戻ります。
+// - `Boar.Camera.Test.PivotDamping <秒>`：ACF既存のRuntime Tuning（Follow Damping）で通常カメラのPivot Dampingを変更
+// - `Boar.Camera.Test.RotationDamping <秒>` / `Boar.Camera.Test.ReturnDamping <秒>`：Presetの一時複製（Transient）の値を変えて差し替え
+// - `Boar.Camera.Test.Reset`：上の3つをすべて-1へ戻す
+// - `Boar.Camera.Trace.Start [ラベル]` / `Boar.Camera.Trace.Stop`：毎フレームのPivot／回転の誤差をCSV（Saved/BoarCameraTrace）へ記録し、停止時に要約をLogへ出力
+/** ローカルプレイヤーの通常カメラ用ACF Requestを管理する。 */
 UCLASS(ClassGroup=(Camera), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UBoarGameplayCameraComponent : public UActorComponent
 {
@@ -88,6 +84,7 @@ private:
 	void ApplyPivotTuning();
 	void HandleWorldPostActorTick(UWorld* World, ELevelTick TickType, float DeltaSeconds);
 
+	/** 通常カメラのACF要求を更新・解除するためのハンドル。 */
 	FACFCameraRequestHandle RequestHandle;
 	/** 現在のRequestに渡したPreset（通常Presetか検証用の一時複製）。差し替えの検出に使います。 */
 	UPROPERTY(Transient)
@@ -95,14 +92,19 @@ private:
 	/** Rotation／Return Damping検証用の一時複製です。アセットとしては保存されません。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UACFCameraPreset> TestPreset;
+	/** 検証用カメラプリセットの回転追従ダンピング。 */
 	float TestPresetRotationDamping = -1.f;
+	/** 検証用カメラプリセットの復帰ダンピング。 */
 	float TestPresetReturnDamping = -1.f;
 
 	/** 毎フレーム記録（Shipping以外）の状態です。 */
 	struct FTraceState;
+	/** カメラの状態を記録するデバッグ用トレース。 */
 	TSharedPtr<FTraceState> Trace;
 	/** 現在のRequestが追従しているPawnです。Possess変更の検出に使います。 */
 	TWeakObjectPtr<APawn> FollowedPawn;
+	/** プリセット欠落をログに報告済みか。 */
 	bool bReportedMissingPreset = false;
+	/** BeginPlay後でカメラ要求を開始できるか。 */
 	bool bBegunPlay = false;
 };

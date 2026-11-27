@@ -11,10 +11,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	int32, CurrentCount,
 	int32, TargetCount);
 
-/**
- * ゲームのルール全体を管理します。
- * 現在収容数、挑戦中記録、フレーム終端の終了判定、保存と演出の順序を管理します。
- */
+// ゲームのルール全体を管理します。
+// 現在収容数、挑戦中記録、フレーム終端の終了判定、保存と演出の順序を管理します。
+/** ステージの開始、捕獲確定、勝敗判定、結果の保存を管理する。 */
 UCLASS()
 class REBOARGETCH_API ABoarGameMode : public AGameModeBase
 {
@@ -24,9 +23,8 @@ public:
 	/** このゲームで使用するPlayerControllerとデフォルトPawnを設定します。 */
 	ABoarGameMode();
 
-	/** 捕獲成功時の共通後処理（檻送致/カウント/ドロップ）を実行します。 */
+	/** 捕獲を確定し、収容と報酬を処理する。bStartsNewCaptureUseがfalseの場合は直前の捕獲と同じ使用順を記録する。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Game")
-	/** bStartsNewCaptureUse：この捕獲がGadget使用（アミの一振り）の最初の捕獲成功か。falseなら直前と同じ使用として同順位にします。 */
 	void HandleBoarCaptured(class ABoarBase* Boar, bool bStartsNewCaptureUse = true);
 
 	/**
@@ -51,7 +49,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Game")
 	int32 GetCapturedBoarCount() const { return CapturedBoarCount; }
 
-	/** 現在のステージ設定を返します。 */
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")
 	class UStageConfig* GetStageConfig() const { return StageConfig; }
 
@@ -93,7 +90,7 @@ public:
 	FText GetInitializationError() const { return InitializationError; }
 
 protected:
-	/** Stage開始時にStageConfigのSpawn EntryからBoarを生成します。 */
+	/** ActorのBeginPlay前に必要なステージ依存を初期化する。 */
 	virtual void StartPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
@@ -101,7 +98,7 @@ protected:
 	/** 独自演出の通知欠落時に呼びます。BPは自身のカメラ・Widget等を解除できます。進行再開はC++が保証します。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStagePresentationTimedOut(bool bIntroduction);
-	/** ステージを準備できなかった場合でも、C++側の復帰用UIを使える。 */
+	/** ステージの準備に失敗した際、失敗理由をBlueprintへ通知する。 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "REBoarGetch|Stage")
 	void OnStageInitializationFailed(const FText& Reason);
 
@@ -130,33 +127,43 @@ private:
 	bool ValidateStageSetup();
 	bool InitializeStageActors();
 	bool FailInitialization(const FText& Reason);
+	/** ステージ初期化の実行を試みたか。 */
 	bool bStartupAttempted = false;
 
+	/** 初期化失敗時に復帰画面へ渡す理由。 */
 	UPROPERTY(Transient)
 	FText InitializationError;
 
+	/** ステージ開始に必要な初期化を完了したか。 */
 	bool bStageInitializationComplete = false;
 	void HandleWorldTickEnd(UWorld* World, ELevelTick TickType, float DeltaSeconds);
 	void ResolveStageEnd();
 	void SetStageActorsStopped(bool bStopped);
+	/** フレーム終端の終了判定の購読を解除するハンドル。 */
 	FDelegateHandle WorldTickEndHandle;
+	/** 現在のステージ進行状態。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))
 	EBoarStageState StageState = EBoarStageState::Preparing;
 
+	/** 今回の挑戦の時間・捕獲・取得結果の正本。 */
 	UPROPERTY(Transient)
 	FStageRunData StageRunData;
 
 	/** 未確定の演出時間は固定せず、BPから完了通知を受けられます。未設定は従来どおり即開始します。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bWaitForStageIntroduction = false;
+	/** 終了UIを表示する前に演出完了通知を待つか。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bWaitForStageEndPresentation = false;
 	/** 独自BP演出の最大待機時間です。完了通知が欠落しても進行を再開します。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation", meta = (ClampMin = "0.1", Units = "s"))
 	float StageIntroductionTimeoutSeconds = 30.f;
+	/** 終了演出から通知が届かない場合の待機上限（秒）。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation", meta = (ClampMin = "0.1", Units = "s"))
 	float StageEndPresentationTimeoutSeconds = 30.f;
+	/** 開始演出の待機を取り消すためのタイマー。 */
 	FTimerHandle IntroductionTimeoutHandle;
+	/** 終了演出の待機を取り消すためのタイマー。 */
 	FTimerHandle EndPresentationTimeoutHandle;
 	void HandleIntroductionTimeout();
 	void HandleEndPresentationTimeout();
@@ -166,9 +173,13 @@ private:
 	/** GameOver時にPlayerControllerのGameOverPresentation（ダウン・カメラ後退・警告UI）を再生してからGameOver UIへ進みます。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Presentation")
 	bool bUseGameOverPresentation = true;
+	/** フレーム終端の判定にGameOver要求が届いているか。 */
 	bool bGameOverRequested = false;
+	/** クリア時の進行データの保存が成功したか。 */
 	bool bClearSaveSucceeded = false;
+	/** 終了演出の完了を受理済みか。 */
 	bool bEndPresentationCompleted = false;
+	/** 終了結果の画面を表示済みか。 */
 	bool bEndUIShown = false;
 	/** 確定済みの捕獲（二重確定防止）。解放されたBoarは再集計時に外れます。 */
 	TSet<TWeakObjectPtr<class ABoarBase>> HandledCapturedBoars;
@@ -185,7 +196,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Stage", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UStageConfig> StageConfig;
 
-	/** 捕獲時に回復ピックアップを出す確率です。 */
+	/** 捕獲時に回復ピックアップを出す確率（0～1）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|Capture", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
 	float HealItemDropChance = 0.3f;
 

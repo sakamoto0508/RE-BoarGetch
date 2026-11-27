@@ -17,12 +17,11 @@ enum class EStageClearPresentationPhase : uint8
  Finished
 };
 
-/**
- * ステージクリア確定後、Result表示までの勝利演出の進行制御です（演出の内容はBP）。
- * 捕獲演出の完了待ち → DirectorClass（BP_StageClearPresentation）を生成して開始 → 完了報告またはSafetyTimeoutで
- * GameModeのCompleteStageEndPresentationへ戻します。演出BPが未設定・生成失敗の場合は開始せず、従来どおり即時Resultへ進みます。
- * Clear判定・保存・Result表示の可否はGameModeが所有し、このComponentとBPは関与しません。GameOverでは使用しません。
- */
+// ステージクリア確定後、Result表示までの勝利演出の進行制御です（演出の内容はBP）。
+// 捕獲演出の完了待ち → DirectorClass（BP_StageClearPresentation）を生成して開始 → 完了報告またはSafetyTimeoutで
+// GameModeのCompleteStageEndPresentationへ戻します。演出BPが未設定・生成失敗の場合は開始せず、従来どおり即時Resultへ進みます。
+// Clear判定・保存・Result表示の可否はGameModeが所有し、このComponentとBPは関与しません。GameOverでは使用しません。
+/** クリア確定からResult表示まで、捕獲待ちと勝利演出の進行を管理する。 */
 UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UStageClearPresentationComponent : public UActorComponent
 {
@@ -70,9 +69,12 @@ protected:
 private:
  void BeginDirector();
  void Finish();
+ /** 捕獲待ち・勝利演出・完了を区別する現在の段階。 */
  EStageClearPresentationPhase Phase = EStageClearPresentationPhase::Idle;
+ /** 現在の段階と演出全体の経過時間（PhaseAge／TotalAge、ゲーム時間の秒）。 */
  float PhaseAge = 0.f, TotalAge = 0.f;
 
+ /** 現在の勝利演出を担当するDirector。 */
  UPROPERTY(Transient)
  TObjectPtr<AStageClearPresentationDirector> Director;
 };

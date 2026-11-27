@@ -6,12 +6,8 @@
 
 class USceneComponent;
 
-/**
- * @brief StageConfigで指定されたBoarの生成位置を表すLevel配置用Actorです。
- *
- * BoarGameModeはStage開始時にLevel内のSpawnPointを収集し、設定されたBoarを
- * 配置順に循環させながら生成します。位置と向きはActor Transformを使用します。
- */
+// BoarGameModeはStage開始時にLevel内のSpawnPointを収集し、設定されたBoarを配置順に循環させながら生成します。位置と向きはActor Transformを使用します。
+/** @brief StageConfigで指定されたBoarの生成位置を表すLevel配置用Actorです。 */
 UCLASS(Blueprintable)
 class REBOARGETCH_API ABoarSpawnPoint : public AActor
 {

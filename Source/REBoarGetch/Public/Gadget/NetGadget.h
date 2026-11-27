@@ -17,6 +17,7 @@ class REBOARGETCH_API ANetGadget : public AGadgetBase
 
 	/** 一振り中に処理した個体です。即解放されても同じ振りで再捕獲しません。 */
 	TSet<TWeakObjectPtr<class ABoarBase>> AttemptedBoarsThisUse;
+	/** 同じ一振りで捕獲成功フィードバックを再生済みか。 */
 	bool bSuccessFeedbackPlayedThisUse = false;
 
 public:

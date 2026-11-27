@@ -64,10 +64,7 @@ struct FBoarAttackTaskInstanceData
 	bool bCleanupCompleted = true;
 };
 
-/**
- * 予兆・直線突進・後退・硬直の順で檻への攻撃を制御するStateTreeタスクです。
- * プレイヤー攻撃（Attack Player）と同じ流れで、後退中も檻の方を向き続けます。
- */
+/** 予兆・直線突進・後退・硬直の順で檻への攻撃を制御するStateTreeタスクです。プレイヤー攻撃（Attack Player）と同じ流れで、後退中も檻の方を向き続けます。 */
 USTRUCT(meta=(DisplayName="Attack Cage", Category="Boar"))
 struct FStateTreeBoarAttackTask : public FStateTreeTaskCommonBase
 {

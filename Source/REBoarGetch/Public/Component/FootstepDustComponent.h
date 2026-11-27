@@ -45,15 +45,13 @@ struct REBOARGETCH_API FFootstepDustStrength
 	int32 StreakCount = 0;
 };
 
-/**
- * 走行中の接地に合わせて、足元から小さな土煙を出す演出専用Componentです。
- *
- * 足音と同じAnimNotify_BoarFootstep（接地フレーム）から呼ばれます。Gameplay・AI・移動には一切関与しません。
- * - 地上で、水平速度がMinSpeed以上のときだけ出します（停止・歩き始め・ジャンプ中・落下中は出しません）。
- * - 速度でMinSpeed〜FullStrengthSpeedの強さを補間します（Player：Walk→Run→Dash、Blue Boar：通常移動→逃走）。
- * - 足のBoneの真下に地面があるときだけ、その地面の位置から出します。
- * - Boarに付いている場合は、BoarArchetypesに含まれる種別・未捕獲・ステージ進行中のときだけ出します。
- */
+// 走行中の接地に合わせて、足元から小さな土煙を出す演出専用Componentです。
+// 足音と同じAnimNotify_BoarFootstep（接地フレーム）から呼ばれます。Gameplay・AI・移動には一切関与しません。
+// - 地上で、水平速度がMinSpeed以上のときだけ出します（停止・歩き始め・ジャンプ中・落下中は出しません）。
+// - 速度でMinSpeed〜FullStrengthSpeedの強さを補間します（Player：Walk→Run→Dash、Blue Boar：通常移動→逃走）。
+// - 足のBoneの真下に地面があるときだけ、その地面の位置から出します。
+// - Boarに付いている場合は、BoarArchetypesに含まれる種別・未捕獲・ステージ進行中のときだけ出します。
+/** 走行中の接地に合わせて足元の土煙を再生する。 */
 UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UFootstepDustComponent : public UActorComponent
 {
@@ -135,6 +133,8 @@ public:
 private:
 	bool IsAllowedForOwner() const;
 
+	/** 同じ足からの土煙連続生成を抑える最終発生時刻（秒）。 */
 	TMap<FName, double> LastDustTimeByFoot;
+	/** 土煙の生成を検証するための累計回数。 */
 	int32 DustSpawnCount = 0;
 };

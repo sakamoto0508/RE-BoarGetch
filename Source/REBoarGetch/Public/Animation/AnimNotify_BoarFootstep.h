@@ -4,11 +4,8 @@
 #include "Animation/AnimNotifies/AnimNotify.h"
 #include "AnimNotify_BoarFootstep.generated.h"
 
-/**
- * 歩行・走行アニメーションの接地フレームに置く足音Notifyです。
- * 音源はNotifyごとに持たず、所有者の設定（PlayerはBP_BoarPlayerCharacterのPlayer Audio、Boarは種別DataAssetのAudio）を参照します。
- * そのため足音の差し替えは1か所で済み、Notifyの位置だけがAnimationに残ります。空中・捕獲済み・未設定では鳴らしません。
- */
+// 音源はNotifyごとに持たず、所有者の設定（PlayerはBP_BoarPlayerCharacterのPlayer Audio、Boarは種別DataAssetのAudio）を参照します。そのため足音の差し替えは1か所で済み、Notifyの位置だけがAnimationに残ります。空中・捕獲済み・未設定では鳴らしません。
+/** 歩行・走行アニメーションの接地フレームに置く足音Notifyです。 */
 UCLASS(meta = (DisplayName = "Boar Footstep"))
 class REBOARGETCH_API UAnimNotify_BoarFootstep : public UAnimNotify
 {

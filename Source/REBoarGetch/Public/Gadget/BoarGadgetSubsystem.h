@@ -16,9 +16,11 @@ class REBOARGETCH_API UBoarGadgetSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
   public:
+	/** 新規ガジェットの解放を購読側へ通知する。 */
 	UPROPERTY()
 	FOnBoarGadgetProgressChanged OnGadgetsUnlocked;
 
+	/** 試用ガジェットの変更を購読側へ通知する。 */
 	UPROPERTY()
 	FOnBoarGadgetProgressChanged OnTestGadgetChanged;
 
@@ -46,6 +48,7 @@ class REBOARGETCH_API UBoarGadgetSubsystem : public UGameInstanceSubsystem
 	friend class FBoarGadgetProgressTest;
 	UBoarGameInstance *GetProgressOwner() const;
 
+	/** 施設で現在選択中の試用ガジェットのクラス。 */
 	UPROPERTY(Transient)
 	FName SelectedTestGadget;
 };

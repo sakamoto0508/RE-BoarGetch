@@ -10,12 +10,11 @@ class UACFCameraNode_Collision;
 class UACFCameraNode_SpiralOrbit;
 class UACFCameraSequence;
 
-/**
- * 捕獲成功時のカメラ演出を1つのDataAssetにまとめたもの：Boarを中心にした螺旋上昇の回転（Spiral Orbit）、
- * 壁際の処理（Collision）、時間とBlend、捕獲の揺れ（Camera Effect Layer）。
- * UCapturePresentationComponentが実行時にこの内容からACFのPreset・Effect Preset・Camera Sequenceを組み立てて再生する
- * （ACFが唯一のカメラ出力。Gameplayの時刻には影響しない）。
- */
+// 捕獲成功時のカメラ演出を1つのDataAssetにまとめたもの：Boarを中心にした螺旋上昇の回転（Spiral Orbit）、
+// 壁際の処理（Collision）、時間とBlend、捕獲の揺れ（Camera Effect Layer）。
+// UCapturePresentationComponentが実行時にこの内容からACFのPreset・Effect Preset・Camera Sequenceを組み立てて再生する
+// （ACFが唯一のカメラ出力。Gameplayの時刻には影響しない）。
+/** 捕獲カメラの螺旋軌道・衝突回避・ブレンド・揺れを設定する。 */
 UCLASS(BlueprintType)
 class REBOARGETCH_API UCaptureCameraPresentationData : public UPrimaryDataAsset
 {

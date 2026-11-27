@@ -17,10 +17,7 @@ struct FBoarStaminaRecoveringConditionInstanceData
 	TObjectPtr<APawn> NPC;
 };
 
-/**
- * スタミナ切れで停止回復中か判定するStateTree条件です。
- * 減速のみの設定やスタミナ非対応の種別では常にfalseとなり、通常ボアの遷移には影響しません。
- */
+/** スタミナ切れで停止回復中か判定するStateTree条件です。減速のみの設定やスタミナ非対応の種別では常にfalseとなり、通常ボアの遷移には影響しません。 */
 USTRUCT(meta=(DisplayName="Boar Stamina Recovering", Category="Boar"))
 struct FStateTreeBoarStaminaRecoveringCondition : public FStateTreeConditionCommonBase
 {

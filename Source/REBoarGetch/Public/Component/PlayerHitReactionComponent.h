@@ -16,18 +16,8 @@ class UNiagaraComponent;
 class UNiagaraSystem;
 class USoundBase;
 
-/**
- * プレイヤー被弾・Stunの演出だけを担当するComponentです。
- *
- * ABoarPlayerCharacterがGameplay（ダメージ成立・Stun開始・残り時間・終了）を確定してから発火するEventを受け、
- * 命中インパクト（衝撃波Niagara・Hit Flash・SE・ACF Camera Effect）、しりもち→起き上がりAnimation、頭上のStun VFXを再生します。
- *
- * - Gameplayの状態は一切持ちません。演出アセットが未設定・再生失敗でも、Stunの開始／解除・入力ロックには影響しません。
- * - Cameraは既存のACF Subsystemへ短いEffectを1つだけ重ねます（ACFのRequest・Preset・FOVは変更しません）。
- *   ACFカメラが無いとき（Console Variableで無効化など）だけ、UE Camera ShakeをFallbackで再生します。
- * - World Time Dilationは使いません。
- * - 値はすべてBP_PlayerCharacterのHitReactionComponent（Details）から調整できます。
- */
+// ABoarPlayerCharacterがGameplay（ダメージ成立・Stun開始・残り時間・終了）を確定してから発火するEventを受け、命中インパクト（衝撃波Niagara・Hit Flash・SE・ACF Camera Effect）、しりもち→起き上がりAnimation、頭上のStun VFXを再生します。- Gameplayの状態は一切持ちません。演出アセットが未設定・再生失敗でも、Stunの開始／解除・入力ロックには影響しません。- Cameraは既存のACF Subsystemへ短いEffectを1つだけ重ねます（ACFのRequest・Preset・FOVは変更しません）。ACFカメラが無いとき（Console Variableで無効化など）だけ、UE Camera ShakeをFallbackで再生します。- World Time Dilationは使いません。- 値はすべてBP_PlayerCharacterのHitReactionComponent（Details）から調整できます。
+/** プレイヤー被弾・Stunの演出だけを担当するComponentです。 */
 UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UPlayerHitReactionComponent : public UActorComponent
 {
@@ -67,10 +57,8 @@ protected:
 	// 命中インパクト
 	//-------------------------------------------------
 
-	/**
-	 * 命中位置に出すスタイライズド衝突波です（中心フラッシュ・突進方向に垂直な衝撃リング・放射線・小粒子）。未設定なら表示しません。
-	 * User Parameter「ImpactDirection」「RingNormal」「Scale」「Color」をこのComponentが設定します。半径・寿命・本数などはNiagaraのUser Parameterで調整します。
-	 */
+	// 未設定なら表示しません。User Parameter「ImpactDirection」「RingNormal」「Scale」「Color」をこのComponentが設定します。半径・寿命・本数などはNiagaraのUser Parameterで調整します。
+	/** 命中位置に出すスタイライズド衝突波です（中心フラッシュ・突進方向に垂直な衝撃リング・放射線・小粒子）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Impact")
 	TObjectPtr<UNiagaraSystem> ImpactVFX;
 
@@ -82,10 +70,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Impact")
 	FLinearColor ImpactVFXColor = FLinearColor(1.0f, 0.93f, 0.62f, 1.0f);
 
-	/**
-	 * リング面の法線を、突進方向からカメラ方向へ傾ける割合です（0 = 突進方向に完全に垂直）。
-	 * 横から見たときにリングが線になって消えるのを防ぎます。大きくするほどカメラ正面向きに近づき、突進方向が伝わりにくくなります。
-	 */
+	/** リング面の法線を、突進方向からカメラ方向へ傾ける割合です（0 = 突進方向に完全に垂直）。横から見たときにリングが線になって消えるのを防ぎます。大きくするほどカメラ正面向きに近づき、突進方向が伝わりにくくなります。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Impact", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ImpactRingCameraBias = 0.35f;
 
@@ -101,6 +86,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Impact|Legacy")
 	bool bUseLegacyImpactVFX = false;
 
+	/** 旧方式の被弾VFXに渡す色。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Impact|Legacy")
 	FLinearColor LegacyImpactVFXColor = FLinearColor(1.0f, 0.42f, 0.12f, 1.0f);
 
@@ -108,6 +94,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Impact")
 	TObjectPtr<USoundBase> ImpactSound;
 
+	/** 被弾SEの音量倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Impact", meta = (ClampMin = "0.0"))
 	float ImpactSoundVolume = 1.0f;
 
@@ -115,13 +102,12 @@ protected:
 	// ---- 被弾フラッシュ ----
 	//-------------------------------------------------
 
-	/**
-	 * 全身へ一瞬重ねるOverlay Materialです（Scalar「GlowAmount」・Vector「GlowColor」を持つもの。既定は捕獲演出と同じM_CaptureGlow）。
-	 * 未設定ならHit Flashを出しません。元のOverlay Materialは終了時に戻します。
-	 */
+	// 既定は捕獲演出と同じM_CaptureGlow）。未設定ならHit Flashを出しません。元のOverlay Materialは終了時に戻します。
+	/** 全身へ一瞬重ねるOverlay Materialです（Scalar「GlowAmount」・Vector「GlowColor」を持つもの。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Hit Flash")
 	TObjectPtr<UMaterialInterface> HitFlashMaterial;
 
+	/** 被弾直後のオーバーレイの色。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Hit Flash")
 	FLinearColor HitFlashColor = FLinearColor(1.0f, 0.55f, 0.35f, 1.0f);
 
@@ -137,9 +123,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Hit Flash", meta = (ClampMin = "0.0", Units = "s"))
 	float HitFlashFadeDuration = 0.14f;
 
+	/** フラッシュの強さを受け取るマテリアルパラメータ名。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Hit Flash")
 	FName HitFlashAmountParameter = TEXT("GlowAmount");
 
+	/** フラッシュの色を受け取るマテリアルパラメータ名。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Hit Flash")
 	FName HitFlashColorParameter = TEXT("GlowColor");
 
@@ -147,13 +135,12 @@ protected:
 	// Camera
 	//-------------------------------------------------
 
-	/**
-	 * 命中時にACFカメラへ重ねるEffectです（攻撃元から押し出すImpulse＋短いShake）。
-	 * 攻撃元の位置をSourceLocationとして渡すため、揺れの向きで攻撃方向が伝わります。未設定・ACFカメラなしでは再生しません。
-	 */
+	// 攻撃元の位置をSourceLocationとして渡すため、揺れの向きで攻撃方向が伝わります。未設定・ACFカメラなしでは再生しません。
+	/** 命中時にACFカメラへ重ねるEffectです（攻撃元から押し出すImpulse＋短いShake）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Camera")
 	TObjectPtr<UACFCameraEffectPreset> HitCameraEffect;
 
+	/** 被弾時のACFカメラ効果に掛ける強度倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Camera", meta = (ClampMin = "0.0"))
 	float HitCameraEffectScale = 1.0f;
 
@@ -161,6 +148,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Camera")
 	TSubclassOf<UCameraShakeBase> FallbackCameraShake;
 
+	/** ACF効果を開始できないときのカメラシェイク倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Camera", meta = (ClampMin = "0.0"))
 	float FallbackCameraShakeScale = 1.0f;
 
@@ -168,10 +156,8 @@ protected:
 	// しりもち・起き上がり
 	//-------------------------------------------------
 
-	/**
-	 * のけぞり→後ろへよろめく→しりもち→起き上がりのAnimationです（Root Motionなし）。
-	 * Stunの残り時間（StunDuration）に合わせて再生速度を変えるため、起き上がり完了と操作復帰が一致します。未設定なら再生しません。
-	 */
+	// Stunの残り時間（StunDuration）に合わせて再生速度を変えるため、起き上がり完了と操作復帰が一致します。未設定なら再生しません。
+	/** のけぞり→後ろへよろめく→しりもち→起き上がりのAnimationです（Root Motionなし）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Knockdown")
 	TObjectPtr<UAnimSequenceBase> KnockdownAnimation;
 
@@ -179,6 +165,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Knockdown")
 	FName KnockdownSlotName = TEXT("FullBody");
 
+	/** しりもちMontageのブレンドイン時間（秒）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Knockdown", meta = (ClampMin = "0.0", Units = "s"))
 	float KnockdownBlendIn = 0.06f;
 
@@ -190,6 +177,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Knockdown", meta = (ClampMin = "0.1"))
 	float KnockdownMinPlayRate = 0.6f;
 
+	/** スタン時間にMontageを合わせる際の再生倍率上限。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Knockdown", meta = (ClampMin = "0.1"))
 	float KnockdownMaxPlayRate = 1.8f;
 
@@ -197,9 +185,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Knockdown")
 	TObjectPtr<USoundBase> SitImpactSound;
 
+	/** しりもちSEを鳴らすMontage上の正規化位置（0～1）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Knockdown", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float SitImpactNormalizedTime = 0.25f;
 
+	/** しりもちSEの音量倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Knockdown", meta = (ClampMin = "0.0"))
 	float SitImpactSoundVolume = 0.7f;
 
@@ -219,6 +209,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX", meta = (Units = "cm"))
 	float StunVFXHeight = 50.0f;
 
+	/** 頭上のスタンVFXの拡大率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX", meta = (ClampMin = "0.0"))
 	float StunVFXScale = 1.0f;
 
@@ -230,6 +221,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX")
 	TObjectPtr<USoundBase> StunSound;
 
+	/** スタン中に再生するSEの音量倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX", meta = (ClampMin = "0.0"))
 	float StunSoundVolume = 0.6f;
 
@@ -237,6 +229,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX")
 	TObjectPtr<USoundBase> StunRecoveredSound;
 
+	/** スタン解除SEの音量倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hit Reaction|Stun VFX", meta = (ClampMin = "0.0"))
 	float StunRecoveredSoundVolume = 0.6f;
 
@@ -272,24 +265,37 @@ private:
 	void ReleaseCameraEffect(bool bImmediate);
 	void RefreshTickEnabled();
 
+	/** スタン解除時に停止する頭上VFXの参照。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraComponent> StunVFXComponent;
 
+	/** 被弾フラッシュの強さを更新する動的マテリアル。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> HitFlashMID;
+	/** 被弾演出の終了時に復元する元のオーバーレイ。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInterface> HitFlashOriginalOverlay;
+	/** 被弾フラッシュ開始からの経過時間（秒）。 */
 	float HitFlashElapsed = 0.0f;
 
+	/** 終了・中断時に解除する現在のしりもちMontage。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimMontage> KnockdownMontage;
+	/** 同じMontageの別の再生を区別するインスタンスID。 */
 	int32 KnockdownMontageInstanceID = INDEX_NONE;
+	/** しりもちSEの予約を取り消すためのタイマー。 */
 	FTimerHandle SitImpactTimerHandle;
 
+	/** 終了時に解除する被弾ACFカメラ効果のハンドル。 */
 	FACFCameraEffectHandle ActiveCameraEffect;
+	/** 被弾演出を開始した回数を数える検証用カウンタ。 */
 	int32 ImpactPresentationCount = 0;
+	/** 被弾VFXを生成した回数を数える検証用カウンタ。 */
 	int32 ImpactVFXSpawnCount = 0;
+	/** 連続生成を抑制する被弾VFXの最終再生時刻（秒）。 */
 	double LastImpactVFXTime = -1.0;
+	/** スタン演出を開始し復元待ちの状態か。 */
 	bool bStunPresentationActive = false;
+	/** 所有プレイヤーの被弾・スタン通知に購読済みか。 */
 	bool bBound = false;
 };

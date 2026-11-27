@@ -12,20 +12,18 @@ class UCageVisualComponent;
 class USoundBase;
 class USoundAttenuation;
 
-/**
- * * 捕獲したイノシシを収容する檻を管理するActorです。
- *   主に以下の処理を担当します。
- *  ・捕獲されたイノシシの収容
- *  ・収容されたイノシシの配置位置計算
- *  ・檻のHP管理
- *  ・檻の破壊と再出現
- *  ・檻の破壊時に収容中のイノシシを解放
- *  ・HP変更、破壊、再出現イベントの通知 *
- *  檻は破壊時にActor自体をDestroyせず、
- *  一時的に非表示・Collision無効の状態にします。
- *  これにより、同じActorから一定時間後の再出現処理を実行できます。
- *
- */
+// * 捕獲したイノシシを収容する檻を管理するActorです。
+// 主に以下の処理を担当します。
+// ・捕獲されたイノシシの収容
+// ・収容されたイノシシの配置位置計算
+// ・檻のHP管理
+// ・檻の破壊と再出現
+// ・檻の破壊時に収容中のイノシシを解放
+// ・HP変更、破壊、再出現イベントの通知 *
+// 檻は破壊時にActor自体をDestroyせず、
+// 一時的に非表示・Collision無効の状態にします。
+// これにより、同じActorから一定時間後の再出現処理を実行できます。
+/** 捕獲個体の収容と解放、檻の耐久値と再出現を管理する。 */
 UCLASS()
 class REBOARGETCH_API ACage : public AActor
 {
@@ -101,9 +99,11 @@ public:
 	bool GetIsCageDestroyed() const { return bIsDestroyed; }
 
 private:
+	/** 檻の収容・被弾・破壊状態を見た目へ反映するコンポーネント。 */
 	UPROPERTY(VisibleAnywhere,Category="Cage|Visual")
 	TObjectPtr<UCageVisualComponent> Presentation;
 
+	/** ステージ開始時の初期化を完了したか。 */
 	bool bStageInitialized = false;
 	void NotifyHousedCountChanged();
 
@@ -111,11 +111,14 @@ private:
 	void HandleHousedBoarDestroyed(AActor* Actor);
 
 	bool CanAdvance() const;
+	/** ステージ終了により檻の進行処理を停止したか。 */
 	bool bStageStopped = false;
+	/** 最後にダメージを受けてからの経過時間（秒）。 */
 	float SecondsSinceDamage = 0.0f;
 	/** 回復量は未調整です。0で無効、Editorでステージごとに設定します。 */
 	UPROPERTY(EditAnywhere, Category = "Cage|Recovery", meta = (ClampMin = "0.0"))
 	float RecoveryPerSecond = 0.0f;
+	/** 最後の被弾から耐久値回復を始めるまでの待機時間（秒）。 */
 	UPROPERTY(EditAnywhere, Category = "Cage|Recovery", meta = (ClampMin = "0.0"))
 	float RecoveryDelay = 0.0f;
 	/** 指定された収容枠に対応するイノシシの配置位置を返します。 */
@@ -194,6 +197,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Cage|Audio")
 	TObjectPtr<USoundBase> LowHpWarningSound;
 
+	/** 耐久値低下の警告を出すHP比率（0～1）。 */
 	UPROPERTY(EditAnywhere, Category = "Cage|Audio", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float WarningHpRatio = 0.3f;
 
@@ -217,6 +221,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Cage|Audio")
 	TObjectPtr<USoundAttenuation> SoundAttenuation;
 
+	/** 警告音を最後に再生した時刻（秒）。 */
 	double LastWarningSoundTime = -1.0e9;
 
 	void PlayCageSound(USoundBase* Sound, bool bAs2D) const;

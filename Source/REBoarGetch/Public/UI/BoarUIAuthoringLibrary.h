@@ -7,10 +7,9 @@
 
 class UWidgetBlueprint;
 
-/**
- * Editor専用：Widget BlueprintへTextBlockとUMGアニメーションを追加する自動化用関数です。
- * PythonからResult画面の順表示アニメを再現可能に作成するために使用し、ゲーム実行時には含まれません。
- */
+// Editor専用：Widget BlueprintへTextBlockとUMGアニメーションを追加する自動化用関数です。
+// PythonからResult画面の順表示アニメを再現可能に作成するために使用し、ゲーム実行時には含まれません。
+/** EditorでWidget Blueprintに表示要素やアニメーションを追加する。 */
 UCLASS()
 class REBOARGETCH_API UBoarUIAuthoringLibrary : public UBlueprintFunctionLibrary
 {

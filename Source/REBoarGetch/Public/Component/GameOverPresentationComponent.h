@@ -15,12 +15,11 @@ enum class EGameOverPresentationPhase : uint8
  Finished
 };
 
-/**
- * GameOver確定（HP0）後、GameOver UIを出すまでのダウン演出の進行制御です（演出の内容はBP）。
- * DirectorClass（BP_GameOverPresentation）を生成して開始し、完了報告またはSafetyTimeout（実時間）で
- * GameModeのCompleteStageEndPresentationへ戻します。演出BPが未設定・生成失敗なら開始せず、従来どおり即時UIを表示します。
- * GameOver判定・入力/AI停止・UI表示の可否はGameModeが所有し、このComponentとBPは関与しません。Clearでは使用しません。
- */
+// GameOver確定（HP0）後、GameOver UIを出すまでのダウン演出の進行制御です（演出の内容はBP）。
+// DirectorClass（BP_GameOverPresentation）を生成して開始し、完了報告またはSafetyTimeout（実時間）で
+// GameModeのCompleteStageEndPresentationへ戻します。演出BPが未設定・生成失敗なら開始せず、従来どおり即時UIを表示します。
+// GameOver判定・入力/AI停止・UI表示の可否はGameModeが所有し、このComponentとBPは関与しません。Clearでは使用しません。
+/** GameOver確定から画面表示まで、ダウン演出の開始と完了を管理する。 */
 UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UGameOverPresentationComponent : public UActorComponent
 {
@@ -66,9 +65,12 @@ protected:
 
 private:
  void Finish();
+ /** 完了・中断処理の分岐に使う現在の演出段階。 */
  EGameOverPresentationPhase Phase = EGameOverPresentationPhase::Idle;
+ /** 演出タイムアウトの起点となる実時刻（秒）。 */
  double StartRealTime = 0.0;
 
+ /** 現在のGameOver演出を担当するDirector。 */
  UPROPERTY(Transient)
  TObjectPtr<AGameOverPresentationDirector> Director;
 };

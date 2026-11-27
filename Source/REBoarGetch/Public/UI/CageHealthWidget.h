@@ -5,10 +5,8 @@
 
 class UProgressBar;
 
-/**
- * ワールド空間に表示する横型HPバーの表示窓口。保持する値は呼び出し元から受け取った表示用コピーで、HPの正本ではありません。
- * 枠・色・サイズ・残像・警告の見た目はWBP_CageHealth（Designer）で編集します。
- */
+// 保持する値は呼び出し元から受け取った表示用コピーで、HPの正本ではありません。枠・色・サイズ・残像・警告の見た目はWBP_CageHealth（Designer）で編集します。
+/** ワールド空間に表示する横型HPバーの表示窓口。 */
 UCLASS()
 class REBOARGETCH_API UCageHealthWidget : public UUserWidget
 {
@@ -46,22 +44,28 @@ protected:
 	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category="Gauge",meta=(ClampMin="0",ClampMax="1"))
 	float PulseMinOpacity=.3f;
 
+	/** 警告時にゲージの脈動に使用する不透明度の範囲。 */
 	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category="Gauge",meta=(ClampMin="0",ClampMax="1"))
 	float PulseOpacityRange=.35f;
 
 	// 現在HP比率、遅れて追従する残像、被弾時の白色混合、警告の強さ（すべて表示用コピー）。
+	/** 受け取った現在HP比率の表示用コピー（0～1）。 */
 	UPROPERTY(BlueprintReadOnly,Transient,Category="Gauge|Display")
 	float Fraction=1;
 
+	/** HPゲージの残像で表示する比率（0～1）。 */
 	UPROPERTY(BlueprintReadOnly,Transient,Category="Gauge|Display")
 	float Trail=1;
 
+	/** 被弾フラッシュで混ぜる白色の強さ（0～1）。 */
 	UPROPERTY(BlueprintReadOnly,Transient,Category="Gauge|Display")
 	float Flash=0;
 
+	/** 警告の脈動で使用する表示強度（0～1）。 */
 	UPROPERTY(BlueprintReadOnly,Transient,Category="Gauge|Display")
 	float Pulse=0;
 
+	/** 現在の耐久値に応じてGaugeに適用する色。 */
 	UPROPERTY(BlueprintReadOnly,Transient,Category="Gauge|Display")
 	FLinearColor Color=FLinearColor(.02f,.75f,1.f);
 

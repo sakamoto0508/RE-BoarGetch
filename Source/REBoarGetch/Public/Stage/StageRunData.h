@@ -19,6 +19,7 @@ struct REBOARGETCH_API FStageRunData
 {
 	GENERATED_BODY()
 
+	/** 今回挑戦しているステージのID。 */
 	UPROPERTY(BlueprintReadOnly)
 	FName StageId;
 
@@ -38,21 +39,27 @@ struct REBOARGETCH_API FStageRunData
 	UPROPERTY(BlueprintReadOnly)
 	bool bHousedSnapshotTaken = false;
 
+	/** 今回の挑戦で取得した特別コインIDの集合。 */
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FName> SpecialCoinIds;
 
+	/** 今回の挑戦で新たに図鑑へ登録された個体IDの一覧。 */
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FName> NewBoarUniqueIds;
 
+	/** 今回の挑戦で新たに取得済みとなった特別コインIDの一覧。 */
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FName> NewSpecialCoinIds;
 
+	/** 現在檻に収容している個体数。 */
 	UPROPERTY(BlueprintReadOnly)
 	int32 CurrentHousedCount = 0;
 
+	/** プレイ中に加算し、クリア確定時に固定する挑戦時間（ゲーム時間の秒）。 */
 	UPROPERTY(BlueprintReadOnly)
 	float ClearTimeSeconds = 0.0f;
 
+	/** 結果を確定し挑戦データの更新を停止したか。 */
 	UPROPERTY(BlueprintReadOnly)
 	bool bResultFrozen = false;
 

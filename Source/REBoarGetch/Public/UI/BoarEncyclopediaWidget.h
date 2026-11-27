@@ -18,6 +18,7 @@ class REBOARGETCH_API UBoarEncyclopediaWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	/** 図鑑を閉じたことを親画面へ通知する。 */
 	UPROPERTY(BlueprintAssignable)
 	FOnBoarEncyclopediaClosed OnClosed;
 
@@ -31,27 +32,35 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Encyclopedia")
 	TArray<TObjectPtr<UStageConfig>> StageCatalog;
 
+	/** 図鑑の個体一覧に使う項目Widgetクラス。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Encyclopedia")
 	TSubclassOf<UBoarLoadoutEntry> EntryClass;
 
+	/** WBPで個体一覧を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Bindings")
 	FName ListWidgetName;
 
+	/** WBPで総登録進捗欄を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Bindings")
 	FName ProgressWidgetName;
 
+	/** WBPで種別の登録進捗欄を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Bindings")
 	FName TypeProgressWidgetName;
 
+	/** WBPで個体詳細欄を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Bindings")
 	FName DetailWidgetName;
 
+	/** WBPで個体写真を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Bindings")
 	FName PhotoWidgetName;
 
+	/** WBPで写真の表示状態欄を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Bindings")
 	FName PhotoStatusWidgetName;
 
+	/** WBPで戻るボタンを探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Bindings")
 	FName BackButtonName;
 
@@ -67,32 +76,42 @@ private:
 	UFUNCTION()
 	void FocusBack();
 
+	/** 登録・未登録個体の項目を並べるコンテナ。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UScrollBox> List;
 
+	/** 図鑑全体の登録進捗を表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> ProgressText;
 
+	/** 種別ごとの登録進捗を表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> TypeProgressText;
 
+	/** 選択した個体の説明を表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> DetailText;
 
+	/** 選択した個体の写真を表示する画像。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UImage> Photo;
 
+	/** 写真を表示できない理由を示すテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> PhotoStatus;
 
+	/** 図鑑を閉じるボタン。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> BackButton;
 
+	/** 選択状態を反映する一覧項目の参照。 */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UBoarLoadoutEntry>> Entries;
 
-	// XはStageCatalogの添字、Yはステージ内の個体定義の添字。表示行から元の定義へ対応付けます。
+	/** 表示行と元の個体定義の対応。XはStageCatalog内、Yはステージ内の添字。 */
 	TArray<FIntPoint> Definitions;
+	/** 一覧項目に表示するラベルの配列。 */
 	TArray<FText> Labels;
+	/** 図鑑を開いた後に初期フォーカスを設定する必要があるか。 */
 	bool bInitialFocusPending = true;
 };

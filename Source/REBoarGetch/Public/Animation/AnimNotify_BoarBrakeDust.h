@@ -6,11 +6,8 @@
 
 class UNiagaraSystem;
 
-/**
- * 蹄が地面を踏み込むフレームに置き、足元の地面から土煙を出すAnimNotifyです。
- * 切り返しの判断（Gameplay）とは結合せず、アニメーションの接地タイミングだけで発生します。見た目の差し替えはNiagaraとこのNotifyの設定で行います。
- * 足のBoneの真下を調べ、地面が近くに無い（空中）・捕獲済み・ステージ進行中でない場合は出しません。
- */
+// 切り返しの判断（Gameplay）とは結合せず、アニメーションの接地タイミングだけで発生します。見た目の差し替えはNiagaraとこのNotifyの設定で行います。足のBoneの真下を調べ、地面が近くに無い（空中）・捕獲済み・ステージ進行中でない場合は出しません。
+/** 蹄が地面を踏み込むフレームに置き、足元の地面から土煙を出すAnimNotifyです。 */
 UCLASS(meta = (DisplayName = "Boar Brake Dust"))
 class REBOARGETCH_API UAnimNotify_BoarBrakeDust : public UAnimNotify
 {
@@ -48,15 +45,19 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "BrakeDust|Override")
 	bool bOverrideParameters = false;
 
+	/** 接地1回で生成する土煙の数。 */
 	UPROPERTY(EditAnywhere, Category = "BrakeDust|Override", meta = (EditCondition = "bOverrideParameters", ClampMin = "0"))
 	int32 SpawnCount = 10;
 
+	/** 土煙の基本サイズに掛ける倍率。 */
 	UPROPERTY(EditAnywhere, Category = "BrakeDust|Override", meta = (EditCondition = "bOverrideParameters", ClampMin = "0.0"))
 	float SizeScale = 1.0f;
 
+	/** 土煙を表示する時間（秒）。 */
 	UPROPERTY(EditAnywhere, Category = "BrakeDust|Override", meta = (EditCondition = "bOverrideParameters", ClampMin = "0.05", Units = "Seconds"))
 	float Lifetime = 0.55f;
 
+	/** 土煙の色。 */
 	UPROPERTY(EditAnywhere, Category = "BrakeDust|Override", meta = (EditCondition = "bOverrideParameters"))
 	FLinearColor DustColor = FLinearColor(0.55f, 0.40f, 0.26f, 1.0f);
 

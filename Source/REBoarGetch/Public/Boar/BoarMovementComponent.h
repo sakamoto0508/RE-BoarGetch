@@ -4,11 +4,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "BoarMovementComponent.generated.h"
 
-/**
- * Boar用のCharacterMovement。演出用の移動時間倍率だけを追加します。
- * 倍率はMovementの経過時間に掛けるため、MaxWalkSpeedやVelocityの値は変えず、移動・加速・旋回が同じ割合で遅くなります。
- * Actor Tick、AI（StateTree）、Timer、World時間には影響しません。
- */
+// 演出用の移動時間倍率だけを追加します。倍率はMovementの経過時間に掛けるため、MaxWalkSpeedやVelocityの値は変えず、移動・加速・旋回が同じ割合で遅くなります。Actor Tick、AI（StateTree）、Timer、World時間には影響しません。
+/** Boar用のCharacterMovement。 */
 UCLASS()
 class REBOARGETCH_API UBoarMovementComponent : public UCharacterMovementComponent
 {
@@ -23,5 +20,6 @@ public:
 		FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
+	/** 演出時に移動更新のDeltaTimeへ掛ける倍率。 */
 	float PresentationTimeScale = 1.f;
 };

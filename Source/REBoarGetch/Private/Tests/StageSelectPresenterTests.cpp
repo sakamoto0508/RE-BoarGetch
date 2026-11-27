@@ -71,7 +71,7 @@ bool FStageSelectPresenterTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Empty catalog does not insert fallback"), Presenter->GetStageCount(), 0);
 	TestFalse(TEXT("Empty catalog step is safe"), Presenter->RequestStep(1, false));
 
-	// GUID slot isolates this fixture; only the notification checks write, and cleanup deletes it.
+	// GUID名のスロットでこのテストを他から切り離す。書き込むのは通知の確認だけで、最後に削除する。
 	auto* Instance = NewObject<UBoarGameInstance>(GEngine);
 	auto* SlotProperty = FindFProperty<FStrProperty>(UBoarGameInstance::StaticClass(), TEXT("SaveSlotName"));
 	if (!TestNotNull(TEXT("Existing reflected save slot setting"), SlotProperty))

@@ -19,7 +19,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoarGadgetProgressTest, "REBoarGetch.Spec.Gadg
 
 bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 {
-	// An isolated, non-existent slot and write prohibition protect the user's actual save.
+	// 存在しない専用スロットを使い、書き込みも禁止して、ユーザーの実際のセーブに触れないようにする。
 	auto* Instance = NewObject<UBoarGameInstance>(GEngine);
 	Instance->SaveSlotName = TEXT("REBoarGetch_Automation_") + FGuid::NewGuid().ToString();
 	const auto NetClass = LoadClass<AGadgetBase>(nullptr, TEXT("/Game/BP/Gadget/BP_NetGadget.BP_NetGadget_C"));
@@ -80,7 +80,7 @@ bool FBoarGadgetProgressTest::RunTest(const FString& Parameters)
 		Instance->Progress->UnlockedGadgetIds.Remove(Id);
 		TestFalse(TEXT("Locked loadout rejected"), Gadgets->IsLoadoutValid({Id, NAME_None, NAME_None, NAME_None}));
 		{
-			// Scope restores the in-memory DataAsset field; no package is saved.
+			// メモリ上のDataAssetの値だけをこのスコープの間変え、抜けると元に戻る（Packageは保存しない）。
 			TGuardValue<int32> RequiredCoins(const_cast<UGadgetDataAsset*>(Definition)->RequiredSpecialCoinCount, 2);
 			Instance->Progress->SpecialCoinIds = {TEXT("C1")};
 			TestFalse(TEXT("Below coin threshold"), Gadgets->CanUnlockGadget(Id));

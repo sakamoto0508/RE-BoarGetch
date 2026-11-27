@@ -23,23 +23,23 @@ class UGadgetComponent;
 class ABoarPlayerCharacter;
 struct FStageRunData;
 
-/**
- * ローカルプレイヤーの入力と画面UIを仲介するControllerです。
- *
- * Enhanced InputのActionを受け取り、実際の移動・ジャンプ・ガジェット処理は
- * Possess中のABoarPlayerCharacterへ委譲します。また、Character/GameModeの変更通知を
- * HUDへ中継し、ステージクリア時だけゲーム入力からResult UI入力へ切り替えます。
- * ダメージ計算や捕獲条件などのゲームルールは、このクラスでは扱いません。
- */
+// ローカルプレイヤーの入力と画面UIを仲介するControllerです。
+// Enhanced InputのActionを受け取り、実際の移動・ジャンプ・ガジェット処理は
+// Possess中のABoarPlayerCharacterへ委譲します。また、Character/GameModeの変更通知を
+// HUDへ中継し、ステージクリア時だけゲーム入力からResult UI入力へ切り替えます。
+// ダメージ計算や捕獲条件などのゲームルールは、このクラスでは扱いません。
+/** ローカルプレイヤーのEnhanced Inputと画面操作を仲介する。 */
 UCLASS()
 class REBOARGETCH_API ABoarPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+	/** 直近の入力がゲームパッドだったか。 */
 	bool bLastInputGamepad = false;
 
 public:
 	ABoarPlayerController();
+	/** 捕獲の見た目・音・カメラ演出を担当するコンポーネント。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
 	TObjectPtr<class UCapturePresentationComponent> CapturePresentation;
 	/** ステージクリア確定後からResult表示までの勝利演出です。 */
@@ -85,7 +85,7 @@ public:
 	static TSoftObjectPtr<UWorld> ResolveLobbyLevel(const TSoftObjectPtr<UWorld>& Configured, const FSoftObjectPath& DefaultMap);
 	/** このControllerのLobby復帰先です。LobbyLevel未設定ならGameDefaultMapを使い、設定不足をErrorで1回だけ報告します。 */
 	TSoftObjectPtr<UWorld> GetLobbyLevel() const;
-	/**	 ステージクリア失敗時に操作を停止し、ゲームオーバー画面を表示します。 */
+	/** GameOverまたは初期化失敗から、現在のLevelを読み直して再挑戦する。 */
 	UFUNCTION(BlueprintCallable, Category = "REBoarGetch|Stage")
 	void RetryStage();
 
@@ -149,24 +149,30 @@ private:
 	mutable bool bLobbyLevelFallbackReported = false;
 	friend class UBoarUIFlowComponent;
 
+	/** 画面遷移とメニューの入力モードを担当するコンポーネント。 */
 	UPROPERTY(Transient)
 	TObjectPtr<class UBoarUIFlowComponent> UIFlow;
 
+	/** 展示枠を編集する画面のWidgetクラス。 */
 	UPROPERTY(EditDefaultsOnly,Category="UI")
 	TSubclassOf<class UBoarArchiveSelectionWidget> ArchiveSelectionWidgetClass;
 
+	/** 施設の共通Interactを受け取る入力Action。 */
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TObjectPtr<UInputAction> InteractAction;
 
+	/** 施設で有効にする入力Mapping Context。 */
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> FacilityMappingContext;
 
 	void InteractWithFacility();
 	void CloseFacilityMenuInput();
 
+	/** 図鑑を表示するWidgetクラス。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarEncyclopediaWidget> EncyclopediaWidgetClass;
 
+	/** ロビーへ戻る操作を承認する確認Widgetクラス。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarConfirmationWidget> LobbyExitConfirmationClass;
 
@@ -175,9 +181,11 @@ private:
 
 	void RemoveLobbyExitConfirmation();
 
+	/** 音量等の設定を表示するWidgetクラス。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarSettingsWidget> SettingsWidgetClass;
 
+	/** ガジェット装備を編集するWidgetクラス。 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBoarLoadoutWidget> LoadoutWidgetClass;
 
@@ -265,12 +273,15 @@ private:
 	void AddOwnedMappingContext(UInputMappingContext* Context, int32 Priority);
 	void RemoveOwnedMappingContext(UInputMappingContext* Context);
 
+	/** このControllerが追加し解除責任を持つMapping Context一覧。 */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UInputMappingContext>> OwnedMappingContexts;
 
+	/** プレイ中と施設で共通使用するMapping Context。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> GlobalMappingContext;
 
+	/** メニューのナビゲーション操作を有効にするMapping Context。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> UIMappingContext;
 
@@ -285,72 +296,51 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
-	/**
-	 * 移動入力（Axis2D）
-	 */
+	/** 移動入力（Axis2D） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> MoveAction;
 
-	/**
-	 * カメラ入力(Axis2D)
-	 */
+	/** カメラ入力(Axis2D) */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> LookAction;
 
-	/**
-	 * ジャンプ入力（Digital）
-	 */
+	/** ジャンプ入力（Digital） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> JumpAction;
 
-	/**
-	 * ガジェット入力（Digital）
-	 */
+	/** ガジェット入力（Digital） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetAction;
 
-	/**
-	 * ダッシュ入力（Digital/Hold）
-	 */
+	/** ダッシュ入力（Digital/Hold） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> DashAction;
 
-	/**
-	 * ガジェット切替モディファイア入力（R1想定）
-	 */
+	/** ガジェット切替モディファイア入力（R1想定） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetModifierAction;
 
-	/**
-	 * ガジェットスロット1入力（□想定）
-	 */
+	/** ガジェットスロット1入力（□想定） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot1Action;
 
-	/**
-	 * ガジェットスロット2入力（△想定）
-	 */
+	/** ガジェットスロット2入力（△想定） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot2Action;
 
-	/**
-	 * ガジェットスロット3入力（○想定）
-	 */
+	/** ガジェットスロット3入力（○想定） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot3Action;
 
-	/**
-	 * ガジェットスロット4入力（×想定）
-	 */
+	/** ガジェットスロット4入力（×想定） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> GadgetSlot4Action;
 
-	/**
-	 *	 ポーズ入力（Digital）
-	 */
+	/** ポーズ入力（Digital） */
 	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category="Input",meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> PauseAction;
 
+	/** 開いている画面を戻る操作の入力Action。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> UIBackAction;
 

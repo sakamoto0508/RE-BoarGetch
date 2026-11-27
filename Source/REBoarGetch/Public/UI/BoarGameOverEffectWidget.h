@@ -3,13 +3,8 @@
 #include "Blueprint/UserWidget.h"
 #include "BoarGameOverEffectWidget.generated.h"
 
-/**
- * GameOver演出用の全画面オーバーレイです（入力を受けません）。
- * 赤フラッシュ、画面周辺の細い警告ライン、短いデジタルノイズ、周辺の薄いDark Navy減光の見た目はWBP_GameOverEffect
- * （UI Material・Widget Animation）で編集し、このクラスは受け取った強さを各レイヤーのRender Opacityへ反映するだけです。
- * 値の時間変化はAGameOverPresentationDirectorが毎フレーム設定します。
- * Post Process（RetroRenderのUnbound PP）には触れず、UMGの最前面付近に重ねます。
- */
+// 赤フラッシュ、画面周辺の細い警告ライン、短いデジタルノイズ、周辺の薄いDark Navy減光の見た目はWBP_GameOverEffect（UI Material・Widget Animation）で編集し、このクラスは受け取った強さを各レイヤーのRender Opacityへ反映するだけです。値の時間変化はAGameOverPresentationDirectorが毎フレーム設定します。Post Process（RetroRenderのUnbound PP）には触れず、UMGの最前面付近に重ねます。
+/** GameOver演出用の全画面オーバーレイです（入力を受けません）。 */
 UCLASS(Blueprintable)
 class REBOARGETCH_API UBoarGameOverEffectWidget : public UUserWidget
 {
@@ -26,6 +21,7 @@ public:
 	void SetVignetteAlpha(float Alpha);
 	/** Bindingされていないレイヤー名。欠けたレイヤーは描画を省きます。 */
 	TArray<FString> GetMissingLayerNames() const;
+	/** 演出強度を反映する全画面オーバーレイのレイヤー数。 */
 	static constexpr int32 LayerCount = 4;
 
 protected:
@@ -35,12 +31,15 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional))
 	TObjectPtr<UWidget> VignetteLayer;
 
+	/** 被弾フラッシュを描画するレイヤー。 */
 	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional))
 	TObjectPtr<UWidget> FlashLayer;
 
+	/** 画面周辺の警告を描画するレイヤー。 */
 	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional))
 	TObjectPtr<UWidget> WarningLayer;
 
+	/** デジタルノイズを描画するレイヤー。 */
 	UPROPERTY(BlueprintReadOnly, Category = "GameOver Effect", meta = (BindWidgetOptional))
 	TObjectPtr<UWidget> NoiseLayer;
 
@@ -50,8 +49,12 @@ protected:
 
 private:
 	static void ApplyLayer(UWidget* Layer, float Alpha);
+	/** 被弾フラッシュへ適用する不透明度（0～1）。 */
 	float FlashAlpha = 0.f;
+	/** 画面周辺の警告へ適用する不透明度（0～1）。 */
 	float WarningAlpha = 0.f;
+	/** ノイズレイヤーへ適用する強度（0～1）。 */
 	float NoiseAmount = 0.f;
+	/** 画面周辺の減光へ適用する不透明度（0～1）。 */
 	float VignetteAlpha = 0.f;
 };

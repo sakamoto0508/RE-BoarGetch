@@ -21,10 +21,7 @@ struct FBoarChasePlayerTaskInstanceData
 	TObjectPtr<APawn> ChaseTarget;
 };
 
-/**
- * Global Senseが認識しているプレイヤーをNavMesh経路で追跡するStateTreeタスクです。
- * 攻撃射程に入りクールダウンが終わっていればSucceeded、プレイヤーを見失うとFailedを返します。
- */
+/** Global Senseが認識しているプレイヤーをNavMesh経路で追跡するStateTreeタスクです。攻撃射程に入りクールダウンが終わっていればSucceeded、プレイヤーを見失うとFailedを返します。 */
 USTRUCT(meta=(DisplayName="Chase Player", Category="Boar"))
 struct FStateTreeBoarChasePlayerTask : public FStateTreeTaskCommonBase
 {

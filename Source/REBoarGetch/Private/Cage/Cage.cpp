@@ -55,13 +55,12 @@ void ACage::InitializeForStage()
 
 void ACage::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// レベル移動やActor削除時に、残っているタイマーを停止する。
+	// Level遷移やActor破棄後に再出現処理が発火しないよう、予約を解除する。
 	GetWorldTimerManager().ClearTimer(RespawnTimerHandle);
 
 	Super::EndPlay(EndPlayReason);
 }
 
-//捕獲したイノシシを檻に追加する。檻の位置にイノシシを移動させる。
 void ACage::CollectBoar(ABoarBase* Boar)
 {
 	if (Boar == nullptr)
@@ -85,12 +84,10 @@ void ACage::CollectBoar(ABoarBase* Boar)
 		return !IsValid(CapturedBoar);
 	});
 
-	// AddUniqueは同じイノシシが既に配列に存在する場合、重複して追加せず、既存要素のインデックスを返す。
 	const int32 SlotIndex = CapturedBoars.AddUnique(Boar);
 	Boar->OnDestroyed.AddUniqueDynamic(this, &ACage::HandleHousedBoarDestroyed);
 
-	// 配列上の位置に対応する収容座標へイノシシを移動させる。
-	// TeleportPhysicsを指定することで、物理速度による移動ではなく 指定した座標へ即座に配置する。
+	// 捕獲地点から檻までの座標差が物理速度に反映されないよう、TeleportPhysicsで配置する。
 	Boar->SetActorLocation(
 		GetCapturedBoarLocation(SlotIndex, Boar),
 		false,
@@ -133,7 +130,6 @@ FVector ACage::GetCapturedBoarLocation(int32 SlotIndex, const ABoarBase* Boar) c
 		* (-AreaExtent.Z + CapsuleHalfHeight + CapturedBoarFloorOffset);
 }
 
-//檻へのダメージ。イノシシが呼び出す関数。
 void ACage::ApplyDamage(float Damage)
 {
 	ApplyDamageInternal(Damage, nullptr, FVector::ZeroVector);
@@ -181,7 +177,6 @@ bool ACage::ApplyDamageInternal(float Damage, const FVector* HitLocation, const 
 	return true;
 }
 
-//檻が破壊された時に呼ばれる処理。破壊された檻に捕まっていたイノシシを解放する。
 void ACage::DestroyCage()
 {
 	if (!CanAdvance() || bIsDestroyed)
@@ -196,13 +191,12 @@ void ACage::DestroyCage()
 	if (Presentation)
 		Presentation->PlayBreakVFX();
 
-	// Actor自体はDestroyせず、非表示にして当たり判定を停止する。
-	// Destroy()すると、このActor自身から復活処理を呼べなくなる。
+	// 同じActorで再出現するため、破壊中は表示・衝突・Tickだけを停止する。
 	SetActorHiddenInGame(true);
 	SetActorEnableCollision(false);
 	SetActorTickEnabled(false);
 
-	// 解放通知が収容配列を更新するため、先にコピーして空にします。
+	// 解放時の通知から再集計されても収容数が残らないよう、反復前に元の配列を空にする。
 	const TArray<TObjectPtr<ABoarBase>> ReleasedBoars = CapturedBoars;
 	CapturedBoars.Empty();
 
@@ -220,20 +214,16 @@ void ACage::DestroyCage()
 
 	NotifyHousedCountChanged();
 
-	// RespawnDelay秒後にRespawnCageを1回だけ呼び出す。
-	// このタイマーはゲーム時間を基準に進むため、
-	// 通常のポーズ中は停止し、スローモーション中は遅く進む。
+	// 待機を0秒にできるよう、正の待機時間だけをゲーム時間のタイマーに渡す。
 	if (RespawnDelay <= 0.0f)
 	{
 		RespawnCage();
 		return;
 	}
 
-	// 再出現タイマーを開始
 	GetWorldTimerManager().SetTimer(RespawnTimerHandle, this, &ACage::RespawnCage, RespawnDelay, false);
 }
 
-//檻が再出現する処理。一定時間後に呼ばれる。
 void ACage::RespawnCage()
 {
 	if (!CanAdvance() || !bIsDestroyed)
@@ -247,12 +237,10 @@ void ACage::RespawnCage()
 	OnRespawned.Broadcast();
 	PlayCageSound(RestoredSound, true);
 
-	//まず、見た目を復活。
 	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
 	SetActorTickEnabled(true);
 
-	// 実行済みタイマーのハンドルを明示的にクリアする。
 	GetWorldTimerManager().ClearTimer(RespawnTimerHandle);
 }
 

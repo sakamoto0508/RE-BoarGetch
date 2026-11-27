@@ -9,10 +9,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedSignature, float, C
 /** HPが0へ到達したことを購読先へ通知するデリゲート型です。 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
 
-/**
- * HP を Character から切り離すためのコンポーネントです。
- * Unity でいうと、HP ロジック専用の MonoBehaviour に近い役割です。
- */
+// HP を Character から切り離すためのコンポーネントです。
+// Unity でいうと、HP ロジック専用の MonoBehaviour に近い役割です。
+/** 所有ActorのHPを管理し、HP変化と死亡を通知する。 */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UHealthComponent : public UActorComponent
 {
@@ -62,11 +61,9 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	/** 開始HPを初期化済みか。 */
 	bool bHealthInitialized = false;
-	/**
-	 * 最大 HP です（プレイヤー仕様に合わせて5スタック想定）。
-	 * BP で調整できるようにしています。
-	 */
+	/** 最大 HP です（プレイヤー仕様に合わせて5スタック想定）。BP で調整できるようにしています。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
 	float MaxHealth = 5.0f;
 

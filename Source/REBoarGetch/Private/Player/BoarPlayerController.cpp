@@ -409,14 +409,13 @@ void ABoarPlayerController::BindPlayerHealth(ABoarPlayerCharacter* PlayerCharact
 			&ABoarPlayerController::HandleHealthChanged);
 	}
 
-	//監視対象を新しいHPへ変更。
 	ObservedHealthComponent = NewHealthComponent;
 	if (ObservedHealthComponent)
 	{
 		ObservedHealthComponent->OnHealthChanged.AddUniqueDynamic(
 			this,
 			&ABoarPlayerController::HandleHealthChanged);
-		//現在のHPをすぐHUDへ反映。
+		// 変更イベントは次にHPが変わるまで来ないため、Possess直後の値をすぐHUDへ反映する。
 		HandleHealthChanged(
 			ObservedHealthComponent->GetCurrentHealth(),
 			ObservedHealthComponent->GetMaxHealth());

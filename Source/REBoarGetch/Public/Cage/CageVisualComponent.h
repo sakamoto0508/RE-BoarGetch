@@ -58,6 +58,7 @@ public:
 	UPROPERTY(EditAnywhere, Category="Gauge", meta=(ClampMin="0", ClampMax="1"))
 	float MediumThreshold = .6f;
 
+	/** 耐久値表示を低残量の色に切り替えるしきい値（0～1）。 */
 	UPROPERTY(EditAnywhere, Category="Gauge", meta=(ClampMin="0", ClampMax="1"))
 	float LowThreshold = .25f;
 
@@ -65,9 +66,11 @@ public:
 	UPROPERTY(EditAnywhere, Category="Gauge")
 	FLinearColor GaugeHighColor = FLinearColor(.015f, .75f, 1);
 
+	/** 耐久値が中残量のときに使うゲージ色。 */
 	UPROPERTY(EditAnywhere, Category="Gauge")
 	FLinearColor GaugeMediumColor = FLinearColor(1, .72f, .025f);
 
+	/** 耐久値が低残量のときに使うゲージ色。 */
 	UPROPERTY(EditAnywhere, Category="Gauge")
 	FLinearColor GaugeLowColor = FLinearColor(1, .035f, .02f);
 
@@ -87,6 +90,7 @@ public:
 	UPROPERTY(EditAnywhere, Category="Visual")
 	FLinearColor LampNormalTint = FLinearColor(.01f, .65f, 1);
 
+	/** 耐久値が低残量のときの警告灯の色。 */
 	UPROPERTY(EditAnywhere, Category="Visual")
 	FLinearColor LampLowTint = FLinearColor(1, .04f, .015f);
 
@@ -94,9 +98,11 @@ public:
 	UPROPERTY(EditAnywhere, Category="Visual", meta=(ClampMin="0"))
 	float LampNormalIntensity = 1.2f;
 
+	/** 低残量時の警告灯の基本照度。 */
 	UPROPERTY(EditAnywhere, Category="Visual", meta=(ClampMin="0"))
 	float LampLowIntensity = .5f;
 
+	/** 低残量時の警告灯に脈動で加える照度。 */
 	UPROPERTY(EditAnywhere, Category="Visual", meta=(ClampMin="0"))
 	float LampLowPulseIntensity = .3f;
 
@@ -124,6 +130,7 @@ public:
 	UPROPERTY(EditAnywhere, Category="VFX|Hit")
 	int32 HitVFXStreakCount = 8;
 
+	/** 被弾1回で生成するVFX粒子数。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Hit")
 	int32 HitVFXParticleCount = 8;
 
@@ -131,6 +138,7 @@ public:
 	UPROPERTY(EditAnywhere, Category="VFX|Hit", meta=(Units="cm"))
 	float HitVFXMaxRadius = 140.f;
 
+	/** 被弾VFXを表示する時間（秒）。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Hit", meta=(Units="s"))
 	float HitVFXLifetime = .28f;
 
@@ -154,9 +162,11 @@ public:
 	UPROPERTY(EditAnywhere, Category="VFX|Hit", meta=(ClampMin="0", Units="cm"))
 	float HitShakeAmplitude = 9.f;
 
+	/** 被弾で檻を揺らす時間（秒）。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Hit", meta=(ClampMin="0.01", Units="s"))
 	float HitShakeDuration = .28f;
 
+	/** 被弾時の揺れの振動回数。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Hit", meta=(ClampMin="0.5"))
 	float HitShakeOscillations = 3.f;
 
@@ -164,10 +174,8 @@ public:
 	UPROPERTY(EditAnywhere, Category="VFX|Hit", meta=(ClampMin="0", Units="s"))
 	float MinHitVFXInterval = .1f;
 
-	/**
-	 * 檻が壊れた瞬間の爆発演出（専用。スターバースト状のフラッシュ・爆発光・トゥーン調の火球・明るい灰茶の煙・火花・
-	 * 地面と空中の衝撃波・赤熱して冷える破片・地面を這う土煙）。既定はNS_CageBreak。全体で約1.4秒で消えます。
-	 */
+	// スターバースト状のフラッシュ・爆発光・トゥーン調の火球・明るい灰茶の煙・火花・地面と空中の衝撃波・赤熱して冷える破片・地面を這う土煙）。既定はNS_CageBreak。全体で約1.4秒で消えます。
+	/** 檻が壊れた瞬間の爆発演出（専用。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break")
 	TObjectPtr<UNiagaraSystem> BreakVFX;
 
@@ -179,15 +187,19 @@ public:
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="0"))
 	int32 BreakFireCount = 12;
 
+	/** 檻破壊時に生成する煙の数。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="0"))
 	int32 BreakSmokeCount = 10;
 
+	/** 檻破壊時に生成する火花の数。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="0"))
 	int32 BreakSparkCount = 28;
 
+	/** 檻破壊時に生成する破片の数。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="0"))
 	int32 BreakDebrisCount = 16;
 
+	/** 檻破壊時に生成する土煙の数。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="0"))
 	int32 BreakDustCount = 14;
 
@@ -199,9 +211,11 @@ public:
 	UPROPERTY(EditAnywhere, Category="VFX|Break")
 	FLinearColor BreakLightColor = FLinearColor(1, .62f, .28f);
 
+	/** 檻破壊時のフラッシュ照度。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="0"))
 	float BreakLightIntensity = 40.f;
 
+	/** 檻破壊時のフラッシュの減衰半径（cm）。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="0", Units="cm"))
 	float BreakLightRadius = 1400.f;
 
@@ -213,16 +227,16 @@ public:
 	UPROPERTY(EditAnywhere, Category="VFX|Break")
 	FLinearColor BreakDustColor = FLinearColor(1.25f, 1.02f, .74f);
 
-	/**
-	 * 爆発の瞬間にACFカメラへ重ねる揺れです（既定はプレイヤー被弾と同じDA_PlayerHitCameraEffect）。未設定・ACFカメラなしでは再生しません。
-	 * 強さはBreakCameraEffectScaleを最大に、檻からの距離がBreakCameraEffectRadiusに近づくほど弱くなります。
-	 */
+	// 未設定・ACFカメラなしでは再生しません。強さはBreakCameraEffectScaleを最大に、檻からの距離がBreakCameraEffectRadiusに近づくほど弱くなります。
+	/** 爆発の瞬間にACFカメラへ重ねる揺れです（既定はプレイヤー被弾と同じDA_PlayerHitCameraEffect）。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break")
 	TObjectPtr<UACFCameraEffectPreset> BreakCameraEffect;
 
+	/** 破壊時のカメラ効果の強度倍率。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="0"))
 	float BreakCameraEffectScale = .7f;
 
+	/** 破壊時のカメラ効果が届く距離（cm）。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(ClampMin="1", Units="cm"))
 	float BreakCameraEffectRadius = 3000.f;
 
@@ -230,6 +244,7 @@ public:
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(Units="cm"))
 	float BreakFootprintRadiusOverride = 0.f;
 
+	/** 破壊VFXの中心高さを上書きする値（cm）。 */
 	UPROPERTY(EditAnywhere, Category="VFX|Break", meta=(Units="cm"))
 	float BreakCenterHeightOverride = 0.f;
 
@@ -253,9 +268,11 @@ protected:
 	virtual void TickComponent(float Dt, ELevelTick TickType, FActorComponentTickFunction* TickFunction) override;
 
 private:
+	/** 現在HPと被弾表示を受け取るゲージ。 */
 	UPROPERTY()
 	TObjectPtr<UWidgetComponent> Gauge;
 
+	/** 被弾で揺らす檻のメッシュ参照。 */
 	UPROPERTY()
 	TObjectPtr<UStaticMeshComponent> CageMeshComponent;
 
@@ -264,9 +281,11 @@ private:
 	/** ゲージWidgetを生成し、必須Bindingを検証します。使えない場合はErrorを1回出してゲージを無効化します。 */
 	void InitGauge();
 
+	/** 残り耐久値に応じて点灯するライト。 */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> Lamps;
 
+	/** 表示状態の取得元となる所有檻。 */
 	UPROPERTY(Transient)
 	TObjectPtr<ACage> Cage;
 
@@ -281,9 +300,12 @@ private:
 
 	/** 現在のHP比率と、遅れて追いつく残像の比率、被弾フラッシュの残り時間（秒）。 */
 	float Fraction = 1;
+	/** HPゲージ上で実値を遅れて追う残像の比率（0～1）。 */
 	float Trail = 1;
+	/** 被弾フラッシュが消えるまでの残り時間（秒）。 */
 	float FlashRemaining = 0;
 
+	/** 壊れた檻の外観を表示中か。 */
 	bool bDestroyed = false;
 
 	/** 次のTickで表示を更新するか。アニメーションしていない間は描画し直しません。 */
@@ -292,15 +314,20 @@ private:
 	/** ゲージWidgetが正しく構築できたか。falseの間はゲージを表示・更新しません。 */
 	bool bGaugeAvailable = false;
 
+	/** 被弾VFXの連続生成を抑える最終再生時刻（秒）。 */
 	double LastHitVFXTime = -1.0e9;
 
 	/** 命中の揺れ：残り秒数・揺らす向き（このComponentのローカル）・揺れていないときの相対位置。 */
 	float ShakeRemaining = 0;
+	/** 被弾の揺れを加える相対座標系での方向。 */
 	FVector ShakeLocalDirection = FVector::ForwardVector;
+	/** 揺れを打ち消すときに復元するメッシュの相対位置。 */
 	FVector RestRelativeLocation = FVector::ZeroVector;
 
 	void StartHitShake(const FVector& WorldDirection);
 	void UpdateHitShake(float Dt);
+	/** 生成した被弾VFXの回数を数える検証用カウンタ。 */
 	int32 HitVFXSpawnCount = 0;
+	/** 生成した破壊VFXの回数を数える検証用カウンタ。 */
 	int32 BreakVFXSpawnCount = 0;
 };

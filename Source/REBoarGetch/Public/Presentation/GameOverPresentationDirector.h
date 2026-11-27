@@ -21,19 +21,20 @@ struct FGameOverGadgetMesh
 {
 	GENERATED_BODY()
 
+	/** ダウン演出を再生するプレイヤーメッシュ。 */
 	UPROPERTY()
 	TWeakObjectPtr<UMeshComponent> Mesh;
 
+	/** 演出終了時に復元するメッシュの元のオーバーレイ。 */
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> OriginalOverlay;
 };
 
-/**
- * GameOverダウン演出の部品群です。順序とタイミング（赤フラッシュ・ヒットストップ・ダウン・カメラ・警告・SE）は
- * 派生BP（BP_GameOverPresentation）のEvent Graphで組み立てます。
- * このクラスは毎フレーム処理が必要な下位処理（実時間ヒットストップ、既存SpringArmの後退、ダウンMontageの保持、
- * 跳ね返り、発光減衰、効果Widgetの値）と、中断・Level遷移時の復元（時間倍率・カメラ・Overlay・HUD・Widget）だけを担当します。
- */
+// GameOverダウン演出の部品群です。順序とタイミング（赤フラッシュ・ヒットストップ・ダウン・カメラ・警告・SE）は
+// 派生BP（BP_GameOverPresentation）のEvent Graphで組み立てます。
+// このクラスは毎フレーム処理が必要な下位処理（実時間ヒットストップ、既存SpringArmの後退、ダウンMontageの保持、
+// 跳ね返り、発光減衰、効果Widgetの値）と、中断・Level遷移時の復元（時間倍率・カメラ・Overlay・HUD・Widget）だけを担当します。
+/** ゲームオーバー演出のダウン姿勢・カメラ・画面効果を制御する。 */
 UCLASS(Abstract, Blueprintable)
 class REBOARGETCH_API AGameOverPresentationDirector : public ABoarPresentationDirector
 {
@@ -170,11 +171,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning")
 	TObjectPtr<UMaterialInterface> GadgetGlowMaterial;
 
+	/** ガジェット消灯演出の発光色。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Warning")
 	FLinearColor GadgetGlowColor = FLinearColor(.02f, .8f, 1.f);
 
 	// ---- Camera Darken（視界が暗くなる演出） ----
 
+	/** ダウンカメラに減光を適用するか。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameOver Presentation|Camera Darken")
 	bool bCameraDarken = true;
 
@@ -219,79 +222,126 @@ private:
 	void UpdateCameraDarken(float Dt);
 
 	// ---- 画面効果Widgetへ渡す値 ----
+	/** 被弾フラッシュの最大強度。 */
 	float FlashPeak = 0.f;
+	/** 被弾フラッシュが続く実時間（秒）。 */
 	float FlashDuration = .24f;
+	/** 被弾フラッシュ開始からの実時間（秒）。 */
 	float FlashAge = 0.f;
 
+	/** 画面周辺の警告表示を有効にするか。 */
 	bool bWarning = false;
+	/** 警告をフェードインする実時間（秒）。 */
 	float WarningFade = .35f;
+	/** 警告表示開始からの実時間（秒）。 */
 	float WarningAge = 0.f;
 
+	/** デジタルノイズを出す実時間（秒）。 */
 	float NoiseDuration = .18f;
+	/** デジタルノイズの強度。 */
 	float NoiseIntensity = 0.f;
+	/** デジタルノイズ開始からの実時間（秒）。 */
 	float NoiseAge = 1.f;
 
+	/** HUDを消すフェードの実時間（秒）。 */
 	float HUDFadeDuration = 0.f;
+	/** HUDフェード開始からの実時間（秒）。 */
 	float HUDFadeAge = 0.f;
+	/** HUDのフェードアウトを進行中か。 */
 	bool bHUDFading = false;
 
 	/** GameOver UIが指定した警告の濃さ。負の間は演出側（UpdateEffects）が値を決めます。 */
 	float UIWarningAlpha = -1.f;
 
 	// ---- ヒットストップ ----
+	/** ヒットストップが有効で時間倍率の復元が必要か。 */
 	bool bHitStopActive = false;
+	/** ヒットストップを解除するまでの実時間（秒）。 */
 	float HitStopRemaining = 0.f;
+	/** ヒットストップ解除時に復元する元のWorld時間倍率。 */
 	float OriginalTimeDilation = 1.f;
+	/** 着地を待ってからダウン演出を始めるか。 */
 	bool bWaitingForLanding = false;
 
 	// ---- ダウン ----
+	/** ダウンMontageの再生を開始済みか。 */
 	bool bDownStarted = false;
+	/** ダウンMontageの最終姿勢を保持しているか。 */
 	bool bDownHeld = false;
+	/** ダウン姿勢をSingle Nodeで再生中か。 */
 	bool bSingleNode = false;
+	/** ダウンMontageの再生確認に使う残りフレーム数。 */
 	int32 MontageCheckFrames = 0;
 
 	// ---- 周囲のBoarの跳ね返り ----
+	/** 跳ね返りを適用する対象と開始位置・変位を保持する。 */
 	struct FKnockback
 	{
+		/** 跳ね返り中のActorへの弱参照。 */
 		TWeakObjectPtr<AActor> Actor;
+		/** 跳ね返り開始時のワールド位置。 */
 		FVector Start;
+		/** 跳ね返り終了時までに加えるワールド変位。 */
 		FVector Offset;
 	};
+	/** 跳ね返り演出が進行中のActor一覧。 */
 	TArray<FKnockback> Knockbacks;
+	/** 跳ね返り開始からの実時間（秒）。 */
 	float KnockAge = 0.f;
+	/** 跳ね返りが続く実時間（秒）。 */
 	float KnockDuration = .4f;
+	/** 跳ね返りに加える浮き上がりの高さ（cm）。 */
 	float KnockHop = 35.f;
 
 	// ---- ガジェットの発光 ----
+	/** ガジェットの発光減衰を開始してからの実時間（秒）。 */
 	float GlowAge = 0.f;
+	/** ガジェットの発光が消えるまでの実時間（秒）。 */
 	float GlowDecay = 1.1f;
+	/** ガジェットの発光を減衰中か。 */
 	bool bGlowActive = false;
 
+	/** 発光量を更新するガジェットの動的マテリアル。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> GadgetGlowMID;
 
+	/** 終了時に発光オーバーレイを解除するガジェットメッシュ一覧。 */
 	UPROPERTY(Transient)
 	TArray<FGameOverGadgetMesh> GadgetMeshes;
 
 	// ---- カメラ（既存SpringArmの元設定を保存し、中断時に戻します） ----
+	/** ダウンカメラの更新を開始済みか。 */
 	bool bCameraStarted = false;
+	/** ダウンカメラ開始からの実時間（秒）。 */
 	float CameraAge = 0.f;
+	/** ダウンカメラの移動に使う実時間（秒）。 */
 	float CameraDuration = 1.4f;
+	/** ダウンカメラが上昇する実時間（秒）。 */
 	float CameraRiseDuration = .6f;
 
 	/** 後退中だけACFの出力を抑制し、SpringArm演出に最終カメラのAuthorityを渡しているか。 */
 	bool bSuppressedACF = false;
 
+	/** 演出中に位置を調整する既存のSpringArm。 */
 	TWeakObjectPtr<USpringArmComponent> Arm;
+	/** 演出中にFOVを調整する既存のカメラ。 */
 	TWeakObjectPtr<UCameraComponent> Camera;
+	/** 終了時に復元するSpringArmの長さ（cm）。 */
 	float OrigArmLength = 0.f;
+	/** 終了時に復元するカメラのFOV（度）。 */
 	float OrigFOV = 90.f;
+	/** 終了時に復元するSpringArmのワールド空間のTargetOffset。 */
 	FVector OrigTargetOffset = FVector::ZeroVector;
+	/** 終了時に復元するSpringArmの相対SocketOffset。 */
 	FVector OrigSocketOffset = FVector::ZeroVector;
+	/** 終了時に復元するSpringArmのカメラ衝突チャンネル。 */
 	TEnumAsByte<ECollisionChannel> OrigProbeChannel = ECC_Camera;
+	/** カメラ演出開始時のControllerのワールド回転。 */
 	FRotator StartControlRotation = FRotator::ZeroRotator;
+	/** ダウンカメラが見るワールド座標。 */
 	FVector Focus = FVector::ZeroVector;
 
+	/** フラッシュ・警告・ノイズを表示するオーバーレイ。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UBoarGameOverEffectWidget> EffectWidget;
 
@@ -299,10 +349,14 @@ private:
 	bool bEffectWidgetUnavailable = false;
 
 	// ---- 画面の暗転 ----
+	/** カメラの減光に使うPost Processの参照。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UPostProcessComponent> DarkenPostProcess;
 
+	/** カメラの減光を開始済みか。 */
 	bool bDarkenStarted = false;
+	/** カメラ減光開始からの実時間（秒）。 */
 	float DarkenAge = 0.f;
+	/** 減光が目標の強さに達するまでの実時間（秒）。 */
 	float DarkenFade = 1.2f;
 };

@@ -4,11 +4,8 @@
 #include "Engine/DataAsset.h"
 #include "BoarLevelDestination.generated.h"
 
-/**
- * ポータル（AHubPortal）の行き先Level 1つ分の設定です。
- * 同じ行き先を指す複数のポータル（例：LobbyのGadgetLab行きとNet TestからのGadgetLab戻り）が同じアセットを参照するので、
- * 行き先を差し替えるとき（Redesign版への切り替えなど）はこのアセットの Level だけを変更します。
- */
+// 同じ行き先を指す複数のポータル（例：LobbyのGadgetLab行きとNet TestからのGadgetLab戻り）が同じアセットを参照するので、行き先を差し替えるとき（Redesign版への切り替えなど）はこのアセットの Level だけを変更します。
+/** ポータル（AHubPortal）の行き先Level 1つ分の設定です。 */
 UCLASS(BlueprintType)
 class REBOARGETCH_API UBoarLevelDestination : public UPrimaryDataAsset
 {

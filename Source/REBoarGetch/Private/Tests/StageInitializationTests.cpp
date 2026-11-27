@@ -31,7 +31,7 @@ namespace
 		{
 			Instance = NewObject<UBoarGameInstance>(GEngine);
 
-			// Only read an isolated, non-existent slot. Startup must not write saves.
+			// 存在しない専用スロットを読むだけにする。開始処理はセーブを書き込んではいけない。
 			FindFProperty<FStrProperty>(UBoarGameInstance::StaticClass(), TEXT("SaveSlotName"))
 				->SetPropertyValue_InContainer(Instance, TEXT("REBoarGetch_Startup_") + FGuid::NewGuid().ToString());
 

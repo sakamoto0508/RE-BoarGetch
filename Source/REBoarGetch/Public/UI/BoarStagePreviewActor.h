@@ -9,17 +9,21 @@ class UMaterialInterface;
 class USceneCaptureComponent2D;
 class UTextureRenderTarget2D;
 
+/** ステージのミニチュアを構成する1部品の描画設定を保持する。 */
 USTRUCT(BlueprintType)
 struct FBoarPreviewPart
 {
 	GENERATED_BODY()
 
+	/** このプレビュー部品に表示するメッシュ。 */
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMesh> Mesh;
 
+	/** メッシュ既定の外観を差し替える場合のマテリアル。 */
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UMaterialInterface> Material;
 
+	/** プレビューActorを基準とした部品の相対Transform。 */
 	UPROPERTY(EditAnywhere)
 	FTransform Transform;
 };
@@ -33,9 +37,11 @@ class REBOARGETCH_API ABoarStagePreviewActor : public AActor
 public:
 	ABoarStagePreviewActor();
 
+	/** ミニチュアを構成する部品設定の一覧。 */
 	UPROPERTY(EditDefaultsOnly, Category="Preview")
 	TArray<FBoarPreviewPart> Parts;
 
+	/** ミニチュア撮影に使う平行投影の幅（cm）。 */
 	UPROPERTY(EditDefaultsOnly, Category="Preview")
 	float OrthoWidth = 1250.f;
 
@@ -47,11 +53,14 @@ public:
 	float RecaptureDuration = 1.5f;
 
 private:
+	/** マテリアルが準備されるまでの再撮影に使う残り時間（秒）。 */
 	float RecaptureRemaining = 0.f;
 
+	/** ミニチュアをカード用画像へ撮影するScene Capture。 */
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneCaptureComponent2D> Capture;
 
+	/** ミニチュアの撮影結果を書き込むRender Target。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextureRenderTarget2D> Target;
 };

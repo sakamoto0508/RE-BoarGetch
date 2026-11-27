@@ -300,7 +300,6 @@ bool ABoarBase::CaptureWithFeedback(bool bSharedFeedback)
 	return true;
 }
 
-// 捕獲状態を返す。
 bool ABoarBase::IsCaptured() const
 {
 	return CaptureComponent != nullptr && CaptureComponent->IsCaptured();
@@ -413,7 +412,6 @@ static FVector GetSightTargetLocation(const AActor* TargetActor)
 	return Extent.IsNearlyZero() ? TargetActor->GetActorLocation() : Origin;
 }
 
-// ターゲットを認識できるか判定する。
 bool ABoarBase::CanDetectTarget(const AActor* TargetActor, float Distance) const
 {
 	if (TargetActor == nullptr || Distance > ActiveSettings.SightRange)

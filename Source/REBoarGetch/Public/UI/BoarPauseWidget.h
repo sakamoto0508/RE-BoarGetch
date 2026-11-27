@@ -21,15 +21,19 @@ public:
 protected:
 	virtual void NativeConstruct() override;
 
+	/** WBPで再開ボタンを探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings")
 	FName ResumeButtonName;
 
+	/** WBPでロビーへ戻るボタンを探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings")
 	FName LobbyButtonName;
 
+	/** WBPで装備変更ボタンを探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings")
 	FName LoadoutButtonName;
 
+	/** WBPで設定ボタンを探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Pause|Bindings")
 	FName SettingsButtonName;
 
@@ -40,6 +44,7 @@ private:
 	UFUNCTION()
 	void FocusSettings();
 
+	/** ゲームの設定画面を開くボタン。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> SettingsButton;
 
@@ -61,12 +66,15 @@ private:
 	UFUNCTION()
 	void FocusLoadout();
 
+	/** ポーズを解除してゲームへ戻るボタン。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> ResumeButton;
 
+	/** 挑戦を中断してロビーへ戻るボタン。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> LobbyButton;
 
+	/** ガジェット編成画面を開くボタン。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> LoadoutButton;
 };

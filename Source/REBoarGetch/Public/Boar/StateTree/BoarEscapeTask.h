@@ -33,6 +33,7 @@ struct FBoarEscapeTaskInstanceData
 	UPROPERTY()
 	FVector PendingEscapeLocation = FVector::ZeroVector;
 
+	/** 切り返し完了後に使用する逃走候補地点があるか。 */
 	UPROPERTY()
 	bool bHasPendingEscapeLocation = false;
 
@@ -45,15 +46,8 @@ struct FBoarEscapeTaskInstanceData
 	float StuckTime = 0.0f;
 };
 
-/**
- * 認識したプレイヤーから離れる方向へ逃走地点を決定するStateTreeタスクです。
- * 真後ろが塞がっている場合は左右へ角度をずらした候補、さらにランダム地点の順に代替先を探します。
- * State中は逃走フラグを立て、DataAssetの逃走速度とスタミナ消費を有効にします。
- * EscapeTurnが有効な種別（Normal）は、逃走開始の旋回の後、決めた方向をN秒（DirectionCommitDuration）維持し、
- * N秒ごとに認識中のプレイヤーから方向を再評価して、角度しきい値以上なら切り返しをABoarBaseへ依頼します。
- * 直進できない・詰まった場合はN秒を待たず障害物復帰します。切り返しの新しい逃走先は停止するまで保留します。
- * ST_Boar_Normalの構成（このタスク→Move To）は変えません。
- */
+// 真後ろが塞がっている場合は左右へ角度をずらした候補、さらにランダム地点の順に代替先を探します。State中は逃走フラグを立て、DataAssetの逃走速度とスタミナ消費を有効にします。EscapeTurnが有効な種別（Normal）は、逃走開始の旋回の後、決めた方向をN秒（DirectionCommitDuration）維持し、N秒ごとに認識中のプレイヤーから方向を再評価して、角度しきい値以上なら切り返しをABoarBaseへ依頼します。直進できない・詰まった場合はN秒を待たず障害物復帰します。切り返しの新しい逃走先は停止するまで保留します。ST_Boar_Normalの構成（このタスク→Move To）は変えません。
+/** 認識したプレイヤーから離れる方向へ逃走地点を決定するStateTreeタスクです。 */
 USTRUCT(meta=(DisplayName="Boar Escape", Category="Boar"))
 struct FStateTreeBoarEscapeTask : public FStateTreeTaskCommonBase
 {
@@ -73,10 +67,7 @@ struct FStateTreeBoarEscapeTask : public FStateTreeTaskCommonBase
 	UPROPERTY(EditAnywhere, Category = "Boar|Escape", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float MinEscapeDistanceRatio = 0.5f;
 
-	/**
-	 * EscapeTurn有効な種別：走行中なのに速度がStuckSpeedThreshold以下の状態がこの秒数続いたら、方向維持時間を待たず障害物復帰します。
-	 * 0以下で無効です。
-	 */
+	/** EscapeTurn有効な種別：走行中なのに速度がStuckSpeedThreshold以下の状態がこの秒数続いたら、方向維持時間を待たず障害物復帰します。0以下で無効です。 */
 	UPROPERTY(EditAnywhere, Category = "Boar|Escape|EscapeTurn", meta = (ClampMin = "0.0", Units = "Seconds"))
 	float StuckRecoverDelay = 0.4f;
 

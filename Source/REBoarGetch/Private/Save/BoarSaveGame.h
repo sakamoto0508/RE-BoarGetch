@@ -26,35 +26,43 @@ public:
 	TArray<FName> ResolveArchiveDisplays() const;
 	/** 登録済み個体を最近捕獲順（新しい順）に返します。CapturedBoarHistoryにない旧セーブの個体は古い履歴としてID昇順で末尾に並べます。 */
 	TArray<FName> GetRecentCapturedBoarIds() const;
-	/** 最近捕獲順。末尾が直近で、位置がそのまま単調増加の順序です（Clear時に収容中だった個体だけ末尾へ移動）。
-	 *  同時捕獲はID降順で並べ、新しい順に読むとID昇順になります。古いセーブのSetから順序を推測しません。 */
+	/** 最近捕獲順。末尾が直近で、位置がそのまま単調増加の順序です（Clear時に収容中だった個体だけ末尾へ移動）。同時捕獲はID降順で並べ、新しい順に読むとID昇順になります。古いセーブのSetから順序を推測しません。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	TArray<FName> CapturedBoarHistory;
 
+	/** 展示枠ごとに保存した個体IDの配列。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	TArray<FName> ArchiveDisplayBoarIds;
 
+	/** 保存済みの展示枠があるかを旧セーブと区別するフラグ。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	bool bHasSavedArchiveDisplays = false;
 
+	/** 図鑑に登録済みの捕獲個体IDの集合。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	TSet<FName> CapturedBoarUniqueIds;
 
+	/** 取得済みの特別コインIDの集合。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	TSet<FName> SpecialCoinIds;
 
+	/** クリア済みステージIDの集合。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	TSet<FName> ClearedStageIds;
 
+	/** 解放済みガジェットIDの集合。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	TSet<FName> UnlockedGadgetIds;
 
+	/** 装備枠ごとに保存したガジェットIDの配列。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	TArray<FName> GadgetLoadout;
 
+	/** 直近に挑戦したステージのID。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	FName LastAttemptedStageId;
 
+	/** 保存済みの装備構成があるかを旧セーブと区別するフラグ。 */
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	bool bHasSavedLoadout = false;
 };

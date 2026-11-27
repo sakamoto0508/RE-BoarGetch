@@ -20,6 +20,7 @@ public:
 	/** 確定済みRunの捕獲数・時間・収集結果と、ステージ設定の目標数を表示します。 */
 	void InitializeResult(const FStageRunData& Run, int32 TargetCount);
 
+	/** ステージクリア時に確定した結果の表示用コピー。 */
 	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result")
 	FStageRunData ResultData;
 
@@ -82,12 +83,15 @@ protected:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "REBoarGetch|Result Reveal", meta = (BindWidgetAnimOptional))
 	TObjectPtr<class UWidgetAnimation> Anim_SpecialCoin;
 
+	/** ステージクリアを表示する見出し文言。 */
 	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result Reveal", meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> Text_StageClear;
 
+	/** 捕獲数を表示する行の書式。 */
 	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result Reveal", meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> Text_CaptureLine;
 
+	/** 特別コイン数を表示する行の書式。 */
 	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result Reveal", meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> Text_CoinLine;
 
@@ -95,12 +99,15 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "REBoarGetch|Result Save", meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> Text_SaveWarning;
 
+	/** クリア結果を保存できなかったときの警告文言。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Save", meta = (MultiLine = "true"))
 	FText SaveFailedText = NSLOCTEXT("Result", "SaveFailed", "進行を保存できませんでした\n○ / Enter：再試行　　× / Esc：保存せず戻る");
 
+	/** 再試行でも保存できなかったときの警告文言。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Save", meta = (MultiLine = "true"))
 	FText SaveRetryFailedText = NSLOCTEXT("Result", "SaveRetryFailed", "再試行しましたが保存できませんでした\n○ / Enter：再試行　　× / Esc：保存せず戻る");
 
+	/** 保存されていない結果を破棄する前に表示する確認文言。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Save", meta = (MultiLine = "true"))
 	FText DiscardConfirmText = NSLOCTEXT("Result", "DiscardConfirm", "今回の記録は失われます。よろしいですか？\n○ / Enter：保存せず戻る　　× / Esc：やめる");
 
@@ -132,21 +139,27 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Reveal")
 	TArray<FName> LateRevealWidgetNames = { TEXT("ClearTimeRow"), TEXT("NewBoarCountRow"), TEXT("Text_ContinueGuide") };
 
+	/** クリア結果の見出しを表示するときのSE。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Reveal|Audio")
 	TObjectPtr<class USoundBase> StageClearSound;
 
+	/** 捕獲数を開示するときのSE。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Reveal|Audio")
 	TObjectPtr<class USoundBase> CaptureCountSound;
 
+	/** 特別コイン数を開示するときのSE。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Reveal|Audio")
 	TObjectPtr<class USoundBase> SpecialCoinSound;
 
+	/** WBPでクリア時間欄を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References")
 	FName ClearTimeTextWidgetName;
 
+	/** WBPで新規登録個体数欄を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References")
 	FName NewBoarCountTextWidgetName;
 
+	/** WBPで特別コイン数欄を探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References")
 	FName SpecialCoinCountTextWidgetName;
 
@@ -164,9 +177,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References")
 	FName CoinPlusTextWidgetName = TEXT("CoinPlus");
 
+	/** 特別コインを獲得した結果の文字色。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Format")
 	FLinearColor CoinEarnedColor = FLinearColor(1.f, .58f, .033f, 1.f);
 
+	/** 特別コインの獲得がなかった結果の文字色。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Format")
 	FLinearColor CoinZeroColor = FLinearColor(.72f, .83f, .9f, 1.f);
 
@@ -178,6 +193,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References")
 	FName PadGuideWidgetName = TEXT("PadGuide");
 
+	/** WBPでキーボード向け操作ガイドを探すWidget名。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Result Widget References")
 	FName KeyboardGuideWidgetName = TEXT("KeyboardGuide");
 
@@ -230,6 +246,7 @@ private:
 	void FillBoarCards(const FStageRunData& Run) const;
 	/** 入力機器に合わせて終了案内を切り替えます（同じ機器なら何もしません）。 */
 	void SetGuideDevice(bool bGamepad);
+	/** 現在の操作ガイドに使う入力デバイス。 */
 	int32 GuideDevice = INDEX_NONE;
 	/** ステップIの表示対象（Text_*があればそれ、無ければRevealStepWidgetNames[I]）。 */
 	UWidget* GetRevealStepWidget(int32 Index) const;
@@ -237,24 +254,38 @@ private:
 	/** 保存失敗中のキー入力を決定・取消へ振り分けます。どちらでもないキーは無視（消費）します。 */
 	FReply HandleSaveFailureKey(const FKey& Key);
 	void UpdateSaveWarning();
+	/** クリア結果が未保存で警告の表示が必要か。 */
 	bool bSaveFailed = false;
+	/** 未保存の結果を破棄してよいか確認中か。 */
 	bool bConfirmingDiscard = false;
+	/** 保存の再試行に失敗し専用文言の表示が必要か。 */
 	bool bSaveRetryFailed = false;
+	/** 保存警告の表示先が見つからないことを報告済みか。 */
 	bool bReportedMissingSaveWarning = false;
 	void StartReveal();
 	void StartRevealStep(int32 Index);
+	/** 結果画面を閉じる操作をすでに受理したか。 */
 	bool bDismissInputAccepted = false;
+	/** 結果項目を順次開示する演出が進行中か。 */
 	bool bRevealRunning = false;
+	/** 後から開示する項目の演出経過時間（秒）。 */
 	float LateRevealAge = -1.f;
+	/** 結果の順次開示を始めてからの実時間（秒）。 */
 	float RevealAge = 0.f;
+	/** 次に開示する結果項目の添字。 */
 	int32 NextRevealStep = 0;
+	/** 現在の開示ステップを開始した演出時刻（秒）。 */
 	float RevealStepStart[3] = { 0.f, 0.f, 0.f };
+	/** 開示ステップ1件にかける時間（秒）。 */
 	float RevealStepDuration[3] = { 0.f, 0.f, 0.f };
+	/** 結果画面を閉じる入力を解禁する演出時刻（秒）。 */
 	float RevealUnlockTime = 0.f;
 
+	/** クリア時の収容数を表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> CapturedCountText;
 
+	/** クリアに必要な目標数を表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> TargetCountText;
 

@@ -18,6 +18,7 @@ public:
 
 	virtual void ActivateByAttack_Implementation(AActor* InstigatorActor, AActor* Source) override;
 
+	/** 試用時に攻撃が命中する的のメッシュ。 */
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
@@ -29,6 +30,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
 private:
+	/** 命中の表示状態を戻す予約を管理するタイマー。 */
 	FTimerHandle ResetTimer;
 
 	void ResetColor();

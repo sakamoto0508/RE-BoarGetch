@@ -7,13 +7,8 @@ class ABoarPlayerCharacter;
 class ABoarPlayerController;
 class USoundBase;
 
-/**
- * Stage終了演出（Stage Clear / Game Over）の演出側の基底Actorです。
- * 演出の順序・タイミング・使用Asset（Montage / SE / VFX等）は派生Blueprintの OnPresentationStarted で組み立て、
- * 完了時に FinishPresentation を呼びます。開始・タイムアウト・中断・GameModeへの完了通知は所有Component（C++）が管理し、
- * このActorはGameplayの判定や保存を行いません。Transientで生成され、Level遷移・中断時のEndPlayで変更した見た目を元に戻します。
- * BP内のDelay / Timelineはヒットストップ（Global Time Dilation）の影響を受けない実時間で進みます。
- */
+// 演出の順序・タイミング・使用Asset（Montage / SE / VFX等）は派生Blueprintの OnPresentationStarted で組み立て、完了時に FinishPresentation を呼びます。開始・タイムアウト・中断・GameModeへの完了通知は所有Component（C++）が管理し、このActorはGameplayの判定や保存を行いません。Transientで生成され、Level遷移・中断時のEndPlayで変更した見た目を元に戻します。BP内のDelay / Timelineはヒットストップ（Global Time Dilation）の影響を受けない実時間で進みます。
+/** Stage終了演出（Stage Clear / Game Over）の演出側の基底Actorです。 */
 UCLASS(Abstract, Blueprintable, NotPlaceable)
 class REBOARGETCH_API ABoarPresentationDirector : public AActor
 {
@@ -65,9 +60,14 @@ protected:
 	virtual void TickPresentation(float RealDeltaSeconds) {}
 
 private:
+	/** ローカルの演出カメラ・HUD・入力を操作するController参照。 */
 	TWeakObjectPtr<ABoarPlayerController> Controller;
+	/** 演出完了を進行側へ通知するコールバック。 */
 	FSimpleDelegate OnFinished;
+	/** このDirectorの終了通知を発行済みか。 */
 	bool bFinished = false;
+	/** Director開始からの実時間（秒）。 */
 	float Age = 0.f;
+	/** 実時間Deltaを計算する直前の時刻（秒）。 */
 	double LastRealTime = 0.0;
 };

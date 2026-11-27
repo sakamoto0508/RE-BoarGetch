@@ -12,13 +12,8 @@ class UPrimitiveComponent;
 class USceneComponent;
 class UStageConfig;
 
-/**
- * @brief ロビー内でステージ選択UIとLevel遷移を仲介する入口Actorです。
- *
- * Trigger内のローカルプレイヤーが共通Interactを押すと、StageConfigをLobby Widgetへ渡して表示します。
- * Widgetの決定通知ではStageConfigのSoft World参照を開き、キャンセルまたはTrigger退出時にはUIと
- * 入力モードをゲーム状態へ戻します。Level遷移要求は一度だけ受け付けます。
- */
+// Trigger内のローカルプレイヤーが共通Interactを押すと、StageConfigをLobby Widgetへ渡して表示します。Widgetの決定通知ではStageConfigのSoft World参照を開き、キャンセルまたはTrigger退出時にはUIと入力モードをゲーム状態へ戻します。Level遷移要求は一度だけ受け付けます。
+/** @brief ロビー内でステージ選択UIとLevel遷移を仲介する入口Actorです。 */
 UCLASS(Blueprintable)
 class REBOARGETCH_API AStageEntrance : public AActor
 {
@@ -31,6 +26,7 @@ public:
     bool CanInteract(const class APlayerController* Controller) const;
     void Interact(class APlayerController* Controller);
 
+    /** Trigger内でステージ選択画面を開く際に共通Interactを必要とするか。 */
     UPROPERTY(EditAnywhere, Category="Interaction")
     bool bRequiresInteraction=true;
 

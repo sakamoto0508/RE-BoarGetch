@@ -35,9 +35,11 @@ struct FCaptureVisualTarget
 {
 	GENERATED_BODY()
 
+	/** データ化する元の捕獲個体への弱参照。 */
 	UPROPERTY()
 	TWeakObjectPtr<ABoarBase> Boar;
 
+	/** データ化演出を表示するメッシュ。 */
 	UPROPERTY()
 	TWeakObjectPtr<USkeletalMeshComponent> Mesh;
 
@@ -53,6 +55,7 @@ struct FCaptureVisualTarget
 	UPROPERTY()
 	TObjectPtr<USkeletalMeshComponent> DataMesh;
 
+	/** データ化の進行を反映する代理メッシュの動的マテリアル。 */
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DataMaterial;
 
@@ -68,8 +71,11 @@ struct FCaptureVisualTarget
 	UPROPERTY()
 	TObjectPtr<UNiagaraComponent> TeleportVFX;
 
+	/** 演出開始前に元メッシュが表示されていたか。 */
 	bool bOriginalVisible = true;
+	/** 捕獲地点でのデータ化を開始済みか。 */
 	bool bDataStarted = false;
+	/** 捕獲地点でのテレポート光を開始済みか。 */
 	bool bTeleportStarted = false;
 
 	/** RestoreTarget済み。復元は一度だけ行い、後から別処理が変えた見た目を戻さない。 */
@@ -77,7 +83,9 @@ struct FCaptureVisualTarget
 
 	/** 命中時の位置と、DataMaterialへ渡すBoarの下端・高さ（cm）。 */
 	FVector CaptureLocation = FVector::ZeroVector;
+	/** 捕獲時のメッシュのワールド下端Z（cm）。 */
 	float CaptureMinZ = 0.f;
+	/** データ化の進行範囲に使うメッシュの高さ（cm）。 */
 	float CaptureHeight = 150.f;
 
 	/** 命中からの経過時間（実時間・秒）。 */
@@ -90,15 +98,18 @@ struct FCaptureSlowedBoar
 {
 	GENERATED_BODY()
 
+	/** 捕獲演出で追跡するBoarへの弱参照。 */
 	UPROPERTY()
 	TWeakObjectPtr<ABoarBase> Boar;
 
 	/** 減速前のMeshのGlobalAnimRateScaleと、このComponentが設定した値。 */
 	float OriginalAnimRate = 1.f;
+	/** 演出中にBoarへ適用したアニメーション速度倍率。 */
 	float AppliedAnimRate = 1.f;
 
 	/** アニメーション倍率・移動時間倍率をこのComponentが設定中か。 */
 	bool bAnimApplied = false;
+	/** 捕獲個体の移動時間倍率を演出用に変更済みか。 */
 	bool bMoveApplied = false;
 
 	/** 他の処理がアニメーション倍率を変えたため、この演出では以後触らない。 */
@@ -111,18 +122,18 @@ struct FCaptureLingeringVFX
 {
 	GENERATED_BODY()
 
+	/** 捕獲確定後も余韻を残すテレポートVFX。 */
 	UPROPERTY()
 	TObjectPtr<UNiagaraComponent> VFX;
 
 	/** VFXの年齢（テレポート開始からの実時間）と、破棄する年齢。 */
 	float Age = 0.f;
+	/** 余韻VFXを破棄する年齢（テレポート開始からの実時間の秒）。 */
 	float EndAge = 0.f;
 };
 
-/**
- * 捕獲Orbitカメラの注視点。Boarが非表示・破棄されても演出の終わりまで位置を保つ軽量な演出用Actor。
- * Gameplayには一切関与しない（Collision・Tick・Replicationなし）。CapturePresentationComponentだけが生成・破棄する。
- */
+// Boarが非表示・破棄されても演出の終わりまで位置を保つ軽量な演出用Actor。Gameplayには一切関与しない（Collision・Tick・Replicationなし）。CapturePresentationComponentだけが生成・破棄する。
+/** 捕獲Orbitカメラの注視点。 */
 UCLASS(NotBlueprintable, Transient)
 class REBOARGETCH_API ACaptureFocusProxy : public AActor
 {
@@ -138,16 +149,17 @@ struct FCaptureReception
 {
 	GENERATED_BODY()
 
+	/** 檻の受信位置で再生中のNiagaraコンポーネント。 */
 	UPROPERTY()
 	TObjectPtr<UNiagaraComponent> VFX;
 
+	/** 受信VFX開始後の実時間（秒）。 */
 	float Age = 0.f;
 };
 
-/**
- * 捕獲成功時の見た目・音・カメラを制御します。捕獲判定とCageへの収容は既存のGameplay処理が担当します。
- * 捕獲成功演出の調整用Component。捕獲地点の演出時間はHit Stop、Slow、Dissolve、Transfer Finishの合計です。Cage受信演出はその後に再生します。
- */
+// 捕獲成功時の見た目・音・カメラを制御します。捕獲判定とCageへの収容は既存のGameplay処理が担当します。
+// 捕獲成功演出の調整用Component。捕獲地点の演出時間はHit Stop、Slow、Dissolve、Transfer Finishの合計です。Cage受信演出はその後に再生します。
+/** 捕獲成功時の見た目・音・カメラを制御し、完了時に進行側へ通知する。 */
 UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UCapturePresentationComponent : public UActorComponent
 {
@@ -503,13 +515,18 @@ private:
 	UPROPERTY(EditAnywhere, Category="Capture Presentation|Audio V2")
 	TObjectPtr<USoundBase> CaptureMultiV2;
 
+	/** 捕獲命中SEを停止・調整するための再生参照。 */
 	TWeakObjectPtr<UAudioComponent> CaptureImpactVoice;
+	/** 捕獲地点の螺旋SEを停止・調整するための再生参照。 */
 	TWeakObjectPtr<UAudioComponent> CaptureSpiralVoice;
+	/** 捕獲確定SEを停止・調整するための再生参照。 */
 	TWeakObjectPtr<UAudioComponent> CaptureConfirmVoice;
 
 	/** V2の音を鳴らしているNetで捕獲したBoar。確定通知にこのBoarが含まれていたら確定音を鳴らします。 */
 	TArray<TWeakObjectPtr<ABoarBase>> CaptureAudioTargets;
+	/** 捕獲音の進行を測る実時間（秒）。 */
 	float CaptureAudioAge = 0.f;
+	/** 段階別の捕獲音を使用中か。 */
 	bool bCaptureAudioV2 = false;
 
 	// ---- カメラ ----
@@ -560,9 +577,11 @@ private:
 
 	// ---- 実行中の状態 ----
 
+	/** 同じ演出で処理している捕獲個体の状態一覧。 */
 	UPROPERTY(Transient)
 	TArray<FCaptureVisualTarget> Targets;
 
+	/** 檻で再生中の受信VFX一覧。 */
 	UPROPERTY(Transient)
 	TArray<FCaptureReception> Receptions;
 
@@ -570,6 +589,7 @@ private:
 	UPROPERTY(Transient)
 	TWeakObjectPtr<UCameraComponent> Camera;
 
+	/** 演出終了時に停止するカメラシェイク。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UCameraShakeBase> ActiveShake;
 
@@ -577,11 +597,14 @@ private:
 	UPROPERTY(Transient)
 	TArray<FCaptureSlowedBoar> SlowedBoars;
 
+	/** 実時間の演出更新を解除するためのハンドル。 */
 	FDelegateHandle TickHandle;
+	/** 実時間Deltaを計算する直前の時刻（秒）。 */
 	double LastRealTime = 0.;
 
 	/** 共有演出の経過時間（実時間・秒）と、Punch In前のFOV。 */
 	float SharedAge = 0.f;
+	/** Punch In解除時に復元するカメラのFOV（度）。 */
 	float OriginalFOV = 90.f;
 
 	/** このComponentが最後に設定したFOV。解放時の所有確認に使います。 */
@@ -590,9 +613,13 @@ private:
 	/** GameModeへ捕獲確定を通知している最中か（HasPendingCaptures用）。 */
 	bool bCommittingCaptures = false;
 
+	/** 複数個体で共有する捕獲演出が進行中か。 */
 	bool bSharedActive = false;
+	/** このコンポーネントが現在の演出カメラを所有しているか。 */
 	bool bOwnCamera = false;
+	/** 捕獲の確定処理まで完了したか。 */
 	bool bConfirmed = false;
+	/** 転送開始SEをこの演出で再生済みか。 */
 	bool bTransferSoundPlayed = false;
 
 	/** 再生中のACF Camera Effect。共有演出の終了・キャンセル・Pause・EndPlayで止めます。 */
@@ -616,22 +643,34 @@ private:
 	TArray<FVector> FocusPoints;
 
 	// ---- デバッグ：Orbit開始時の注視点・開始角・経過、実カメラが注視点の周りを回った累積角と高さ ----
+	/** Orbit開始時点で固定した注視位置（ワールド座標）。 */
 	FVector OrbitFocusAtStart = FVector::ZeroVector;
+	/** Orbit開始時のワールドYaw（度）。 */
 	float OrbitStartYaw = 0.f;
+	/** Orbit開始からの実時間（秒）。 */
 	float OrbitRealAge = 0.f;
+	/** Orbitで実際に回った角度の累積（度）。 */
 	float OrbitActualDegrees = 0.f;
+	/** Orbit回転差分の測定に使う前回のYaw（度）。 */
 	float OrbitPrevYaw = 0.f;
+	/** Orbit中に記録した注視点からの最低カメラ高（cm）。 */
 	float OrbitMinHeight = 0.f;
+	/** Orbit中に記録した注視点からの最高カメラ高（cm）。 */
 	float OrbitMaxHeight = 0.f;
+	/** Orbit回転差分の基準となるYawを取得済みか。 */
 	bool bOrbitHasPrevYaw = false;
+	/** Orbit中に記録したカメラのワールド位置列（デバッグ用）。 */
 	TArray<FVector> OrbitTrail;
 
 	/** Orbit Soundの再生。Orbitの開始で鳴らし、Orbitの終わり・中断で止める（捕獲音とは別の寿命）。 */
 	void StartOrbitSound(const class UACFCameraNode_SpiralOrbit* Orbit);
 	void UpdateOrbitSound();
 	void StopOrbitSound(bool bFade);
+	/** OrbitループSEの音量を制御する再生参照。 */
 	TWeakObjectPtr<UAudioComponent> CaptureOrbitVoice;
+	/** OrbitループSEの減衰を始める時刻（Orbit開始からの実時間の秒）。 */
 	float OrbitSoundFadeStart = 0.f;
+	/** OrbitループSEを減衰中か。 */
 	bool bOrbitSoundFading = false;
 
 	/** 捕獲確定後に余韻を残すテレポートVFX。 */
@@ -640,5 +679,6 @@ private:
 
 	/** 現在のNet使用で捕獲した数と、複数体の強調を出したか。 */
 	int32 SameUseCaptureCount = 0;
+	/** 複数捕獲の追加フィードバックを再生済みか。 */
 	bool bMultiFeedbackPlayed = false;
 };

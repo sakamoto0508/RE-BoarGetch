@@ -15,6 +15,7 @@ struct REBOARGETCH_API FBoarLevelBGMEntry
 {
 	GENERATED_BODY()
 
+	/** BGM設定を適用するLevel。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Level BGM")
 	TSoftObjectPtr<UWorld> Level;
 
@@ -26,6 +27,7 @@ struct REBOARGETCH_API FBoarLevelBGMEntry
 	UPROPERTY(Config, EditAnywhere, Category = "Level BGM")
 	bool bKeepCurrentBGMWhenUnset = false;
 
+	/** Level BGMのフェードイン時間（秒）。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Level BGM", meta = (ClampMin = "0.0", Units = "s"))
 	float FadeInSeconds = 1.0f;
 
@@ -40,6 +42,7 @@ struct REBOARGETCH_API FBoarSoundVolumeEntry
 {
 	GENERATED_BODY()
 
+	/** この音量設定を適用するサウンド。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Mix")
 	TSoftObjectPtr<USoundBase> Sound;
 
@@ -52,11 +55,10 @@ struct REBOARGETCH_API FBoarSoundVolumeEntry
 	FString Note;
 };
 
-/**
- * 複数の画面・Actorが共有するSEと距離減衰の設定です（Project Settings > Game > REBoarGetch Audio。DefaultGame.iniに保存）。
- * Stage BGMはStageConfig、それ以外のLevel（Lobby等）のBGMはここのLevel BGMs、Player・Boar・Cage・Gadget固有のSEは各BP / DataAssetで設定します。
- * 未設定の項目は再生をスキップします。
- */
+// 複数の画面・Actorが共有するSEと距離減衰の設定です（Project Settings > Game > REBoarGetch Audio。DefaultGame.iniに保存）。
+// Stage BGMはStageConfig、それ以外のLevel（Lobby等）のBGMはここのLevel BGMs、Player・Boar・Cage・Gadget固有のSEは各BP / DataAssetで設定します。
+// 未設定の項目は再生をスキップします。
+/** 各画面とActorで共有するサウンド、音量、距離減衰を設定する。 */
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "REBoarGetch Audio"))
 class REBOARGETCH_API UBoarAudioSettings : public UDeveloperSettings
 {
@@ -74,6 +76,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Level BGM")
 	bool bStopBGMInUnlistedLevels = true;
 
+	/** BGM設定のないLevelへ遷移するときのフェードアウト時間（秒）。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Level BGM", meta = (ClampMin = "0.0", Units = "s"))
 	float UnlistedLevelFadeOutSeconds = 1.0f;
 
@@ -81,21 +84,27 @@ public:
 	const FBoarLevelBGMEntry* FindLevelBGM(const FString& LevelPackageName) const;
 
 	// ---- UI共通 ----
+	/** UI項目へ移動したときのSE。 */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftObjectPtr<USoundBase> UISelect;
 
+	/** UI項目を決定したときのSE。 */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftObjectPtr<USoundBase> UIConfirm;
 
+	/** UI操作をキャンセルしたときのSE。 */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftObjectPtr<USoundBase> UICancel;
 
+	/** 無効なUI操作を通知するSE。 */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftObjectPtr<USoundBase> UIReject;
 
+	/** UIを開くときのSE。 */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftObjectPtr<USoundBase> UIOpen;
 
+	/** UIを閉じるときのSE。 */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftObjectPtr<USoundBase> UIClose;
 
@@ -113,24 +122,31 @@ public:
 	TSoftObjectPtr<USoundBase> PortalReject;
 
 	// ---- 環境音（EBoarAmbienceType別の共通音源） ----
+	/** 水辺で再生する共通環境音。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Ambience")
 	TSoftObjectPtr<USoundBase> AmbienceWater;
 
+	/** 森林で再生する共通環境音。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Ambience")
 	TSoftObjectPtr<USoundBase> AmbienceForest;
 
+	/** 風を表現する共通環境音。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Ambience")
 	TSoftObjectPtr<USoundBase> AmbienceWind;
 
+	/** 風車の周囲で再生する共通環境音。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Ambience")
 	TSoftObjectPtr<USoundBase> AmbienceWindmill;
 
+	/** 施設内で再生する共通環境音。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Ambience")
 	TSoftObjectPtr<USoundBase> AmbienceFacility;
 
+	/** ホログラム設備で再生する共通環境音。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Ambience")
 	TSoftObjectPtr<USoundBase> AmbienceHologram;
 
+	/** 放牧施設で再生する共通環境音。 */
 	UPROPERTY(Config, EditAnywhere, Category = "Ambience")
 	TSoftObjectPtr<USoundBase> AmbienceRanch;
 
@@ -166,6 +182,8 @@ public:
 #endif
 
 private:
+	/** サウンド参照をキーに保持する音量設定のキャッシュ。 */
 	mutable TMap<FSoftObjectPath, float> SoundVolumeCache;
+	/** サウンド別音量のキャッシュを構築済みか。 */
 	mutable bool bSoundVolumeCacheBuilt = false;
 };

@@ -21,25 +21,29 @@ struct FStageClearHiddenMesh
 {
 	GENERATED_BODY()
 
+	/** データ化する元のメッシュを参照する。 */
 	UPROPERTY()
 	TWeakObjectPtr<UPrimitiveComponent> Source;
 
+	/** データ化終了時に復元する元のオーバーレイ。 */
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> OriginalOverlay;
 
+	/** データ化中だけ表示する代理メッシュ。 */
 	UPROPERTY()
 	TObjectPtr<UMeshComponent> DataProxy;
 
+	/** 演出前に元メッシュが可視だったか。 */
 	bool bOriginalVisible = true;
+	/** 演出前に元メッシュがゲーム中非表示だったか。 */
 	bool bOriginalHiddenInGame = false;
 };
 
-/**
- * Stage Clear勝利演出の部品群です。順序とタイミング（Montage開始・星・発光・分解・後退・暗転）、SE、BGMは
- * 派生BP（BP_StageClearPresentation）のEvent Graphで組み立てます。
- * このクラスは毎フレーム処理が必要な下位処理（勝利カメラの選定と後退、Montageの最終ポーズ保持、データ化Proxy、粒子）と、
- * Level遷移・中断時の見た目の復元だけを担当します。Player/網のActorはDestroyせず、Mesh表示とOverlayだけを一時変更します。
- */
+// Stage Clear勝利演出の部品群です。順序とタイミング（Montage開始・星・発光・分解・後退・暗転）、SE、BGMは
+// 派生BP（BP_StageClearPresentation）のEvent Graphで組み立てます。
+// このクラスは毎フレーム処理が必要な下位処理（勝利カメラの選定と後退、Montageの最終ポーズ保持、データ化Proxy、粒子）と、
+// Level遷移・中断時の見た目の復元だけを担当します。Player/網のActorはDestroyせず、Mesh表示とOverlayだけを一時変更します。
+/** ステージクリア演出の勝利ポーズ・カメラ・データ化を制御する。 */
 UCLASS(Abstract, Blueprintable)
 class REBOARGETCH_API AStageClearPresentationDirector : public ABoarPresentationDirector
 {
@@ -90,9 +94,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera")
 	FVector VictoryFocusOffset = FVector(0, 0, 125);
 
+	/** 勝利カメラと注視点の初期距離（cm）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera", meta = (ClampMin = "50"))
 	float CameraDistance = 450.f;
 
+	/** 勝利カメラの初期高さ（cm）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera")
 	float CameraHeight = 15.f;
 
@@ -100,18 +106,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera", meta = (ClampMin = "-90", ClampMax = "90"))
 	float CameraYawOffset = 28.f;
 
+	/** 勝利カメラへ切り替えるブレンド時間（秒）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera", meta = (ClampMin = "0"))
 	float CameraBlendTime = .5f;
 
+	/** 勝利カメラ開始時のFOV（度）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera", meta = (ClampMin = "20", ClampMax = "120"))
 	float VictoryFOV = 55.f;
 
+	/** カメラ後退終了時のFOV（度）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera", meta = (ClampMin = "20", ClampMax = "120"))
 	float RetreatEndFOV = 58.f;
 
+	/** 勝利カメラが後退する距離（cm）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera", meta = (ClampMin = "0"))
 	float RetreatDistance = 400.f;
 
+	/** カメラ後退中に加える高さ（cm）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera")
 	float RetreatHeight = 100.f;
 
@@ -119,13 +130,16 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera")
 	TObjectPtr<UCurveFloat> RetreatCurve;
 
+	/** 後退カメラのイージング指数。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Camera", meta = (ClampMin = "1"))
 	float RetreatEaseExponent = 2.2f;
 
 	// ---- Animation ----
+	/** 勝利ポーズを再生するMontage。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Animation")
 	TObjectPtr<UAnimMontage> VictoryMontage;
 
+	/** 勝利Montageの基本再生速度倍率。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Animation", meta = (ClampMin = "0.1"))
 	float MontagePlayRate = 1.f;
 
@@ -133,9 +147,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Animation")
 	TObjectPtr<UAnimSequenceBase> VictoryAnimation;
 
+	/** Montageを再生できない場合にSingle Nodeへの切り替えを許すか。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Animation")
 	bool bAllowSingleNodeFallback = true;
 
+	/** 代替の勝利ジャンプで上昇する高さ（cm）。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|Animation", meta = (ClampMin = "0"))
 	float FallbackJumpHeight = 30.f;
 
@@ -144,27 +160,35 @@ public:
 	float FallbackJumpDelay = .2f;
 
 	// ---- VFX ----
+	/** 勝利演出で再生する星のNiagara System。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX")
 	TObjectPtr<UNiagaraSystem> StarVFX;
 
+	/** 星の演出に使う色の候補。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX")
 	TArray<FLinearColor> StarColors;
 
+	/** 星のVFXを配置する位置のオフセット。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX")
 	FVector StarOffset = FVector(0, 0, 10);
 
+	/** 星のVFXに掛ける拡大率。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX", meta = (ClampMin = "0.01"))
 	float StarScale = 1.f;
 
+	/** 代理メッシュに適用する分解用マテリアル。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX")
 	TObjectPtr<UMaterialInterface> DataMaterial;
 
+	/** 分解前に発光させるオーバーレイ用マテリアル。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX")
 	TObjectPtr<UMaterialInterface> GlowMaterial;
 
+	/** プレイヤーの分解時に再生する転送VFX。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX")
 	TObjectPtr<UNiagaraSystem> TransferVFX;
 
+	/** データ化と転送VFXに適用する色。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stage Clear Presentation|VFX")
 	FLinearColor DataColor = FLinearColor(.02f, .8f, 1.f);
 
@@ -201,50 +225,82 @@ private:
 	void ShowBanner();
 	void HideBanner(float Duration);
 
+	/** 勝利カメラへ切り替え済みか。 */
 	bool bVictoryShot = false;
+	/** 勝利Montageの再生中か。 */
 	bool bMontagePlaying = false;
+	/** 勝利Montageの最終姿勢を保持中か。 */
 	bool bMontageHeld = false;
+	/** 代替の勝利ジャンプを再生中か。 */
 	bool bFallbackJump = false;
+	/** 勝利ポーズをSingle Nodeで再生中か。 */
 	bool bSingleNodePlayback = false;
+	/** 分解前の発光を更新中か。 */
 	bool bGlowing = false;
+	/** メッシュをデータ化している途中か。 */
 	bool bDissolving = false;
+	/** メッシュのデータ化が完了したか。 */
 	bool bDissolveFinished = false;
+	/** 勝利カメラが後退中か。 */
 	bool bRetreating = false;
+	/** 勝利Montageの再生確認に使う残りフレーム数。 */
 	int32 MontageCheckFrames = 0;
+	/** 勝利Montage開始からの実時間（秒）。 */
 	float MontageAge = 0.f;
+	/** 発光の開始からの実時間（秒）。 */
 	float GlowAge = 0.f;
+	/** 発光が目標の強さに達する実時間（秒）。 */
 	float GlowRamp = .25f;
+	/** 代理メッシュの分解開始からの実時間（秒）。 */
 	float DissolveAge = 0.f;
+	/** 代理メッシュの分解にかける実時間（秒）。 */
 	float DissolveDuration = .75f;
+	/** 勝利カメラの後退開始からの実時間（秒）。 */
 	float RetreatAge = 0.f;
+	/** 勝利カメラの後退にかける実時間（秒）。 */
 	float RetreatDuration = 2.1f;
+	/** 粒子が消えるまでの実時間（秒）。 */
 	float ParticleFadeDuration = .7f;
+	/** 勝利カメラが追うワールド座標。 */
 	FVector VictoryFocusPoint = FVector::ZeroVector;
+	/** 注視点から勝利カメラへ向くワールド方向。 */
 	FVector CameraDirection = FVector::ForwardVector;
+	/** 衝突を考慮して確保したカメラ後退距離の上限（cm）。 */
 	float MaxRetreatDistance = 0.f;
+	/** 衝突を考慮して確保したカメラ上昇量の上限（cm）。 */
 	float MaxRetreatHeight = 0.f;
+	/** 代替ジャンプ終了時に復元するメッシュの相対位置。 */
 	FVector MeshOriginalRelativeLocation = FVector::ZeroVector;
+	/** 分解の進行計算に使う代理メッシュの下端Z（cm）。 */
 	float DissolveMinZ = 0.f;
+	/** 分解の進行範囲に使う代理メッシュの高さ（cm）。 */
 	float DissolveHeight = 150.f;
 
+	/** この演出中に生成した勝利カメラ。 */
 	UPROPERTY(Transient)
 	TObjectPtr<ACameraActor> VictoryCamera;
 
+	/** 演出終了時に戻す元のView Target。 */
 	UPROPERTY(Transient)
 	TWeakObjectPtr<AActor> OriginalViewTarget;
 
+	/** 非表示・表示状態の復元が必要なメッシュ一覧。 */
 	UPROPERTY(Transient)
 	TArray<FStageClearHiddenMesh> HiddenMeshes;
 
+	/** 演出終了時に停止・破棄する星のNiagaraコンポーネント一覧。 */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UNiagaraComponent>> StarComponents;
 
+	/** プレイヤーの転送VFXを制御するNiagaraコンポーネント。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraComponent> TransferComponent;
 
+	/** 勝利演出中の発光量を更新する動的マテリアル。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> GlowMID;
 
+	/** データ化の高さや色を更新する動的マテリアル。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> DataMID;
 
@@ -252,6 +308,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraComponent> FragmentComponent;
 
+	/** 勝利演出中に表示するステージクリアバナー。 */
 	UPROPERTY(Transient)
 	TObjectPtr<class UBoarStageClearBannerWidget> BannerWidget;
 };

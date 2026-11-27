@@ -22,10 +22,7 @@ struct FBoarAttackPlayerTaskInstanceData
 	UPROPERTY()
 	TObjectPtr<APawn> TargetPlayer;
 
-	/**
-	 * 現在の突進攻撃フェーズです。Telegraph → Charge → Retreat と進み、
-	 * 認識の有無にかかわらずRecoveryを経て終了し、次の攻撃条件はStateTreeで再評価します。
-	 */
+	/** 現在の突進攻撃フェーズです。Telegraph → Charge → Retreat と進み、認識の有無にかかわらずRecoveryを経て終了し、次の攻撃条件はStateTreeで再評価します。 */
 	EBoarChargeAttackPhase Phase = EBoarChargeAttackPhase::Telegraph;
 
 	/** 現在フェーズの経過時間です。 */

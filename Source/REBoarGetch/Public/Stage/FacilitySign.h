@@ -27,9 +27,11 @@ struct FFacilitySignStyle
 {
     GENERATED_BODY()
 
+    /** 見出し文字のフォントサイズ。 */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1"))
     float TitleSize=14.f;
 
+    /** 補助文字のフォントサイズ。 */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1"))
     float SubtitleSize=7.f;
 
@@ -45,9 +47,11 @@ struct FFacilitySignStyle
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(Units="cm", ClampMin="0.1"))
     float Depth=4.f;
 
+    /** 見出し文字の色。 */
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     FLinearColor TitleColor=FLinearColor(FColor(244, 248, 252));
 
+    /** 補助文字の色。 */
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     FLinearColor SubtitleColor=FLinearColor(FColor(64, 212, 240));
 };
@@ -66,6 +70,7 @@ public:
     /** 展示設備が所有する名札として、展示元と状態表示用の部品（リング等）を設定します。 */
     void BindSpecimenSource(ABoarArchiveDisplay* Source, const TArray<UPrimitiveComponent*>& Highlights);
 
+    /** サインの各部品を配置するルート。 */
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<USceneComponent> SceneRoot;
 
@@ -73,6 +78,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign")
     TObjectPtr<UStaticMeshComponent> Panel;
 
+    /** サインの階層や点灯状態を示すアクセントライン。 */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign")
     TObjectPtr<UStaticMeshComponent> AccentLine;
 
@@ -80,12 +86,15 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sign")
     TObjectPtr<UWidgetComponent> LabelWidget;
 
+    /** 外観設定の選択に使うサインの階層。 */
     UPROPERTY(EditAnywhere, Category="Sign")
     EFacilitySignTier Tier=EFacilitySignTier::FacilityLabel;
 
+    /** 表示する見出し。 */
     UPROPERTY(EditAnywhere, Category="Sign")
     FText Title;
 
+    /** 表示する補助文字。 */
     UPROPERTY(EditAnywhere, Category="Sign")
     FText Subtitle;
 
@@ -97,9 +106,11 @@ public:
     UPROPERTY(EditAnywhere, Category="Sign|Style")
     TObjectPtr<UMaterialInterface> WidgetMaterial;
 
+    /** サイン本体の外観マテリアル。 */
     UPROPERTY(EditAnywhere, Category="Sign|Style")
     TObjectPtr<UMaterialInterface> PanelMaterial;
 
+    /** アクセントラインの基本マテリアル。 */
     UPROPERTY(EditAnywhere, Category="Sign|Style")
     TObjectPtr<UMaterialInterface> AccentMaterial;
 
@@ -119,9 +130,11 @@ public:
     UPROPERTY(Transient)
     TArray<TObjectPtr<UPrimitiveComponent>> HighlightComponents;
 
+    /** 点灯中に使うアクセントマテリアル。 */
     UPROPERTY(EditAnywhere, Category="Sign|State")
     TObjectPtr<UMaterialInterface> HighlightOnMaterial;
 
+    /** 消灯中に使うアクセントマテリアル。 */
     UPROPERTY(EditAnywhere, Category="Sign|State")
     TObjectPtr<UMaterialInterface> HighlightOffMaterial;
 
@@ -129,9 +142,11 @@ public:
     UPROPERTY(EditInstanceOnly, Category="Sign|Specimen")
     TObjectPtr<ABoarArchiveDisplay> SpecimenSource;
 
+    /** 展示枠が空のときに表示する見出し。 */
     UPROPERTY(EditAnywhere, Category="Sign|Specimen")
     FText EmptyTitle;
 
+    /** 個体名が未設定のときに表示する見出し。 */
     UPROPERTY(EditAnywhere, Category="Sign|Specimen")
     FText UnnamedTitle;
 
@@ -144,8 +159,11 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
 private:
+    /** 既存表示との差分判定に使う表示済みの見出し。 */
     FText ShownTitle;
+    /** 最後に表示へ反映した減光状態。 */
     bool bShownDimmed=false;
+    /** 展示内容の定期反映を解除するタイマー。 */
     FTimerHandle MirrorTimer;
     void ApplyLayout(const FText& NewTitle, bool bDimmed);
     void SetNear(bool bNear);

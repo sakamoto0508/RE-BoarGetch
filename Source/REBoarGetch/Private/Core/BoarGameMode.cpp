@@ -35,10 +35,8 @@ namespace
 
 ABoarGameMode::ABoarGameMode()
 {
-	// プレイヤーコントローラーを指定
 	PlayerControllerClass = ABoarPlayerController::StaticClass();
 
-	// デフォルトポーンクラスを指定
 	DefaultPawnClass = ABoarPlayerCharacter::StaticClass();
 }
 
@@ -57,7 +55,6 @@ void ABoarGameMode::RecordCaptureOrder(const ABoarBase* Boar, bool bStartsNewCap
 	// （NetGadgetのbSuccessFeedbackPlayedThisUse）、同じ一振りの捕獲は判定窓の別フレームでも同じ番号になる。
 	if (bStartsNewCaptureUse || CaptureEventOrder == 0)
 		++CaptureEventOrder;
-	// 再捕獲は上書きで最新の使用番号へ更新する。
 	StageRunData.LastCaptureOrderByBoar.Add(Boar->BoarUniqueId, CaptureEventOrder);
 }
 
@@ -84,7 +81,6 @@ bool ABoarGameMode::ConfirmCapture(ABoarBase* Boar)
 	PendingCapturedBoars.Remove(Boar);
 	HandledCapturedBoars.Add(Boar);
 
-	// 捕獲成立時の演出や報酬付与をBoarCaptureResolutionに委譲する。
 	BoarCaptureResolution::Resolve(GetWorld(), Boar, StageRunData, HealPickupClass, HealItemDropChance);
 	RefreshHousedBoarCount();
 	return true;
@@ -108,10 +104,9 @@ TArray<ABoarBase*> ABoarGameMode::CompletePendingCaptures(const TArray<TWeakObje
 
 	for (const TWeakObjectPtr<ABoarBase>& Boar : Boars)
 	{
-		// 確定待ちに無いもの（破棄済み・確定済み・未登録）は確定しない。
 		if (PendingCapturedBoars.Remove(Boar) == 0)
 			continue;
-		// 先に確定した捕獲でClear要求が立つと、以降はCanAdvanceStage()で確定されない（従来どおり）。
+		// この一振りの途中で目標に達したら、その時点の収容数を守るため以降の捕獲確定を止める。
 		if (ConfirmCapture(Boar.Get()))
 			Confirmed.Add(Boar.Get());
 	}
@@ -271,13 +266,12 @@ bool ABoarGameMode::FailInitialization(const FText& Reason)
 
 void ABoarGameMode::EvaluateStageClearCondition()
 {
-	// 通知済み、またはステージ設定未登録の場合はクリア判定を行わない。
 	if (bStageClearRequested || StageConfig == nullptr)
 		return;
 
 	const int32 TargetCaptureCount = StageConfig->TargetCaptureCount;
 
-	// 目標値0以下は判定無効。正数の場合のみ到達数と比較する。
+	// 目標未設定の検証マップが開始直後にクリアしないよう、0以下は判定を無効にする。
 	if (TargetCaptureCount <= 0 || CapturedBoarCount < TargetCaptureCount)
 		return;
 
@@ -348,10 +342,12 @@ void ABoarGameMode::ResolveStageEnd()
 	if (Next == StageState)
 		return;
 
+	// 捕獲演出の中断から確定処理に戻っても、勝敗決定後の収容数を変えないよう先に状態を確定する。
 	StageState = Next;
 
 	if (bWaitForStageEndPresentation)
 	{
+		// BPから同期で完了通知が来てもタイマーが残らないよう、演出イベントより先に予約する。
 		GetWorldTimerManager().SetTimer(EndPresentationTimeoutHandle, this,
 			&ABoarGameMode::HandleEndPresentationTimeout,
 			FMath::Max(MinStagePresentationTimeoutSeconds, StageEndPresentationTimeoutSeconds), false);
@@ -360,7 +356,6 @@ void ABoarGameMode::ResolveStageEnd()
 	if (auto* PC = GetWorld()->GetFirstPlayerController())
 		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
 			Presentation->CancelPresentation();
-	// StageStateを変えた後なので、上の中断で確定されなかった捕獲は確定しないまま破棄する。
 	PendingCapturedBoars.Reset();
 	SetStageActorsStopped(true);
 

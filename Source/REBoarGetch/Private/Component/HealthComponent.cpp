@@ -2,19 +2,12 @@
 #include "Core/BoarGameMode.h"
 #include "Engine/World.h"
 
-/**
- * コンストラクタです。
- * HP は毎フレーム更新しないので Tick は不要です。
- */
+// HPは被弾・回復・初期化でのみ変化するため、毎フレームの更新は不要。
 UHealthComponent::UHealthComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-/**
- * 初期化処理です。
- * ゲーム開始時に HP を満タンに戻します。
- */
 void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -33,9 +26,6 @@ bool UHealthComponent::InitializeHealth()
 	return true;
 }
 
-/**
- * ダメージを受けます。
- */
 void UHealthComponent::TakeDamage(float DamageAmount)
 {
 	if (!ABoarGameMode::IsStageProgressAllowed(this))
@@ -50,9 +40,6 @@ void UHealthComponent::TakeDamage(float DamageAmount)
 		OnDeath.Broadcast();
 }
 
-/**
- * HP を回復します。
- */
 void UHealthComponent::Heal(float HealAmount)
 {
 	if (!ABoarGameMode::IsStageProgressAllowed(this))
@@ -64,9 +51,6 @@ void UHealthComponent::Heal(float HealAmount)
 	ClampAndBroadcastHealth();
 }
 
-/**
- * HP を最大値まで戻します。
- */
 void UHealthComponent::ResetHealth()
 {
 	bHealthInitialized = true;
@@ -74,17 +58,11 @@ void UHealthComponent::ResetHealth()
 	ClampAndBroadcastHealth();
 }
 
-/**
- * 死亡状態かどうかを返します。
- */
 bool UHealthComponent::IsDead() const
 {
 	return CurrentHealth <= 0.0f;
 }
 
-/**
- * HP を範囲内に収めて通知します。
- */
 void UHealthComponent::ClampAndBroadcastHealth()
 {
 	CurrentHealth = FMath::Clamp(CurrentHealth, 0.0f, MaxHealth);

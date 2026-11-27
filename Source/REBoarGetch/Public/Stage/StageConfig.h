@@ -75,10 +75,8 @@ struct FStageUnlockCondition
 	FName RequiredClearedStageId;
 };
 
-/**
- * Stage固有の静的設定をまとめるDataAssetです。ロビー表示、遷移先、出現個体、コイン、クリア目標、解放条件を設定します。
- * 挑戦中の状態はStageRunData、永続進行はGameInstance / SaveGameが管理します。
- */
+// ロビー表示、遷移先、出現個体、コイン、クリア目標、解放条件を設定します。挑戦中の状態はStageRunData、永続進行はGameInstance / SaveGameが管理します。
+/** Stage固有の静的設定をまとめるDataAssetです。 */
 UCLASS(BlueprintType)
 class REBOARGETCH_API UStageConfig : public UPrimaryDataAsset
 {

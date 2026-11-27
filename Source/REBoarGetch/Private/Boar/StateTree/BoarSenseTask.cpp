@@ -23,7 +23,6 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::Tick(FStateTreeExecutionContext& Co
 
 EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionContext& Context) const
 {
-	// StateTreeが保持しているインスタンスデータを取得する。
 	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 
 	// このStateTreeを実行しているイノシシを取得する。
@@ -43,44 +42,30 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 		return EStateTreeRunStatus::Failed;
 	}
 
-	// Perceptionを更新し、現在認識している対象を取得する。
 	InstanceData.bHasTargetInSight = Boar->RefreshPerceptionTargets();
 
-	// 認識しているプレイヤーを保存する。
+	// StateTreeのTransition Conditionはこの出力だけを読むため、認識結果を毎Tick写しておく。
 	InstanceData.TargetPlayer = Boar->GetPerceivedPlayer();
-
-	// 認識している檻を保存する。
 	InstanceData.TargetCage = Boar->GetPerceivedCage();
-
-	// 認識しているプレイヤーが存在するかを保存する。
 	InstanceData.bHasTargetPlayer = InstanceData.TargetPlayer != nullptr;
-
-	// 認識している檻が存在するかを保存する。
 	InstanceData.bHasTargetCage = InstanceData.TargetCage != nullptr;
-
-	// 認識している檻までの距離を保存する。
 	InstanceData.DistanceToCage = Boar->GetPerceivedCageDistance();
-
-	// 現在檻を攻撃できる状態か更新する。
 	InstanceData.bCanAttackCage = Boar->CanAttackCage();
 
-	// プレイヤー・檻を認識しているか判定する。
+	// 檻を攻撃しない種類では、檻を認識していても反応する対象に数えない。
 	const bool bHasPlayer = InstanceData.TargetPlayer != nullptr;
 	const bool bHasCage = InstanceData.TargetCage != nullptr && InstanceData.bCanAttackCage;
 
 	// 種類ごとの仕様に従い、発見した対象への反応を決定する。
 	Boar->GetTargetPreference(InstanceData.bPreferPlayer, InstanceData.bPreferCage, InstanceData.bPreferEscape);
 
-	// 認識中プレイヤーまでの距離を保存する。
 	InstanceData.DistanceToPlayer = Boar->GetPerceivedPlayerDistance();
 
 	// 回復中も認識は更新し続け、回復State側の遷移条件に停止状態を渡す。
 	InstanceData.bIsStaminaRecovering = Boar->ShouldStopWhileRecoveringStamina() && Boar->IsStaminaRecovering();
 
-	// プレイヤーも檻も見つかっていない場合。
 	if (!bHasPlayer && !bHasCage)
 	{
-		// 優先対象は存在しない。
 		InstanceData.bPreferCage = false;
 
 		// 対象がいないことは正常な徘徊状態なので、失敗として扱わない。
@@ -91,7 +76,6 @@ EStateTreeRunStatus FStateTreeBoarSenseTask::UpdateSense(FStateTreeExecutionCont
 	return EStateTreeRunStatus::Running;
 }
 
-// StateTreeエディタ上に表示するノード名を返す。
 #if WITH_EDITOR
 FText FStateTreeBoarSenseTask::GetDescription(const FGuid& ID, FStateTreeDataView InstanceDataView,
                                               const IStateTreeBindingLookup& BindingLookup,

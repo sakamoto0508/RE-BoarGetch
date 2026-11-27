@@ -12,19 +12,17 @@ enum class EGadgetUseStyle : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGadgetLoadoutChanged);
 
-/**
- * プレイヤーが所持するガジェットを管理するComponentです。
- * 主に以下の処理を担当します。
- *  ・ガジェットの生成と装備
- *  ・現在のガジェットの破棄
- *  ・ガジェット使用の開始と終了
- *  ・最大4つのガジェットスロットの管理
- *  ・指定スロットへの装備切り替え
- *  ・ゲーム開始時の初期ガジェット装備 *
- *  ガジェットに関する処理をPlayerCharacterから分離することで、
- *  プレイヤー本体の責務が増えすぎないようにしています。
- *
- */
+// プレイヤーが所持するガジェットを管理するComponentです。
+// 主に以下の処理を担当します。
+// ・ガジェットの生成と装備
+// ・現在のガジェットの破棄
+// ・ガジェット使用の開始と終了
+// ・最大4つのガジェットスロットの管理
+// ・指定スロットへの装備切り替え
+// ・ゲーム開始時の初期ガジェット装備 *
+// ガジェットに関する処理をPlayerCharacterから分離することで、
+// プレイヤー本体の責務が増えすぎないようにしています。
+/** プレイヤーの装備枠と、ガジェットの装備・使用を管理する。 */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class REBOARGETCH_API UGadgetComponent : public UActorComponent
 {
@@ -40,9 +38,12 @@ public:
     bool IsTemporaryLoadout() const { return bTemporaryLoadout; }
 
 private:
+	/** ステージ用の装備初期化を済ませたか。 */
 	bool bStageInitialized = false;
+    /** 施設の試用装備を一時構成として扱うか。 */
     bool bTemporaryLoadout = false;
 
+    /** ガジェット解放・保存済み装備を取得する進行管理の参照。 */
     UPROPERTY(Transient)
     TObjectPtr<UBoarGadgetSubsystem> GadgetProgress;
 
@@ -150,6 +151,7 @@ private:
 	bool bCooldownsStopped = false;
 
 	bool SaveCurrentLoadout();
+	/** 直近の装備保存が成功したか。 */
 	bool bLastLoadoutSaveSuccessful = false;
 	/** プレイヤーが使用できるガジェットスロットの最大数です。 */
 	static constexpr int32 MaxGadgetSlots = 4;
@@ -159,33 +161,22 @@ private:
 	/** ガジェットが登録されている最初のスロットを検索しています。 */
 	int32 FindFirstValidSlot() const;
 
-	/**
-	 * 初期装備スロットです。最大4件までを使用します。
-	 */
+	/** 初期装備スロットです。最大4件までを使用します。 */
 	UPROPERTY(EditDefaultsOnly, Category = "Gadget")
 	TArray<TSubclassOf<AGadgetBase>> DefaultGadgetSlots;
 
-	/**
-	 * 現在装備スロット(0-3)です。
-	 */
+	/** 現在装備スロット(0-3)です。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	TArray<TSubclassOf<AGadgetBase>> EquippedGadgetSlots;
 
-	/**
-	 * 現在アクティブなスロット番号です。未選択時はINDEX_NONE。
-	 */
+	/** 現在アクティブなスロット番号です。未選択時はINDEX_NONE。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	int32 CurrentGadgetSlotIndex = INDEX_NONE;
 
-	/**
-	 * 現在の装備です。
-	 */
+	/** 現在の装備です。 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Gadget", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<AGadgetBase> CurrentGadget;
 
-	/**
-	 * 所有者です。
-	 * プレイヤーキャラに紐づけて使います。
-	 */
+	/** 所有者です。プレイヤーキャラに紐づけて使います。 */
 	TObjectPtr<APawn> OwningPawn;
 };

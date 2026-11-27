@@ -17,10 +17,8 @@ struct FBoarStaminaRecoveryTaskInstanceData
 	TObjectPtr<APawn> NPC;
 };
 
-/**
- * スタミナ切れのイノシシをその場で停止させ、復帰割合まで回復したら成功終了するStateTreeタスクです。
- * スタミナの増減はABoarBase::UpdateStaminaが担当し、このタスクは移動要求を出さずに待つだけです。
- */
+// スタミナの増減はABoarBase::UpdateStaminaが担当し、このタスクは移動要求を出さずに待つだけです。
+/** スタミナ切れのイノシシをその場で停止させ、復帰割合まで回復したら成功終了するStateTreeタスクです。 */
 USTRUCT(meta=(DisplayName="Boar Stamina Recovery", Category="Boar"))
 struct FStateTreeBoarStaminaRecoveryTask : public FStateTreeTaskCommonBase
 {

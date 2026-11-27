@@ -68,6 +68,7 @@ struct REBOARGETCH_API FBoarPlayerAudioSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio|Movement")
 	TObjectPtr<USoundBase> Footstep;
 
+	/** プレイヤーの足音に掛ける音量倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio|Movement", meta = (ClampMin = "0.0"))
 	float FootstepVolume = 0.6f;
 
@@ -104,10 +105,7 @@ struct REBOARGETCH_API FBoarPlayerAudioSettings
 	TObjectPtr<USoundAttenuation> Attenuation;
 };
 
-/**
- * Boar種別ごとのSEです（DA_BoarDataAssetの種別ごとのAudio）。
- * 状態遷移・成立イベントでだけ鳴らし、毎フレームの状態確認では鳴らしません。
- */
+/** Boar種別ごとのSEです（DA_BoarDataAssetの種別ごとのAudio）。状態遷移・成立イベントでだけ鳴らし、毎フレームの状態確認では鳴らしません。 */
 USTRUCT(BlueprintType)
 struct REBOARGETCH_API FBoarArchetypeAudioSettings
 {
@@ -169,6 +167,7 @@ struct REBOARGETCH_API FBoarArchetypeAudioSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio|Movement")
 	TObjectPtr<USoundBase> Footstep;
 
+	/** このBoar種別の足音に掛ける音量倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio|Movement", meta = (ClampMin = "0.0"))
 	float FootstepVolume = 0.5f;
 

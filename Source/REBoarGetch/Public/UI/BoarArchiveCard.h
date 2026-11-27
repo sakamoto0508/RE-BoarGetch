@@ -10,6 +10,7 @@ class REBOARGETCH_API UBoarArchiveCard : public UBoarLoadoutEntry
 
 public:
  UBoarArchiveCard(const FObjectInitializer& ObjectInitializer);
+	/** 選択枠の発光に使うマテリアル。 */
 	UPROPERTY(EditDefaultsOnly, Category="Visual")
  TObjectPtr<class UMaterialInterface> FlowGlowMaterial;
  /** 編集中・フォーカス中の枠色です。 */
@@ -31,23 +32,28 @@ protected:
  virtual void NativeOnAddedToFocusPath(const FFocusEvent& Event) override;
  virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& Event) override;
  // レイアウトはWBPで作成します。C++で代替レイアウトは作らず、RootWidgetが無い場合はErrorを出して表示しません。
+ /** カード全体の背景と外枠を表示するBorder。 */
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional))
  TObjectPtr<class UBorder> Frame;
 
+ /** 個体の写真を表示する画像。 */
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional))
  TObjectPtr<class UImage> Portrait;
 
+ /** フォーカス中の強調枠を表示する画像。 */
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional))
  TObjectPtr<class UImage> FocusFrame;
 
+ /** 写真を表示できないときのプレースホルダー。 */
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional))
  TObjectPtr<class UTextBlock> Placeholder;
 
+ /** 展示枠や個体に付くバッジを表示するテキスト。 */
  UPROPERTY(BlueprintReadOnly, Category="Bindings", meta=(BindWidgetOptional))
  TObjectPtr<class UTextBlock> BadgeText;
 
 private:
  void RefreshFrame();
- // 編集対象の展示枠と現在のフォーカスを別々に保持して枠の強調を決めます。
+ /** 編集中の展示枠か（bActiveCard）、フォーカス中か（bFocusedCard）。 */
  bool bActiveCard=false, bFocusedCard=false;
 };

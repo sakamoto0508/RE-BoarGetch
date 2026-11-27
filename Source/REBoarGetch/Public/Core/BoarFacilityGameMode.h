@@ -10,12 +10,15 @@ class REBOARGETCH_API ABoarFacilityGameMode : public AGameModeBase
     GENERATED_BODY()
 
 public:
+    /** 図鑑施設として展示枠の変更を許可するか。 */
     UPROPERTY(EditDefaultsOnly, Category="Facility")
     bool bArchive=false;
 
+    /** 施設でガジェット試用を有効にするか。 */
     UPROPERTY(EditDefaultsOnly, Category="Facility")
     bool bGadgetTest=false;
 
+    /** 施設で初期装備する試用ガジェットのクラス。 */
     UPROPERTY(EditDefaultsOnly, Category="Facility")
     TSubclassOf<class AGadgetBase> TestGadgetClass;
 

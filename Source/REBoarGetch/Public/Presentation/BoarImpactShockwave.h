@@ -7,11 +7,10 @@ class UNiagaraComponent;
 class UNiagaraSystem;
 class UWorld;
 
-/**
- * 突進の命中位置に出す衝撃波（NS_PlayerHitImpact）の再生パラメーターです。
- * プレイヤー被弾（UPlayerHitReactionComponent）と檻への攻撃命中（UCageVisualComponent）で同じSystemを共有し、
- * 大きさ・色・本数などだけを呼び出し側で変えます。負の値の項目はNiagara側のUser Parameter既定値のままにします。
- */
+// 突進の命中位置に出す衝撃波（NS_PlayerHitImpact）の再生パラメーターです。
+// プレイヤー被弾（UPlayerHitReactionComponent）と檻への攻撃命中（UCageVisualComponent）で同じSystemを共有し、
+// 大きさ・色・本数などだけを呼び出し側で変えます。負の値の項目はNiagara側のUser Parameter既定値のままにします。
+/** プレイヤーや檻への突進が命中したときの衝撃波の再生条件を保持する。 */
 struct FBoarImpactShockwaveParams
 {
 	/** User.Scale：全体の大きさ。 */
@@ -25,14 +24,17 @@ struct FBoarImpactShockwaveParams
 
 	/** trueならUser.SparkColorをSparkColorで上書きします。 */
 	bool bOverrideSparkColor = false;
+	/** 衝撃波と合わせて生成する火花の色。 */
 	FLinearColor SparkColor = FLinearColor(1.0f, 0.66f, 0.26f, 1.0f);
 
 	/** User.StreakCount / User.ParticleCount（負ならNiagara既定値）。 */
 	int32 StreakCount = -1;
+	/** 衝撃波で生成する粒子数。 */
 	int32 ParticleCount = -1;
 
 	/** User.MaxRadius（cm）/ User.Lifetime（秒）（負ならNiagara既定値）。 */
 	float MaxRadius = -1.0f;
+	/** 衝撃波粒子の表示時間（秒）。 */
 	float Lifetime = -1.0f;
 };
 

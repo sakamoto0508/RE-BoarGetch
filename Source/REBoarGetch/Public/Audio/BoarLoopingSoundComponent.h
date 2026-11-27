@@ -9,13 +9,8 @@ class UAudioComponent;
 class USoundAttenuation;
 class USoundBase;
 
-/**
- * 設備の待機音・環境音を、この位置から鳴らすComponentです（BoarAudioManagerSubsystem経由でSE音量設定に従います）。
- * - Loop：BeginPlayから継続再生し、EndPlay（Level遷移を含む）で停止します。ゲームPause中は一時停止します。
- * - Intermittent：鳥・虫などをランダム間隔（ゲーム時間）で一回ずつ鳴らします。
- * 音源はSoundを直接指定するか、AmbienceTypeでProject Settings（REBoarGetch Audio）の共通音源を使います。
- * 音源が無い場合は何もしません。距離減衰は未指定ならDefault Ambience Attenuationを使います。
- */
+// - Loop：BeginPlayから継続再生し、EndPlay（Level遷移を含む）で停止します。ゲームPause中は一時停止します。- Intermittent：鳥・虫などをランダム間隔（ゲーム時間）で一回ずつ鳴らします。音源はSoundを直接指定するか、AmbienceTypeでProject Settings（REBoarGetch Audio）の共通音源を使います。音源が無い場合は何もしません。距離減衰は未指定ならDefault Ambience Attenuationを使います。
+/** 設備の待機音・環境音を、この位置から鳴らすComponentです（BoarAudioManagerSubsystem経由でSE音量設定に従います）。 */
 UCLASS(ClassGroup = (Audio), meta = (BlueprintSpawnableComponent))
 class REBOARGETCH_API UBoarLoopingSoundComponent : public USceneComponent
 {
@@ -36,9 +31,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
 	TObjectPtr<USoundAttenuation> Attenuation;
 
+	/** 環境音の再生音量に掛ける倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio", meta = (ClampMin = "0.0"))
 	float VolumeMultiplier = 1.0f;
 
+	/** 環境音の再生ピッチに掛ける倍率。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio", meta = (ClampMin = "0.01"))
 	float PitchMultiplier = 1.0f;
 
@@ -46,9 +43,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
 	bool bStartOnBeginPlay = true;
 
+	/** ループ音を立ち上げるフェード時間（秒）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio", meta = (ClampMin = "0.0", Units = "s"))
 	float FadeInDuration = 1.0f;
 
+	/** ループ音を止めるフェード時間（秒）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio", meta = (ClampMin = "0.0", Units = "s"))
 	float FadeOutDuration = 0.5f;
 
@@ -56,9 +55,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio|Intermittent")
 	bool bIntermittent = false;
 
+	/** 間欠音の再生間隔の下限（ゲーム時間の秒）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio|Intermittent", meta = (EditCondition = "bIntermittent", ClampMin = "0.1", Units = "s"))
 	float MinInterval = 4.0f;
 
+	/** 間欠音の再生間隔の上限（ゲーム時間の秒）。 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio|Intermittent", meta = (EditCondition = "bIntermittent", ClampMin = "0.1", Units = "s"))
 	float MaxInterval = 10.0f;
 
@@ -87,9 +88,12 @@ private:
 	void PlayOneShot();
 	USoundAttenuation* ResolveAttenuation() const;
 
+	/** 現在再生しているループ音のコンポーネント参照。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UAudioComponent> LoopComponent;
 
+	/** 間欠音の次回再生を取り消すためのタイマー。 */
 	FTimerHandle IntermittentTimer;
+	/** 環境音の再生を有効にしているか。 */
 	bool bActive = false;
 };

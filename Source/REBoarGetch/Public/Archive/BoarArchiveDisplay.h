@@ -15,8 +15,10 @@ public:
 	ABoarArchiveDisplay();
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+	/** 展示部品の取り付け基準となるルート。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USceneComponent> SceneRoot;
+	/** 保存済みの個体に合わせて外観を切り替えるメッシュ。 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<class USkeletalMeshComponent> BoarVisual;
 	/** Saveの展示枠。左から0始まりで、UBoarSaveGame::ArchiveDisplaySlotCount未満です（ClampMaxはmeta指定のため直書き）。 */
@@ -37,8 +39,10 @@ public:
 	/** Idleだけをループ再生します。未設定なら静止Pose。歩行・攻撃AnimBPは使いません。 */
 	UPROPERTY(EditAnywhere, Category="Archive|Visual")
 	TObjectPtr<class UAnimSequence> IdleAnimation;
+	/** 展示する個体メッシュの拡大率。 */
 	UPROPERTY(EditAnywhere, Category="Archive|Visual", meta=(ClampMin="0.01"))
 	float DisplayScale = .82f;
+	/** 展示メッシュの相対オフセット。 */
 	UPROPERTY(EditAnywhere, Category="Archive|Visual")
 	FVector VisualOffset = FVector::ZeroVector;
 	/** 配置確認用のBoar表示。Editor専用で、Play開始後はSaveから展示対象を決めます。 */
@@ -62,6 +66,8 @@ private:
 	UFUNCTION()
 	void RefreshDisplay();
 	void ConfigureVisual(USkeletalMesh* Mesh, const TArray<UMaterialInterface*>& Materials, UAnimSequence* Idle);
+	/** 現在展示している個体の表示名。 */
 	FText DisplayedBoarName;
+	/** この枠に表示可能な個体が入っているか。 */
 	bool bHasSpecimen = false;
 };

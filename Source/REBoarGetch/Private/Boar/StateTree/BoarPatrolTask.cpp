@@ -14,7 +14,6 @@ EStateTreeRunStatus FStateTreeBoarPatrolTask::EnterState(
 
 	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 
-	// StateTreeを実行しているイノシシを取得する。
 	ABoarBase* Boar = Cast<ABoarBase>(InstanceData.NPC.Get());
 	if (Boar == nullptr)
 		return EStateTreeRunStatus::Failed;

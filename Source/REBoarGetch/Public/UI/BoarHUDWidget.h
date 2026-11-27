@@ -77,10 +77,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|HUD Stamina", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float StaminaLowRatio = 0.25f;
 
-	/**
-	 * ゲージを表示する位置の、プレイヤー中心からのオフセット(cm)です。X=カメラの右方向（負の値で左側）、Y=上方向。
-	 * ワールド空間で指定するため、カメラ距離が変わってもキャラクターとの見た目の位置関係が保たれます。
-	 */
+	/** ゲージを表示する位置の、プレイヤー中心からのオフセット(cm)です。X=カメラの右方向（負の値で左側）、Y=上方向。ワールド空間で指定するため、カメラ距離が変わってもキャラクターとの見た目の位置関係が保たれます。 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "REBoarGetch|HUD Stamina")
 	FVector2D StaminaGaugeWorldOffset = FVector2D(-55.0f, 15.0f);
 
@@ -108,23 +105,29 @@ private:
 	// 名前設定を実Widgetへ解決します。未配置の表示部品は更新時にスキップします。
 	void ResolveWidgetReferences();
 
+	/** 現在の檻収容数を表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> CapturedCountText;
 
+	/** クリアに必要な檻収容数を表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> TargetCountText;
 
+	/** プレイヤーの現在HPを表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> CurrentHealthText;
 
+	/** プレイヤーの最大HPを表示するテキスト。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> MaxHealthText;
 
+	/** 残りスタミナを表示するゲージ。 */
 	UPROPERTY(Transient)
 	TObjectPtr<UProgressBar> StaminaBarWidget;
 
 	/** 最後に通知されたスタミナ表示状態です。NativeTickのフェード判定に使います。 */
 	bool bStaminaFull = true;
+	/** スタミナ回復までダッシュを使えない状態か。 */
 	bool bStaminaLocked = false;
 	/** 満タンになってからの経過秒数です。生成直後は満タン扱いで非表示から始めます。 */
 	float StaminaFullElapsed = 1000.0f;
@@ -136,9 +139,11 @@ private:
 	/** プレイヤー横の画面位置を求め、ゲージのCanvasSlotへ反映します。投影できない場合はfalseです。 */
 	bool UpdateStaminaGaugePosition();
 
+	/** 装備枠ごとにガジェットアイコンを表示する画像。 */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UImage>> GadgetIconWidgets;
 
+	/** 現在選択中の装備枠を強調するWidgetの配列。 */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UWidget>> GadgetSelectionWidgets;
 };

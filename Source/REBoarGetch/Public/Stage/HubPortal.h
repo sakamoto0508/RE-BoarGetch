@@ -20,6 +20,7 @@ struct FGadgetCollectionLabel
     UPROPERTY(EditAnywhere, Category="Portal")
     FName GadgetId;
 
+    /** ポータルの行き先や試用対象を提示するラベル。 */
     UPROPERTY(EditAnywhere, Category="Portal")
     TObjectPtr<class ATextRenderActor> Label;
 };
@@ -32,6 +33,7 @@ class REBOARGETCH_API AHubPortal : public AActor
 public:
     AHubPortal();
 
+    /** 遷移を開始できるプレイヤーを検出する範囲。 */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<UBoxComponent> Trigger;
 
@@ -39,6 +41,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Portal|Audio")
     TObjectPtr<UBoarLoopingSoundComponent> IdleSound;
 
+    /** ポータルの進入操作に使う入力Action。 */
     UPROPERTY(EditAnywhere, Category="Portal")
     EHubPortalAction Action=EHubPortalAction::Travel;
 
@@ -68,6 +71,7 @@ public:
     /** 固定入口はクラス既定値、旧配置は DataAsset → 直接指定の順に解決します。 */
     TSoftObjectPtr<UWorld> GetTravelDestination() const;
 
+    /** 選択した試用対象に応じて表示を切り替えるActor一覧。 */
     UPROPERTY(EditInstanceOnly, Category="Portal")
     TArray<TObjectPtr<AActor>> TestVisualActors;
 
@@ -75,14 +79,17 @@ public:
     UPROPERTY(EditInstanceOnly, Category="Portal")
     TArray<TObjectPtr<AActor>> TestBarrierActors;
 
+    /** 遷移時に施設の試用対象をクリアするか。 */
     UPROPERTY(EditInstanceOnly, Category="Portal")
     bool bClearTestTargetOnTravel=false;
 
+    /** Trigger内で共通Interactの入力を必要とするか。 */
     UPROPERTY(EditInstanceOnly, Category="Portal")
     bool bRequiresInteraction=true;
 
     virtual void Interact(class ABoarPlayerController* Controller);
 
+    /** 選択中の試用ガジェット名を表示するラベル。 */
     UPROPERTY(EditInstanceOnly, Category="Portal")
     TObjectPtr<class ATextRenderActor> TestLabel;
 
@@ -94,6 +101,7 @@ public:
     UPROPERTY(EditDefaultsOnly, Category="Portal|Test Preview")
     TMap<FName, TSubclassOf<ASkeletalMeshActor>> TestPreviewClasses;
 
+    /** 試用ガジェットを表示するプレビュー用マテリアル。 */
     UPROPERTY(EditDefaultsOnly, Category="Portal|Test Preview")
     TObjectPtr<UMaterialInterface> TestPreviewMaterial;
 
@@ -114,6 +122,7 @@ private:
     void RefreshTestTarget();
 
     void RefreshTestPreview(FName GadgetId);
+    /** このポータルからの遷移を要求済みか。 */
     bool bTravelRequested=false;
     void PlayPortalSound(EBoarPortalSound Sound) const;
     void Activate(class ABoarPlayerController* Controller);

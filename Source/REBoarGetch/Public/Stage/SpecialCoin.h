@@ -14,6 +14,7 @@ public:
 	/** 見た目や接触判定は派生BPで設定し、取得処理だけを共通化します。 */
 	ASpecialCoin();
 
+	/** 進行データで特別コインを識別するID。 */
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Coin")
 	FName SpecialCoinId;
 
@@ -28,5 +29,6 @@ protected:
 	void OnCoinCollected();
 
 private:
+	/** 現在の挑戦でこのコインを取得済みか。 */
 	bool bCollected = false;
 };

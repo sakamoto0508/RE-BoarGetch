@@ -77,13 +77,12 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	FootstepDustComponent->FullStrength = FFootstepDustStrength(/*SpawnCount=*/6, /*SizeScale=*/0.62f, /*Lifetime=*/0.42f, /*KickSpeed=*/150.0f, /*KickUp=*/50.0f, /*StreakCount=*/0);
 	FootstepDustComponent->Spread = 0.6f;
 
-	/// TPS移動の基本設定
+	// TPS操作：体は移動方向へ向け、カメラだけをControllerの回転に追従させる。
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 
-	// SpringArm
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
 	CameraBoom->TargetArmLength = CameraArmLength;
@@ -91,12 +90,10 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	CameraBoom->bEnableCameraLag = true;
 	CameraBoom->CameraLagSpeed = 10.0f;
 
-	// プレイヤー追従カメラ
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
-	// CharacterMovementの初期設定
 	GetCharacterMovement()->RotationRate = FRotator(0.f, RotationRate, 0.f);
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->JumpZVelocity = JumpVelocity;
@@ -124,7 +121,6 @@ void ABoarPlayerCharacter::BeginPlay()
 	// 購読済みの表示側へ初期値を確実に届ける。
 	BroadcastStaminaChanged(true);
 
-	// 接触判定のイベント登録。
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
 	{
 		// プレイヤー被弾判定はカプセル接触で受ける。
@@ -246,7 +242,6 @@ void ABoarPlayerCharacter::Move(const FVector2D& Input)
 	UpdateGroundActionState(bHasMoveInput);
 }
 
-// カメラを回転させる
 void ABoarPlayerCharacter::Look(const FVector2D& Input)
 {
 	if (Controller == nullptr)
@@ -299,7 +294,6 @@ void ABoarPlayerCharacter::StopJump()
 	StopJumping();
 }
 
-// ガジェット使用を開始する
 void ABoarPlayerCharacter::StartGadgetUse()
 {
 	if (GadgetComponent && !IsActionLocked())
@@ -371,7 +365,7 @@ void ABoarPlayerCharacter::StartGadgetUse()
 		GadgetUseMontage = nullptr;
 		GadgetUseMontageInstanceID = INDEX_NONE;
 
-		//BPイベントでガジェット使用開始を通知する。
+		// BPがこのイベント内で再生したMontageを、使用中のMontageとして後で特定できるよう前後のInstanceを比べる。
 		OnGadgetUseStarted(CurrentGadgetUseStyle, CurrentGadget);
 
 		const FAnimMontageInstance* MontageAfter = AnimInstance ? AnimInstance->GetActiveMontageInstance() : nullptr;
@@ -385,7 +379,6 @@ void ABoarPlayerCharacter::StartGadgetUse()
 	}
 }
 
-// ガジェット使用を終了する
 void ABoarPlayerCharacter::StopGadgetUse()
 {
 	if (!bIsGadgetInUse)
@@ -461,7 +454,6 @@ void ABoarPlayerCharacter::StopGadgetUseMontage()
 	Instance->Stop(Montage->BlendOut);
 }
 
-// ガジェットスロットを切り替える
 void ABoarPlayerCharacter::SwitchGadgetSlot(int32 SlotIndex)
 {
 	// Stun・Downed・Stage停止中、およびOneShot使用中（アミ等）は切り替えない。
@@ -704,7 +696,6 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 	HitInfo.HitLocation = GetActorLocation() - HitInfo.HitDirection * Radius + FVector(0.0, 0.0, HalfHeight * TorsoHeightRatio);
 	HitInfo.bAirborne = GetCharacterMovement() && GetCharacterMovement()->IsFalling();
 
-	// ダメージを受けてスタン状態にする
 	HealthComponent->TakeDamage(ContactDamage);
 
 	// HP0ではStunを開始せず、GameOver演出のダウンアニメがStun状態で上書きされないようにする。
