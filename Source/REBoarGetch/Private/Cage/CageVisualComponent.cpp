@@ -25,6 +25,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogCageVisual, Log, All);
 
 namespace CageVisual
 {
+	/** 破壊VFXのScaleの下限（0除算を避ける）。 */
+	constexpr float MinBreakVFXScale = .01f;
+
 	/** 見た目の更新間隔（秒）。HP表示なので毎フレームである必要はない。 */
 	constexpr float TickInterval = .05f;
 
@@ -455,8 +458,8 @@ void UCageVisualComponent::PlayBreakVFX()
 
 	// World Space Emitterなので、大きさ・位置はUser Parameterで渡してから開始する。
 	VFX->SetVariableFloat(TEXT("User.Scale"), BreakVFXScale);
-	VFX->SetVariableFloat(TEXT("User.FootprintRadius"), Footprint / FMath::Max(BreakVFXScale, .01f));
-	VFX->SetVariableFloat(TEXT("User.CenterHeight"), CenterHeight / FMath::Max(BreakVFXScale, .01f));
+	VFX->SetVariableFloat(TEXT("User.FootprintRadius"), Footprint / FMath::Max(BreakVFXScale, CageVisual::MinBreakVFXScale));
+	VFX->SetVariableFloat(TEXT("User.CenterHeight"), CenterHeight / FMath::Max(BreakVFXScale, CageVisual::MinBreakVFXScale));
 	VFX->SetVariableInt(TEXT("User.FireCount"), BreakFireCount);
 	VFX->SetVariableInt(TEXT("User.SmokeCount"), BreakSmokeCount);
 	VFX->SetVariableInt(TEXT("User.SparkCount"), BreakSparkCount);

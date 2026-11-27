@@ -27,6 +27,12 @@
 #include "BoarSaveGame.h"
 #include "TimerManager.h"
 
+namespace
+{
+	/** 開始・終了演出の完了待ちTimeoutの下限（秒）。0以下だとTimerが即座に切れるため。 */
+	constexpr float MinStagePresentationTimeoutSeconds = 0.1f;
+}
+
 ABoarGameMode::ABoarGameMode()
 {
 	// プレイヤーコントローラーを指定
@@ -169,7 +175,7 @@ void ABoarGameMode::StartPlay()
 		// 完了通知が同期で返る場合にも解除できるよう、BPイベントより先に監視を開始する。
 		GetWorldTimerManager().SetTimer(IntroductionTimeoutHandle, this,
 			&ABoarGameMode::HandleIntroductionTimeout,
-			FMath::Max(0.1f, StageIntroductionTimeoutSeconds), false);
+			FMath::Max(MinStagePresentationTimeoutSeconds, StageIntroductionTimeoutSeconds), false);
 		OnStageIntroductionRequested();
 	}
 	else
@@ -348,7 +354,7 @@ void ABoarGameMode::ResolveStageEnd()
 	{
 		GetWorldTimerManager().SetTimer(EndPresentationTimeoutHandle, this,
 			&ABoarGameMode::HandleEndPresentationTimeout,
-			FMath::Max(0.1f, StageEndPresentationTimeoutSeconds), false);
+			FMath::Max(MinStagePresentationTimeoutSeconds, StageEndPresentationTimeoutSeconds), false);
 	}
 
 	if (auto* PC = GetWorld()->GetFirstPlayerController())

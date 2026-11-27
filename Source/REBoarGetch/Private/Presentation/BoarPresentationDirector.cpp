@@ -1,5 +1,6 @@
 #include "Presentation/BoarPresentationDirector.h"
 #include "REBoarGetch.h"
+#include "Presentation/BoarPresentationTiming.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -74,7 +75,7 @@ void ABoarPresentationDirector::Tick(float DeltaSeconds)
 	const double Now = GetWorld()->GetRealTimeSeconds();
 
 	// ヒッチやブレークポイントで大きく飛んでも、演出が1フレームで進みすぎないよう0.1秒で打ち切る。
-	const float Dt = FMath::Clamp(float(Now - LastRealTime), 0.f, .1f);
+	const float Dt = FMath::Clamp(float(Now - LastRealTime), 0.f, BoarPresentationTiming::MaxFrameDeltaTime);
 	LastRealTime = Now;
 	Age += Dt;
 

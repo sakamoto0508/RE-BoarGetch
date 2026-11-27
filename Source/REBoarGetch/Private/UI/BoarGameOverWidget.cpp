@@ -1,5 +1,6 @@
 #include "UI/BoarGameOverWidget.h"
 #include "REBoarGetch.h"
+#include "Presentation/BoarPresentationTiming.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
@@ -148,7 +149,7 @@ void UBoarGameOverWidget::UpdateSelection()
 void UBoarGameOverWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-	const float Dt = FMath::Min(InDeltaTime, .1f);
+	const float Dt = FMath::Min(InDeltaTime, BoarPresentationTiming::MaxFrameDeltaTime);
 	UpdateSelection();
 
 	// 選択枠の発光をゆっくり明滅させます。

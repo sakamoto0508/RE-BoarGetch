@@ -1,5 +1,6 @@
 #include "Component/StageClearPresentationComponent.h"
 #include "REBoarGetch.h"
+#include "Presentation/BoarPresentationTiming.h"
 #include "Component/CapturePresentationComponent.h"
 #include "Core/BoarGameMode.h"
 #include "Engine/World.h"
@@ -71,7 +72,7 @@ void UStageClearPresentationComponent::TickComponent(float DeltaTime, ELevelTick
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// ヒッチで大きく飛んでも演出の段階を飛ばさないよう、1フレームの進みを0.1秒までにする。
-	const float Dt = FMath::Min(DeltaTime, .1f);
+	const float Dt = FMath::Min(DeltaTime, BoarPresentationTiming::MaxFrameDeltaTime);
 	TotalAge += Dt;
 	PhaseAge += Dt;
 

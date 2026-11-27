@@ -11,6 +11,9 @@
 
 namespace
 {
+	/** Pitch倍率の下限。0以下だと再生されない（または不正な値になる）ため。 */
+	constexpr float MinPitchMultiplier = 0.01f;
+
 	// Project Settings > Mix の音源ごとの音量。全ての再生経路で同じ倍率を掛ける。
 	float SoundGain(const USoundBase* Sound)
 	{
@@ -146,7 +149,7 @@ void UBoarAudioManagerSubsystem::PlaySoundEffect2D(
 		WorldContextObject,
 		Sound,
 		MasterVolume * SoundEffectVolume * SoundGain(Sound) * FMath::Max(0.0f, VolumeMultiplier),
-		FMath::Max(0.01f, PitchMultiplier));
+		FMath::Max(MinPitchMultiplier, PitchMultiplier));
 }
 
 UAudioComponent* UBoarAudioManagerSubsystem::SpawnSoundEffect2D(
@@ -158,7 +161,7 @@ UAudioComponent* UBoarAudioManagerSubsystem::SpawnSoundEffect2D(
 	const float BaseVolume = FMath::Max(0.f, VolumeMultiplier) * SoundGain(Sound);
 	UAudioComponent* Component = UGameplayStatics::CreateSound2D(
 		WorldContextObject, Sound, MasterVolume * SoundEffectVolume * BaseVolume,
-		FMath::Max(.01f, PitchMultiplier));
+		FMath::Max(MinPitchMultiplier, PitchMultiplier));
 	if (Component)
 	{
 		Component->bIsUISound = false;
@@ -185,7 +188,7 @@ void UBoarAudioManagerSubsystem::PlaySoundEffectAtLocation(
 		Sound,
 		Location,
 		MasterVolume * SoundEffectVolume * SoundGain(Sound) * FMath::Max(0.0f, VolumeMultiplier),
-		FMath::Max(0.01f, PitchMultiplier));
+		FMath::Max(MinPitchMultiplier, PitchMultiplier));
 }
 
 void UBoarAudioManagerSubsystem::PlayUISound(UObject* WorldContextObject, EBoarUISound Sound)
@@ -217,7 +220,7 @@ void UBoarAudioManagerSubsystem::PlayWorldSoundEffect(
 		return;
 
 	const float Volume = MasterVolume * SoundEffectVolume * SoundGain(Sound) * FMath::Max(0.0f, VolumeMultiplier);
-	const float Pitch = FMath::Max(0.01f, PitchMultiplier);
+	const float Pitch = FMath::Max(MinPitchMultiplier, PitchMultiplier);
 	USoundAttenuation* ResolvedAttenuation = ResolveWorldAttenuation(Attenuation);
 
 	if (AttachTo)
@@ -247,7 +250,7 @@ UAudioComponent* UBoarAudioManagerSubsystem::SpawnManagedSoundAttached(
 	const float Volume = MasterVolume * SoundEffectVolume * BaseVolume;
 	UAudioComponent* Component = UGameplayStatics::SpawnSoundAttached(Sound, AttachTo, NAME_None,
 		FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, true, Volume,
-		FMath::Max(0.01f, PitchMultiplier), 0.0f, ResolveWorldAttenuation(Attenuation));
+		FMath::Max(MinPitchMultiplier, PitchMultiplier), 0.0f, ResolveWorldAttenuation(Attenuation));
 
 	if (!Component)
 		return nullptr;

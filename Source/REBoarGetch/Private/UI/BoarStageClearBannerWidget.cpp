@@ -1,4 +1,5 @@
 #include "UI/BoarStageClearBannerWidget.h"
+#include "Presentation/BoarPresentationTiming.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
@@ -96,7 +97,7 @@ void UBoarStageClearBannerWidget::ApplyGlitch(float Strength)
 void UBoarStageClearBannerWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-	const float Dt = FMath::Min(InDeltaTime, .1f);
+	const float Dt = FMath::Min(InDeltaTime, BoarPresentationTiming::MaxFrameDeltaTime);
 	Age += Dt;
 
 	if (HideDuration >= 0.f)
