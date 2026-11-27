@@ -24,6 +24,16 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 
+namespace BoarPlayer
+{
+	/** Capsuleが無いときに使う大きさ（UEの標準的なCharacterと同じ、cm）。 */
+	constexpr float FallbackCapsuleRadius = 34.0f;
+	constexpr float FallbackCapsuleHalfHeight = 88.0f;
+
+	/** 空中アミの急降下ループのループ回数。着地でLandingへ切り替えるまで回し続けるための、実質無限の値。 */
+	constexpr int32 AirNetDropLoopCount = 1000;
+}
+
 ABoarPlayerCharacter::ABoarPlayerCharacter()
 {
 	// Tickはダッシュスタミナの消費・回復と、空中アミ捕獲中の急降下制御に使う。
@@ -686,9 +696,8 @@ void ABoarPlayerCharacter::HandleBoarContact(AActor* OtherActor)
 	HitInfo.HitDirection = Away.IsNearlyZero() ? -GetActorForwardVector().GetSafeNormal2D() : Away.GetSafeNormal();
 	const UCapsuleComponent* Capsule = GetCapsuleComponent();
 
-	// Capsuleが無い場合はUEの標準的なCharacterの大きさとみなす。
-	const float Radius = Capsule ? Capsule->GetScaledCapsuleRadius() : 34.0f;
-	const float HalfHeight = Capsule ? Capsule->GetScaledCapsuleHalfHeight() : 88.0f;
+	const float Radius = Capsule ? Capsule->GetScaledCapsuleRadius() : BoarPlayer::FallbackCapsuleRadius;
+	const float HalfHeight = Capsule ? Capsule->GetScaledCapsuleHalfHeight() : BoarPlayer::FallbackCapsuleHalfHeight;
 
 	// 攻撃側を向いたCapsule表面の、胴（中心よりHalf Heightの15%上）の高さを命中位置とする。
 	constexpr double TorsoHeightRatio = 0.15;
@@ -1237,9 +1246,8 @@ bool ABoarPlayerCharacter::EnterAirNetDropPhase(EAirNetDropPhase NewPhase)
 	case EAirNetDropPhase::Swing:
 		return PlayAirNetDropAnimation(AirNetDropSwingAnimation, AirNetDropSwingPlayRate, 1, 0.0f);
 	case EAirNetDropPhase::Drop:
-		// 着地か最大急降下時間まで構えを保持する（ループ回数は十分大きく取る）。
-		// 着地まで回し続けるため、実質無限のループ回数を指定する（着地時にLandingへ切り替える）。
-		return PlayAirNetDropAnimation(AirNetDropLoopAnimation, 1.0f, /*LoopCount=*/1000, 0.0f);
+		// 着地か最大急降下時間まで構えを保持する。
+		return PlayAirNetDropAnimation(AirNetDropLoopAnimation, 1.0f, BoarPlayer::AirNetDropLoopCount, 0.0f);
 	case EAirNetDropPhase::Recovery:
 		return PlayAirNetDropAnimation(AirNetDropRecoveryAnimation, 1.0f, 1, 0.0f);
 	default:

@@ -6,6 +6,12 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "StateTreeExecutionContext.h"
 
+namespace BoarAttackPlayer
+{
+	/** CharacterMovementが無いときの旋回速度（度/秒）。CharacterMovementのRotation Rateの既定値と同じ。 */
+	constexpr float FallbackTurnRate = 360.0f;
+}
+
 EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::EnterState(FStateTreeExecutionContext& Context,
 	const FStateTreeTransitionResult& Transition) const
 {
@@ -79,7 +85,7 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::TickAttack(
 		const FVector ToPlayer = (Player->GetActorLocation() - Boar->GetActorLocation()).GetSafeNormal2D();
 		if (!ToPlayer.IsNearlyZero())
 		{
-			const float TurnRate = Movement ? Movement->RotationRate.Yaw : 360.0f;
+			const float TurnRate = Movement ? Movement->RotationRate.Yaw : BoarAttackPlayer::FallbackTurnRate;
 			const FRotator NewRotation = FMath::RInterpConstantTo(
 				Boar->GetActorRotation(), ToPlayer.Rotation(), SafeDeltaTime, TurnRate);
 			Boar->SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f));
@@ -133,7 +139,7 @@ EStateTreeRunStatus FStateTreeBoarAttackPlayerTask::TickAttack(
 
 		const FVector RetreatDirection = ToPlayer.IsNearlyZero() ? -InstanceData.ChargeDirection : -ToPlayer;
 		const FVector FaceDirection = ToPlayer.IsNearlyZero() ? InstanceData.ChargeDirection : ToPlayer;
-		const float TurnRate = Movement ? Movement->RotationRate.Yaw : 360.0f;
+		const float TurnRate = Movement ? Movement->RotationRate.Yaw : BoarAttackPlayer::FallbackTurnRate;
 		const FRotator NewRotation = FMath::RInterpConstantTo(
 			Boar->GetActorRotation(), FaceDirection.Rotation(), SafeDeltaTime, TurnRate);
 		Boar->SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f));

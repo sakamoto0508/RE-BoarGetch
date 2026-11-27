@@ -9,6 +9,12 @@
 
 namespace
 {
+	/** ランダムな逃走先を探す半径の倍率（Escape Distanceに掛ける）。少し広めに探して、近すぎる点はMinimum Escape Distanceで除く。 */
+	constexpr float RandomEscapeSearchRadiusScale = 1.5f;
+
+	/** Playerを認識していないとき、維持方向を優先させるために脅威を置く距離（cm、維持方向の真後ろ）。 */
+	constexpr float VirtualThreatDistance = 100.0f;
+
 	/** 真後ろから左右交互に広げる候補角度です。先頭は従来の真後ろ方向です。 */
 	constexpr float EscapeCandidateAngles[] = {0.0f, 35.0f, -35.0f, 70.0f, -70.0f, 105.0f, -105.0f};
 
@@ -64,7 +70,7 @@ namespace
 		{
 			FNavLocation Result;
 
-			if (!Nav.GetRandomReachablePointInRadius(BoarLocation, EscapeDistance * 1.5f, Result))
+			if (!Nav.GetRandomReachablePointInRadius(BoarLocation, EscapeDistance * RandomEscapeSearchRadiusScale, Result))
 				continue;
 			if (FVector::DistSquared(BoarLocation, Result.Location) < MinimumEscapeDistanceSq)
 				continue;
@@ -391,7 +397,7 @@ namespace
 		}
 
 		// プレイヤーを認識していないときは、維持方向に近い方向を優先する（脅威を維持方向の真後ろに置いて評価する）。
-		const FVector ScoreThreatLocation = Threat != nullptr ? Threat->GetActorLocation() : BoarLocation - Heading * 100.0f;
+		const FVector ScoreThreatLocation = Threat != nullptr ? Threat->GetActorLocation() : BoarLocation - Heading * VirtualThreatDistance;
 		FVector OpenDirection;
 		FVector OpenLocation;
 

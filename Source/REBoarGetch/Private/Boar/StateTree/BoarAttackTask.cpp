@@ -9,6 +9,9 @@
 
 namespace BoarAttackCage
 {
+	/** CharacterMovementが無いときの旋回速度（度/秒）。CharacterMovementのRotation Rateの既定値と同じ。 */
+	constexpr float FallbackTurnRate = 360.0f;
+
 	/** 旋回速度の範囲で指定方向へ向き直らせる。 */
 	void TurnTowards(ABoarBase* Boar, const FVector& Direction, float DeltaTime)
 	{
@@ -16,7 +19,7 @@ namespace BoarAttackCage
 			return;
 
 		const UCharacterMovementComponent* Movement = Boar->GetCharacterMovement();
-		const float TurnRate = Movement ? Movement->RotationRate.Yaw : 360.0f;
+		const float TurnRate = Movement ? Movement->RotationRate.Yaw : FallbackTurnRate;
 		const FRotator NewRotation = FMath::RInterpConstantTo(
 			Boar->GetActorRotation(), Direction.Rotation(), DeltaTime, TurnRate);
 		Boar->SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f));

@@ -30,6 +30,18 @@
 
 namespace
 {
+	/** 疲労ループ音の開始・停止のフェード時間（秒）。 */
+	constexpr float TiredLoopFadeTime = 0.2f;
+
+	/** 攻撃予備動作の再生速度の下限（0除算を避ける）。 */
+	constexpr float MinAttackTelegraphPlayRate = 0.01f;
+
+	/** 切り返しの旋回時間の下限（秒）。0に近いと角速度が発散するため。 */
+	constexpr float MinEscapePivotTurnTime = 0.05f;
+
+	/** 切り返し中の旋回ループMontageの再生速度の下限。 */
+	constexpr float MinEscapeTurnLoopPlayRate = 0.1f;
+
 	/** 逃走・切り返しのデバッグログ（AKI-152）。0=無効、1=Output Log、2=Output Log＋画面表示。 */
 	int32 GBoarEscapeTurnDebug = 0;
 	FAutoConsoleVariableRef CVarBoarEscapeTurnDebug(
@@ -504,7 +516,7 @@ float ABoarBase::GetAttackTelegraphDuration() const
 	if (ActiveSettings.AttackTelegraphAnimation)
 	{
 		return ActiveSettings.AttackTelegraphAnimation->GetPlayLength() / FMath::Max(
-			ActiveSettings.AttackTelegraphPlayRate, 0.01f);
+			ActiveSettings.AttackTelegraphPlayRate, MinAttackTelegraphPlayRate);
 	}
 
 	return FMath::Max(ActiveSettings.AttackTelegraphDuration, 0.0f);
@@ -774,7 +786,7 @@ void ABoarBase::UpdateStamina(float DeltaSeconds)
 				TiredLoopComponent = Audio->SpawnManagedSoundAttached(ActiveSettings.Audio.TiredLoop,
 				                                                      GetRootComponent(),
 				                                                      ActiveSettings.Audio.Attenuation, 1.0f, 1.0f,
-				                                                      0.2f);
+				                                                      TiredLoopFadeTime);
 	}
 	else if (bWasRecoveringStamina && !bIsRecoveringStamina)
 	{
@@ -819,7 +831,7 @@ void ABoarBase::StopBoarLoopingSounds()
 		if (UBoarAudioManagerSubsystem* Audio = GetGameInstance()
 			                                        ? GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>()
 			                                        : nullptr)
-			Audio->StopManagedSound(TiredLoopComponent, 0.2f);
+			Audio->StopManagedSound(TiredLoopComponent, TiredLoopFadeTime);
 		else
 			TiredLoopComponent->Stop();
 	}
@@ -1574,8 +1586,7 @@ void ABoarBase::SetEscapeTurnPhase(EBoarEscapeTurnPhase NewPhase)
 			                       ? Settings.PivotStopDuration - FMath::Min(
 				                       Settings.BraceDuration, Settings.PivotStopDuration)
 			                       : Settings.PivotStopDuration;
-		// 旋回時間が0に近いと角速度が発散するため、最短0.05秒として扱う。
-		EscapePivotTurnRate = RemainingYaw / FMath::Max(TurnTime, 0.05f);
+		EscapePivotTurnRate = RemainingYaw / FMath::Max(TurnTime, MinEscapePivotTurnTime);
 	}
 
 	if (NewPhase == EBoarEscapeTurnPhase::None)
@@ -1667,8 +1678,7 @@ void ABoarBase::OnEscapeTurnPhaseChanged_Implementation(EBoarEscapeTurnPhase New
 			IsOwnMontage(Current))
 			break;
 
-		PlayTurnLoop(TurnDirection < 0.0f ? EscapeTurnLeftMontage.Get() : EscapeTurnRightMontage.Get(), /*MinPlayRate=*/
-		             0.1f);
+		PlayTurnLoop(TurnDirection < 0.0f ? EscapeTurnLeftMontage.Get() : EscapeTurnRightMontage.Get(), MinEscapeTurnLoopPlayRate);
 		break;
 	case EBoarEscapeTurnPhase::Accelerate:
 		// 切り返しの旋回を終えて走り出すときは、後脚で地面を蹴るMontageを1回再生してからLocomotionへ戻る（自動Blend Out）。

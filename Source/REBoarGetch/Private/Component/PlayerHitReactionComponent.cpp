@@ -27,6 +27,12 @@ DEFINE_LOG_CATEGORY_STATIC(LogBoarHitReaction, Log, All);
 
 namespace BoarHitReaction
 {
+	/** 攻撃者が無い被弾で、攻撃の発生源とみなす距離（cm、命中位置から被弾方向の逆へ）。 */
+	constexpr float FallbackSourceDistance = 100.0f;
+
+	/** 頭のSocketが無いとき、Stun VFXを置くActor原点からの高さ（cm）。 */
+	constexpr float StunVFXFallbackHeight = 80.0f;
+
 	/** Niagaraの色はUser Parameter「Color」で受けます（捕獲・Stage Clearの既存Systemと同じ規約）。 */
 	const FName ColorParameter(TEXT("Color"));
 
@@ -254,7 +260,7 @@ void UPlayerHitReactionComponent::PlayCameraReaction(const FBoarPlayerHitInfo& H
 
 	const FVector Source = HitInfo.Attacker
 		? HitInfo.AttackerLocation
-		: HitInfo.HitLocation - HitInfo.HitDirection * 100.0f;
+		: HitInfo.HitLocation - HitInfo.HitDirection * BoarHitReaction::FallbackSourceDistance;
 
 	// 連続被弾でも揺れを積み重ねず、前の被弾の揺れは即座に置き換える。
 	ReleaseCameraEffect(true);
@@ -393,7 +399,7 @@ void UPlayerHitReactionComponent::UpdateStunVFXLocation() const
 	// 頭のBoneの真上（World上方向）へ置く。しりもちで頭が傾いても周回面は水平のまま。
 	const FVector Head = Mesh->DoesSocketExist(StunVFXSocket)
 		? Mesh->GetSocketLocation(StunVFXSocket)
-		: GetOwner()->GetActorLocation() + FVector(0.0, 0.0, 80.0);
+		: GetOwner()->GetActorLocation() + FVector(0.0, 0.0, BoarHitReaction::StunVFXFallbackHeight);
 
 	StunVFXComponent->SetWorldLocation(Head + FVector(0.0, 0.0, StunVFXHeight));
 }
