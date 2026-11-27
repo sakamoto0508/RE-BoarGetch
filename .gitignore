@@ -102,3 +102,6 @@ Tools/**/*.pyc
 Tools/**/*.log
 Tools/Verification/*.json
 Tools/Verification/*.png
+
+# Editor backup files
+*~

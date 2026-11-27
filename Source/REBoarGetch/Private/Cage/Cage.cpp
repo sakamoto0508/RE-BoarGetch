@@ -24,6 +24,7 @@ ACage::ACage()
 
 	CapturedBoarArea = CreateDefaultSubobject<UBoxComponent>(TEXT("CapturedBoarArea"));
 	CapturedBoarArea->SetupAttachment(SceneRoot);
+	// 既定の収容範囲（cm）。中心を床から100cm上げ、幅400×奥行400×高さ200の箱にする。檻ごとの大きさはBP／配置側で調整する。
 	CapturedBoarArea->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
 	CapturedBoarArea->SetBoxExtent(FVector(200.0f, 200.0f, 100.0f));
 	CapturedBoarArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);

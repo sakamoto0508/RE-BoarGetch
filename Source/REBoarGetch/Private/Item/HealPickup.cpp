@@ -10,6 +10,7 @@ AHealPickup::AHealPickup()
 
 	PickupCollision = CreateDefaultSubobject<USphereComponent>(TEXT("PickupCollision"));
 	SetRootComponent(PickupCollision);
+	// 既定の取得範囲（半径cm）。BP／配置側で調整する。
 	PickupCollision->SetSphereRadius(80.0f);
 	PickupCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	PickupCollision->SetCollisionObjectType(ECC_WorldDynamic);

@@ -124,8 +124,8 @@ ABoarBase::ABoarBase(const FObjectInitializer& ObjectInitializer)
 	FootstepDustComponent->BoarArchetypes = {EBoarArchetype::EscapeSpecialist};
 	FootstepDustComponent->MinSpeed = 420.0f;
 	FootstepDustComponent->FullStrengthSpeed = 650.0f;
-	FootstepDustComponent->MinStrength = {4, 0.60f, 0.40f, 120.0f, 40.0f, 0};
-	FootstepDustComponent->FullStrength = {8, 0.90f, 0.55f, 260.0f, 55.0f, 2};
+	FootstepDustComponent->MinStrength = FFootstepDustStrength(/*SpawnCount=*/4, /*SizeScale=*/0.60f, /*Lifetime=*/0.40f, /*KickSpeed=*/120.0f, /*KickUp=*/40.0f, /*StreakCount=*/0);
+	FootstepDustComponent->FullStrength = FFootstepDustStrength(/*SpawnCount=*/8, /*SizeScale=*/0.90f, /*Lifetime=*/0.55f, /*KickSpeed=*/260.0f, /*KickUp=*/55.0f, /*StreakCount=*/2);
 	FootstepDustComponent->StreakMinSpeed = 560.0f;
 	FootstepDustComponent->StreakLength = 90.0f;
 	FootstepDustComponent->Spread = 0.45f;

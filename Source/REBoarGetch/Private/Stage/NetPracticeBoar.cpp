@@ -10,6 +10,7 @@
 ANetPracticeBoar::ANetPracticeBoar()
 {
 	AutoPossessAI = EAutoPossessAI::Disabled;
+	// 当たり判定（cm）：半径58・半分の高さ70。下の仮の見た目（胴の長さ約150cm）を包む大きさ。
 	GetCapsuleComponent()->SetCapsuleSize(58, 70);
 
 	// 見た目はキューブを組み合わせた仮のBoar（胴・鼻・両耳）。数値は位置（cm）とScale。
@@ -32,7 +33,7 @@ ANetPracticeBoar::ANetPracticeBoar()
 	Add(TEXT("EarLeft"), FVector(45, -26, 45), FVector(.25, .15, .4));
 	Add(TEXT("EarRight"), FVector(45, 26, 45), FVector(.25, .15, .4));
 
-	// 頭上に捕獲の成否を表示する文字。
+	// 頭上に捕獲の成否を表示する文字（中心から125cm上、文字の高さ24cm）。
 	Feedback = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Feedback"));
 	Feedback->SetupAttachment(GetRootComponent());
 	Feedback->SetRelativeLocation(FVector(0, 0, 125));

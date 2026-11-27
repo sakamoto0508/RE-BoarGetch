@@ -73,8 +73,8 @@ ABoarPlayerCharacter::ABoarPlayerCharacter()
 	FootstepDustComponent = CreateDefaultSubobject<UFootstepDustComponent>(TEXT("FootstepDustComponent"));
 	FootstepDustComponent->MinSpeed = 250.0f;
 	FootstepDustComponent->FullStrengthSpeed = 900.0f;
-	FootstepDustComponent->MinStrength = {3, 0.40f, 0.30f, 70.0f, 30.0f, 0};
-	FootstepDustComponent->FullStrength = {6, 0.62f, 0.42f, 150.0f, 50.0f, 0};
+	FootstepDustComponent->MinStrength = FFootstepDustStrength(/*SpawnCount=*/3, /*SizeScale=*/0.40f, /*Lifetime=*/0.30f, /*KickSpeed=*/70.0f, /*KickUp=*/30.0f, /*StreakCount=*/0);
+	FootstepDustComponent->FullStrength = FFootstepDustStrength(/*SpawnCount=*/6, /*SizeScale=*/0.62f, /*Lifetime=*/0.42f, /*KickSpeed=*/150.0f, /*KickUp=*/50.0f, /*StreakCount=*/0);
 	FootstepDustComponent->Spread = 0.6f;
 
 	/// TPS移動の基本設定
