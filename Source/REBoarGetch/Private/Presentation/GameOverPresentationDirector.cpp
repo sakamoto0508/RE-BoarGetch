@@ -1,5 +1,6 @@
 #include "Presentation/GameOverPresentationDirector.h"
 #include "REBoarGetch.h"
+#include "UI/BoarUILayers.h"
 
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraSubsystem.h"
@@ -24,8 +25,6 @@
 
 namespace GameOverPresentation
 {
-	/** 画面効果WidgetのZOrder（HUDより前、GameOver UIより後ろ）。 */
-	constexpr int32 EffectWidgetZOrder = 50;
 
 	/** 0除算・極端に短い演出を避けるための各時間の下限（秒）。 */
 	constexpr float MinFlashDuration = .02f;
@@ -123,7 +122,7 @@ UBoarGameOverEffectWidget* AGameOverPresentationDirector::EnsureEffectWidget()
 			*GetName(), *EffectWidgetClass->GetName(), *FString::Join(Missing, TEXT(", ")));
 	}
 
-	EffectWidget->AddToViewport(GameOverPresentation::EffectWidgetZOrder);
+	EffectWidget->AddToViewport(BoarUILayer::Presentation);
 	return EffectWidget;
 }
 

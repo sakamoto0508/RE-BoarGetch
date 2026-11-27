@@ -1,5 +1,6 @@
 #include "Stage/StageEntrance.h"
 #include "REBoarGetch.h"
+#include "UI/BoarUILayers.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Audio/BoarLoopingSoundComponent.h"
 #include "Engine/GameInstance.h"
@@ -146,8 +147,7 @@ void AStageEntrance::ShowStageSelection(APlayerController* PlayerController)
 
 		LobbyWidget->OnStageStartRequested.AddUniqueDynamic(this, &AStageEntrance::HandleStageStartRequested);
 		LobbyWidget->OnStageSelectionClosed.AddUniqueDynamic(this, &AStageEntrance::HandleStageSelectionClosed);
-		constexpr int32 StageSelectZOrder = 50; // HUDより前面
-		LobbyWidget->AddToViewport(StageSelectZOrder);
+		LobbyWidget->AddToViewport(BoarUILayer::Presentation);
 	}
 
 	// 表示内容を現在のStageConfigで更新してから、Game入力とUI入力を両立させる。

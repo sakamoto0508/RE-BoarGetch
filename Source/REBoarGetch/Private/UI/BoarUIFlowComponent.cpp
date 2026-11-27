@@ -1,5 +1,6 @@
 #include "UI/BoarUIFlowComponent.h"
 #include "REBoarGetch.h"
+#include "UI/BoarUILayers.h"
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Player/BoarPlayerController.h"
@@ -166,7 +167,7 @@ void UBoarUIFlowComponent::OpenLoadoutMenu()
 
 	LoadoutWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseLoadoutMenu);
 	PauseWidget->SetVisibility(ESlateVisibility::Collapsed);
-	LoadoutWidget->AddToViewport(90);
+	LoadoutWidget->AddToViewport(BoarUILayer::Loadout);
 	PlayFlowSound(EBoarUISound::Open);
 
 	// 既存UI入力ContextとPauseを維持し、戻る操作で親画面へ戻します。
@@ -205,7 +206,7 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* Re
 	bEncyclopediaGameAndUI = PauseWidget || Cast<UBoarLobbyWidget>(ParentMenu);
 	bEncyclopediaAddedUIContext = PC->UIMappingContext && !PC->OwnedMappingContexts.Contains(PC->UIMappingContext);
 	if (bEncyclopediaAddedUIContext)
-		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
+		PC->AddOwnedMappingContext(PC->UIMappingContext, BoarInputPriority::UI);
 
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
@@ -221,7 +222,7 @@ void UBoarUIFlowComponent::OpenEncyclopedia(UUserWidget* ParentMenu, UWidget* Re
 
 	EncyclopediaWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseEncyclopedia);
 	ParentMenu->SetVisibility(ESlateVisibility::Collapsed);
-	EncyclopediaWidget->AddToViewport(120);
+	EncyclopediaWidget->AddToViewport(BoarUILayer::Encyclopedia);
 	PlayFlowSound(EBoarUISound::Open);
 	FInputModeGameAndUI ModeUI;
 	ModeUI.SetWidgetToFocus(EncyclopediaWidget->TakeWidget());
@@ -321,7 +322,7 @@ void UBoarUIFlowComponent::OpenSettingsMenu(UUserWidget* ParentMenu, UWidget* Re
 	SettingsParentVisibility = ParentMenu->GetVisibility();
 	SettingsWidget->OnClosed.AddUniqueDynamic(this, &UBoarUIFlowComponent::CloseSettingsMenu);
 	ParentMenu->SetVisibility(ESlateVisibility::Collapsed);
-	SettingsWidget->AddToViewport(100);
+	SettingsWidget->AddToViewport(BoarUILayer::Menu);
 
 	if (PauseWidget)
 	{
@@ -440,7 +441,7 @@ void UBoarUIFlowComponent::OpenPauseMenu()
 	if (PC->GlobalMappingContext && PC->UIMappingContext)
 	{
 		PC->RemoveOwnedMappingContext(PC->DefaultMappingContext);
-		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
+		PC->AddOwnedMappingContext(PC->UIMappingContext, BoarInputPriority::UI);
 	}
 
 	// 押下状態を持ち越さず、既存のアクション終了経路を使用します。
@@ -457,7 +458,7 @@ void UBoarUIFlowComponent::OpenPauseMenu()
 	PC->FlushPressedKeys();
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
-	Widget->AddToViewport(80);
+	Widget->AddToViewport(BoarUILayer::PauseMenu);
 	FInputModeGameAndUI ModeUI;
 	ModeUI.SetHideCursorDuringCapture(false);
 	ModeUI.SetWidgetToFocus(Widget->TakeWidget());
@@ -486,7 +487,7 @@ void UBoarUIFlowComponent::ResumeFromPause()
 	PauseWidget->RemoveFromParent();
 	PauseWidget = nullptr;
 	PC->RemoveOwnedMappingContext(PC->UIMappingContext);
-	PC->AddOwnedMappingContext(PC->DefaultMappingContext, 0);
+	PC->AddOwnedMappingContext(PC->DefaultMappingContext, BoarInputPriority::Default);
 
 	if (auto* PlayerCharacter = PC->GetBoarCharacter())
 		PlayerCharacter->SetMenuOpen(false);
@@ -514,7 +515,7 @@ void UBoarUIFlowComponent::LeaveStageFromPause()
 
 	LobbyExitConfirmation->OnDecision.AddUniqueDynamic(this, &UBoarUIFlowComponent::ResolveLobbyExit);
 	PauseWidget->SetVisibility(ESlateVisibility::Collapsed);
-	LobbyExitConfirmation->AddToViewport(110);
+	LobbyExitConfirmation->AddToViewport(BoarUILayer::Confirmation);
 	PlayFlowSound(EBoarUISound::Open);
 	FInputModeGameAndUI ModeUI;
 	ModeUI.SetWidgetToFocus(LobbyExitConfirmation->TakeWidget());
@@ -611,7 +612,7 @@ void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 	bFacilityMenuOpen = true;
 	bFacilityAddedUIContext = PC->UIMappingContext && !PC->OwnedMappingContexts.Contains(PC->UIMappingContext);
 	if (bFacilityAddedUIContext)
-		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
+		PC->AddOwnedMappingContext(PC->UIMappingContext, BoarInputPriority::UI);
 
 	PC->bIsGadgetModifierHeld = false;
 
@@ -627,7 +628,7 @@ void UBoarUIFlowComponent::OpenFacilityMenu(bool bArchive)
 	PC->FlushPressedKeys();
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
-	Menu->AddToViewport(100);
+	Menu->AddToViewport(BoarUILayer::Menu);
 	FInputModeGameAndUI Mode;
 	Mode.SetWidgetToFocus(Menu->TakeWidget());
 	Mode.SetHideCursorDuringCapture(false);
@@ -674,7 +675,7 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 	bFacilityMenuOpen = true;
 	bFacilityAddedUIContext = PC->UIMappingContext && !PC->OwnedMappingContexts.Contains(PC->UIMappingContext);
 	if (bFacilityAddedUIContext)
-		PC->AddOwnedMappingContext(PC->UIMappingContext, 20);
+		PC->AddOwnedMappingContext(PC->UIMappingContext, BoarInputPriority::UI);
 
 	PC->bIsGadgetModifierHeld = false;
 
@@ -690,7 +691,7 @@ void UBoarUIFlowComponent::OpenArchiveDisplaySelection()
 	PC->FlushPressedKeys();
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
-	ArchiveSelectionWidget->AddToViewport(100);
+	ArchiveSelectionWidget->AddToViewport(BoarUILayer::Menu);
 	PlayFlowSound(EBoarUISound::Open);
 	FInputModeUIOnly Input;
 	Input.SetWidgetToFocus(ArchiveSelectionWidget->TakeWidget());

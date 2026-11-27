@@ -26,17 +26,7 @@
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-
-namespace
-{
-	/** Input Mapping Contextの優先度。数値が大きいほど優先され、同じキーを後から上書きできる。 */
-	constexpr int32 DefaultMappingPriority = 0;
-	constexpr int32 GlobalMappingPriority = 10;  // Pause等、どの画面でも有効な操作
-	constexpr int32 FacilityMappingPriority = 15; // Lobby・施設だけの操作（Return等）
-
-	/** Result・GameOver画面のZOrder。通常HUDより前面に出す。 */
-	constexpr int32 EndScreenZOrder = 100;
-}
+#include "UI/BoarUILayers.h"
 
 ABoarPlayerController::ABoarPlayerController()
 {
@@ -69,7 +59,7 @@ void ABoarPlayerController::BeginPlay()
 	{
 		// Priority 0をゲームプレイ入力の基準レイヤーとして使用する。
 		// 将来、メニュー等を追加する場合は、より高いPriorityのContextで上書きできる。
-		AddOwnedMappingContext(DefaultMappingContext, DefaultMappingPriority);
+		AddOwnedMappingContext(DefaultMappingContext, BoarInputPriority::Default);
 		UE_LOG(LogREBoarGetch, Log, TEXT("[Input] MappingContextを追加しました: %s"), *GetNameSafe(DefaultMappingContext));
 	}
 	else if (IsLocalController())
@@ -79,11 +69,11 @@ void ABoarPlayerController::BeginPlay()
 			*GetNameSafe(LocalPlayer), *GetNameSafe(InputSubsystem), *GetNameSafe(DefaultMappingContext));
 	}
 
-	AddOwnedMappingContext(GlobalMappingContext, GlobalMappingPriority);
+	AddOwnedMappingContext(GlobalMappingContext, BoarInputPriority::Global);
 
 	// Lobby・施設・施設TestのReturnで使用。通常Stageには登録しません。
 	if (GetWorld() && !GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		AddOwnedMappingContext(FacilityMappingContext, FacilityMappingPriority);
+		AddOwnedMappingContext(FacilityMappingContext, BoarInputPriority::Facility);
 
 	// Mapping Context登録後にHUDを生成し、現在Possess中のCharacterとGameModeへ接続する。
 	CreatePlayerHUD();
@@ -287,7 +277,7 @@ void ABoarPlayerController::CreatePlayerHUD()
 	}
 
 	// 通常HUDはResultより低いZOrderに置き、SelfHitTestInvisibleでゲーム入力を遮らない。
-	PlayerHUDWidget->AddToViewport(0);
+	PlayerHUDWidget->AddToViewport(BoarUILayer::HUD);
 	PlayerHUDWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
 	if (ABoarGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ABoarGameMode>() : nullptr)
@@ -503,7 +493,7 @@ void ABoarPlayerController::HandleStageCleared(const FStageRunData& Run, int32 T
 	ResultWidget->OnSaveRetryRequested.AddUniqueDynamic(this, &ABoarPlayerController::HandleSaveRetryRequested);
 
 	// 通常HUDより前面へ表示し、確定した捕獲数を渡す。
-	ResultWidget->AddToViewport(EndScreenZOrder);
+	ResultWidget->AddToViewport(BoarUILayer::EndScreen);
 	ResultWidget->InitializeResult(Run, TargetCount);
 	ResultWidget->SetSaveFailed(!bSaveSucceeded);
 
@@ -660,7 +650,7 @@ void ABoarPlayerController::HandleStageGameOver()
 	GameOverWidget = Widget;
 	GameOverWidget->OnRetryRequested.AddUniqueDynamic(this, &ABoarPlayerController::RetryStage);
 	GameOverWidget->OnLobbyRequested.AddUniqueDynamic(this, &ABoarPlayerController::ReturnToLobby);
-	GameOverWidget->AddToViewport(EndScreenZOrder);
+	GameOverWidget->AddToViewport(BoarUILayer::EndScreen);
 	FInputModeUIOnly InputMode;
 	InputMode.SetWidgetToFocus(GameOverWidget->TakeWidget());
 	SetInputMode(InputMode);

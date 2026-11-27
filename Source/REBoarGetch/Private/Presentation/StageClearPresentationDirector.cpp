@@ -1,5 +1,6 @@
 #include "Presentation/StageClearPresentationDirector.h"
 #include "REBoarGetch.h"
+#include "UI/BoarUILayers.h"
 
 #include "ACFCameraBlueprintLibrary.h"
 #include "ACFCameraSubsystem.h"
@@ -87,8 +88,6 @@ namespace StageClearPresentation
 	constexpr float MinParticleFadeDuration = .05f;
 	constexpr float MinScreenFadeDuration = .01f;
 
-	/** 「STAGE CLEAR!」バナーのZOrder（HUDより前）。 */
-	constexpr int32 BannerZOrder = 50;
 }
 
 AStageClearPresentationDirector::AStageClearPresentationDirector()
@@ -795,7 +794,7 @@ void AStageClearPresentationDirector::ShowBanner()
 		BannerWidget = CreateWidget<UBoarStageClearBannerWidget>(PC, BannerWidgetClass);
 		if (BannerWidget)
 		{
-			BannerWidget->AddToViewport(StageClearPresentation::BannerZOrder);
+			BannerWidget->AddToViewport(BoarUILayer::Presentation);
 		}
 	}
 }
