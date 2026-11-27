@@ -44,6 +44,6 @@ void UBoarFlowGlowLibrary::SetFlowFrameState(UUserWidget* Owner, bool bFocused, 
 		const bool bActive = MID->K2_GetScalarParameterValue(TEXT("Focused")) > .5f || MID->
 			K2_GetScalarParameterValue(TEXT("Hovered")) > .5f;
 		MID->SetScalarParameterValue(TEXT("Active"), bActive ? 1.f : 0.f);
-		Owner->SetRenderScale(FVector2D(bActive ? 1.035f : 1.f));
+		Owner->SetRenderScale(FVector2D(bActive ? FocusedScale : 1.f));
 	}
 }

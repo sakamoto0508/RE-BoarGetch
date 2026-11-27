@@ -6,6 +6,19 @@
 #include "Components/TextBlock.h"
 #include "Engine/Texture2D.h"
 
+namespace BoarGameOverReveal
+{
+	/** 選択肢が下から浮き上がる距離（px）。 */
+	constexpr float ChoicesSlideDistance = 24.f;
+
+	/** 見出しの動きのうち「開始倍率→わずかに小さく」に使う割合。残り（0.35）で1.0へ戻る。 */
+	constexpr float HeadingUndershootPhase = .65f;
+	constexpr float HeadingSettlePhase = .35f;
+
+	/** 見出しが不透明になり切るまでの割合（見出しの動き全体に対して）。 */
+	constexpr float HeadingFadeInPhase = .3f;
+}
+
 // RetryとLobbyの選択を通知へ接続します。BPに必要なボタンがない場合は警告します。
 void UBoarGameOverWidget::NativeConstruct()
 {
@@ -160,7 +173,7 @@ void UBoarGameOverWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 	{
 		const float C = FMath::Clamp((RevealAge - ChoicesDelay) / ChoicesRevealTime, 0.f, 1.f);
 		ChoicesWidget->SetRenderOpacity(C);
-		ChoicesWidget->SetRenderTranslation(FVector2D(0.f, FMath::InterpEaseOut(24.f, 0.f, C, 2.f)));
+		ChoicesWidget->SetRenderTranslation(FVector2D(0.f, FMath::InterpEaseOut(BoarGameOverReveal::ChoicesSlideDistance, 0.f, C, 2.f)));
 	}
 
 	if (!HeadingWidget)
@@ -168,12 +181,13 @@ void UBoarGameOverWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 	// 0～65%で開始倍率→わずかに小さく、残りで1.0へ戻る「拡大して落ち着く」動きです。
 	const float T = FMath::Clamp(RevealAge / HeadingRevealTime, 0.f, 1.f);
 	const float Low = 1.f - HeadingSettleUndershoot;
-	const float Scale = T < .65f
-			? FMath::InterpEaseOut(HeadingStartScale, Low, T / .65f, 2.f)
-			: FMath::InterpEaseInOut(Low, 1.f, (T - .65f) / .35f, 2.f);
+	using namespace BoarGameOverReveal;
+	const float Scale = T < HeadingUndershootPhase
+			? FMath::InterpEaseOut(HeadingStartScale, Low, T / HeadingUndershootPhase, 2.f)
+			: FMath::InterpEaseInOut(Low, 1.f, (T - HeadingUndershootPhase) / HeadingSettlePhase, 2.f);
 
 	HeadingWidget->SetRenderScale(FVector2D(Scale));
-	HeadingWidget->SetRenderOpacity(FMath::Clamp(T / .3f, 0.f, 1.f));
+	HeadingWidget->SetRenderOpacity(FMath::Clamp(T / HeadingFadeInPhase, 0.f, 1.f));
 
 	if (HeadingFrameWidget)
 	{

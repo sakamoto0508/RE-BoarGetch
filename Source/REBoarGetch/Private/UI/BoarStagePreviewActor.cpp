@@ -4,6 +4,17 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "ShaderCompiler.h"
 
+namespace
+{
+	/** ミニチュアを斜め上から見下ろす撮影位置と、注視点（Actor基準、cm）。 */
+	const FVector PreviewCaptureLocation(-1100, -1100, 1100);
+	const FVector PreviewLookAtLocation(0, 0, 80);
+
+	/** 撮影するRender Targetの解像度（px）。 */
+	constexpr int32 PreviewTextureWidth = 1024;
+	constexpr int32 PreviewTextureHeight = 768;
+}
+
 ABoarStagePreviewActor::ABoarStagePreviewActor()
 {
 	// 生成直後はシェーダー/テクスチャが未準備の場合があるため、短時間だけTickで撮り直します。
@@ -18,8 +29,8 @@ ABoarStagePreviewActor::ABoarStagePreviewActor()
 	Capture->ProjectionType = ECameraProjectionMode::Orthographic;
 	Capture->CaptureSource = ESceneCaptureSource::SCS_SceneColorHDR;
 	Capture->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
-	Capture->SetRelativeLocation(FVector(-1100, -1100, 1100));
-	Capture->SetRelativeRotation((FVector(0, 0, 80) - Capture->GetRelativeLocation()).Rotation());
+	Capture->SetRelativeLocation(PreviewCaptureLocation);
+	Capture->SetRelativeRotation((PreviewLookAtLocation - Capture->GetRelativeLocation()).Rotation());
 	Capture->ShowFlags.SetAtmosphere(false);
 	Capture->ShowFlags.SetFog(false);
 	Capture->ShowFlags.SetVolumetricFog(false);
@@ -69,7 +80,7 @@ UTextureRenderTarget2D* ABoarStagePreviewActor::CreatePreview()
 
 	Target = NewObject<UTextureRenderTarget2D>(this);
 	Target->ClearColor = FLinearColor(0, 0, 0, 1); // Captureのアルファには不透明度の反転値が入ります。
-	Target->InitCustomFormat(1024, 768, PF_FloatRGBA, false);
+	Target->InitCustomFormat(PreviewTextureWidth, PreviewTextureHeight, PF_FloatRGBA, false);
 	Target->UpdateResourceImmediate(true);
 	Capture->TextureTarget = Target;
 	Capture->OrthoWidth = OrthoWidth;

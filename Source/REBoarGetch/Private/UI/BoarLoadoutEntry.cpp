@@ -5,10 +5,16 @@
 #include "Components/Image.h"
 #include "Components/SizeBox.h"
 
+namespace
+{
+	/** Gadget Labで使う詰めた一覧行の高さ（px）。 */
+	constexpr float CompactLabRowHeight = 52.f;
+}
+
 void UBoarLoadoutEntry::UseCompactLabRow()
 {
 	if (auto* Row = WidgetTree ? Cast<USizeBox>(WidgetTree->RootWidget) : nullptr)
-		Row->SetHeightOverride(52.f);
+		Row->SetHeightOverride(CompactLabRowHeight);
 }
 
 void UBoarLoadoutEntry::NativeConstruct()

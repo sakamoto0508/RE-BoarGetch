@@ -5,6 +5,40 @@
 
 namespace
 {
+	// ---- 帯・レール・背景の光 ----
+	/** 帯が開き始めるときの縦の大きさ（1で全開）。 */
+	constexpr float BandStartHeightScale = .15f;
+	/** レールが伸び切るのを帯より遅らせる時間（秒）。 */
+	constexpr float RailExtraOpenTime = .1f;
+	/** レールの横の大きさの下限（0だとWidgetが潰れるため）。 */
+	constexpr float MinRailScale = .001f;
+	/** 背景の光が出始める時刻と、出切るまでの時間（秒）。 */
+	constexpr float GlowDelay = .05f;
+	constexpr float GlowFadeInTime = .5f;
+
+	// ---- タイトル ----
+	/** 出始めの短い点滅（Title Delayからの秒数）と、その間の不透明度。 */
+	constexpr float TitleFlickerStart = .14f;
+	constexpr float TitleFlickerEnd = .18f;
+	constexpr float TitleFlickerOpacity = .35f;
+	/** タイトルのフェードインの速さ（Title Settle Timeに対する倍率）。 */
+	constexpr float TitleFadeInRate = 2.5f;
+
+	// ---- 装飾 ----
+	/** 装飾が出始める時刻（Title Delayからの秒数）と、出切るまでの時間（秒）。 */
+	constexpr float DecoDelay = .15f;
+	constexpr float DecoFadeInTime = .25f;
+	/** 装飾が縮んで定位置に収まる前の大きさ。 */
+	constexpr float DecoStartScale = 1.06f;
+
+	// ---- グリッチ ----
+	/** 登場直後のグリッチが終わりまでに弱まる割合。 */
+	constexpr float IntroGlitchFalloff = .5f;
+	/** その後に時々だけ出すグリッチの強さ。 */
+	constexpr float IdleGlitchStrength = .45f;
+	/** グリッチのずれを更新する間隔（秒）。 */
+	constexpr float GlitchStepInterval = .05f;
+
 	float Ease(float T) { return FMath::InterpEaseOut(0.f, 1.f, FMath::Clamp(T, 0.f, 1.f), 3.f); }
 }
 
@@ -83,18 +117,18 @@ void UBoarStageClearBannerWidget::NativeTick(const FGeometry& MyGeometry, float 
 	if (UWidget* W = Part(BandWidgetName))
 	{
 		W->SetRenderOpacity(Open);
-		W->SetRenderScale(FVector2D(1.f, FMath::Lerp(.15f, 1.f, Open)));
+		W->SetRenderScale(FVector2D(1.f, FMath::Lerp(BandStartHeightScale, 1.f, Open)));
 	}
 
 	for (FName Name : {RailTopWidgetName, RailBottomWidgetName})
 		if (UWidget* W = Part(Name))
 		{
-			const float Rail = Ease(Age / (BandOpenTime + .1f));
+			const float Rail = Ease(Age / (BandOpenTime + RailExtraOpenTime));
 			W->SetRenderOpacity(FMath::Min(1.f, Rail * 2.f));
-			W->SetRenderScale(FVector2D(FMath::Max(.001f, Rail), 1.f));
+			W->SetRenderScale(FVector2D(FMath::Max(MinRailScale, Rail), 1.f));
 		}
 	if (UWidget* W = Part(GlowWidgetName))
-		W->SetRenderOpacity(Ease((Age - .05f) / .5f));
+		W->SetRenderOpacity(Ease((Age - GlowDelay) / GlowFadeInTime));
 
 	// タイトル：少し大きい状態から縮んで定位置へ。出始めに一度だけ短く点滅させます。
 	const float TT = (Age - TitleDelay) / TitleSettleTime;
@@ -102,16 +136,16 @@ void UBoarStageClearBannerWidget::NativeTick(const FGeometry& MyGeometry, float 
 	if (UWidget* W = Part(TitleWidgetName))
 	{
 		const float Settle = Ease(TT);
-		const bool bFlicker = Age > TitleDelay + .14f && Age < TitleDelay + .18f;
-		W->SetRenderOpacity(bFlicker ? .35f : FMath::Clamp(TT * 2.5f, 0.f, 1.f));
+		const bool bFlicker = Age > TitleDelay + TitleFlickerStart && Age < TitleDelay + TitleFlickerEnd;
+		W->SetRenderOpacity(bFlicker ? TitleFlickerOpacity : FMath::Clamp(TT * TitleFadeInRate, 0.f, 1.f));
 		W->SetRenderScale(FVector2D(FMath::Lerp(TitleStartScale, 1.f, Settle)));
 	}
 
 	if (UWidget* W = Part(DecoWidgetName))
 	{
-		const float D = Ease((Age - TitleDelay - .15f) / .25f);
+		const float D = Ease((Age - TitleDelay - DecoDelay) / DecoFadeInTime);
 		W->SetRenderOpacity(D);
-		W->SetRenderScale(FVector2D(FMath::Lerp(1.06f, 1.f, D)));
+		W->SetRenderScale(FVector2D(FMath::Lerp(DecoStartScale, 1.f, D)));
 	}
 
 	if (UWidget* W = Part(SweepWidgetName))
@@ -124,19 +158,19 @@ void UBoarStageClearBannerWidget::NativeTick(const FGeometry& MyGeometry, float 
 		W->SetRenderTranslation(FVector2D(0.f, Y));
 	}
 
-	// グリッチ：登場直後は強く、その後は時々だけ短く。0.05秒ごとにずれを更新します。
+	// グリッチ：登場直後は強く、その後は時々だけ短く。Glitch Step Intervalごとにずれを更新します。
 	float Strength = 0.f;
 
 	if (Age > TitleDelay && Age < TitleDelay + IntroGlitchTime)
-		Strength = 1.f - (Age - TitleDelay) / IntroGlitchTime * .5f;
+		Strength = 1.f - (Age - TitleDelay) / IntroGlitchTime * IntroGlitchFalloff;
 	else if (GlitchInterval > 0.f && Age > TitleDelay + IntroGlitchTime)
-		Strength = FMath::Fmod(Age - TitleDelay - IntroGlitchTime, GlitchInterval) > GlitchInterval - GlitchBurstTime ? .45f : 0.f;
+		Strength = FMath::Fmod(Age - TitleDelay - IntroGlitchTime, GlitchInterval) > GlitchInterval - GlitchBurstTime ? IdleGlitchStrength : 0.f;
 
 	if (Strength <= 0.f)
 		ApplyGlitch(0.f);
 	else if (Age >= NextGlitchStep)
 	{
 		ApplyGlitch(Strength);
-		NextGlitchStep = Age + .05f;
+		NextGlitchStep = Age + GlitchStepInterval;
 	}
 }

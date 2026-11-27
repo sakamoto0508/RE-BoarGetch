@@ -21,6 +21,13 @@
 
 namespace
 {
+	/** 詳細欄に出す図鑑説明の最大文字数。 */
+	constexpr int32 DetailDescriptionMaxChars = 140;
+
+	/** スティックでフォーカスを動かす閾値と、続けて動かすまでの待ち時間（実時間の秒）。 */
+	constexpr float AnalogNavigationThreshold = 0.6f;
+	constexpr double AnalogNavigationRepeatInterval = 0.18;
+
 	// 捕獲済み候補グリッドの列数です。展示枠数とは別の値です。
 	constexpr int32 GridColumns = 3;
 
@@ -204,7 +211,7 @@ void UBoarArchiveSelectionWidget::RefreshDetail()
 		if (!D->EncyclopediaDescription.IsEmpty())
 			Value = FText::Format(
 			LOCTEXT("DetailDescription", "{0}\n{1}"), Value,
-			FText::FromString(D->EncyclopediaDescription.ToString().Left(140)));
+			FText::FromString(D->EncyclopediaDescription.ToString().Left(DetailDescriptionMaxChars)));
 	}
 	else if (!Id.IsNone())
 		Value = FText::Format(LOCTEXT("DetailMissing", "{0}\n個体情報未登録"), Value);
@@ -374,11 +381,11 @@ FReply UBoarArchiveSelectionWidget::NativeOnAnalogValueChanged(const FGeometry& 
 {
 	if (E.GetKey() == EKeys::Gamepad_LeftX || E.GetKey() == EKeys::Gamepad_LeftY)
 	{
-		if (FMath::Abs(E.GetAnalogValue()) > 0.6f && FPlatformTime::Seconds() >= NextAnalogNavigation)
+		if (FMath::Abs(E.GetAnalogValue()) > AnalogNavigationThreshold && FPlatformTime::Seconds() >= NextAnalogNavigation)
 		{
 			const int32 Sign = E.GetAnalogValue() > 0 ? 1 : -1;
 			MoveGridFocus(E.GetKey() == EKeys::Gamepad_LeftX ? Sign : -Sign * GridColumns);
-			NextAnalogNavigation = FPlatformTime::Seconds() + 0.18;
+			NextAnalogNavigation = FPlatformTime::Seconds() + AnalogNavigationRepeatInterval;
 		}
 
 		return FReply::Handled();

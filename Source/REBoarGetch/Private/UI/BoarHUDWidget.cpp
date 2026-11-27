@@ -15,6 +15,10 @@
 
 namespace
 {
+	/** スタミナ切れの点滅：最も暗いときの明るさと、そこから最大までの振れ幅。 */
+	constexpr float StaminaBlinkMinBrightness = 0.55f;
+	constexpr float StaminaBlinkAmplitude = 0.45f;
+
 	UTextBlock* ResolveHUDTextBlock(UWidgetTree* WidgetTree, const FName WidgetName)
 	{
 		if (!WidgetTree || WidgetName.IsNone())
@@ -185,7 +189,7 @@ void UBoarHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	if (bStaminaLocked && StaminaExhaustedBlinkRate > 0.0f)
 	{
 		StaminaBlinkTime += InDeltaTime;
-		Blink = 0.55f + 0.45f * (0.5f + 0.5f * FMath::Cos(StaminaBlinkTime * StaminaExhaustedBlinkRate * UE_TWO_PI));
+		Blink = StaminaBlinkMinBrightness + StaminaBlinkAmplitude * (0.5f + 0.5f * FMath::Cos(StaminaBlinkTime * StaminaExhaustedBlinkRate * UE_TWO_PI));
 	}
 	else
 	{

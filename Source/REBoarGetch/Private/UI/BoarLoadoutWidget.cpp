@@ -8,6 +8,13 @@
 #include "Components/Image.h"
 #include "Components/ScrollBox.h"
 
+namespace
+{
+	/** 状態表示の文字色：エラー（赤）／通常（水色）。 */
+	const FLinearColor StatusErrorColor(1.f, .2f, .15f);
+	const FLinearColor StatusNormalColor(.6f, .9f, 1.f);
+}
+
 // 名前指定のWidgetを接続し、Presenterの表示データと通知から装備画面を組み立てます。
 void UBoarLoadoutWidget::NativeConstruct()
 {
@@ -253,7 +260,7 @@ void UBoarLoadoutWidget::SetStatus(const FText& Text, bool bError)
 	if (Status)
 	{
 		Status->SetText(Text);
-		Status->SetColorAndOpacity(FSlateColor(bError ? FLinearColor(1.f, .2f, .15f) : FLinearColor(.6f, .9f, 1.f)));
+		Status->SetColorAndOpacity(FSlateColor(bError ? StatusErrorColor : StatusNormalColor));
 	}
 }
 

@@ -19,6 +19,23 @@
 
 namespace
 {
+	/** 未解放ステージの一覧項目の不透明度。 */
+	constexpr float LockedStageEntryOpacity = 0.45f;
+
+	/** カルーセルで中央以外（前・次）のカードの大きさ。 */
+	constexpr float CarouselSideCardScale = .72f;
+
+	/** ミニチュアの彩度：ロック中・次のカード／前のカード（中央は1）。 */
+	constexpr float DimmedCardSaturation = .18f;
+	constexpr float PreviousCardSaturation = .5f;
+
+	/** ミニチュアの色味：ロック中・次のカード／前のカード（中央は白のまま）。 */
+	const FLinearColor DimmedCardTint(.5f, .62f, .78f, 1);
+	const FLinearColor PreviousCardTint(.75f, .83f, .9f, 1);
+
+	/** ミニチュア撮影用Actorを置く画面外の位置（cm）。 */
+	const FVector PreviewActorSpawnLocation(0, 0, -100000);
+
 	// BP側の任意名Widgetを解決します。未配置・未設定の場合はnullptrとして扱います。
 	template <typename TWidget>
 	TWidget* ResolveLobbyWidget(UWidgetTree* WidgetTree, const FName WidgetName)
@@ -171,7 +188,7 @@ void UBoarLobbyWidget::RefreshSelectedStage()
 		const auto Entry = Presenter->GetStage(I);
 		StageEntries[I]->Setup(I, Entry.EntryLabel, Entry.bSelected);
 		StageEntries[I]->SetAvailable(Entry.bUnlocked);
-		StageEntries[I]->SetRenderOpacity(Entry.bUnlocked ? 1.0f : 0.45f);
+		StageEntries[I]->SetRenderOpacity(Entry.bUnlocked ? 1.0f : LockedStageEntryOpacity);
 	}
 
 	if (PreviousButton)
@@ -492,7 +509,7 @@ void UBoarLobbyWidget::RefreshCarousel()
 
 		Card->SetVisibility(Stage.bValid ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 		Card->SetRenderTranslation(FVector2D::ZeroVector);
-		Card->SetRenderScale(FVector2D(I == 1 ? 1.f : .72f));
+		Card->SetRenderScale(FVector2D(I == 1 ? 1.f : CarouselSideCardScale));
 		Card->SetRenderOpacity(I == 1 ? 1.f : I == 0 ? PreviousCardOpacity : NextCardOpacity);
 		const bool bUnlocked = Stage.bUnlocked;
 
@@ -513,7 +530,7 @@ void UBoarLobbyWidget::RefreshCarousel()
 		UTexture2D* Thumbnail = Stage.Thumbnail.LoadSynchronous();
 		UMaterialInstanceDynamic* Diorama = Stage.bValid ? GetDioramaBrush(Stage) : nullptr;
 		if (Diorama) Diorama->SetScalarParameterValue(
-			TEXT("Saturation"), !bUnlocked || I == 2 ? .18f : I == 0 ? .5f : 1.f);
+			TEXT("Saturation"), !bUnlocked || I == 2 ? DimmedCardSaturation : I == 0 ? PreviousCardSaturation : 1.f);
 		if (auto* Preview = ResolveLobbyWidget<UImage>(WidgetTree, FName(*(Prefix + TEXT("Image")))))
 		{
 			if (Diorama)
@@ -526,9 +543,9 @@ void UBoarLobbyWidget::RefreshCarousel()
 					: ESlateVisibility::Collapsed);
 			// 次のカードとロック中のカードは輪郭を残しつつ、明るい細部を抑えて表示します。
 			Preview->SetColorAndOpacity(!bUnlocked || I == 2
-					? FLinearColor(.5f, .62f, .78f, 1)
+					? DimmedCardTint
 					: I == 0
-					? FLinearColor(.75f, .83f, .9f, 1)
+					? PreviousCardTint
 					: FLinearColor::White);
 		}
 
@@ -575,7 +592,7 @@ UMaterialInstanceDynamic* UBoarLobbyWidget::GetDioramaBrush(const FBoarStageSele
 	FActorSpawnParameters Params;
 	Params.ObjectFlags |= RF_Transient;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	auto* Actor = GetWorld()->SpawnActor<ABoarStagePreviewActor>(Class, FVector(0, 0, -100000), FRotator::ZeroRotator,
+	auto* Actor = GetWorld()->SpawnActor<ABoarStagePreviewActor>(Class, PreviewActorSpawnLocation, FRotator::ZeroRotator,
 		Params);
 	if (!Actor)
 		return nullptr;
@@ -617,8 +634,8 @@ void UBoarLobbyWidget::AnimateCarousel(float DeltaTime)
 		if (auto* Card = WidgetTree->FindWidget(Names[I]))
 		{
 			Card->SetRenderTranslation(FVector2D(-SlideDirection * CarouselSpacing * A, 0));
-			const float From = I == 1 ? 1.f : .72f;
-			const float To = I - SlideDirection == 1 ? 1.f : .72f;
+			const float From = I == 1 ? 1.f : CarouselSideCardScale;
+			const float To = I - SlideDirection == 1 ? 1.f : CarouselSideCardScale;
 			Card->SetRenderScale(FVector2D(FMath::Lerp(From, To, A)));
 			Card->SetRenderOpacity(FMath::Lerp(I == 1 ? 1.f : I == 0 ? PreviousCardOpacity : NextCardOpacity,
 				I - SlideDirection == 1 ? 1.f : NextCardOpacity, A));

@@ -11,6 +11,9 @@ class REBOARGETCH_API UBoarFlowGlowLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	/** フォーカス・ホバー中のWidgetを少しだけ大きく見せる拡大率です。 */
+	static constexpr float FocusedScale = 1.035f;
+
 	UFUNCTION(BlueprintCallable, Category="Hologram")
 	static void ResizeFlowFrame(UUserWidget* Owner, FVector2D LocalSize);
 	UFUNCTION(BlueprintCallable, Category="Hologram")

@@ -63,7 +63,7 @@ void UBoarArchiveCard::RefreshFrame()
 		UBoarFlowGlowLibrary::SetFlowFrameState(this, true, bHighlighted);
 	}
 
-	SetRenderScale(bFocusedCard ? FVector2D(1.035f) : FVector2D(1));
+	SetRenderScale(bFocusedCard ? FVector2D(UBoarFlowGlowLibrary::FocusedScale) : FVector2D(1));
 }
 
 void UBoarArchiveCard::NativeOnAddedToFocusPath(const FFocusEvent& E)
