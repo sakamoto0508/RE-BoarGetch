@@ -49,11 +49,29 @@ namespace
 		TEXT("通常Boarの逃走・切り返しのデバッグログ。0 = 無効、1 = Output Log（LogREBoarGetch）、2 = Output Log＋画面表示。"),
 		ECVF_Cheat);
 
+	/** 移動アニメーションのデバッグログ。0=無効、1=Output Log。 */
 	int32 GBoarAnimDebug = 0;
+
+	/** 移動アニメーションのデバッグログを出す間隔（秒）。 */
+	constexpr float AnimDebugInterval = 0.2f;
+
+	/** PIE中にコンソールで切り替えても効くよう、プレイ中の全Boarのログ用Timerを張り直す。 */
+	void HandleAnimDebugChanged(IConsoleVariable*)
+	{
+		for (TObjectIterator<ABoarBase> It; It; ++It)
+		{
+			if (!It->IsTemplate() && It->HasActorBegunPlay())
+			{
+				It->RefreshAnimDebugTimer();
+			}
+		}
+	}
+
 	FAutoConsoleVariableRef CVarBoarAnimDebug(
 		TEXT("Boar.AI.AnimDebug"),
 		GBoarAnimDebug,
 		TEXT("Boarの移動アニメーションのデバッグログ（0.2秒ごと）。0 = 無効、1 = Output Log（LogREBoarGetch）。"),
+		FConsoleVariableDelegate::CreateStatic(&HandleAnimDebugChanged),
 		ECVF_Cheat);
 
 	/** AnimBP（ABP_NormalBoar）の変数を名前で読む（デバッグ表示用。無ければNaN）。 */
@@ -151,16 +169,29 @@ void ABoarBase::BeginPlay()
 
 	InitializeForStage();
 
-	// アニメ診断ログ（Boar.AI.AnimDebug）。無効時は判定だけで何もしない。
-	constexpr float AnimDebugInterval = 0.2f;
-	GetWorldTimerManager().SetTimer(AnimDebugTimerHandle, this, &ABoarBase::LogAnimDebug, AnimDebugInterval, true);
+	// 無効のときはTimerを張らない（全Boarで空回りさせない）。
+	RefreshAnimDebugTimer();
+}
+
+void ABoarBase::RefreshAnimDebugTimer()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+		return;
+
+	FTimerManager& Timers = World->GetTimerManager();
+	if (GBoarAnimDebug == 0)
+	{
+		Timers.ClearTimer(AnimDebugTimerHandle);
+	}
+	else if (!Timers.IsTimerActive(AnimDebugTimerHandle))
+	{
+		Timers.SetTimer(AnimDebugTimerHandle, this, &ABoarBase::LogAnimDebug, AnimDebugInterval, true);
+	}
 }
 
 void ABoarBase::LogAnimDebug() const
 {
-	if (GBoarAnimDebug == 0)
-		return;
-
 	LogAnimDebugEvent(TEXT("tick"));
 }
 
@@ -216,7 +247,7 @@ void ABoarBase::LogAnimDebugEvent(const TCHAR* Trigger) const
 	       ),
 	       *GetName(), ArchetypeName(BoarArchetype), Trigger,
 	       World ? World->GetTimeSeconds() : 0.0, *StateText, GetVelocity().Size2D(), Move ? Move->MaxWalkSpeed : 0.0f,
-	       bIsEscaping ? 1 : 0, *EscapePhaseName(EscapeTurnPhase), Move && Move->bOrientRotationToMovement ? 1 : 0,
+	       bIsEscaping ? 1 : 0, *EscapePhaseName(Escape.Phase), Move && Move->bOrientRotationToMovement ? 1 : 0,
 	       ReadAnimNumber(AnimInstance, TEXT("Speed")), ReadAnimNumber(AnimInstance, TEXT("NormalizedSpeed")),
 	       ReadAnimNumber(AnimInstance, TEXT("LocomotionBlendX")),
 	       ReadAnimNumber(AnimInstance, TEXT("LocomotionPlayRate")),
@@ -231,7 +262,7 @@ void ABoarBase::InitializeForStage()
 
 	ApplyArchetypeDefaults();
 	CurrentStamina = ActiveSettings.MaxStamina;
-	SetActorTickEnabled(ActiveSettings.bUseStamina);
+	UpdateTickEnabled();
 	bSettingsInitialized = true;
 }
 
@@ -273,7 +304,7 @@ bool ABoarBase::CaptureWithFeedback(bool bSharedFeedback)
 		const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
 		LogEscapeTurn(FString::Printf(
 			TEXT("CapturedDuring phase=%s lastPivot=%s sinceLastPivotStart=%.2fs speed=%.0f threatDist=%.0f"),
-			*EscapePhaseName(EscapeTurnPhase), PivotReasonName(LastEscapePivotReason), Now - LastEscapePivotTime,
+			*EscapePhaseName(Escape.Phase), PivotReasonName(Escape.LastPivotReason), Now - Escape.LastPivotTime,
 			GetVelocity().Size2D(), GetEscapeThreatDistance()));
 	}
 
@@ -619,8 +650,8 @@ void ABoarBase::ReleaseBoar()
 	ResetEscapeMotion();
 	ApplyMovementSpeed();
 
-	// 捕獲前と同じく、スタミナ対応種別だけ毎フレーム更新へ戻す。
-	SetActorTickEnabled(ActiveSettings.bUseStamina);
+	// 捕獲前と同じ条件で毎フレーム更新へ戻す（逃走状態は直前のResetEscapeMotionで解除済み）。
+	UpdateTickEnabled();
 
 	PerceivedPlayer = nullptr;
 	PerceivedCage = nullptr;
@@ -833,7 +864,7 @@ void ABoarBase::SetEscaping(bool bNewEscaping)
 	if (bIsEscaping)
 	{
 		// 到着直後の再入は「継続」なので鳴らさない。新しい逃走の開始だけを知らせる。
-		if (const UWorld* World = GetWorld(); World && World->GetTimeSeconds() - LastEscapeExitTime > ActiveSettings.
+		if (const UWorld* World = GetWorld(); World && World->GetTimeSeconds() - Escape.LastExitTime > ActiveSettings.
 			Audio.EscapeStartMinGap)
 			PlayBoarSound(ActiveSettings.Audio.EscapeStart);
 		// 逃走中は向き追従の旋回速度を逃走用（直進的）にする。EscapeTurn無効の種別は変わらない。
@@ -843,10 +874,10 @@ void ABoarBase::SetEscaping(bool bNewEscaping)
 	{
 		// 逃走Stateを抜けた時刻を残し、到着直後の再入を「逃走開始」ではなく「継続」と判定できるようにする。
 		if (const UWorld* World = GetWorld())
-			LastEscapeExitTime = World->GetTimeSeconds();
+			Escape.LastExitTime = World->GetTimeSeconds();
 
 		if (IsEscapeTurnDebugEnabled())
-			LogEscapeTurn(FString::Printf(TEXT("EscapeEnded (phase=%s を中断して復元)"), *EscapePhaseName(EscapeTurnPhase)));
+			LogEscapeTurn(FString::Printf(TEXT("EscapeEnded (phase=%s を中断して復元)"), *EscapePhaseName(Escape.Phase)));
 
 		ResetEscapeMotion();
 	}
@@ -918,19 +949,19 @@ void ABoarBase::BeginEscapeMotion(const FVector& EscapeDirection)
 	SetEscapeHeading(EscapeDirection);
 
 	// 逃走の継続時間（最短時間・逃げ切り判定）はここから数える。同じ逃走への再入では数え直さない。
-	EscapeSessionStartTime = GetWorld()->GetTimeSeconds();
-	EscapeThreatLostTime = -1.0;
+	Escape.SessionStartTime = GetWorld()->GetTimeSeconds();
+	Escape.ThreatLostTime = -1.0;
 	const float Delta = GetYawDelta(*this, EscapeDirection);
 	if (FMath::Abs(Delta) >= Settings.StartTurnMinAngle)
 	{
-		EscapeTurnTargetYaw = EscapeDirection.Rotation().Yaw;
-		EscapeTurnSign = Delta >= 0.0f ? 1.0f : -1.0f;
-		++EscapeStartTurnCount;
+		Escape.TurnTargetYaw = EscapeDirection.Rotation().Yaw;
+		Escape.TurnSign = Delta >= 0.0f ? 1.0f : -1.0f;
+		++Escape.StartTurnCount;
 
 		if (IsEscapeTurnDebugEnabled())
 			LogEscapeTurn(FString::Printf(
 				TEXT("EscapeStarted (新しい逃走) StartTurn #%d angle=%.1f rate=%.0f threatDist=%.0f"),
-				EscapeStartTurnCount, Delta, Settings.StartTurnRateDegreesPerSecond, GetEscapeThreatDistance()));
+				Escape.StartTurnCount, Delta, Settings.StartTurnRateDegreesPerSecond, GetEscapeThreatDistance()));
 		HoldOrientRotation();
 		SetEscapeTurnPhase(EBoarEscapeTurnPhase::StartTurn);
 	}
@@ -940,10 +971,10 @@ void ABoarBase::BeginEscapeMotion(const FVector& EscapeDirection)
 			LogEscapeTurn(FString::Printf(
 				TEXT("EscapeStarted (新しい逃走) 旋回なし angle=%.1f < StartTurnMinAngle threatDist=%.0f"),
 				Delta, GetEscapeThreatDistance()));
-		EscapeAccelerationStartRatio = Settings.StartInitialSpeedRatio;
-		EscapeAccelerationDuration = Settings.StartAccelerationDuration;
+		Escape.AccelerationStartRatio = Settings.StartInitialSpeedRatio;
+		Escape.AccelerationDuration = Settings.StartAccelerationDuration;
 		StartEscapeCommit(true);
-		SetEscapeTurnPhase(EscapeAccelerationDuration > 0.0f
+		SetEscapeTurnPhase(Escape.AccelerationDuration > 0.0f
 			                   ? EBoarEscapeTurnPhase::Accelerate
 			                   : EBoarEscapeTurnPhase::None);
 	}
@@ -952,11 +983,11 @@ void ABoarBase::BeginEscapeMotion(const FVector& EscapeDirection)
 void ABoarBase::UpdateEscapeThreatHold()
 {
 	const UWorld* World = GetWorld();
-	APawn* Threat = Cast<APawn>(const_cast<AActor*>(EscapeThreat.Get()));
+	APawn* Threat = Cast<APawn>(const_cast<AActor*>(Escape.Threat.Get()));
 	if (!ActiveSettings.EscapeTurn.bEnabled || !bIsEscaping || World == nullptr || Threat == nullptr ||
-		EscapeSessionStartTime < 0.0)
+		Escape.SessionStartTime < 0.0)
 	{
-		EscapeThreatLostTime = -1.0;
+		Escape.ThreatLostTime = -1.0;
 		return;
 	}
 
@@ -965,31 +996,31 @@ void ABoarBase::UpdateEscapeThreatHold()
 	if (PerceivedPlayer == Threat)
 	{
 		// 通常の認識（視界・記憶範囲）で捉えている：見失い時間を戻す。
-		if (EscapeThreatLostTime >= 0.0 && IsEscapeTurnDebugEnabled())
+		if (Escape.ThreatLostTime >= 0.0 && IsEscapeTurnDebugEnabled())
 			LogEscapeTurn(
-				FString::Printf(TEXT("EscapeThreatReacquired 見失い%.2fs後に再認識 → 逃走継続"), Now - EscapeThreatLostTime));
+				FString::Printf(TEXT("EscapeThreatReacquired 見失い%.2fs後に再認識 → 逃走継続"), Now - Escape.ThreatLostTime));
 
-		EscapeThreatLostTime = -1.0;
+		Escape.ThreatLostTime = -1.0;
 		return;
 	}
 
 	if (PerceivedPlayer != nullptr)
 		return;
 
-	if (EscapeThreatLostTime < 0.0)
+	if (Escape.ThreatLostTime < 0.0)
 	{
-		EscapeThreatLostTime = Now;
+		Escape.ThreatLostTime = Now;
 
 		if (IsEscapeTurnDebugEnabled())
 			LogEscapeTurn(FString::Printf(
 				TEXT("EscapeThreatLost 逃走相手を見失った（%.0fcm）→ 逃げ切り判定開始 lose=%.1fs min=%.1fs elapsed=%.2fs"),
 				FVector::Dist(GetActorLocation(), Threat->GetActorLocation()),
 				ActiveSettings.EscapeTurn.EscapeLoseDuration,
-				ActiveSettings.EscapeTurn.EscapeMinDuration, Now - EscapeSessionStartTime));
+				ActiveSettings.EscapeTurn.EscapeMinDuration, Now - Escape.SessionStartTime));
 	}
 
-	const bool bWithinMinDuration = Now - EscapeSessionStartTime < ActiveSettings.EscapeTurn.EscapeMinDuration;
-	const bool bWithinLoseDuration = Now - EscapeThreatLostTime < ActiveSettings.EscapeTurn.EscapeLoseDuration;
+	const bool bWithinMinDuration = Now - Escape.SessionStartTime < ActiveSettings.EscapeTurn.EscapeMinDuration;
+	const bool bWithinLoseDuration = Now - Escape.ThreatLostTime < ActiveSettings.EscapeTurn.EscapeLoseDuration;
 	if (bWithinMinDuration || bWithinLoseDuration)
 	{
 		// まだ逃げ切っていない：見えていなくても同じ相手から逃げ続ける。
@@ -1000,9 +1031,9 @@ void ABoarBase::UpdateEscapeThreatHold()
 
 	if (IsEscapeTurnDebugEnabled())
 		LogEscapeTurn(FString::Printf(TEXT("EscapeSucceeded 逃げ切り（見失って%.2fs・逃走%.2fs）→ 徘徊へ"),
-		                              Now - EscapeThreatLostTime, Now - EscapeSessionStartTime));
-	EscapeSessionStartTime = -1.0;
-	EscapeThreatLostTime = -1.0;
+		                              Now - Escape.ThreatLostTime, Now - Escape.SessionStartTime));
+	Escape.SessionStartTime = -1.0;
+	Escape.ThreatLostTime = -1.0;
 }
 
 void ABoarBase::SuspendEscape()
@@ -1010,10 +1041,10 @@ void ABoarBase::SuspendEscape()
 	if (!bIsEscaping)
 		return;
 	// 速度・回転・Montageを戻す前に、再開に必要な分だけ控える。
-	const bool bCanResume = ActiveSettings.EscapeTurn.bEnabled && bHasEscapeHeading;
-	const FVector Heading = EscapeHeading;
+	const bool bCanResume = ActiveSettings.EscapeTurn.bEnabled && Escape.bHasHeading;
+	const FVector Heading = Escape.Heading;
 	const float CommitElapsed = GetEscapeCommitElapsed();
-	const EBoarEscapeTurnPhase Phase = EscapeTurnPhase;
+	const EBoarEscapeTurnPhase Phase = Escape.Phase;
 
 	// 通常の逃走終了と同じ復元（ResetEscapeMotion）を行う。旋回の途中でもMontage・速度倍率・向き追従は残さない。
 	SetEscaping(false);
@@ -1021,10 +1052,10 @@ void ABoarBase::SuspendEscape()
 	if (!bCanResume)
 		return;
 
-	bEscapeSuspended = true;
-	SuspendedEscapeHeading = Heading;
-	SuspendedEscapeCommitElapsed = CommitElapsed;
-	SuspendedEscapeTurnPhase = Phase;
+	Escape.Suspended.bValid = true;
+	Escape.Suspended.Heading = Heading;
+	Escape.Suspended.CommitElapsed = CommitElapsed;
+	Escape.Suspended.Phase = Phase;
 
 	if (IsEscapeTurnDebugEnabled())
 		LogEscapeTurn(FString::Printf(
@@ -1037,9 +1068,9 @@ bool ABoarBase::TryResumeEscape(const AActor* Threat)
 {
 	const FBoarEscapeTurnSettings& Settings = ActiveSettings.EscapeTurn;
 	const UWorld* World = GetWorld();
-	const bool bWasSuspended = bEscapeSuspended;
-	bEscapeSuspended = false;
-	const AActor* PreviousThreat = EscapeThreat.Get();
+	const bool bWasSuspended = Escape.Suspended.bValid;
+	Escape.Suspended.bValid = false;
+	const AActor* PreviousThreat = Escape.Threat.Get();
 	SetEscapeThreat(Threat);
 
 	if (!bWasSuspended || World == nullptr)
@@ -1047,7 +1078,7 @@ bool ABoarBase::TryResumeEscape(const AActor* Threat)
 
 	// 「同じ逃走か」は時間だけでなく、抜けた理由（SuspendEscapeは別Stateへの遷移でだけ呼ぶ）と相手でも判断する。
 	const double Now = World->GetTimeSeconds();
-	const double Gap = Now - LastEscapeExitTime;
+	const double Gap = Now - Escape.LastExitTime;
 	const TCHAR* Reject = nullptr;
 
 	if (!Settings.bEnabled)
@@ -1058,7 +1089,7 @@ bool ABoarBase::TryResumeEscape(const AActor* Threat)
 		Reject = TEXT("DifferentThreat");
 	else if (Gap > Settings.ContinueEscapeGraceDuration)
 		Reject = TEXT("GapTooLong");
-	else if (EscapeSessionStartTime < 0.0)
+	else if (Escape.SessionStartTime < 0.0)
 		Reject = TEXT("AlreadyEscaped"); // 逃げ切って終えた逃走は再開しない（次は新しい逃走）
 	if (Reject != nullptr)
 	{
@@ -1068,11 +1099,11 @@ bool ABoarBase::TryResumeEscape(const AActor* Threat)
 		return false;
 	}
 
-	SetEscapeHeading(SuspendedEscapeHeading);
-	const float Delta = FRotator::NormalizeAxis(EscapeTurnTargetYaw - GetActorRotation().Yaw);
+	SetEscapeHeading(Escape.Suspended.Heading);
+	const float Delta = FRotator::NormalizeAxis(Escape.TurnTargetYaw - GetActorRotation().Yaw);
 	const bool bTurnRemaining = FMath::Abs(Delta) > 0.5f;
 
-	switch (SuspendedEscapeTurnPhase)
+	switch (Escape.Suspended.Phase)
 	{
 	case EBoarEscapeTurnPhase::StartTurn:
 	case EBoarEscapeTurnPhase::Decelerate:
@@ -1080,11 +1111,11 @@ bool ABoarBase::TryResumeEscape(const AActor* Threat)
 	case EBoarEscapeTurnPhase::Hold:
 		if (bTurnRemaining)
 		{
-			// 旋回の途中で抜けた：旋回先（EscapeTurnTargetYaw）は固定したまま、同じ種類の旋回を続ける。
+			// 旋回の途中で抜けた：旋回先（Escape.TurnTargetYaw）は固定したまま、同じ種類の旋回を続ける。
 			// 切り返しはMontage・停止を作り直すため踏ん張りからやり直す（減速は済んでいる）。逃走開始の旋回をやり直すことはない。
-			EscapeTurnSign = Delta >= 0.0f ? 1.0f : -1.0f;
+			Escape.TurnSign = Delta >= 0.0f ? 1.0f : -1.0f;
 			HoldOrientRotation();
-			const EBoarEscapeTurnPhase ResumePhase = SuspendedEscapeTurnPhase == EBoarEscapeTurnPhase::StartTurn
+			const EBoarEscapeTurnPhase ResumePhase = Escape.Suspended.Phase == EBoarEscapeTurnPhase::StartTurn
 				                                         ? EBoarEscapeTurnPhase::StartTurn
 				                                         : EBoarEscapeTurnPhase::Brace;
 			if (UCharacterMovementComponent* Move = GetCharacterMovement())
@@ -1096,7 +1127,7 @@ bool ABoarBase::TryResumeEscape(const AActor* Threat)
 				LogEscapeTurn(FString::Printf(
 					TEXT(
 						"EscapeResumed gap=%.2fs | EscapeDirectionPreserved heading=%.0f | 旋回の途中から再開 phase=%s remainingYaw=%.1f"),
-					Gap, EscapeHeading.Rotation().Yaw, *EscapePhaseName(ResumePhase), Delta));
+					Gap, Escape.Heading.Rotation().Yaw, *EscapePhaseName(ResumePhase), Delta));
 			return true;
 		}
 
@@ -1106,14 +1137,14 @@ bool ABoarBase::TryResumeEscape(const AActor* Threat)
 	default:
 		// 走行中に抜けた：方向維持の経過秒数を引き継ぐ（別State中の時間は数えない）。
 		StartEscapeCommit(false);
-		EscapeCommitStartTime = Now - FMath::Max(0.0f, SuspendedEscapeCommitElapsed);
+		Escape.CommitStartTime = Now - FMath::Max(0.0f, Escape.Suspended.CommitElapsed);
 		break;
 	}
 
 	if (IsEscapeTurnDebugEnabled())
 		LogEscapeTurn(FString::Printf(
 			TEXT("EscapeResumed gap=%.2fs | EscapeDirectionPreserved heading=%.0f | DirectionCommitRemaining=%.2fs"),
-			Gap, EscapeHeading.Rotation().Yaw, GetEscapeCommitRemaining()));
+			Gap, Escape.Heading.Rotation().Yaw, GetEscapeCommitRemaining()));
 	return true;
 }
 
@@ -1123,8 +1154,8 @@ void ABoarBase::SetEscapeHeading(const FVector& Direction)
 	if (Flat.IsNearlyZero())
 		return;
 
-	EscapeHeading = Flat;
-	bHasEscapeHeading = true;
+	Escape.Heading = Flat;
+	Escape.bHasHeading = true;
 }
 
 void ABoarBase::CommitEscapeHeading(const FVector& Direction, const TCHAR* DebugReason)
@@ -1135,7 +1166,7 @@ void ABoarBase::CommitEscapeHeading(const FVector& Direction, const TCHAR* Debug
 	if (IsEscapeTurnDebugEnabled())
 		LogEscapeTurn(FString::Printf(
 			TEXT("DirectionCommit start (%s) heading=%.0f duration=%.2fs threatDist=%.0f maxSpeed=%.0f"),
-			DebugReason, EscapeHeading.Rotation().Yaw, ActiveSettings.EscapeTurn.DirectionCommitDuration,
+			DebugReason, Escape.Heading.Rotation().Yaw, ActiveSettings.EscapeTurn.DirectionCommitDuration,
 			GetEscapeThreatDistance(), GetEscapeEffectiveMaxSpeed()));
 }
 
@@ -1172,14 +1203,14 @@ void ABoarBase::ApplyEscapeRotationRate()
 float ABoarBase::GetEscapeCommitElapsed() const
 {
 	const UWorld* World = GetWorld();
-	return (World && EscapeCommitStartTime >= 0.0)
-		       ? static_cast<float>(World->GetTimeSeconds() - EscapeCommitStartTime)
+	return (World && Escape.CommitStartTime >= 0.0)
+		       ? static_cast<float>(World->GetTimeSeconds() - Escape.CommitStartTime)
 		       : -1.0f;
 }
 
 float ABoarBase::GetEscapeCommitDistance() const
 {
-	return EscapeCommitStartTime >= 0.0 ? FVector::Dist2D(GetActorLocation(), EscapeCommitStartLocation) : -1.0f;
+	return Escape.CommitStartTime >= 0.0 ? FVector::Dist2D(GetActorLocation(), Escape.CommitStartLocation) : -1.0f;
 }
 
 float ABoarBase::GetEscapeReferenceYawDelta(const FVector& Direction) const
@@ -1188,8 +1219,8 @@ float ABoarBase::GetEscapeReferenceYawDelta(const FVector& Direction) const
 		return 0.0f;
 	// 維持方向があればそれを基準にする。Actorの正面は経路の曲がりや向き追従で揺れるため、
 	// 小さな方向変更を積み重ねて大きな切り返しを回避できてしまう。
-	if (bHasEscapeHeading)
-		return FRotator::NormalizeAxis(Direction.Rotation().Yaw - EscapeHeading.Rotation().Yaw);
+	if (Escape.bHasHeading)
+		return FRotator::NormalizeAxis(Direction.Rotation().Yaw - Escape.Heading.Rotation().Yaw);
 
 	return GetYawDelta(*this, Direction);
 }
@@ -1214,14 +1245,14 @@ bool ABoarBase::NeedsEscapePivot(const FVector& EscapeDirection, EBoarEscapePivo
 
 float ABoarBase::GetEscapeThreatDistance() const
 {
-	const AActor* Threat = EscapeThreat.Get();
+	const AActor* Threat = Escape.Threat.Get();
 	return Threat ? FVector::Dist2D(GetActorLocation(), Threat->GetActorLocation()) : -1.0f;
 }
 
 bool ABoarBase::IsEscapePivotCoolingDown() const
 {
 	const UWorld* World = GetWorld();
-	return World != nullptr && World->GetTimeSeconds() - LastEscapePivotEndTime < ActiveSettings.EscapeTurn.
+	return World != nullptr && World->GetTimeSeconds() - Escape.LastPivotEndTime < ActiveSettings.EscapeTurn.
 		MinPivotInterval;
 }
 
@@ -1236,7 +1267,7 @@ const TCHAR* ABoarBase::GetEscapePivotRejectReason(const FVector& EscapeDirectio
 		return TEXT("NoDirection");
 	if (FMath::Abs(GetEscapeReferenceYawDelta(EscapeDirection)) < GetPivotAngleThreshold(Settings, Reason))
 		return TEXT("AngleTooSmall");
-	if (EscapeTurnPhase != EBoarEscapeTurnPhase::None && EscapeTurnPhase != EBoarEscapeTurnPhase::Accelerate)
+	if (Escape.Phase != EBoarEscapeTurnPhase::None && Escape.Phase != EBoarEscapeTurnPhase::Accelerate)
 		return TEXT("TurnInProgress");
 	// 抑制の基準は「前回の切り返しを終えて走り出した時刻」。開始時刻基準だと切り返し自体（約2秒）で抑制が切れてしまうため。
 	// 再評価（Reevaluate）は切り返し後にDirectionCommitDuration走ってから行うので、抑制は障害物・再入だけに掛ける。
@@ -1261,8 +1292,8 @@ void ABoarBase::LogEscapeTurn(const FString& Message) const
 	const UWorld* World = GetWorld();
 	const FString Line = FString::Printf(TEXT("[EscapeTurn] %s t=%.2f phase=%s escaping=%d starts=%d pivots=%d | %s"),
 	                                     *GetName(), World ? World->GetTimeSeconds() : 0.0,
-	                                     *EscapePhaseName(EscapeTurnPhase), bIsEscaping ? 1 : 0,
-	                                     EscapeStartTurnCount, EscapePivotCount, *Message);
+	                                     *EscapePhaseName(Escape.Phase), bIsEscaping ? 1 : 0,
+	                                     Escape.StartTurnCount, Escape.PivotCount, *Message);
 	UE_LOG(LogREBoarGetch, Log, TEXT("%s"), *Line);
 
 	if (GBoarEscapeTurnDebug >= 2 && GEngine)
@@ -1277,7 +1308,7 @@ bool ABoarBase::ContinueEscapeMotion()
 	if (!ActiveSettings.EscapeTurn.bEnabled)
 		return false;
 
-	if (EscapeTurnPhase == EBoarEscapeTurnPhase::StartTurn)
+	if (Escape.Phase == EBoarEscapeTurnPhase::StartTurn)
 	{
 		if (IsEscapeTurnDebugEnabled())
 			LogEscapeTurn(TEXT("EscapeContinue (Sustained): 逃走開始の旋回を継続"));
@@ -1288,7 +1319,7 @@ bool ABoarBase::ContinueEscapeMotion()
 	if (IsEscapePivoting())
 	{
 		// 切り返しの途中で逃走先に到着した。旋回先は固定したまま続け、減速中なら到着で止まったので踏ん張りへ進める。
-		if (EscapeTurnPhase == EBoarEscapeTurnPhase::Decelerate)
+		if (Escape.Phase == EBoarEscapeTurnPhase::Decelerate)
 		{
 			SetEscapeTurnPhase(EBoarEscapeTurnPhase::Brace);
 
@@ -1316,9 +1347,9 @@ bool ABoarBase::TryStartEscapePivot(const FVector& EscapeDirection, bool bSkipDe
 		if (IsEscapeTurnDebugEnabled())
 			LogEscapeTurn(FString::Printf(
 				TEXT("EscapeTurnRejected [%s]: %s angle(vs %s)=%.1f threshold=%.1f sinceLastPivotEnd=%.2fs"),
-				PivotReasonName(PivotReason), Reason, bHasEscapeHeading ? TEXT("heading") : TEXT("forward"),
+				PivotReasonName(PivotReason), Reason, Escape.bHasHeading ? TEXT("heading") : TEXT("forward"),
 				GetEscapeReferenceYawDelta(EscapeDirection), GetPivotAngleThreshold(Settings, PivotReason),
-				World ? World->GetTimeSeconds() - LastEscapePivotEndTime : 0.0));
+				World ? World->GetTimeSeconds() - Escape.LastPivotEndTime : 0.0));
 		return false;
 	}
 
@@ -1326,34 +1357,34 @@ bool ABoarBase::TryStartEscapePivot(const FVector& EscapeDirection, bool bSkipDe
 
 	// 旋回先と回転方向はここで固定し、旋回中にプレイヤーが動いても引き直さない。
 	const float Delta = GetYawDelta(*this, EscapeDirection);
-	EscapeTurnTargetYaw = EscapeDirection.Rotation().Yaw;
-	EscapeTurnSign = Delta >= 0.0f ? 1.0f : -1.0f;
-	LastEscapePivotTime = Now;
-	LastEscapePivotReason = PivotReason;
-	++EscapePivotCount;
+	Escape.TurnTargetYaw = EscapeDirection.Rotation().Yaw;
+	Escape.TurnSign = Delta >= 0.0f ? 1.0f : -1.0f;
+	Escape.LastPivotTime = Now;
+	Escape.LastPivotReason = PivotReason;
+	++Escape.PivotCount;
 
 	// 旋回速度は踏ん張り（Brace）の開始時に、その時点の残り角度から決める（SetEscapeTurnPhase）。
-	EscapePivotTurnRate = 0.0f;
+	Escape.PivotTurnRate = 0.0f;
 
 	// デバッグ：捕獲チャンスが届く距離で起きたかを後で比べられるよう、開始時の距離を残す。
-	EscapePivotStartTime = Now;
-	EscapePivotHeldStartTime = -1.0;
-	EscapePivotStartThreatDistance = GetEscapeThreatDistance();
-	EscapePivotMinThreatDistance = EscapePivotStartThreatDistance;
+	Escape.PivotStartTime = Now;
+	Escape.PivotHeldStartTime = -1.0;
+	Escape.PivotStartThreatDistance = GetEscapeThreatDistance();
+	Escape.PivotMinThreatDistance = Escape.PivotStartThreatDistance;
 
 	if (IsEscapeTurnDebugEnabled())
 	{
-		const AActor* Threat = EscapeThreat.Get();
+		const AActor* Threat = Escape.Threat.Get();
 		LogEscapeTurn(FString::Printf(
 			TEXT(
 				"PivotTiming start reason=%s threatDist=%.0f threatSpeed=%.0f boarSpeed=%.0f expectedHold=%.2fs（踏ん張り＋停止の間に旋回）"),
-			PivotReasonName(PivotReason), EscapePivotStartThreatDistance,
+			PivotReasonName(PivotReason), Escape.PivotStartThreatDistance,
 			Threat ? Threat->GetVelocity().Size2D() : -1.0f,
 			GetVelocity().Size2D(), Settings.PivotStopDuration));
 		LogEscapeTurn(FString::Printf(
 			TEXT("EscapeTurnStarted #%d reason=%s angle(vs heading)=%.1f turn(vs forward)=%.1f dir=%s from=%s"),
-			EscapePivotCount, PivotReasonName(PivotReason), GetEscapeReferenceYawDelta(EscapeDirection), Delta,
-			EscapeTurnSign > 0.0f ? TEXT("R") : TEXT("L"),
+			Escape.PivotCount, PivotReasonName(PivotReason), GetEscapeReferenceYawDelta(EscapeDirection), Delta,
+			Escape.TurnSign > 0.0f ? TEXT("R") : TEXT("L"),
 			bSkipDecelerate ? TEXT("Brace(到着後)") : TEXT("Decelerate(走行中)")));
 	}
 
@@ -1361,7 +1392,7 @@ bool ABoarBase::TryStartEscapePivot(const FVector& EscapeDirection, bool bSkipDe
 
 	// 切り返し後に維持する逃走方向は旋回先と同じにする。方向維持（N秒）は旋回を終えて走り出してから始め直す。
 	SetEscapeHeading(EscapeDirection);
-	EscapeCommitStartTime = -1.0;
+	Escape.CommitStartTime = -1.0;
 	HoldOrientRotation();
 	SetEscapeTurnPhase(bSkipDecelerate ? EBoarEscapeTurnPhase::Brace : EBoarEscapeTurnPhase::Decelerate);
 
@@ -1376,47 +1407,47 @@ bool ABoarBase::TryStartEscapePivot(const FVector& EscapeDirection, bool bSkipDe
 
 bool ABoarBase::IsEscapeMovementHeld() const
 {
-	return EscapeTurnPhase == EBoarEscapeTurnPhase::StartTurn || EscapeTurnPhase == EBoarEscapeTurnPhase::Brace
-		|| EscapeTurnPhase == EBoarEscapeTurnPhase::Hold;
+	return Escape.Phase == EBoarEscapeTurnPhase::StartTurn || Escape.Phase == EBoarEscapeTurnPhase::Brace
+		|| Escape.Phase == EBoarEscapeTurnPhase::Hold;
 }
 
 bool ABoarBase::IsEscapePivoting() const
 {
-	return EscapeTurnPhase == EBoarEscapeTurnPhase::Decelerate || EscapeTurnPhase == EBoarEscapeTurnPhase::Brace
-		|| EscapeTurnPhase == EBoarEscapeTurnPhase::Hold;
+	return Escape.Phase == EBoarEscapeTurnPhase::Decelerate || Escape.Phase == EBoarEscapeTurnPhase::Brace
+		|| Escape.Phase == EBoarEscapeTurnPhase::Hold;
 }
 
 float ABoarBase::GetEscapeTurnDirection() const
 {
-	return (IsEscapePivoting() || EscapeTurnPhase == EBoarEscapeTurnPhase::StartTurn) ? EscapeTurnSign : 0.0f;
+	return (IsEscapePivoting() || Escape.Phase == EBoarEscapeTurnPhase::StartTurn) ? Escape.TurnSign : 0.0f;
 }
 
 float ABoarBase::GetEscapeTurnRateDegreesPerSecond() const
 {
-	switch (EscapeTurnPhase)
+	switch (Escape.Phase)
 	{
 	case EBoarEscapeTurnPhase::StartTurn: return ActiveSettings.EscapeTurn.StartTurnRateDegreesPerSecond;
 	case EBoarEscapeTurnPhase::Brace: return ActiveSettings.EscapeTurn.bHoldHeadingDuringBrace
 		                                         ? 0.0f
-		                                         : EscapePivotTurnRate;
-	case EBoarEscapeTurnPhase::Hold: return EscapePivotTurnRate;
+		                                         : Escape.PivotTurnRate;
+	case EBoarEscapeTurnPhase::Hold: return Escape.PivotTurnRate;
 	default: return 0.0f;
 	}
 }
 
 void ABoarBase::ResetEscapeMotion()
 {
-	const bool bWasActive = EscapeTurnPhase != EBoarEscapeTurnPhase::None;
+	const bool bWasActive = Escape.Phase != EBoarEscapeTurnPhase::None;
 	RestoreOrientRotation();
-	PreviousEscapeTurnPhase = EscapeTurnPhase;
-	EscapeTurnPhase = EBoarEscapeTurnPhase::None;
-	EscapeTurnPhaseElapsed = 0.0f;
-	EscapeTurnSign = 0.0f;
-	bHasEscapeHeading = false;
-	bEscapeSuspended = false;
-	EscapeCommitStartTime = -1.0;
-	EscapePivotStartTime = -1.0;
-	EscapePivotTurnRate = 0.0f;
+	Escape.PreviousPhase = Escape.Phase;
+	Escape.Phase = EBoarEscapeTurnPhase::None;
+	Escape.PhaseElapsed = 0.0f;
+	Escape.TurnSign = 0.0f;
+	Escape.bHasHeading = false;
+	Escape.Suspended.bValid = false;
+	Escape.CommitStartTime = -1.0;
+	Escape.PivotStartTime = -1.0;
+	Escape.PivotTurnRate = 0.0f;
 
 	// 逃走中の旋回速度を使っていた場合は通常歩行の値へ戻す（逃走中なら逃走用のまま）。
 	ApplyEscapeRotationRate();
@@ -1425,7 +1456,7 @@ void ABoarBase::ResetEscapeMotion()
 	if (bWasActive)
 	{
 		ApplyMovementSpeed();
-		OnEscapeTurnPhaseChanged(EscapeTurnPhase, 0.0f);
+		OnEscapeTurnPhaseChanged(Escape.Phase, 0.0f);
 	}
 
 	UpdateTickEnabled();
@@ -1433,43 +1464,43 @@ void ABoarBase::ResetEscapeMotion()
 
 void ABoarBase::TickEscapeTurn(float DeltaSeconds)
 {
-	if (EscapeTurnPhase == EBoarEscapeTurnPhase::None)
+	if (Escape.Phase == EBoarEscapeTurnPhase::None)
 		return;
 
 	const FBoarEscapeTurnSettings& Settings = ActiveSettings.EscapeTurn;
-	EscapeTurnPhaseElapsed += DeltaSeconds;
+	Escape.PhaseElapsed += DeltaSeconds;
 
 	// デバッグ：切り返し〜再加速中のプレイヤー最接近距離（アミが届く距離まで来られたか）。
-	if (EscapePivotStartTime >= 0.0)
+	if (Escape.PivotStartTime >= 0.0)
 	{
 		const float ThreatDistance = GetEscapeThreatDistance();
-		if (ThreatDistance >= 0.0f && (EscapePivotMinThreatDistance < 0.0f || ThreatDistance <
-			EscapePivotMinThreatDistance))
-			EscapePivotMinThreatDistance = ThreatDistance;
+		if (ThreatDistance >= 0.0f && (Escape.PivotMinThreatDistance < 0.0f || ThreatDistance <
+			Escape.PivotMinThreatDistance))
+			Escape.PivotMinThreatDistance = ThreatDistance;
 	}
 
 	auto BeginAcceleration = [this](float StartRatio, float Duration)
 	{
 		RestoreOrientRotation();
-		EscapeAccelerationStartRatio = StartRatio;
-		EscapeAccelerationDuration = Duration;
+		Escape.AccelerationStartRatio = StartRatio;
+		Escape.AccelerationDuration = Duration;
 		StartEscapeCommit(true);
 		SetEscapeTurnPhase(Duration > 0.0f ? EBoarEscapeTurnPhase::Accelerate : EBoarEscapeTurnPhase::None);
 	};
 
-	switch (EscapeTurnPhase)
+	switch (Escape.Phase)
 	{
 	case EBoarEscapeTurnPhase::StartTurn:
 		if (StepEscapeRotation(Settings.StartTurnRateDegreesPerSecond, DeltaSeconds))
 		{
 			if (IsEscapeTurnDebugEnabled())
-				LogEscapeTurn(FString::Printf(TEXT("EscapeStartTurnCompleted %.2fs"), EscapeTurnPhaseElapsed));
+				LogEscapeTurn(FString::Printf(TEXT("EscapeStartTurnCompleted %.2fs"), Escape.PhaseElapsed));
 
 			BeginAcceleration(Settings.StartInitialSpeedRatio, Settings.StartAccelerationDuration);
 		}
 		break;
 	case EBoarEscapeTurnPhase::Decelerate:
-		if (EscapeTurnPhaseElapsed >= Settings.DecelerateDuration)
+		if (Escape.PhaseElapsed >= Settings.DecelerateDuration)
 		{
 			SetEscapeTurnPhase(EBoarEscapeTurnPhase::Brace);
 
@@ -1481,36 +1512,36 @@ void ABoarBase::TickEscapeTurn(float DeltaSeconds)
 	case EBoarEscapeTurnPhase::Brace:
 		// 前脚を突っ張って止まる間は向きを変えない（bHoldHeadingDuringBrace）。無効時は踏ん張りながら向きを変える。
 		if (!Settings.bHoldHeadingDuringBrace)
-			StepEscapeRotation(EscapePivotTurnRate, DeltaSeconds);
+			StepEscapeRotation(Escape.PivotTurnRate, DeltaSeconds);
 
-		if (EscapeTurnPhaseElapsed >= FMath::Min(Settings.BraceDuration, Settings.PivotStopDuration))
+		if (Escape.PhaseElapsed >= FMath::Min(Settings.BraceDuration, Settings.PivotStopDuration))
 			SetEscapeTurnPhase(EBoarEscapeTurnPhase::Hold);
 
 		break;
 	case EBoarEscapeTurnPhase::Hold:
 		{
-			const bool bReached = StepEscapeRotation(EscapePivotTurnRate, DeltaSeconds);
+			const bool bReached = StepEscapeRotation(Escape.PivotTurnRate, DeltaSeconds);
 
-			if (EscapeTurnPhaseElapsed >= FMath::Max(Settings.PivotStopDuration - Settings.BraceDuration, 0.0f))
+			if (Escape.PhaseElapsed >= FMath::Max(Settings.PivotStopDuration - Settings.BraceDuration, 0.0f))
 			{
 				// 時間内に回り切れなかった分（フレーム誤差）は、走り出す前に合わせ切る。
-				const float RemainingYaw = FRotator::NormalizeAxis(EscapeTurnTargetYaw - GetActorRotation().Yaw);
+				const float RemainingYaw = FRotator::NormalizeAxis(Escape.TurnTargetYaw - GetActorRotation().Yaw);
 
 				if (!bReached)
-					SetActorRotation(FRotator(0.0f, EscapeTurnTargetYaw, 0.0f));
+					SetActorRotation(FRotator(0.0f, Escape.TurnTargetYaw, 0.0f));
 
 				if (IsEscapeTurnDebugEnabled())
 					LogEscapeTurn(FString::Printf(TEXT("EscapeTurnCompleted (踏ん張り＋停止で旋回) rate=%.0f remainingYaw=%.1f"),
-					                              EscapePivotTurnRate, bReached ? 0.0f : RemainingYaw));
-				if (IsEscapeTurnDebugEnabled() && EscapePivotStartTime >= 0.0)
+					                              Escape.PivotTurnRate, bReached ? 0.0f : RemainingYaw));
+				if (IsEscapeTurnDebugEnabled() && Escape.PivotStartTime >= 0.0)
 				{
 					const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
 					LogEscapeTurn(FString::Printf(
 						TEXT(
 							"PivotTiming turnEnd reason=%s sinceStart=%.2fs held=%.2fs threatDist start=%.0f now=%.0f min=%.0f"),
-						PivotReasonName(LastEscapePivotReason), Now - EscapePivotStartTime,
-						EscapePivotHeldStartTime >= 0.0 ? Now - EscapePivotHeldStartTime : 0.0,
-						EscapePivotStartThreatDistance, GetEscapeThreatDistance(), EscapePivotMinThreatDistance));
+						PivotReasonName(Escape.LastPivotReason), Now - Escape.PivotStartTime,
+						Escape.PivotHeldStartTime >= 0.0 ? Now - Escape.PivotHeldStartTime : 0.0,
+						Escape.PivotStartThreatDistance, GetEscapeThreatDistance(), Escape.PivotMinThreatDistance));
 				}
 
 				BeginAcceleration(Settings.PivotInitialSpeedRatio, Settings.PivotAccelerationDuration);
@@ -1518,18 +1549,18 @@ void ABoarBase::TickEscapeTurn(float DeltaSeconds)
 			break;
 		}
 	case EBoarEscapeTurnPhase::Accelerate:
-		if (EscapeTurnPhaseElapsed >= EscapeAccelerationDuration)
+		if (Escape.PhaseElapsed >= Escape.AccelerationDuration)
 		{
-			if (IsEscapeTurnDebugEnabled() && EscapePivotStartTime >= 0.0)
+			if (IsEscapeTurnDebugEnabled() && Escape.PivotStartTime >= 0.0)
 			{
 				LogEscapeTurn(FString::Printf(
 					TEXT("PivotTiming accelEnd reason=%s total=%.2fs threatDist now=%.0f min=%.0f"),
-					PivotReasonName(LastEscapePivotReason),
-					GetWorld() ? GetWorld()->GetTimeSeconds() - EscapePivotStartTime : 0.0,
-					GetEscapeThreatDistance(), EscapePivotMinThreatDistance));
+					PivotReasonName(Escape.LastPivotReason),
+					GetWorld() ? GetWorld()->GetTimeSeconds() - Escape.PivotStartTime : 0.0,
+					GetEscapeThreatDistance(), Escape.PivotMinThreatDistance));
 			}
 
-			EscapePivotStartTime = -1.0;
+			Escape.PivotStartTime = -1.0;
 			SetEscapeTurnPhase(EBoarEscapeTurnPhase::None);
 		}
 		break;
@@ -1542,27 +1573,27 @@ void ABoarBase::TickEscapeTurn(float DeltaSeconds)
 
 void ABoarBase::SetEscapeTurnPhase(EBoarEscapeTurnPhase NewPhase)
 {
-	const bool bChanged = EscapeTurnPhase != NewPhase;
+	const bool bChanged = Escape.Phase != NewPhase;
 	if (bChanged && IsEscapeTurnDebugEnabled())
-		LogEscapeTurn(FString::Printf(TEXT("Phase %s -> %s (%.2fs)"), *EscapePhaseName(EscapeTurnPhase),
-		                              *EscapePhaseName(NewPhase), EscapeTurnPhaseElapsed));
+		LogEscapeTurn(FString::Printf(TEXT("Phase %s -> %s (%.2fs)"), *EscapePhaseName(Escape.Phase),
+		                              *EscapePhaseName(NewPhase), Escape.PhaseElapsed));
 	if (bChanged)
-		PreviousEscapeTurnPhase = EscapeTurnPhase;
+		Escape.PreviousPhase = Escape.Phase;
 
-	EscapeTurnPhase = NewPhase;
-	EscapeTurnPhaseElapsed = 0.0f;
+	Escape.Phase = NewPhase;
+	Escape.PhaseElapsed = 0.0f;
 
-	if (NewPhase == EBoarEscapeTurnPhase::Brace && EscapePivotStartTime >= 0.0 && EscapePivotHeldStartTime < 0.0)
+	if (NewPhase == EBoarEscapeTurnPhase::Brace && Escape.PivotStartTime >= 0.0 && Escape.PivotHeldStartTime < 0.0)
 	{
 		if (const UWorld* World = GetWorld())
-			EscapePivotHeldStartTime = World->GetTimeSeconds();
+			Escape.PivotHeldStartTime = World->GetTimeSeconds();
 	}
 
 	if (NewPhase == EBoarEscapeTurnPhase::Brace)
 	{
 		// 旋回に使える時間で、残りの角度を回り切る速度にする（再開時も残り角度から決め直す）。
 		// 踏ん張り中に向きを変えない設定では、踏ん張りの後の停止時間だけで回る（停止時間・旋回を終える時刻は同じ）。
-		float RemainingYaw = FRotator::NormalizeAxis(EscapeTurnTargetYaw - GetActorRotation().Yaw) * EscapeTurnSign;
+		float RemainingYaw = FRotator::NormalizeAxis(Escape.TurnTargetYaw - GetActorRotation().Yaw) * Escape.TurnSign;
 		if (RemainingYaw < 0.0f)
 			RemainingYaw += 360.0f;
 
@@ -1571,13 +1602,13 @@ void ABoarBase::SetEscapeTurnPhase(EBoarEscapeTurnPhase NewPhase)
 			                       ? Settings.PivotStopDuration - FMath::Min(
 				                       Settings.BraceDuration, Settings.PivotStopDuration)
 			                       : Settings.PivotStopDuration;
-		EscapePivotTurnRate = RemainingYaw / FMath::Max(TurnTime, MinEscapePivotTurnTime);
+		Escape.PivotTurnRate = RemainingYaw / FMath::Max(TurnTime, MinEscapePivotTurnTime);
 	}
 
 	if (NewPhase == EBoarEscapeTurnPhase::None)
 	{
 		RestoreOrientRotation();
-		EscapeTurnSign = 0.0f;
+		Escape.TurnSign = 0.0f;
 	}
 
 	ApplyMovementSpeed();
@@ -1585,7 +1616,7 @@ void ABoarBase::SetEscapeTurnPhase(EBoarEscapeTurnPhase NewPhase)
 
 	if (bChanged)
 	{
-		OnEscapeTurnPhaseChanged(EscapeTurnPhase, GetEscapeTurnDirection());
+		OnEscapeTurnPhaseChanged(Escape.Phase, GetEscapeTurnDirection());
 		LogAnimDebugEvent(TEXT("phase"));
 	}
 }
@@ -1668,7 +1699,7 @@ void ABoarBase::OnEscapeTurnPhaseChanged_Implementation(EBoarEscapeTurnPhase New
 	case EBoarEscapeTurnPhase::Accelerate:
 		// 切り返しの旋回を終えて走り出すときは、後脚で地面を蹴るMontageを1回再生してからLocomotionへ戻る（自動Blend Out）。
 		// Montage_Playが同じSlotの旋回ループを再生中のBlend時間で置き換える。逃走開始の旋回の後は加速の始まり方が違うので使わない。
-		if (PreviousEscapeTurnPhase == EBoarEscapeTurnPhase::Hold && EscapePushOffMontage != nullptr
+		if (Escape.PreviousPhase == EBoarEscapeTurnPhase::Hold && EscapePushOffMontage != nullptr
 			&& AnimInstance->Montage_Play(EscapePushOffMontage) > 0.0f)
 		{
 			StopOwnMontages(EscapePushOffMontage);
@@ -1689,7 +1720,7 @@ bool ABoarBase::StepEscapeRotation(float RateDegreesPerSecond, float DeltaSecond
 	FRotator Rotation = GetActorRotation();
 
 	// 固定した回転方向に沿った残り角度。逆回りで近道し直さないよう0〜360で測る。
-	float Remaining = FRotator::NormalizeAxis(EscapeTurnTargetYaw - Rotation.Yaw) * EscapeTurnSign;
+	float Remaining = FRotator::NormalizeAxis(Escape.TurnTargetYaw - Rotation.Yaw) * Escape.TurnSign;
 	if (Remaining < 0.0f)
 	{
 		Remaining += 360.0f;
@@ -1699,13 +1730,13 @@ bool ABoarBase::StepEscapeRotation(float RateDegreesPerSecond, float DeltaSecond
 	constexpr float ArrivedToleranceDeg = 0.5f;
 	if (Remaining <= ArrivedToleranceDeg || Remaining >= 360.0f - ArrivedToleranceDeg)
 	{
-		Rotation.Yaw = EscapeTurnTargetYaw;
+		Rotation.Yaw = Escape.TurnTargetYaw;
 		SetActorRotation(Rotation);
 		return true;
 	}
 
 	const float Step = FMath::Min(RateDegreesPerSecond * DeltaSeconds, Remaining);
-	Rotation.Yaw += Step * EscapeTurnSign;
+	Rotation.Yaw += Step * Escape.TurnSign;
 	SetActorRotation(Rotation);
 	return Remaining - Step <= 0.5f;
 }
@@ -1713,43 +1744,43 @@ bool ABoarBase::StepEscapeRotation(float RateDegreesPerSecond, float DeltaSecond
 void ABoarBase::HoldOrientRotation()
 {
 	UCharacterMovementComponent* Move = GetCharacterMovement();
-	if (bOrientRotationHeld || Move == nullptr)
+	if (Escape.bOrientRotationHeld || Move == nullptr)
 		return;
 
-	bSavedOrientRotationToMovement = Move->bOrientRotationToMovement;
+	Escape.bSavedOrientRotationToMovement = Move->bOrientRotationToMovement;
 	Move->bOrientRotationToMovement = false;
-	bOrientRotationHeld = true;
+	Escape.bOrientRotationHeld = true;
 }
 
 void ABoarBase::RestoreOrientRotation()
 {
-	if (!bOrientRotationHeld)
+	if (!Escape.bOrientRotationHeld)
 		return;
 	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
-		Move->bOrientRotationToMovement = bSavedOrientRotationToMovement;
+		Move->bOrientRotationToMovement = Escape.bSavedOrientRotationToMovement;
 	}
 
-	bOrientRotationHeld = false;
+	Escape.bOrientRotationHeld = false;
 }
 
 void ABoarBase::StartEscapeCommit(bool bFromTurnEnd)
 {
 	if (const UWorld* World = GetWorld())
 	{
-		EscapeCommitStartTime = World->GetTimeSeconds();
-		EscapeCommitStartLocation = GetActorLocation();
+		Escape.CommitStartTime = World->GetTimeSeconds();
+		Escape.CommitStartLocation = GetActorLocation();
 
 		// 旋回を終えて走り出した時刻を連続切り返しの抑制の基準にする（逃走開始・切り返しの両方）。
 		// 止まらずに方向だけ確定し直した場合（障害物復帰・再評価）は抑制の基準を動かさない。
 		if (bFromTurnEnd)
 		{
-			LastEscapePivotEndTime = EscapeCommitStartTime;
+			Escape.LastPivotEndTime = Escape.CommitStartTime;
 
 			if (IsEscapeTurnDebugEnabled())
 				LogEscapeTurn(FString::Printf(
 					TEXT("DirectionCommit start (TurnEnd) heading=%.0f duration=%.2fs threatDist=%.0f"),
-					bHasEscapeHeading ? EscapeHeading.Rotation().Yaw : GetActorRotation().Yaw,
+					Escape.bHasHeading ? Escape.Heading.Rotation().Yaw : GetActorRotation().Yaw,
 					ActiveSettings.EscapeTurn.DirectionCommitDuration, GetEscapeThreatDistance()));
 		}
 	}
@@ -1759,11 +1790,11 @@ float ABoarBase::GetEscapeTurnSpeedScale() const
 {
 	const FBoarEscapeTurnSettings& Settings = ActiveSettings.EscapeTurn;
 
-	switch (EscapeTurnPhase)
+	switch (Escape.Phase)
 	{
 	case EBoarEscapeTurnPhase::Decelerate:
 		return Settings.DecelerateDuration > 0.0f
-			       ? 1.0f - FMath::Clamp(EscapeTurnPhaseElapsed / Settings.DecelerateDuration, 0.0f, 1.0f)
+			       ? 1.0f - FMath::Clamp(Escape.PhaseElapsed / Settings.DecelerateDuration, 0.0f, 1.0f)
 			       : 0.0f;
 
 	case EBoarEscapeTurnPhase::StartTurn:
@@ -1771,9 +1802,9 @@ float ABoarBase::GetEscapeTurnSpeedScale() const
 	case EBoarEscapeTurnPhase::Hold:
 		return 0.0f;
 	case EBoarEscapeTurnPhase::Accelerate:
-		return EscapeAccelerationDuration > 0.0f
-			       ? FMath::Lerp(EscapeAccelerationStartRatio, 1.0f,
-			                     FMath::Clamp(EscapeTurnPhaseElapsed / EscapeAccelerationDuration, 0.0f, 1.0f))
+		return Escape.AccelerationDuration > 0.0f
+			       ? FMath::Lerp(Escape.AccelerationStartRatio, 1.0f,
+			                     FMath::Clamp(Escape.PhaseElapsed / Escape.AccelerationDuration, 0.0f, 1.0f))
 			       : 1.0f;
 
 	default:
@@ -1783,5 +1814,5 @@ float ABoarBase::GetEscapeTurnSpeedScale() const
 
 void ABoarBase::UpdateTickEnabled()
 {
-	SetActorTickEnabled(!IsCaptured() && (ActiveSettings.bUseStamina || EscapeTurnPhase != EBoarEscapeTurnPhase::None));
+	SetActorTickEnabled(!IsCaptured() && (ActiveSettings.bUseStamina || Escape.Phase != EBoarEscapeTurnPhase::None));
 }
