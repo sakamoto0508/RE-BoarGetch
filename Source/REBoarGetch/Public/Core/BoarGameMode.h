@@ -66,6 +66,13 @@ public:
 	 * テスト用World）では、進行を止める理由がないためtrueです。各Actor・ComponentはGameModeを個別に探さずこれを使います。
 	 */
 	static bool IsStageProgressAllowed(const UObject* WorldContextObject);
+
+	/**
+	 * 捕獲状態になったBoarを、捕獲演出を再生できれば確定待ちに、できなければ即時確定にします。
+	 * Gameplay（Boar）が演出を直接探さないための窓口です。ABoarGameModeが無いWorld（施設の練習用Boarなど）でも演出は再生し、
+	 * その場合は確定（収容・記録）を行いません。BoarはCaptureComponentで捕獲状態になってから呼んでください。
+	 */
+	static void BeginCaptureResolution(class ABoarBase* Boar, bool bStartsNewCaptureUse);
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")
 	EBoarStageState GetStageState() const { return StageState; }
 	UFUNCTION(BlueprintPure, Category = "REBoarGetch|Stage")
@@ -183,8 +190,21 @@ private:
 	bool bEndUIShown = false;
 	/** 確定済みの捕獲（二重確定防止）。解放されたBoarは再集計時に外れます。 */
 	TSet<TWeakObjectPtr<class ABoarBase>> HandledCapturedBoars;
-	/** 捕獲状態だが演出完了まで確定を保留しているBoar。HandledCapturedBoarsと同時には入りません。 */
-	TSet<TWeakObjectPtr<class ABoarBase>> PendingCapturedBoars;
+	/**
+	 * 捕獲状態だが演出完了まで確定を保留しているBoarと、確定の期限（ゲーム時間・秒）。HandledCapturedBoarsと同時には入りません。
+	 * 期限を過ぎても演出から完了通知が来なければ、GameModeが確定します（演出の不具合で捕獲を失わないため）。
+	 */
+	TMap<TWeakObjectPtr<class ABoarBase>, double> PendingCapturedBoars;
+	/**
+	 * 確定待ちの上限時間（ゲーム時間・秒）。Pause中は進みません。捕獲演出が確定を通知する時間（Hit Stop＋Slow＋Dissolve＋
+	 * Transfer Finish、現在約0.85秒）より十分長くしてください。短いと演出の途中で確定し、Cageへの受信演出が出ません。
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Capture", meta = (ClampMin = "0.5", Units = "s"))
+	float PendingCaptureTimeoutSeconds = 3.f;
+	/** 期限を過ぎた確定待ちを確定します。NowはWorldのゲーム時間（秒）。 */
+	void ConfirmExpiredPendingCaptures(double Now);
+	/** WorldのPlayerControllerが持つ捕獲演出Component。無ければnullptr。 */
+	static class UCapturePresentationComponent* FindCapturePresentation(const UWorld* World);
 	/** コインの見た目・Overlapを持つ既存BPを指定します。未設定では生成しません。 */
 	UPROPERTY(EditDefaultsOnly, Category = "REBoarGetch|Stage|Spawn")
 	TSubclassOf<class ASpecialCoin> SpecialCoinClass;

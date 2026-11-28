@@ -381,7 +381,44 @@ bool FBoarPendingCaptureTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("確定できなかった捕獲も確定待ちから外す"), Mode->IsCapturePending(Late));
 	TestFalse(TEXT("Clear要求後の捕獲は未確定"), Mode->HandledCapturedBoars.Contains(Late));
 
+	// 演出から完了通知が来なくても、上限時間を過ぎたらGameModeが確定する。期限前は確定しない。
+	Mode->bStageClearRequested = false;
+	{
+		ABoarBase* Stalled = SpawnCaptured(TEXT("PendingTest_Stalled"));
+		if (!TestNotNull(TEXT("完了通知が来ないBoar"), Stalled))
+			return false;
+
+		Mode->RegisterPendingCapture(Stalled);
+		const double Deadline = Mode->PendingCapturedBoars.FindRef(Stalled);
+		TestTrue(TEXT("期限は登録時刻＋上限時間"), FMath::IsNearlyEqual(Deadline,
+			Fixture.World->GetTimeSeconds() + Mode->PendingCaptureTimeoutSeconds, 1.e-3));
+
+		Mode->ConfirmExpiredPendingCaptures(Deadline - 0.1);
+		TestTrue(TEXT("期限前は確定待ちのまま"), Mode->IsCapturePending(Stalled));
+
+		Mode->RegisterPendingCapture(Stalled);
+		TestTrue(TEXT("二重登録で期限を延ばさない"), FMath::IsNearlyEqual(Mode->PendingCapturedBoars.FindRef(Stalled), Deadline));
+
+		Mode->ConfirmExpiredPendingCaptures(Deadline);
+		TestFalse(TEXT("期限で確定待ちから外れる"), Mode->IsCapturePending(Stalled));
+		TestTrue(TEXT("期限で確定する"), Mode->HandledCapturedBoars.Contains(Stalled));
+		TestEqual(TEXT("期限で確定した後の完了通知では二重確定しない"),
+			Mode->CompletePendingCaptures({TWeakObjectPtr<ABoarBase>(Stalled)}).Num(), 0);
+	}
+
+	// 捕獲演出が無いWorld（PlayerControllerが無い）では、窓口から即時確定する。
+	{
+		ABoarBase* Immediate = SpawnCaptured(TEXT("PendingTest_Immediate"));
+		if (!TestNotNull(TEXT("演出なしで捕獲するBoar"), Immediate))
+			return false;
+
+		ABoarGameMode::BeginCaptureResolution(Immediate, true);
+		TestFalse(TEXT("演出なしでは確定待ちにしない"), Mode->IsCapturePending(Immediate));
+		TestTrue(TEXT("演出なしでは即時確定"), Mode->HandledCapturedBoars.Contains(Immediate));
+	}
+
 	// Stage終了確定時は、残った確定待ちを確定せずに破棄する。
+	Mode->bStageClearRequested = true;
 	Mode->PendingCapturedBoars.Add(Late);
 	Mode->bWaitForStageEndPresentation = true;
 	Mode->bClearSaveSucceeded = true;

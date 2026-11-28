@@ -12,8 +12,7 @@ waves = {
     'capture_multi_v2': ('SFX_CaptureV2_Multi', .41),
 }
 blueprints = ('/Game/BP/Player/BP_BoarPlayerController', '/Game/BP/Lobby/BP_PC_Lobby')
-legacy = ('impact_sound', 'transfer_start_sound', 'capture_success_sound', 'multi_capture_sound',
-          'camera_presentation', 'teleport_vfx', 'hit_stop_duration', 'slow_duration',
+legacy = ('camera_presentation', 'teleport_vfx', 'hit_stop_duration', 'slow_duration',
           'capture_dissolve_duration', 'transfer_finish_duration', 'teleport_lead_time')
 source = Path(unreal.Paths.project_dir()).resolve() / 'SourceArt/Capture/Audio/AKI166'
 step = os.environ.get('CAPTURE_AUDIO_STEP', 'verify')

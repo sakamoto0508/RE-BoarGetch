@@ -4,7 +4,6 @@
 #include "Audio/BoarAudioManagerSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
-#include "Kismet/GameplayStatics.h"
 #include "Player/BoarPlayerCharacter.h"
 #include "Player/BoarPlayerController.h"
 
@@ -78,9 +77,5 @@ void ABoarPresentationDirector::Tick(float DeltaSeconds)
 	const float Dt = FMath::Clamp(float(Now - LastRealTime), 0.f, BoarPresentationTiming::MaxFrameDeltaTime);
 	LastRealTime = Now;
 	Age += Dt;
-
-	// ヒットストップ中もBPのDelay / Timelineが実時間で進むよう、Global Time Dilationを打ち消します。
-	constexpr float MinTimeDilation = .0001f; // 0除算防止
-	CustomTimeDilation = 1.f / FMath::Max(UGameplayStatics::GetGlobalTimeDilation(this), MinTimeDilation);
 	TickPresentation(Dt);
 }

@@ -7,7 +7,7 @@ class ABoarPlayerCharacter;
 class ABoarPlayerController;
 class USoundBase;
 
-// 演出の順序・タイミング・使用Asset（Montage / SE / VFX等）は派生Blueprintの OnPresentationStarted で組み立て、完了時に FinishPresentation を呼びます。開始・タイムアウト・中断・GameModeへの完了通知は所有Component（C++）が管理し、このActorはGameplayの判定や保存を行いません。Transientで生成され、Level遷移・中断時のEndPlayで変更した見た目を元に戻します。BP内のDelay / Timelineはヒットストップ（Global Time Dilation）の影響を受けない実時間で進みます。
+// 演出の順序・タイミング・使用Asset（Montage / SE / VFX等）は派生Blueprintの OnPresentationStarted で組み立て、完了時に FinishPresentation を呼びます。開始・タイムアウト・中断・GameModeへの完了通知は所有Component（C++）が管理し、このActorはGameplayの判定や保存を行いません。Transientで生成され、Level遷移・中断時のEndPlayで変更した見た目を元に戻します。演出の経過時間（Age・TickPresentation）は実時間で進みます。
 /** Stage終了演出（Stage Clear / Game Over）の演出側の基底Actorです。 */
 UCLASS(Abstract, Blueprintable, NotPlaceable)
 class REBOARGETCH_API ABoarPresentationDirector : public AActor

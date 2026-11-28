@@ -126,11 +126,6 @@ namespace CapturePresentation
 	constexpr float ShakeFrequency = 24.f;
 }
 
-static TAutoConsoleVariable<int32> CVarCaptureAudioLegacy(
-	TEXT("Boar.Capture.AudioLegacy"),
-	0,
-	TEXT("捕獲音のA/B比較: 0 = V2の音が設定されていればV2を使う、1 = 従来の音を使う。次の捕獲から反映されます。"));
-
 UCaptureSuccessCameraShake::UCaptureSuccessCameraShake(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -313,8 +308,6 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 		// ---- 共有演出の開始（Net 1回につき1回） ----
 		bSharedActive = true;
 		SharedAge = 0.f;
-		bConfirmed = false;
-		bTransferSoundPlayed = false;
 
 		// 捕獲Orbitカメラ（ACF Sequence + Spiral Orbit）。ACFの通常カメラが出ているときだけ、Net 1回につき1回。
 		// 注視点は命中時のBoundsから決めてFocus Proxyに保持し、Boarが消えてもOrbitの中心は動かない。
@@ -358,11 +351,6 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 		{
 			ActiveShake = PC->PlayerCameraManager->StartCameraShake(CameraShake);
 		}
-
-		if (!bCaptureAudioV2)
-		{
-			PlaySound(ImpactSound);
-		}
 	}
 	else if (bSharedActive && SharedAge < HitStopDuration + SlowDuration)
 	{
@@ -395,17 +383,6 @@ bool UCapturePresentationComponent::PresentCapturedBoar(ABoarBase* Boar, bool bS
 	return true;
 }
 
-void UCapturePresentationComponent::PlaySound(USoundBase* Sound, float Pitch)
-{
-	if (!Sound || !GetWorld() || !GetWorld()->GetGameInstance())
-		return;
-
-	if (auto* Audio = GetWorld()->GetGameInstance()->GetSubsystem<UBoarAudioManagerSubsystem>())
-	{
-		Audio->PlaySoundEffect2D(this, Sound, 1.f, Pitch);
-	}
-}
-
 UAudioComponent* UCapturePresentationComponent::SpawnCaptureAudio(USoundBase* Sound, float Volume, float Pitch)
 {
 	if (UGameInstance* Instance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
@@ -424,13 +401,6 @@ void UCapturePresentationComponent::BeginCaptureAudio(ABoarBase* Boar)
 	using namespace CapturePresentation;
 
 	StopCaptureAudio();
-
-	// V2の4音がすべて設定されていて、CVarで従来音に切り替えていないときだけV2を使う。
-	bCaptureAudioV2 = !CVarCaptureAudioLegacy.GetValueOnGameThread()
-		&& CaptureImpactV2 && CaptureSpiralV2 && CaptureConfirmV2 && CaptureMultiV2;
-
-	if (!bCaptureAudioV2)
-		return;
 
 	CaptureAudioTargets.Add(Boar);
 	CaptureAudioAge = 0.f;
@@ -597,11 +567,6 @@ void UCapturePresentationComponent::ReleaseCameraEffect(bool bImmediate)
 void UCapturePresentationComponent::PlayMultiCaptureFeedback(const FVector& Source, ABoarBase* Boar)
 {
 	bMultiFeedbackPlayed = true;
-
-	if (!bCaptureAudioV2)
-	{
-		PlaySound(MultiCaptureSound);
-	}
 
 	// 通常のEffectと重ねず入れ替える。同じフレームの複数Hitなら通常分は即座に消す。
 	// Orbitカメラは入れ替えない（途中で入れ替えると視点が跳ぶ）。複数体は注視点をBoar群の中心へ移す（PresentCapturedBoar）。
@@ -1612,27 +1577,6 @@ void UCapturePresentationComponent::UpdateSharedFeedback(float RealDelta)
 		// Sinカーブで一度狭めてから元の視野角へ戻す。
 		const float P = FMath::Clamp(SharedAge / FMath::Max(MinDuration, CameraDuration), 0.f, 1.f);
 		ApplyFieldOfView(FMath::Clamp(OriginalFOV - CameraZoomAmount * FMath::Sin(P * PI), MinFieldOfView, MaxFieldOfView));
-	}
-
-	const float DataStart = HitStopDuration + SlowDuration;
-	if (!bTransferSoundPlayed && SharedAge >= DataStart)
-	{
-		if (!bCaptureAudioV2)
-		{
-			PlaySound(TransferStartSound);
-		}
-
-		bTransferSoundPlayed = true;
-	}
-
-	if (!bConfirmed && SharedAge >= GetTotalDuration())
-	{
-		if (!bCaptureAudioV2)
-		{
-			PlaySound(CaptureSuccessSound, bMultiFeedbackPlayed ? MultiCaptureSuccessPitch : 1.f);
-		}
-
-		bConfirmed = true;
 	}
 
 	if (SharedAge >= FMath::Max(GetTotalDuration(), CameraDuration))

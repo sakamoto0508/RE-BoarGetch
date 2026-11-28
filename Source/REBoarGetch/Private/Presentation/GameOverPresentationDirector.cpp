@@ -7,6 +7,7 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Boar/BoarBase.h"
+#include "Boar/BoarMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/CapsuleComponent.h"
@@ -35,9 +36,8 @@ namespace GameOverPresentation
 	constexpr float MinCameraDuration = .1f;
 	constexpr float MinCameraRiseDuration = .05f;
 
-	/** Hit Stop中の時間倍率の下限と、CustomTimeDilationの計算で0除算を避ける値。 */
+	/** Hit Stop中の時間倍率の下限。0だとアニメーションが完全に止まり、解除時の値の判定もできなくなるため。 */
 	constexpr float MinHitStopTimeScale = .01f;
-	constexpr float MinTimeDilation = .0001f;
 
 	/** ダウンアニメーションの再生速度の下限。 */
 	constexpr float MinDownPlayRate = .1f;
@@ -145,17 +145,49 @@ void AGameOverPresentationDirector::BeginHitStop(float Duration, float TimeScale
 	if (Duration <= 0.f || bHitStopActive)
 		return;
 
-	// 排他の前提：GameOver確定時（ResolveStageEnd）に捕獲演出は中断・復元済みで、以降はCanAdvanceStage()により
-	// 新しい捕獲演出も始まらない。そのためこの間のGlobal Time Dilationの所有者はこの演出だけになる。
-	OriginalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(this);
-	const float Scale = FMath::Clamp(TimeScale, MinHitStopTimeScale, 1.f);
-	UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeDilation * Scale);
-
-	// 同じフレーム内の後続Delayも実時間で進むよう、即座に打ち消します。
-	CustomTimeDilation = 1.f / FMath::Max(OriginalTimeDilation * Scale, MinTimeDilation);
-
+	// 制作ルールに従い、World全体の時間は変えず、見せたい対象だけを減速する。
+	// GameOver確定時（ResolveStageEnd）に捕獲演出の減速は中断・復元済みのため、同じBoarへ二重に掛からない。
+	HitStopTimeScale = FMath::Clamp(TimeScale, MinHitStopTimeScale, 1.f);
 	HitStopRemaining = Duration;
 	bHitStopActive = true;
+	ApplyHitStopToTargets();
+}
+
+void AGameOverPresentationDirector::ApplyHitStopToTargets()
+{
+	if (ABoarPlayerCharacter* Player = GetPresentationPlayer())
+	{
+		AddHitStopTarget(Player->GetMesh(), nullptr);
+	}
+
+	// BPがKnockBackNearbyBoarsをHit Stopの後に呼んでも対象に含めるよう、毎Tick追加分を確認する。
+	for (const FKnockback& K : Knockbacks)
+	{
+		if (ABoarBase* Boar = Cast<ABoarBase>(K.Actor.Get()))
+		{
+			AddHitStopTarget(Boar->GetMesh(), Cast<UBoarMovementComponent>(Boar->GetCharacterMovement()));
+		}
+	}
+}
+
+void AGameOverPresentationDirector::AddHitStopTarget(USkeletalMeshComponent* Mesh, UBoarMovementComponent* Movement)
+{
+	if (!Mesh || HitStopTargets.ContainsByPredicate([Mesh](const FHitStopTarget& T) { return T.Mesh.Get() == Mesh; }))
+		return;
+
+	FHitStopTarget& T = HitStopTargets.AddDefaulted_GetRef();
+	T.Mesh = Mesh;
+	T.OriginalAnimRate = Mesh->GlobalAnimRateScale;
+	T.AppliedAnimRate = T.OriginalAnimRate * HitStopTimeScale;
+	Mesh->GlobalAnimRateScale = T.AppliedAnimRate;
+
+	if (Movement)
+	{
+		T.Movement = Movement;
+		T.OriginalMoveScale = Movement->GetPresentationTimeScale();
+		Movement->SetPresentationTimeScale(T.OriginalMoveScale * HitStopTimeScale);
+		T.AppliedMoveScale = Movement->GetPresentationTimeScale();
+	}
 }
 
 void AGameOverPresentationDirector::EndHitStop()
@@ -165,10 +197,22 @@ void AGameOverPresentationDirector::EndHitStop()
 
 	bHitStopActive = false;
 
-	if (GetWorld())
+	// 自分が設定した値のまま残っているものだけを戻し、他の処理が変えた値は上書きしない。
+	for (const FHitStopTarget& T : HitStopTargets)
 	{
-		UGameplayStatics::SetGlobalTimeDilation(this, OriginalTimeDilation);
+		if (USkeletalMeshComponent* Mesh = T.Mesh.Get(); Mesh && FMath::IsNearlyEqual(Mesh->GlobalAnimRateScale, T.AppliedAnimRate))
+		{
+			Mesh->GlobalAnimRateScale = T.OriginalAnimRate;
+		}
+
+		if (UBoarMovementComponent* Movement = T.Movement.Get();
+			Movement && FMath::IsNearlyEqual(Movement->GetPresentationTimeScale(), T.AppliedMoveScale))
+		{
+			Movement->SetPresentationTimeScale(T.OriginalMoveScale);
+		}
 	}
+
+	HitStopTargets.Reset();
 }
 
 void AGameOverPresentationDirector::SettlePlayerOnGround()
@@ -640,6 +684,10 @@ void AGameOverPresentationDirector::TickPresentation(float Dt)
 		if (HitStopRemaining <= 0.f)
 		{
 			EndHitStop();
+		}
+		else
+		{
+			ApplyHitStopToTargets();
 		}
 	}
 

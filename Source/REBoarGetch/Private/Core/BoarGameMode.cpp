@@ -91,11 +91,54 @@ void ABoarGameMode::RegisterPendingCapture(ABoarBase* Boar, bool bStartsNewCaptu
 	if (!IsValid(Boar) || !Boar->IsCaptured() || !CanAdvanceStage() || HandledCapturedBoars.Contains(Boar))
 		return;
 	// 演出ありの捕獲は、確定待ちに登録した時点が捕獲成功イベント（確定は演出後）。
-	bool bAlreadyPending = false;
-	PendingCapturedBoars.Add(Boar, &bAlreadyPending);
+	// 二重登録では期限を延ばさない（最初の登録から上限時間で必ず確定させる）。
+	if (PendingCapturedBoars.Contains(Boar))
+		return;
 
-	if (!bAlreadyPending)
-		RecordCaptureOrder(Boar, bStartsNewCaptureUse);
+	PendingCapturedBoars.Add(Boar, GetWorld()->GetTimeSeconds() + PendingCaptureTimeoutSeconds);
+	RecordCaptureOrder(Boar, bStartsNewCaptureUse);
+}
+
+void ABoarGameMode::ConfirmExpiredPendingCaptures(double Now)
+{
+	TArray<TWeakObjectPtr<ABoarBase>> Expired;
+
+	for (const TPair<TWeakObjectPtr<ABoarBase>, double>& Pending : PendingCapturedBoars)
+		if (Pending.Value <= Now)
+			Expired.Add(Pending.Key);
+
+	if (Expired.IsEmpty())
+		return;
+
+	UE_LOG(LogREBoarGetch, Warning, TEXT("[Capture] 捕獲演出から%.1f秒以内に完了通知が届かなかったため、%d体の捕獲を確定します。"),
+		PendingCaptureTimeoutSeconds, Expired.Num());
+	CompletePendingCaptures(Expired);
+}
+
+UCapturePresentationComponent* ABoarGameMode::FindCapturePresentation(const UWorld* World)
+{
+	const APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+	return PC ? PC->FindComponentByClass<UCapturePresentationComponent>() : nullptr;
+}
+
+void ABoarGameMode::BeginCaptureResolution(ABoarBase* Boar, bool bStartsNewCaptureUse)
+{
+	UWorld* World = Boar ? Boar->GetWorld() : nullptr;
+	if (!World)
+		return;
+
+	ABoarGameMode* Mode = World->GetAuthGameMode<ABoarGameMode>();
+	if (UCapturePresentationComponent* Presentation = FindCapturePresentation(World);
+		Presentation && Presentation->PresentCapturedBoar(Boar, bStartsNewCaptureUse))
+	{
+		if (Mode)
+			Mode->RegisterPendingCapture(Boar, bStartsNewCaptureUse);
+
+		return;
+	}
+
+	if (Mode)
+		Mode->HandleBoarCaptured(Boar, bStartsNewCaptureUse);
 }
 
 TArray<ABoarBase*> ABoarGameMode::CompletePendingCaptures(const TArray<TWeakObjectPtr<ABoarBase>>& Boars)
@@ -332,6 +375,9 @@ void ABoarGameMode::HandleWorldTickEnd(UWorld* World, ELevelTick TickType, float
 	if (StageState == EBoarStageState::Playing)
 		StageRunData.ClearTimeSeconds += DeltaSeconds;
 
+	if (!PendingCapturedBoars.IsEmpty())
+		ConfirmExpiredPendingCaptures(World->GetTimeSeconds());
+
 	ResolveStageEnd();
 }
 
@@ -353,9 +399,8 @@ void ABoarGameMode::ResolveStageEnd()
 			FMath::Max(MinStagePresentationTimeoutSeconds, StageEndPresentationTimeoutSeconds), false);
 	}
 
-	if (auto* PC = GetWorld()->GetFirstPlayerController())
-		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
-			Presentation->CancelPresentation();
+	if (UCapturePresentationComponent* Presentation = FindCapturePresentation(GetWorld()))
+		Presentation->CancelPresentation();
 	PendingCapturedBoars.Reset();
 	SetStageActorsStopped(true);
 

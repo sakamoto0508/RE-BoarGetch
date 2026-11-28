@@ -292,21 +292,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|VFX", meta=(ClampMin="0", ClampMax="250"))
 	float TransferRiseDistance = 105.f;
 
-	// ---- 効果音（従来版。Audio V2の4音がそろっていればV2を優先します） ----
+	// ---- 効果音（命中・転送・確定・複数体の4音は「Audio V2」カテゴリ） ----
 
-	/** 網が命中した瞬間の効果音。Net 1回につき1回、既存AudioManager経由で再生します。未設定なら無音です。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio")
-	TObjectPtr<USoundBase> ImpactSound;
-
-	/** Boarのデータ化が始まる瞬間の転送音。既存AudioManager経由で再生します。未設定なら無音です。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio")
-	TObjectPtr<USoundBase> TransferStartSound;
-
-	/** 捕獲地点での転送が完了した瞬間の確定音。Net 1回につき1回、既存AudioManager経由で再生します。未設定なら無音です。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio")
-	TObjectPtr<USoundBase> CaptureSuccessSound;
-
-	/** 捕獲Orbitカメラ（カメラがBoarの周りを回る間）の効果音。Orbitを再生したときだけ開始と同時に鳴らし、Spiral OrbitのDurationの終わりに合わせてフェードアウトします。Orbitを省略したとき・ACFが無いときは鳴らしません。従来版・Audio V2のどちらでも鳴ります。未設定なら無音です。 */
+	/** 捕獲Orbitカメラ（カメラがBoarの周りを回る間）の効果音。Orbitを再生したときだけ開始と同時に鳴らし、Spiral OrbitのDurationの終わりに合わせてフェードアウトします。Orbitを省略したとき・ACFが無いときは鳴らしません。未設定なら無音です。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Audio")
 	TObjectPtr<USoundBase> OrbitSound;
 
@@ -436,17 +424,9 @@ public:
 
 	// ---- 複数体捕獲 ----
 
-	/** 1回のNetで何体以上捕獲したら複数体の強調（Multi Capture Sound・Multi Capture Camera Effect）を出すか。強調はNet 1回につき1回だけです。 */
+	/** 1回のNetで何体以上捕獲したら複数体の強調（確定音をCapture Multi V2にする・Multi Capture Camera Effect）を出すか。強調はNet 1回につき1回だけです。 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Multi Capture", meta=(ClampMin="2", ClampMax="10"))
 	int32 MultiCaptureThreshold = 2;
-
-	/** 複数体捕獲になった瞬間に1回だけ鳴らす追加の効果音。未設定なら鳴らしません。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Multi Capture")
-	TObjectPtr<USoundBase> MultiCaptureSound;
-
-	/** 複数体捕獲のとき、転送完了の確定音（Capture Success Sound）を鳴らすピッチ倍率。 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture Presentation|Multi Capture", meta=(ClampMin="0.5", ClampMax="2"))
-	float MultiCaptureSuccessPitch = 1.12f;
 
 protected:
 	virtual void BeginPlay() override;
@@ -490,14 +470,13 @@ private:
 	float GetTotalDuration() const;
 
 	// ---- 効果音 ----
-	void PlaySound(USoundBase* Sound, float Pitch = 1.f);
 	void BeginCaptureAudio(ABoarBase* Boar);
 	void UpdateCaptureAudio(float RealDelta);
 	void ConfirmCaptureAudio(const TArray<ABoarBase*>& Confirmed);
 	void StopCaptureAudio(bool bKeepConfirmedTail = false);
 	UAudioComponent* SpawnCaptureAudio(USoundBase* Sound, float Volume, float Pitch = 1.f);
 
-	// ---- Audio V2。4音すべて設定されていれば従来の効果音の代わりに使います（CVar Boar.Capture.AudioLegacy=1で従来音に戻せます）。 ----
+	// ---- 捕獲音（Audio V2）。未設定の音は鳴らしません。Net 1回につき1組だけ鳴らします。 ----
 
 	/** 命中した瞬間の音。 */
 	UPROPERTY(EditAnywhere, Category="Capture Presentation|Audio V2")
@@ -522,12 +501,10 @@ private:
 	/** 捕獲確定SEを停止・調整するための再生参照。 */
 	TWeakObjectPtr<UAudioComponent> CaptureConfirmVoice;
 
-	/** V2の音を鳴らしているNetで捕獲したBoar。確定通知にこのBoarが含まれていたら確定音を鳴らします。 */
+	/** 捕獲音を鳴らしているNetで捕獲したBoar。確定通知にこのBoarが含まれていたら確定音を鳴らします。 */
 	TArray<TWeakObjectPtr<ABoarBase>> CaptureAudioTargets;
 	/** 捕獲音の進行を測る実時間（秒）。 */
 	float CaptureAudioAge = 0.f;
-	/** 段階別の捕獲音を使用中か。 */
-	bool bCaptureAudioV2 = false;
 
 	// ---- カメラ ----
 	void SpawnImpact(const FCaptureVisualTarget& Target);
@@ -617,10 +594,6 @@ private:
 	bool bSharedActive = false;
 	/** このコンポーネントが現在の演出カメラを所有しているか。 */
 	bool bOwnCamera = false;
-	/** 捕獲の確定処理まで完了したか。 */
-	bool bConfirmed = false;
-	/** 転送開始SEをこの演出で再生済みか。 */
-	bool bTransferSoundPlayed = false;
 
 	/** 再生中のACF Camera Effect。共有演出の終了・キャンセル・Pause・EndPlayで止めます。 */
 	FACFCameraEffectHandle ActiveCameraEffect;

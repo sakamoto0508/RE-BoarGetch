@@ -10,7 +10,6 @@
 #include "BrainComponent.h"
 #include "Cage/Cage.h"
 #include "Component/CaptureComponent.h"
-#include "Component/CapturePresentationComponent.h"
 #include "Component/FootstepDustComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -283,20 +282,8 @@ bool ABoarBase::CaptureWithFeedback(bool bSharedFeedback)
 	StopBoarLoopingSounds();
 	SetActorTickEnabled(false);
 
-	// 捕獲に成功したBoarは、演出が終わるまで元の位置に残す。
-	// 演出がある場合はGameModeへ確定待ちとして登録し、演出完了時に確定する。無い場合は即時確定。
-	if (auto* PC = GetWorld()->GetFirstPlayerController())
-		if (auto* Presentation = PC->FindComponentByClass<UCapturePresentationComponent>())
-			if (Presentation->PresentCapturedBoar(this, bSharedFeedback))
-			{
-				if (auto* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-					Mode->RegisterPendingCapture(this, bSharedFeedback);
-
-				return true;
-			}
-	if (auto* Mode = GetWorld()->GetAuthGameMode<ABoarGameMode>())
-		Mode->HandleBoarCaptured(this, bSharedFeedback);
-
+	// 捕獲に成功したBoarは、演出が終わるまで元の位置に残す。確定を待つか即時確定するかはGameModeが決める。
+	ABoarGameMode::BeginCaptureResolution(this, bSharedFeedback);
 	return true;
 }
 

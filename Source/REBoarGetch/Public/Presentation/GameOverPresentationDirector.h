@@ -6,6 +6,7 @@
 
 class UAnimMontage;
 class UAnimSequenceBase;
+class UBoarMovementComponent;
 class UBoarGameOverEffectWidget;
 class UCameraComponent;
 class UCurveFloat;
@@ -13,6 +14,7 @@ class UMaterialInstanceDynamic;
 class UMaterialInterface;
 class UMeshComponent;
 class UPostProcessComponent;
+class USkeletalMeshComponent;
 class USpringArmComponent;
 
 /** ガジェット発光の減衰中に一時的に変更したMeshの元Overlayです。 */
@@ -45,7 +47,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GameOver Presentation")
 	void BeginRedFlash(float PeakAlpha = .5f, float Duration = .24f);
 
-	/** 実時間でDuration秒だけGlobal Time Dilationを下げ、必ず元の値へ戻します。 */
+	/**
+	 * 実時間でDuration秒だけ、PlayerとKnockBackNearbyBoarsの対象Boarのアニメーションと移動をTimeScale倍に減速します。
+	 * World全体の時間（Global Time Dilation）は変えないため、Niagara・物理・UI・SE・カメラは減速されません。
+	 * KnockBackNearbyBoarsより先に呼んでも、後から跳ね返りの対象になったBoarはHit Stopの間に減速へ加わります。
+	 * 終了・EndPlay（Retry・Level遷移）で、この演出が設定した値のまま残っているものだけを元へ戻します。
+	 */
 	UFUNCTION(BlueprintCallable, Category = "GameOver Presentation")
 	void BeginHitStop(float Duration = .09f, float TimeScale = .05f);
 
@@ -213,6 +220,12 @@ private:
 	UBoarGameOverEffectWidget* EnsureEffectWidget();
 	FVector ComputeBodyFocus() const;
 	void EndHitStop();
+
+	/** Playerと跳ね返り対象のBoarのうち、まだ減速していないものを減速対象に加えます。 */
+	void ApplyHitStopToTargets();
+
+	/** 1体を減速対象に加えます。既に加えたMeshは何もしません。 */
+	void AddHitStopTarget(USkeletalMeshComponent* Mesh, UBoarMovementComponent* Movement);
 	void UpdateDown();
 	void UpdateCamera(float Dt);
 	void UpdateGadgetGlow(float Dt);
@@ -258,8 +271,28 @@ private:
 	bool bHitStopActive = false;
 	/** ヒットストップを解除するまでの実時間（秒）。 */
 	float HitStopRemaining = 0.f;
-	/** ヒットストップ解除時に復元する元のWorld時間倍率。 */
-	float OriginalTimeDilation = 1.f;
+	/** ヒットストップ中のアニメーション・移動の時間倍率（0〜1）。 */
+	float HitStopTimeScale = 1.f;
+
+	/** ヒットストップで減速した1体分の、元の値とこの演出が設定した値。 */
+	struct FHitStopTarget
+	{
+		/** 減速したMeshへの弱参照。Actorの寿命は延ばさない。 */
+		TWeakObjectPtr<USkeletalMeshComponent> Mesh;
+		/** 移動を減速したBoarのMovementへの弱参照。Playerなど対象外のときは空。 */
+		TWeakObjectPtr<UBoarMovementComponent> Movement;
+		/** 減速前のMeshのGlobalAnimRateScale。 */
+		float OriginalAnimRate = 1.f;
+		/** この演出が設定したGlobalAnimRateScale。違う値に変わっていたら他の処理の値なので戻さない。 */
+		float AppliedAnimRate = 1.f;
+		/** 減速前の移動時間倍率。 */
+		float OriginalMoveScale = 1.f;
+		/** この演出が設定した移動時間倍率。 */
+		float AppliedMoveScale = 1.f;
+	};
+
+	/** ヒットストップで減速中の対象。解除時に元へ戻してから空にする。 */
+	TArray<FHitStopTarget> HitStopTargets;
 	/** 着地を待ってからダウン演出を始めるか。 */
 	bool bWaitingForLanding = false;
 
